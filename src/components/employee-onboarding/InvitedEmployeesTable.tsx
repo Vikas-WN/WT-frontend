@@ -42,6 +42,7 @@ const DATA_COLUMNS = [
   "personal_email",
   "user_type",
   "department",
+  "created_on",
 ] as const;
 
 const SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
@@ -58,6 +59,20 @@ const SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
     columnKeys: ["name"],
     direction: "desc",
     getValue: (row) => pickRowField(row, ["name"]),
+  },
+  {
+    id: "created_on_asc",
+    label: "Created On",
+    columnKeys: ["created_on"],
+    direction: "asc",
+    getValue: (row) => pickRowField(row, ["created_on", "created_at", "createdAt"]),
+  },
+  {
+    id: "created_on_desc",
+    label: "Created On",
+    columnKeys: ["created_on"],
+    direction: "desc",
+    getValue: (row) => pickRowField(row, ["created_on", "created_at", "createdAt"]),
   },
   {
     id: "email_asc",
@@ -189,7 +204,7 @@ export function InvitedEmployeesTable({
         </div>
       ) : null}
       <div
-        className="relative wt-scroll-both-chain max-h-[min(70vh,520px)] rounded-xl border border-wt-border"
+        className="wt-scroll-x-visible wt-scroll-both-chain relative max-h-[min(70vh,520px)] rounded-xl border border-wt-border"
         style={{ overscrollBehaviorY: "auto" }}
         ref={tableScrollRef}
         onWheel={(event) => {
@@ -282,7 +297,10 @@ export function InvitedEmployeesTable({
                         type="button"
                         className="px-2.5 py-1 text-xs"
                         disabled={selectionBusy || isResending}
-                        onClick={() => onResendInvite(email)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onResendInvite(email);
+                        }}
                       >
                         {isResending ? "Resending Invite…" : "Resend Invite"}
                       </Button>

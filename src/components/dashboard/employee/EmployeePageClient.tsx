@@ -17,6 +17,7 @@ import {
   filterInvitedRowsByCreatedAtRange,
   filterInvitedRowsByName,
   formatInvitedEmployeeTableRows,
+  lastSevenDaysInvitedEmployeesDateRange,
 } from "@/utils/dashboard/invitedEmployees";
 import { compareApiDates, formatApiDateDisplay } from "@/utils/apiDate";
 import { createEmptyOnboardForm } from "@/utils/onboardFormState";
@@ -100,7 +101,9 @@ export function EmployeePageClient() {
 
   const onboardOptions = onboardOptionsQ.data ?? FALLBACK_ONBOARD_OPTIONS;
   const onboardBands = bandsQ.data ?? [];
-  const optionsLoading = onboardOptionsQ.isLoading || bandsQ.isLoading;
+  const optionsLoading =
+    (onboardOptionsQ.isLoading && !onboardOptionsQ.data) ||
+    (bandsQ.isLoading && !bandsQ.data);
 
   useEffect(() => {
     if (!hasHrAccess || bandsQ.isLoading) return;
@@ -178,6 +181,13 @@ export function EmployeePageClient() {
 
   const refreshInvitedList = useCallback(
     async (range?: { from?: string; to?: string }) => {
+      const from = (range?.from ?? invitedListFromDateRef.current).trim();
+      const to = (range?.to ?? invitedListToDateRef.current).trim();
+      const rangeError = invitedDateRangeError(from, to);
+      if (rangeError) {
+        showErrorToast(rangeError);
+        return;
+      }
       try {
         await loadInviteOnboardingPreview(range);
       } catch (error) {
@@ -186,6 +196,27 @@ export function EmployeePageClient() {
     },
     [loadInviteOnboardingPreview]
   );
+
+  const refreshInvitedListAfterCreate = useCallback(async () => {
+    const from = invitedListFromDateRef.current.trim();
+    const to = invitedListToDateRef.current.trim();
+    if (invitedDateRangeError(from, to)) {
+      const defaults = lastSevenDaysInvitedEmployeesDateRange();
+      setInvitedListFromDate(defaults.from);
+      setInvitedListToDate(defaults.to);
+      try {
+        await loadInviteOnboardingPreview(defaults);
+      } catch {
+        // Employee was created; list refresh failures should not hide success.
+      }
+      return;
+    }
+    try {
+      await loadInviteOnboardingPreview();
+    } catch {
+      // Employee was created; list refresh failures should not hide success.
+    }
+  }, [loadInviteOnboardingPreview]);
 
   const resetOnboardForm = useCallback(() => {
     setOnboardForm(createEmptyOnboardForm());
@@ -204,7 +235,7 @@ export function EmployeePageClient() {
       setResendingInviteEmail(normalized);
       try {
         await hrmsService.resendOnboardInvite({ email: normalized });
-        showSuccessToast(`Onboarding invite resent to ${normalized}.`);
+        showSuccessToast(`Onboarding invite resent to ${normalized}.`, `resend-invite-${normalized}`);
       } catch (error) {
         showErrorToast(
           toUserFriendlyApiErrorMessage(error, "Failed to resend onboarding invite.")
@@ -292,11 +323,7 @@ export function EmployeePageClient() {
                 onError={handleOnboardFormError}
                 onSubmitSuccess={async () => {
                   resetOnboardForm();
-                  try {
-                    await loadInviteOnboardingPreview();
-                  } catch {
-                    // Employee was created; list refresh failures should not hide success.
-                  }
+                  await refreshInvitedListAfterCreate();
                 }}
               />
 
@@ -353,11 +380,11 @@ export function EmployeePageClient() {
                       Apply Dates
                     </Button>
                     <Button
-                      variant="secondary"
+                      variant="outline"
                       type="button"
-                      className="h-10 shrink-0 border border-wt-border bg-wt-surface-2 px-3 text-sm text-wt-text hover:bg-wt-surface-3"
+                      className="h-10 shrink-0 border-wt-border bg-wt-surface-1 px-3 text-sm font-medium text-wt-text shadow-sm hover:bg-wt-surface-2"
                       onClick={() => {
-                        const { from, to } = defaultInvitedEmployeesDateRange();
+                        const { from, to } = lastSevenDaysInvitedEmployeesDateRange();
                         setInvitedListFromDate(from);
                         setInvitedListToDate(to);
                         void refreshInvitedList({ from, to });

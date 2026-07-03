@@ -398,6 +398,30 @@ body::-webkit-scrollbar {
   display: none;
 }
 
+/* Horizontal scroll with visible scrollbar for wide data tables */
+.wt-scroll-x-visible {
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--wt-text-muted) 45%, transparent) transparent;
+}
+
+.wt-scroll-x-visible::-webkit-scrollbar {
+  display: block;
+  height: 8px;
+  width: 8px;
+}
+
+.wt-scroll-x-visible::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--wt-text-muted) 45%, transparent);
+  border-radius: 999px;
+}
+
+.wt-scroll-x-visible::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 /* Sticky headers for all data tables */
 .wt-scrollable-table,
 [data-slot="table"] {
@@ -1196,7 +1220,11 @@ select.input-field {
 }
 
 :is(.dark, [data-theme="dark"]) .wt-sidebar-nav .wt-sidebar-nav-item:hover {
-  background: var(--wt-surface-3);
+  background: color-mix(in oklab, var(--wt-surface-3) 88%, var(--wt-brand) 12%);
+  color: var(--wt-text);
+}
+
+:is(.dark, [data-theme="dark"]) .wt-sidebar-nav .wt-sidebar-nav-item:hover svg {
   color: var(--wt-text);
 }
 

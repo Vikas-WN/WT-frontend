@@ -42,6 +42,18 @@ export function bandSelectOptions(
     .filter((item) => item.value && item.label);
 }
 
+export function internBandDisplayLabel(
+  bands: Array<Record<string, unknown>>,
+  internBandId: number
+): string {
+  if (internBandId > 0) {
+    const row = bands.find((band) => Number(band.id) === internBandId);
+    const label = row ? bandDisplayLabel(row) : "";
+    if (label) return label;
+  }
+  return internBandId === 8 ? "B8 - Intern" : internBandId > 0 ? `Band ${internBandId}` : "";
+}
+
 export function resolveInternBandId(bands: Array<Record<string, unknown>>): number {
   const internHit = bands.find((row) => {
     const key = bandNameMatchKey(String(row.name ?? row.band_name ?? ""));

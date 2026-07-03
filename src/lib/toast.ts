@@ -7,10 +7,10 @@ const sharedToastOptions = {
   closeButton: true,
 } as const;
 
-export function showSuccessToast(message: string) {
-  toast.success(message, sharedToastOptions);
+export function showSuccessToast(message: string, id?: string) {
+  toast.success(message, { ...sharedToastOptions, ...(id ? { id } : {}) });
 }
 
-export function showErrorToast(message: string) {
-  toast.error(message, sharedToastOptions);
+export function showErrorToast(message: string, id?: string) {
+  toast.error(message, { ...sharedToastOptions, ...(id ? { id } : {}) });
 }

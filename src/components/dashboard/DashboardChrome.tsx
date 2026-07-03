@@ -143,6 +143,9 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const hasAccountManagerAccess = userRoles.includes("ROLE_AM");
   const canAccessProfile = Boolean(user) && !shouldSkipSelfProfileFetch(userRoles);
   const isEmployeeDirectoryRoute = pathname.startsWith("/dashboard/employee-directory");
+  const isEmployeeOnboardingRoute =
+    pathname === DASHBOARD_ROUTES.employee ||
+    pathname.startsWith(`${DASHBOARD_ROUTES.employee}/`);
   const isEmployeeProfileRoute = Boolean(pathname.match(/^\/dashboard\/employee-directory\/[^/]+$/));
   const isHrPortalUser =
     (userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN")) &&
@@ -370,7 +373,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
             <WebTrakBrand variant="header" compact className="shrink-0 lg:hidden" />
             <div className="min-w-0">
             <h2 className="truncate text-lg font-semibold tracking-tight text-wt-text sm:text-xl">{pageTitle}</h2>
-            {isEmployeeDirectoryRoute && !isLearningRoute ? (
+            {isEmployeeDirectoryRoute && !isLearningRoute && !isEmployeeOnboardingRoute ? (
               <nav
                 className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
                 aria-label="Breadcrumb"

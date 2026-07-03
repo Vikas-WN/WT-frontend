@@ -61,6 +61,16 @@ export function parsePydanticValidationPayload(payload: unknown): string | null 
   return null;
 }
 
+function isGenericServerFailureMessage(message: string): boolean {
+  const lower = message.trim().toLowerCase();
+  return (
+    lower === "internal server error" ||
+    lower.startsWith("request failed:") ||
+    lower.includes("bad gateway") ||
+    isHtmlErrorBody(message)
+  );
+}
+
 export function toUserFriendlyApiErrorMessage(
   error: unknown,
   fallback = "Something went wrong. Please try again."
@@ -69,8 +79,16 @@ export function toUserFriendlyApiErrorMessage(
     if (error.status === 0) {
       return error.message;
     }
-    if (error.status === 502 || error.status === 503 || error.status === 504) {
-      return "Unable to reach the server. Please try again later.";
+    if (
+      error.status === 500 ||
+      error.status === 502 ||
+      error.status === 503 ||
+      error.status === 504
+    ) {
+      const message = error.message.trim();
+      if (!message || isGenericServerFailureMessage(message)) {
+        return "Unable to reach the server. Please try again later.";
+      }
     }
 
     const payload = error.payload;

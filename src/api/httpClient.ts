@@ -143,10 +143,15 @@ export class HttpClient {
         }
 
         const payload = await this.tryReadBody(response);
+        const serverUnavailable =
+          response.status === 500 ||
+          response.status === 502 ||
+          response.status === 503 ||
+          response.status === 504;
         throw new ApiError(
           parseApiErrorMessage(
             payload,
-            response.status === 502 || response.status === 503 || response.status === 504
+            serverUnavailable
               ? "Unable to reach the server. Please try again later."
               : `Request failed: ${response.status} ${response.statusText}`
           ),
