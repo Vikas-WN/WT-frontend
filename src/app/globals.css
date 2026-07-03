@@ -390,12 +390,6 @@ body::-webkit-scrollbar {
 .wt-scroll-both {
   overflow: auto;
   overscroll-behavior: contain;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.wt-scroll-both::-webkit-scrollbar {
-  display: none;
 }
 
 /* Horizontal scroll with visible scrollbar for wide data tables */
