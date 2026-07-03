@@ -20,7 +20,7 @@ function formatDisplayDate(value: string): string {
 }
 
 export function DatePicker({
-  label,
+  label = "",
   value,
   onChange,
   required = false,
@@ -29,7 +29,7 @@ export function DatePicker({
   max,
   className,
 }: {
-  label: string
+  label?: string
   value: string
   onChange: (value: string) => void
   required?: boolean

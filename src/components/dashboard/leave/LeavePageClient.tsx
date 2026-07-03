@@ -154,6 +154,8 @@ import {
 import { compOffService } from "@/services/compOff.service";
 import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
 import { CompOffCreditsDialog } from "@/components/dashboard/leave/CompOffCreditsDialog";
+import { WfhExceptionModal } from "@/components/dashboard/leave/WfhExceptionModal";
+import { HrWfhExceptionPanel } from "@/components/dashboard/leave/HrWfhExceptionPanel";
 import { CompOffPageClient } from "@/components/comp-off/CompOffPageClient";
 import { LeaveRequestForm } from "@/components/dashboard/leave/LeaveRequestForm";
 import { MyLeaveRequestsView } from "@/components/dashboard/leave/MyLeaveRequestsView";
@@ -222,6 +224,7 @@ export function LeavePageClient() {
   const invalidateLeaveBalance = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["leave", "my-balance"] });
   }, [queryClient]);
+
   const [myRequestsFromDate, setMyRequestsFromDate] = useState(() => defaultMyLeaveRequestRange().fromDate);
   const [myRequestsToDate, setMyRequestsToDate] = useState(() => defaultMyLeaveRequestRange().toDate);
   const myLeaveRequestsQ = useMyLeaveRequests(userEmail, true, myRequestsFromDate, myRequestsToDate);
@@ -230,6 +233,25 @@ export function LeavePageClient() {
   const loadMyLeaveRequests = useCallback(async () => {
     if (myLeaveRequestsQ.refetch) await myLeaveRequestsQ.refetch();
   }, [myLeaveRequestsQ.refetch]);
+
+  const handleSubmitWfhException = useCallback(
+    async (payload: { request_from_date: string; request_to_date: string; comments: string }) => {
+      const body = {
+        request_from_date: payload.request_from_date,
+        request_to_date: payload.request_to_date,
+        request_type: "WFH_EXCEPTION",
+        comments: payload.comments,
+      };
+      await apiClient.post(endpoints.userRequest.root, {
+        contentType: "application/json",
+        body: JSON.stringify(body),
+      });
+      showSuccessToast("Custom Work From Home request submitted to HR for approval.");
+      invalidateLeaveBalance();
+      await loadMyLeaveRequests();
+    },
+    [invalidateLeaveBalance, loadMyLeaveRequests]
+  );
   const [actionLoading, setActionLoading] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
@@ -375,6 +397,7 @@ export function LeavePageClient() {
   const [editingLeaveRequestId, setEditingLeaveRequestId] = useState<string>("");
   const [requestViewTab, setRequestViewTab] = useState<"request" | "view">("request");
   const [wfhRequestViewTab, setWfhRequestViewTab] = useState<"request" | "view">("request");
+  const [wfhExceptionOpen, setWfhExceptionOpen] = useState(false);
   const [employeeRequestFilters, setEmployeeRequestFilters] = useState(() => {
     const now = new Date();
     return {
@@ -1043,7 +1066,10 @@ export function LeavePageClient() {
     () =>
       myLeaveRequests
         .filter(
-          (row) => normalizeUserRequestType(row.request_type ?? row.requestType) === "WFH"
+          (row) => {
+            const t = normalizeUserRequestType(row.request_type ?? row.requestType);
+            return t === "WFH" || t === "WFH_EXCEPTION";
+          }
         )
         .filter((row) => leaveRequestMatchesSearch(row, myLeaveSearch)),
     [myLeaveRequests, myLeaveSearch]
@@ -1188,37 +1214,48 @@ export function LeavePageClient() {
                                   <TabsContent value="request" className="pt-6">
                                   <div className="space-y-6">
                                     <div className="rounded-xl bg-muted/40 p-6 shadow-sm border border-border/40">
-                                      <h3 className="text-sm font-semibold tracking-tight text-foreground mb-5">
-                                        Apply for WFH
-                                      </h3>
-                                      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                      <div className="flex items-start justify-between mb-5">
+                                        <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                                          Apply for WFH
+                                        </h3>
+                                        <button
+                                          type="button"
+                                          onClick={() => setWfhExceptionOpen(true)}
+                                          className="text-xs text-sky-600 hover:text-sky-700 underline cursor-pointer"
+                                        >
+                                          Need more than 1 WFH day this week? Contact HR
+                                        </button>
+                                      </div>
+                                      <div className="max-w-xs">
                                         <DatePicker
-                                          label="From Date"
+                                          label="Date"
                                           required
                                           value={leaveRequestForm.request_from_date}
                                           onChange={(v) =>
                                             setLeaveRequestForm((p) => ({
                                               ...p,
                                               request_from_date: v,
-                                              request_to_date: p.is_half_day ? v : p.request_to_date,
+                                              request_to_date: v,
                                             }))
                                           }
                                           disabled={actionLoading}
                                         />
-                                        <DatePicker
-                                          label="To Date"
-                                          required
-                                          value={
-                                            leaveRequestForm.is_half_day
-                                              ? leaveRequestForm.request_from_date
-                                              : leaveRequestForm.request_to_date
-                                          }
-                                          onChange={(v) => {
-                                            if (leaveRequestForm.is_half_day) return;
-                                            setLeaveRequestForm((p) => ({ ...p, request_to_date: v }));
-                                          }}
-                                          disabled={actionLoading || leaveRequestForm.is_half_day}
-                                        />
+                                      </div>
+                                      <div className="mt-4">
+                                        <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                          <Checkbox
+                                            className="cursor-pointer"
+                                            checked={leaveRequestForm.is_half_day}
+                                            onCheckedChange={(checked) =>
+                                              setLeaveRequestForm((p) => ({
+                                                ...p,
+                                                is_half_day: checked === true,
+                                              }))
+                                            }
+                                            disabled={actionLoading}
+                                          />
+                                          <span className="text-muted-foreground">Half-day</span>
+                                        </label>
                                       </div>
                                       {requiresClientApproval ? (
                                         <div className="mt-5">
@@ -1259,17 +1296,8 @@ export function LeavePageClient() {
                                                 const fromDate = normalizeToApiDate(
                                                   leaveRequestForm.request_from_date.trim()
                                                 );
-                                                const toDate = normalizeToApiDate(
-                                                  leaveRequestForm.request_to_date.trim()
-                                                );
-                                                if (!fromDate || !toDate) {
-                                                  throw new Error("From Date and To Date are required (dd/mm/yyyy).");
-                                                }
-                                                if (!parseApiDate(fromDate) || !parseApiDate(toDate)) {
-                                                  throw new Error("Please provide valid dates (dd/mm/yyyy).");
-                                                }
-                                                if (compareApiDates(toDate, fromDate) < 0) {
-                                                  throw new Error("To Date cannot be earlier than From Date.");
+                                                if (!fromDate || !parseApiDate(fromDate)) {
+                                                  throw new Error("Please provide a valid date (dd/mm/yyyy).");
                                                 }
                                                 const comments = leaveRequestForm.comments.trim();
                                                 if (!comments) {
@@ -1277,9 +1305,6 @@ export function LeavePageClient() {
                                                 }
                                                 if (comments.length > 200) {
                                                   throw new Error("Comments must be 200 characters or less.");
-                                                }
-                                                if (leaveRequestForm.is_half_day && fromDate !== toDate) {
-                                                  throw new Error("Half-day request must be for one day.");
                                                 }
                                                 const needsClientApproval = requiresClientApproval;
                                                 if (needsClientApproval && !leaveRequestForm.client_approval) {
@@ -1291,7 +1316,7 @@ export function LeavePageClient() {
                                                 const payload = buildUserRequestBody(
                                                   {
                                                     request_from_date: fromDate,
-                                                    request_to_date: toDate,
+                                                    request_to_date: fromDate,
                                                     request_type: "WFH",
                                                     comments,
                                                     is_half_day: leaveRequestForm.is_half_day,
@@ -1350,6 +1375,7 @@ export function LeavePageClient() {
                                   <MyLeaveRequestsView
                                     rows={filteredWfhTabRequests}
                                     loading={myLeaveRequestsLoading}
+                                    showRequestType
                                     sortId={myLeaveSortId}
                                     onSortChange={setMyLeaveSortId}
                                     sortOptions={LEAVE_REQUEST_SORT_OPTIONS}
@@ -1631,6 +1657,11 @@ export function LeavePageClient() {
                             </>
                           )}
                         </div>
+                          {leaveSubTab === "org" && hasHrAccess ? (
+                            <div className="mb-8">
+                              <HrWfhExceptionPanel actionLoading={actionLoading} runAction={runAction} />
+                            </div>
+                          ) : null}
                           <div hidden={!((leaveSubTab === "team" || leaveSubTab === "org") && canViewTeamLeave)}>
                         <div className="bg-white dark:bg-zinc-950 rounded-xl border border-border/40 shadow-sm p-6 space-y-5">
                           <div className="flex flex-col gap-3">
@@ -2018,6 +2049,11 @@ export function LeavePageClient() {
               loading={actionLoading}
             />
             <CompOffCreditsDialog open={compOffCreditsOpen} onClose={() => setCompOffCreditsOpen(false)} />
+            <WfhExceptionModal
+              open={wfhExceptionOpen}
+              onClose={() => setWfhExceptionOpen(false)}
+              onSubmit={handleSubmitWfhException}
+            />
     </>
   );
 }

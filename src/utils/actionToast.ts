@@ -1,4 +1,4 @@
-export type UserRequestType = "LEAVE" | "OPTIONAL" | "WFH" | "COMP_OFF" | "COMP_OFF_EARN";
+export type UserRequestType = "LEAVE" | "OPTIONAL" | "WFH" | "WFH_EXCEPTION" | "COMP_OFF" | "COMP_OFF_EARN";
 
 export function normalizeUserRequestType(value: unknown): UserRequestType {
   const raw = String(value ?? "LEAVE")
@@ -6,6 +6,7 @@ export function normalizeUserRequestType(value: unknown): UserRequestType {
     .toUpperCase()
     .replace(/[\s-]+/g, "_");
   if (raw === "WFH" || raw === "WORK_FROM_HOME") return "WFH";
+  if (raw === "WFH_EXCEPTION" || raw === "WORK_FROM_HOME_EXCEPTION" || raw === "CUSTOM_WFH") return "WFH_EXCEPTION";
   if (raw === "COMP_OFF_EARN" || raw === "COMPOFF_EARN") return "COMP_OFF_EARN";
   if (raw === "COMP_OFF" || raw === "COMPOFF") return "COMP_OFF";
   if (raw === "OPTIONAL" || raw === "OPTIONAL_LEAVE") return "OPTIONAL";
@@ -15,6 +16,7 @@ export function normalizeUserRequestType(value: unknown): UserRequestType {
 export function userRequestTypePhrase(type: unknown): string {
   const normalized = normalizeUserRequestType(type);
   if (normalized === "WFH") return "work-from-home";
+  if (normalized === "WFH_EXCEPTION") return "custom work-from-home";
   if (normalized === "COMP_OFF_EARN") return "comp-off earn";
   if (normalized === "COMP_OFF") return "comp-off";
   if (normalized === "OPTIONAL") return "optional leave";
@@ -28,6 +30,7 @@ export function formatUserRequestTypeLabel(type: unknown): string {
   const upper = raw.toUpperCase().replace(/[\s-]+/g, "_");
   if (upper === "ALL") return "All types";
   if (upper === "WFH" || upper === "WORK_FROM_HOME") return "Work from home";
+  if (upper === "WFH_EXCEPTION" || upper === "WORK_FROM_HOME_EXCEPTION") return "Work from home (Custom)";
   if (upper === "COMP_OFF" || upper === "COMPOFF") return "Comp off";
   if (upper === "COMP_OFF_EARN" || upper === "COMPOFF_EARN") return "Comp off (earn)";
   if (upper === "LEAVE") return "Leave";
@@ -49,6 +52,7 @@ export const USER_REQUEST_FILTER_TYPE_OPTIONS = [
   { value: "LEAVE", label: "Leave" },
   { value: "OPTIONAL", label: "Optional Leave" },
   { value: "WFH", label: "Work from home" },
+  { value: "WFH_EXCEPTION", label: "Work from home (Custom)" },
   { value: "COMP_OFF", label: "Comp off (usage)" },
 ] as const;
 
