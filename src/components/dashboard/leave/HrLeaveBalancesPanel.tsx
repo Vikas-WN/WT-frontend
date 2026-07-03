@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from "react";
 import { hrmsService, type LeaveBalancesListItem } from "@/services/hrms.service";
 import { InputField } from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { Wallet } from "lucide-react";
 
 const BALANCES_TABLE_MIN_HEIGHT = "min-h-[320px]";
 const BALANCES_TABLE_COL_COUNT = 6;
@@ -83,16 +84,19 @@ export function HrLeaveBalancesPanel({
   const rangeEnd = Math.min(totalElements, (page + 1) * pageSize);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 p-6 bg-white dark:bg-zinc-950 rounded-xl border border-border/40 shadow-sm">
       <div>
-        <h3 className="font-semibold">Leave Balances</h3>
-        <p className="text-sm text-wt-text-muted mt-1">
+        <h3 className="text-base font-semibold flex items-center gap-2 text-foreground">
+          <Wallet className="size-4 text-muted-foreground" />
+          Leave Balances
+        </h3>
+        <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
           Organization leave and comp-off balances by month (HR / Admin).
         </p>
       </div>
 
-      <div className="flex w-full items-end gap-3">
-        <div className="min-w-0 flex-[2]">
+      <div className="flex flex-col sm:flex-row w-full items-end gap-3">
+        <div className="w-full sm:min-w-0 sm:flex-[2]">
           <InputField
             label="Search"
             type="search"
@@ -101,16 +105,16 @@ export function HrLeaveBalancesPanel({
             placeholder="Name, email, emp id"
           />
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="w-full sm:min-w-0 sm:flex-1">
           <InputField label="Year" value={year} onChange={setYear} type="number" />
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="w-full sm:min-w-0 sm:flex-1">
           <InputField label="Month" value={month} onChange={setMonth} type="number" />
         </div>
         <Button
           variant="brand"
           type="button"
-          className="shrink-0 px-3 py-2 h-10"
+          className="shrink-0 px-5 py-2 h-10 w-full sm:w-auto"
           disabled={actionLoading || loading}
           onClick={() =>
             runAction("Load leave balances", async () => {
@@ -123,7 +127,11 @@ export function HrLeaveBalancesPanel({
         </Button>
       </div>
 
-      {loadError ? <p className="text-sm text-rose-700">{loadError}</p> : null}
+      {loadError ? (
+        <div className="rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 px-4 py-3">
+          <p className="text-sm text-red-700 dark:text-red-400">{loadError}</p>
+        </div>
+      ) : null}
 
       <ScrollableTable
         maxHeightClass="max-h-[min(60vh,480px)]"
@@ -131,14 +139,14 @@ export function HrLeaveBalancesPanel({
         scrollChain
       >
         <WtTable>
-          <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-            <TableRow className="hover:bg-transparent">
-              <TableHead>Emp ID</TableHead>
-              <TableHead>Primary</TableHead>
-              <TableHead>Secondary</TableHead>
-              <TableHead>Carry Forward</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead>Comp-Off</TableHead>
+          <TableHeader className={`${WT_STICKY_TABLE_HEAD_CLASS} text-[11px] font-semibold tracking-wider text-muted-foreground/70 bg-muted/30`}>
+            <TableRow className="hover:bg-transparent h-10">
+              <TableHead className="font-semibold px-4">Employee</TableHead>
+              <TableHead className="font-semibold px-4">Primary</TableHead>
+              <TableHead className="font-semibold px-4">Secondary</TableHead>
+              <TableHead className="font-semibold px-4">Carry Forward</TableHead>
+              <TableHead className="font-semibold px-4">Total</TableHead>
+              <TableHead className="font-semibold px-4">Comp-Off</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -146,7 +154,7 @@ export function HrLeaveBalancesPanel({
               Array.from({ length: 5 }).map((_, rowIndex) => (
                 <TableRow key={`balances-skeleton-${rowIndex}`}>
                   {Array.from({ length: BALANCES_TABLE_COL_COUNT }).map((_, colIndex) => (
-                    <TableCell key={colIndex} className="px-3 py-2">
+                    <TableCell key={colIndex} className="px-4 py-3">
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
                   ))}
@@ -154,22 +162,35 @@ export function HrLeaveBalancesPanel({
               ))
             ) : rows.length ? (
               rows.map((row, idx) => (
-                <TableRow key={`${row.emp_id}-${idx}`}>
-                  <TableCell className="px-3 py-2 whitespace-nowrap">{row.emp_id}</TableCell>
-                  <TableCell className="px-3 py-2 tabular-nums">{row.leave?.primary ?? "—"}</TableCell>
-                  <TableCell className="px-3 py-2 tabular-nums">{row.leave?.secondary ?? "—"}</TableCell>
-                  <TableCell className="px-3 py-2 tabular-nums">{row.leave?.carry_forward ?? "—"}</TableCell>
-                  <TableCell className="px-3 py-2 tabular-nums">{row.leave?.total ?? "—"}</TableCell>
-                  <TableCell className="px-3 py-2 tabular-nums">{row.comp_off_balance ?? "—"}</TableCell>
+                <TableRow
+                  key={`${row.emp_id}-${idx}`}
+                  className={idx % 2 === 1 ? "bg-muted/20" : ""}
+                >
+                  <TableCell
+                    className="px-4 py-3 max-w-[160px] truncate whitespace-nowrap overflow-hidden text-ellipsis"
+                    title={row.employee_name || row.emp_id}
+                  >
+                    {row.employee_name || row.emp_id}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 tabular-nums">{row.leave?.primary ?? "—"}</TableCell>
+                  <TableCell className="px-4 py-3 tabular-nums">{row.leave?.secondary ?? "—"}</TableCell>
+                  <TableCell className="px-4 py-3 tabular-nums">{row.leave?.carry_forward ?? "—"}</TableCell>
+                  <TableCell className="px-4 py-3 tabular-nums font-medium">{row.leave?.total ?? "—"}</TableCell>
+                  <TableCell className="px-4 py-3 tabular-nums">{row.comp_off_balance ?? "—"}</TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow className="hover:bg-transparent">
                 <TableCell
                   colSpan={BALANCES_TABLE_COL_COUNT}
-                  className="h-[280px] text-center align-middle text-sm text-wt-text-muted"
+                  className="h-[280px] text-center align-middle"
                 >
-                  No Data
+                  <div className="flex flex-col items-center gap-2">
+                    <Wallet className="size-8 text-muted-foreground/30" />
+                    <span className="text-sm text-muted-foreground">
+                      {loadError ? "Failed to load data." : "No Data"}
+                    </span>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
@@ -178,20 +199,22 @@ export function HrLeaveBalancesPanel({
       </ScrollableTable>
 
       {totalElements > 0 ? (
-        <ListPagination
-          page={page + 1}
-          totalPages={totalPages}
-          totalItems={totalElements}
-          rangeStart={rangeStart}
-          rangeEnd={rangeEnd}
-          pageSize={pageSize}
-          pageSizeOptions={[25, 50, 100]}
-          onPageChange={(p) => setPage(Math.max(0, p - 1))}
-          onPageSizeChange={(size) => {
-            setPageSize(size);
-            setPage(0);
-          }}
-        />
+        <div className="border-t border-border/40 pt-4">
+          <ListPagination
+            page={page + 1}
+            totalPages={totalPages}
+            totalItems={totalElements}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            pageSize={pageSize}
+            pageSizeOptions={[25, 50, 100]}
+            onPageChange={(p) => setPage(Math.max(0, p - 1))}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(0);
+            }}
+          />
+        </div>
       ) : null}
     </div>
   );

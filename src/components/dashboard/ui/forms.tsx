@@ -330,7 +330,7 @@ export function DropdownSelectField({
         items={items}
         isItemEqualToValue={selectItemsEqual}
       >
-        <SelectTrigger id={fieldId} aria-busy={loading || undefined}>
+        <SelectTrigger id={fieldId} aria-busy={loading || undefined} className="cursor-pointer">
           <SelectValue placeholder={loading ? loadingLabel : placeholder} />
         </SelectTrigger>
         <SelectContent>

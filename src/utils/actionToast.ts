@@ -1,4 +1,4 @@
-export type UserRequestType = "LEAVE" | "WFH" | "COMP_OFF" | "COMP_OFF_EARN";
+export type UserRequestType = "LEAVE" | "OPTIONAL" | "WFH" | "COMP_OFF" | "COMP_OFF_EARN";
 
 export function normalizeUserRequestType(value: unknown): UserRequestType {
   const raw = String(value ?? "LEAVE")
@@ -8,6 +8,7 @@ export function normalizeUserRequestType(value: unknown): UserRequestType {
   if (raw === "WFH" || raw === "WORK_FROM_HOME") return "WFH";
   if (raw === "COMP_OFF_EARN" || raw === "COMPOFF_EARN") return "COMP_OFF_EARN";
   if (raw === "COMP_OFF" || raw === "COMPOFF") return "COMP_OFF";
+  if (raw === "OPTIONAL" || raw === "OPTIONAL_LEAVE") return "OPTIONAL";
   return "LEAVE";
 }
 
@@ -16,6 +17,7 @@ export function userRequestTypePhrase(type: unknown): string {
   if (normalized === "WFH") return "work-from-home";
   if (normalized === "COMP_OFF_EARN") return "comp-off earn";
   if (normalized === "COMP_OFF") return "comp-off";
+  if (normalized === "OPTIONAL") return "optional leave";
   return "leave";
 }
 
@@ -29,6 +31,7 @@ export function formatUserRequestTypeLabel(type: unknown): string {
   if (upper === "COMP_OFF" || upper === "COMPOFF") return "Comp off";
   if (upper === "COMP_OFF_EARN" || upper === "COMPOFF_EARN") return "Comp off (earn)";
   if (upper === "LEAVE") return "Leave";
+  if (upper === "OPTIONAL" || upper === "OPTIONAL_LEAVE") return "Optional Leave";
   return raw
     .replace(/_/g, " ")
     .toLowerCase()
@@ -37,12 +40,14 @@ export function formatUserRequestTypeLabel(type: unknown): string {
 
 export const USER_REQUEST_TYPE_SELECT_OPTIONS = [
   { value: "LEAVE", label: "Leave" },
+  { value: "OPTIONAL", label: "Optional Leave" },
   { value: "WFH", label: "Work from home" },
 ] as const;
 
 export const USER_REQUEST_FILTER_TYPE_OPTIONS = [
   { value: "ALL", label: "All types" },
   { value: "LEAVE", label: "Leave" },
+  { value: "OPTIONAL", label: "Optional Leave" },
   { value: "WFH", label: "Work from home" },
   { value: "COMP_OFF", label: "Comp off (usage)" },
 ] as const;

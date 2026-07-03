@@ -13,7 +13,7 @@ export type PageTabItem = {
 export const PAGE_TAB_EDGE_GAP_CLASS = "pt-6";
 
 const PAGE_TABS_EMBEDDED_HEADER_CLASS = cn(
-  "w-full border-b border-wt-border px-5 pb-4",
+  "w-full px-5 pb-4",
   PAGE_TAB_EDGE_GAP_CLASS
 );
 

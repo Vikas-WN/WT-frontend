@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { hrmsService, type LeaveRecipientOption } from "@/services/hrms.service";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+import { FieldLabel } from "@/components/ui/field";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { unwrapLeaveOptionItems } from "@/utils/leaveApiOptions";
+import { ChevronsUpDown, X, Check, Search, Loader2 } from "lucide-react";
 
 function optionLabel(option: LeaveRecipientOption): string {
   const name = option.name?.trim() || option.email;
@@ -33,7 +34,6 @@ export function LeaveAdditionalRecipientsSelector({
   onChange: (emails: string[]) => void;
   disabled?: boolean;
 }) {
-  const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [options, setOptions] = useState<LeaveRecipientOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +96,10 @@ export function LeaveAdditionalRecipientsSelector({
       .filter((option): option is LeaveRecipientOption => Boolean(option));
   }, [options, selectedEmails]);
 
-  const filteredOptions = useMemo(() => options.filter((option) => matchesQuery(option, query)), [options, query]);
+  const filteredOptions = useMemo(
+    () => options.filter((option) => matchesQuery(option, query)),
+    [options, query]
+  );
 
   const toggleEmail = (email: string, checked: boolean) => {
     const normalized = email.trim().toLowerCase();
@@ -117,90 +120,64 @@ export function LeaveAdditionalRecipientsSelector({
     toggleEmail(email, false);
   };
 
+  const triggerLabel = selectedEmails.length
+    ? `${selectedEmails.length} employee${selectedEmails.length > 1 ? "s" : ""} selected`
+    : "Select employees…";
+
   if (loading) {
-    return <p className="text-sm text-wt-text-muted">Loading employees…</p>;
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    );
   }
 
   if (error && !options.length) {
-    return <p className="text-sm text-rose-700">{error}</p>;
+    return <p className="text-sm text-destructive">{error}</p>;
   }
 
   return (
     <div className="space-y-2" ref={rootRef}>
-      <p className="text-sm font-medium">Leave Notification Recipients</p>
-      <p className="text-xs text-wt-text-muted">
-        Optional. Select one or more employees; each receives the leave notification email at their
-        work address.
-      </p>
-
-      {selectedOptions.length ? (
-        <div className="flex flex-wrap gap-2">
-          {selectedEmails.map((email) => {
-            const option = selectedOptions.find(
-              (row) => row.email.trim().toLowerCase() === email.trim().toLowerCase()
-            );
-            const label = option ? optionLabel(option) : email;
-            return (
-              <Badge
-                key={email}
-                variant="secondary"
-                className={`gap-1 pr-1 ${filledBadgeClass("neutral")}`}
-              >
-                <span className="max-w-[220px] truncate">{label}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-muted-foreground hover:text-foreground"
-                  aria-label={`Remove ${label}`}
-                  disabled={disabled}
-                  onClick={() => removeEmail(email)}
-                >
-                  ×
-                </Button>
-              </Badge>
-            );
-          })}
-        </div>
-      ) : null}
+      <FieldLabel>Leave Notification Recipients</FieldLabel>
 
       <div className="relative">
         <Button
           type="button"
           variant="outline"
-          className="input-field flex h-auto w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm font-normal"
+          role="combobox"
           aria-expanded={open}
-          aria-haspopup="listbox"
-          aria-controls={listId}
           disabled={disabled}
-          onClick={() => setOpen((value) => !value)}
+          onClick={() => setOpen((v) => !v)}
+          className="h-10 w-full justify-between px-3 text-sm font-normal text-muted-foreground"
         >
-          <span className="text-wt-text-muted">
-            {selectedEmails.length ? `${selectedEmails.length} selected` : "Select employees…"}
+          <span className={selectedEmails.length ? "text-foreground" : ""}>
+            {triggerLabel}
           </span>
-          <span aria-hidden>▾</span>
+          <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
         </Button>
 
         {open ? (
-          <div
-            id={listId}
-            role="listbox"
-            aria-multiselectable="true"
-            className="absolute left-0 right-0 top-full z-50 mt-1 space-y-2 rounded-xl border border-wt-border bg-wt-surface-1 p-2 shadow-lg"
-          >
-            <input
-              type="search"
-              className="input-field w-full px-3 py-2 text-sm"
-              placeholder="Search employees…"
-              value={query}
-              disabled={disabled}
-              autoComplete="off"
-              autoFocus
-              onChange={(event) => setQuery(event.target.value)}
-            />
-            <div className="max-h-52 overflow-auto rounded-lg border border-wt-border">
+          <div className="absolute left-0 right-0 top-full z-50 mt-1.5 rounded-lg border border-border bg-popover text-popover-foreground shadow-lg">
+            <div className="flex items-center gap-2 border-b border-border px-3">
+              <Search className="size-4 shrink-0 text-muted-foreground" />
+              <input
+                type="search"
+                placeholder="Search employees…"
+                value={query}
+                disabled={disabled}
+                autoComplete="off"
+                autoFocus
+                onChange={(event) => setQuery(event.target.value)}
+                className="h-9 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              />
+            </div>
+            <div className="max-h-52 overflow-y-auto p-1">
               {searching ? (
-                <p className="px-3 py-2 text-sm text-wt-text-muted">Searching…</p>
+                <div className="flex items-center justify-center gap-2 px-2 py-4 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  <span>Searching</span>
+                </div>
               ) : filteredOptions.length ? (
                 filteredOptions.map((option) => {
                   const email = String(option.email ?? "").trim();
@@ -209,29 +186,63 @@ export function LeaveAdditionalRecipientsSelector({
                   return (
                     <label
                       key={email}
-                      className="flex cursor-pointer items-start gap-2 px-3 py-2 text-sm hover:bg-wt-surface-2"
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent"
                     >
-                      <Checkbox
-                        className="mt-0.5"
+                      <input
+                        type="checkbox"
+                        className="size-4 rounded border-border text-primary focus:ring-primary/30 cursor-pointer"
                         checked={checked}
                         disabled={disabled}
-                        onCheckedChange={(next) => toggleEmail(email, Boolean(next))}
+                        onChange={() => toggleEmail(email, !checked)}
                       />
-                      <span>
+                      <span className="flex-1 min-w-0">
                         <span className="font-medium">{optionLabel(option)}</span>
-                        <span className="block text-xs text-wt-text-muted">{email}</span>
+                        <span className="block text-xs text-muted-foreground truncate">
+                          {email}
+                        </span>
                       </span>
+                      {checked ? (
+                        <Check className="size-4 shrink-0 text-primary" />
+                      ) : null}
                     </label>
                   );
                 })
               ) : (
-                <p className="px-3 py-2 text-sm text-wt-text-muted">No employees match your search.</p>
+                <p className="px-2 py-4 text-center text-sm text-muted-foreground">
+                  No employees match your search.
+                </p>
               )}
             </div>
           </div>
         ) : null}
       </div>
-      {error ? <p className="text-xs text-rose-700">{error}</p> : null}
+
+      {selectedOptions.length ? (
+        <div className="flex flex-wrap gap-1.5">
+          {selectedOptions.map((option) => {
+            const label = optionLabel(option);
+            return (
+              <span
+                key={option.email}
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${filledBadgeClass("neutral")}`}
+              >
+                <span className="max-w-[180px] truncate">{label}</span>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => removeEmail(option.email)}
+                  className="ml-0.5 inline-flex size-3.5 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground cursor-pointer"
+                  aria-label={`Remove ${label}`}
+                >
+                  <X className="size-3" />
+                </button>
+              </span>
+            );
+          })}
+        </div>
+      ) : null}
+
+      <p className="text-[11px] text-muted-foreground/80 mt-0.5 tracking-normal">Optional · Notify additional teammates</p>
     </div>
   );
 }
