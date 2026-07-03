@@ -3,9 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { ContentCard } from "@/components/dashboard/ui/ContentCard";
-import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
-import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
+
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -19,12 +17,13 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/api/httpClient";
 import { endpoints } from "@/api/endpoints";
 import { hrmsService, type LeaveManagerOption } from "@/services/hrms.service";
-import { useMyLeaveRequests } from "@/hooks/leave/useMyLeaveRequests";
+import { useMyLeaveRequests, defaultMyLeaveRequestRange } from "@/hooks/leave/useMyLeaveRequests";
 import { ApiError } from "@/api/error";
 import { toRows, toPagedRows } from "@/utils/apiRows";
 import {
@@ -90,7 +89,8 @@ import {
   managerTeamRowsForProject,
 } from "@/utils/dashboard/projects";
 import { MetricCard } from "@/components/dashboard/ui/MetricCard";
-import { InputField, SelectField, TextAreaField, FileField, UploadTile, ApiDateField } from "@/components/dashboard/ui/forms";
+import { InputField, SelectField, TextAreaField, FileField, UploadTile } from "@/components/dashboard/ui/forms";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   ProfilePhotoAvatar,
   ProfileField,
@@ -108,6 +108,7 @@ import {
   LEAVE_REQUEST_SORT_OPTIONS,
   toggleColumnSort,
 } from "@/utils/listSort";
+import { Calendar, Clock, Home, Users, Building2, Wallet, Info } from "lucide-react";
 import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
@@ -128,6 +129,7 @@ import {
   formatApprovalStageLabel,
   formatStageRejectionReason,
   listScopedUserRequests,
+  fetchPaginatedScopedUserRequests,
   mergeStatusUpdateIntoRow,
   requestFinalStatus,
   requestHrStatus,
@@ -140,10 +142,8 @@ import { buildUserRequestBody } from "@/utils/leaveRequestPayload";
 import { activeAllocationsRequireClientApproval } from "@/utils/leaveAllocations";
 import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSummary";
 import { HrLeaveBalancesPanel } from "@/components/dashboard/leave/HrLeaveBalancesPanel";
-import { ManagerTeamOnLeavePanel } from "@/components/dashboard/leave/ManagerTeamOnLeavePanel";
-import { LeaveWorkflowNotice } from "@/components/dashboard/leave/LeaveWorkflowNotice";
+
 import { LeaveManagerSelector } from "@/components/dashboard/leave/LeaveManagerSelector";
-import { LeaveHrCcNotice } from "@/components/dashboard/leave/LeaveHrCcNotice";
 import { LeaveAdditionalRecipientsSelector } from "@/components/dashboard/leave/LeaveAdditionalRecipientsSelector";
 
 import {
@@ -153,8 +153,13 @@ import {
 } from "@/utils/compOff";
 import { compOffService } from "@/services/compOff.service";
 import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
+import { CompOffCreditsDialog } from "@/components/dashboard/leave/CompOffCreditsDialog";
+import { WfhExceptionModal } from "@/components/dashboard/leave/WfhExceptionModal";
+import { HrWfhExceptionPanel } from "@/components/dashboard/leave/HrWfhExceptionPanel";
 import { CompOffPageClient } from "@/components/comp-off/CompOffPageClient";
-import { UI_COPY } from "@/constants/uiCopy";
+import { LeaveRequestForm } from "@/components/dashboard/leave/LeaveRequestForm";
+import { MyLeaveRequestsView } from "@/components/dashboard/leave/MyLeaveRequestsView";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const LEAVE_REQUESTS_TABLE_MIN_HEIGHT = "min-h-[320px]";
 const MY_LEAVE_TABLE_COL_COUNT = 8;
@@ -215,12 +220,38 @@ export function LeavePageClient() {
       .includes("manager");
   const { user, refresh: refreshSession } = useAuth();
   const userEmail = useMemo(() => String(user?.email ?? "").trim(), [user?.email]);
-  const myLeaveRequestsQ = useMyLeaveRequests(userEmail, false);
+  const queryClient = useQueryClient();
+  const invalidateLeaveBalance = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["leave", "my-balance"] });
+  }, [queryClient]);
+
+  const [myRequestsFromDate, setMyRequestsFromDate] = useState(() => defaultMyLeaveRequestRange().fromDate);
+  const [myRequestsToDate, setMyRequestsToDate] = useState(() => defaultMyLeaveRequestRange().toDate);
+  const myLeaveRequestsQ = useMyLeaveRequests(userEmail, true, myRequestsFromDate, myRequestsToDate);
   const myLeaveRequests = myLeaveRequestsQ.rows;
   const myLeaveRequestsLoading = myLeaveRequestsQ.isFetching;
   const loadMyLeaveRequests = useCallback(async () => {
-    await myLeaveRequestsQ.refetch();
+    if (myLeaveRequestsQ.refetch) await myLeaveRequestsQ.refetch();
   }, [myLeaveRequestsQ.refetch]);
+
+  const handleSubmitWfhException = useCallback(
+    async (payload: { request_from_date: string; request_to_date: string; comments: string }) => {
+      const body = {
+        request_from_date: payload.request_from_date,
+        request_to_date: payload.request_to_date,
+        request_type: "WFH_EXCEPTION",
+        comments: payload.comments,
+      };
+      await apiClient.post(endpoints.userRequest.root, {
+        contentType: "application/json",
+        body: JSON.stringify(body),
+      });
+      showSuccessToast("Custom Work From Home request submitted to HR for approval.");
+      invalidateLeaveBalance();
+      await loadMyLeaveRequests();
+    },
+    [invalidateLeaveBalance, loadMyLeaveRequests]
+  );
   const [actionLoading, setActionLoading] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
@@ -273,6 +304,15 @@ export function LeavePageClient() {
   });
   const [teamRequestsLoading, setTeamRequestsLoading] = useState(false);
   const [employeeRequests, setEmployeeRequests] = useState<Array<Record<string, unknown>>>([]);
+  const [teamPage, setTeamPage] = useState(0);
+  const [teamPageSize, setTeamPageSize] = useState(10);
+  const [teamTotalPages, setTeamTotalPages] = useState(0);
+  const [teamTotalElements, setTeamTotalElements] = useState(0);
+  const teamCacheRef = useRef<Map<string, {
+    rows: Array<Record<string, unknown>>;
+    totalPages: number;
+    totalElements: number;
+  }>>(new Map());
   const [kpis, setKpis] = useState<Array<Record<string, unknown>>>([]);
   const [headcountBreakdown, setHeadcountBreakdown] = useState<Array<Record<string, unknown>>>([]);
   const [roleBillingRows, setRoleBillingRows] = useState<Array<Record<string, unknown>>>([]);
@@ -352,17 +392,25 @@ export function LeavePageClient() {
   const [selectedLeaveManagerEmails, setSelectedLeaveManagerEmails] = useState<string[]>([]);
   const [selectedWfhManagerEmails, setSelectedWfhManagerEmails] = useState<string[]>([]);
   const [wfhManagerOptions, setWfhManagerOptions] = useState<LeaveManagerOption[]>([]);
+  const [wfhManagerOptionsLoading, setWfhManagerOptionsLoading] = useState(false);
   const [selectedAdditionalRecipientEmails, setSelectedAdditionalRecipientEmails] = useState<string[]>([]);
   const [editingLeaveRequestId, setEditingLeaveRequestId] = useState<string>("");
-  const [employeeRequestFilters, setEmployeeRequestFilters] = useState({
-    fromDate: "",
-    toDate: "",
-    requestType: "ALL",
+  const [requestViewTab, setRequestViewTab] = useState<"request" | "view">("request");
+  const [wfhRequestViewTab, setWfhRequestViewTab] = useState<"request" | "view">("request");
+  const [wfhExceptionOpen, setWfhExceptionOpen] = useState(false);
+  const [employeeRequestFilters, setEmployeeRequestFilters] = useState(() => {
+    const now = new Date();
+    return {
+      fromDate: formatApiDate(new Date(now.getFullYear(), now.getMonth(), 1)),
+      toDate: formatApiDate(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+      requestType: "ALL",
+    };
   });
   const [myLeaveSortId, setMyLeaveSortId] = useState(LEAVE_REQUEST_SORT_OPTIONS[0].id);
   const [teamLeaveSortId, setTeamLeaveSortId] = useState(LEAVE_REQUEST_SORT_OPTIONS[0].id);
   const [myLeaveSearch, setMyLeaveSearch] = useState("");
   const [teamLeaveSearch, setTeamLeaveSearch] = useState("");
+  const [compOffCreditsOpen, setCompOffCreditsOpen] = useState(false);
   const [pendingReject, setPendingReject] = useState<{
     requestId: string;
     requestType: unknown;
@@ -529,7 +577,8 @@ export function LeavePageClient() {
   const teamRequestType = employeeRequestFilters.requestType || "ALL";
   const showCompOffTab = canApplyCompOff || hasManagerAccess || hasHrAccess || hasDmAccess;
   const showLeaveSubTabBar = showCompOffTab || hasHrAccess || !isTeamLeaveRoute;
-  const compOffForcedTab: "my" | "team" = canApplyCompOff ? "my" : "team";
+  const compOffForcedTab: "my" | "team" =
+    isTeamLeaveRoute && (hasManagerAccess || hasHrAccess || hasDmAccess) ? "team" : "my";
 
   const leaveRequestTypeOptions = useMemo(() => {
     const base = USER_REQUEST_TYPE_SELECT_OPTIONS.filter((opt) => opt.value !== "WFH");
@@ -546,13 +595,6 @@ export function LeavePageClient() {
     () => activeAllocationsRequireClientApproval(myAllocationRowsForLeave),
     [myAllocationRowsForLeave]
   );
-
-  const leaveWorkflowVariant = useMemo((): Parameters<typeof LeaveWorkflowNotice>[0]["variant"] => {
-    if (isTeamLeaveRoute && hasHrAccess) return "hr";
-    if (hasDmAccess && !hasManagerAccess) return "dm";
-    if (hasManagerAccess) return "manager";
-    return "employee";
-  }, [hasDmAccess, hasHrAccess, hasManagerAccess, isTeamLeaveRoute]);
 
   useEffect(() => {
     if (leaveSubTab === "wfh") {
@@ -586,15 +628,22 @@ export function LeavePageClient() {
   useEffect(() => {
     if (leaveSubTab !== "wfh") return;
     let cancelled = false;
+    setWfhManagerOptionsLoading(true);
     (async () => {
       try {
         const res = await hrmsService.getWfhManagerOptions();
         const items: LeaveManagerOption[] = [];
         const data = res?.data as { items?: LeaveManagerOption[] } | undefined;
         if (data?.items) items.push(...data.items);
-        if (!cancelled) setWfhManagerOptions(items);
+        if (!cancelled) {
+          setWfhManagerOptions(items);
+          setWfhManagerOptionsLoading(false);
+        }
       } catch {
-        if (!cancelled) setWfhManagerOptions([]);
+        if (!cancelled) {
+          setWfhManagerOptions([]);
+          setWfhManagerOptionsLoading(false);
+        }
       }
     })();
     return () => { cancelled = true; };
@@ -672,6 +721,13 @@ export function LeavePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [canAccessProfile, requiresSelfOnboarding, leaveSubTab]);
+  useEffect(() => {
+    if (leaveSubTab !== "my" && leaveSubTab !== "wfh") return;
+    const id = window.setTimeout(() => {
+      void loadMyLeaveRequests();
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [leaveSubTab, loadMyLeaveRequests]);
 
   async function runAction(label: string, fn: () => Promise<unknown>) {
     setActionLoading(true);
@@ -714,14 +770,14 @@ export function LeavePageClient() {
     return map;
   }
 
-  const loadEmployeeRequestsForApprover = useCallback(
-    async (scope: "team" | "org" = "team") => {
-    const today = new Date();
-    const future = new Date(today);
-    future.setFullYear(future.getFullYear() + 2);
-    const from = employeeRequestFilters.fromDate || `${today.getFullYear()}-01-01`;
-    const to = employeeRequestFilters.toDate || future.toISOString().slice(0, 10);
-    const requestType = employeeRequestFilters.requestType || "ALL";
+  const scopeEmployeesRef = useRef<{
+    idToName: Record<string, string>;
+    emailToName: Record<string, string>;
+    userIdToEmail: Record<string, string>;
+    emailCsv: string;
+  }>({ idToName: {}, emailToName: {}, userIdToEmail: {}, emailCsv: "" });
+
+  const loadScopeEmployees = useCallback(async (scope: "team" | "org") => {
     let onboardRows: Array<Record<string, unknown>> = [];
     let scopedManagerRows: Array<Record<string, unknown>> = [];
     if (scope === "team" && hasHrAccess) {
@@ -771,47 +827,60 @@ export function LeavePageClient() {
       )
       .filter(Boolean)
       .join(",");
-    const collectedRows: Array<Record<string, unknown>> = [];
+    scopeEmployeesRef.current = { idToName, emailToName, userIdToEmail, emailCsv };
+  }, [hasHrAccess, hasManagerAccess, managerPortfolioRows, loadManagerData]);
+
+  const loadEmployeeRequestsForApprover = useCallback(
+    async (scope: "team" | "org" = "team", page: number = 0, size: number = 10, skipScopeLoad = false) => {
+    const today = new Date();
+    const future = new Date(today);
+    future.setFullYear(future.getFullYear() + 2);
+    const from = employeeRequestFilters.fromDate || `${today.getFullYear()}-01-01`;
+    const to = employeeRequestFilters.toDate || future.toISOString().slice(0, 10);
+    const requestType = employeeRequestFilters.requestType || "ALL";
+
+    if (!skipScopeLoad) {
+      await loadScopeEmployees(scope);
+    }
+    const { idToName, emailToName, userIdToEmail, emailCsv } = scopeEmployeesRef.current;
+
+    let rows: Array<Record<string, unknown>> = [];
+    let totalPages = 1;
+    let totalElements = 0;
+
     if (scope === "team") {
-      if (emailCsv) {
-        collectedRows.push(
-          ...(await listScopedUserRequests({
-            fromDate: from,
-            toDate: to,
-            requestType,
-            empEmails: emailCsv,
-          }))
-        );
-      }
-      if (hasDmAccess && !hasHrAccess) {
-        collectedRows.push(
-          ...(await listScopedUserRequests({
-            fromDate: from,
-            toDate: to,
-            requestType,
-          }))
-        );
+      const hasDmAlso = hasDmAccess && !hasHrAccess;
+      if (hasDmAlso) {
+        const [teamRes, dmRes] = await Promise.all([
+          emailCsv
+            ? fetchPaginatedScopedUserRequests({ fromDate: from, toDate: to, requestType, empEmails: emailCsv, page: 0, size: 200 })
+            : { rows: [] as Array<Record<string, unknown>>, totalPages: 0, totalElements: 0 },
+          fetchPaginatedScopedUserRequests({ fromDate: from, toDate: to, requestType, page: 0, size: 200 }),
+        ]);
+        const merged = [...teamRes.rows, ...dmRes.rows];
+        rows = Array.from(new Map(
+          merged.map((row) => {
+            const key = String(
+              row.user_request_id ?? row.userRequestId ?? row.request_id ?? row.requestId ?? row.id ?? Math.random()
+            );
+            return [key, row] as const;
+          })
+        ).values());
+        totalPages = 1;
+        totalElements = rows.length;
+      } else if (emailCsv) {
+        const result = await fetchPaginatedScopedUserRequests({ fromDate: from, toDate: to, requestType, empEmails: emailCsv, page, size });
+        rows = result.rows;
+        totalPages = result.totalPages;
+        totalElements = result.totalElements;
       }
     } else if (hasHrAccess) {
-      collectedRows.push(
-        ...(await listScopedUserRequests({
-          fromDate: from,
-          toDate: to,
-          requestType,
-        }))
-      );
+      const result = await fetchPaginatedScopedUserRequests({ fromDate: from, toDate: to, requestType, page, size });
+      rows = result.rows;
+      totalPages = result.totalPages;
+      totalElements = result.totalElements;
     }
-    let rows = collectedRows;
-    rows = Array.from(
-      new Map(
-        rows.map((row) => {
-          const key = String(
-            row.user_request_id ?? row.userRequestId ?? row.request_id ?? row.requestId ?? row.id ?? Math.random()
-          );
-          return [key, row] as const;
-        })
-      ).values()
-    );
+
     const unresolvedEmails = [
       ...new Set(
         rows
@@ -832,6 +901,7 @@ export function LeavePageClient() {
           .filter((email) => Boolean(email) && !emailToName[email])
       ),
     ];
+    const nameMap = { ...emailToName };
     await Promise.all(
       unresolvedEmails.map(async (email) => {
         try {
@@ -844,7 +914,7 @@ export function LeavePageClient() {
             (payload.user as Record<string, unknown> | undefined)?.name ??
             (payload.profile as Record<string, unknown> | undefined)?.name;
           const name = String(payload.name ?? nested ?? "").trim();
-          if (name) emailToName[email] = name;
+          if (name) nameMap[email] = name;
         } catch {
           /* ignore lookup misses */
         }
@@ -881,8 +951,8 @@ export function LeavePageClient() {
       const emailFromUid = uid ? userIdToEmail[uid] ?? "" : "";
       const employee_display =
         nameFromRow ||
-        (email && emailToName[email]) ||
-        (emailFromUid && emailToName[emailFromUid]) ||
+        (email && nameMap[email]) ||
+        (emailFromUid && nameMap[emailFromUid]) ||
         (uid && idToName[uid]) ||
         email ||
         emailFromUid ||
@@ -890,36 +960,41 @@ export function LeavePageClient() {
       return { ...row, employee_display };
     });
     setEmployeeRequests(enriched);
+    setTeamPage(page);
+    setTeamTotalPages(totalPages);
+    setTeamTotalElements(totalElements);
   },
-    [employeeRequestFilters, hasHrAccess, hasManagerAccess, hasDmAccess, managerPortfolioRows, loadManagerData]
+    [employeeRequestFilters, hasHrAccess, hasManagerAccess, hasDmAccess, loadScopeEmployees]
   );
 
-  const teamTableColCount = useMemo(() => {
-    let count = 7;
-    if (hasHrAccess || hasDmAccess) count += 1;
-    if (hasHrAccess) count += 1;
-    return count;
-  }, [hasDmAccess, hasHrAccess]);
+  const teamTableColCount = 5;
 
   const fetchTeamRequests = useCallback(
-    async (scope: "team" | "org") => {
+    async (scope: "team" | "org", page: number = 0, size: number = teamPageSize) => {
       setTeamRequestsLoading(true);
       try {
-        await loadEmployeeRequestsForApprover(scope);
+        const cacheKey = `${scope}:${employeeRequestFilters.fromDate}:${employeeRequestFilters.toDate}:${employeeRequestFilters.requestType}:${page}:${size}`;
+        const cached = teamCacheRef.current.get(cacheKey);
+        if (cached) {
+          setEmployeeRequests(cached.rows);
+          setTeamPage(page);
+          setTeamTotalPages(cached.totalPages);
+          setTeamTotalElements(cached.totalElements);
+          return;
+        }
+        await loadEmployeeRequestsForApprover(scope, page, size);
       } catch {
         setEmployeeRequests([]);
       } finally {
         setTeamRequestsLoading(false);
       }
     },
-    [loadEmployeeRequestsForApprover]
+    [employeeRequestFilters, loadEmployeeRequestsForApprover, teamPageSize]
   );
 
-  useEffect(() => {
-    if (!canViewTeamLeave) return;
-    if (leaveSubTab !== "team" && leaveSubTab !== "org") return;
-    void fetchTeamRequests(leaveSubTab === "org" ? "org" : "team");
-  }, [canViewTeamLeave, leaveSubTab, fetchTeamRequests]);
+  const invalidateTeamCache = useCallback(() => {
+    teamCacheRef.current.clear();
+  }, []);
 
   async function updateEmployeeRequestStatus(
     requestId: string,
@@ -991,7 +1066,10 @@ export function LeavePageClient() {
     () =>
       myLeaveRequests
         .filter(
-          (row) => normalizeUserRequestType(row.request_type ?? row.requestType) === "WFH"
+          (row) => {
+            const t = normalizeUserRequestType(row.request_type ?? row.requestType);
+            return t === "WFH" || t === "WFH_EXCEPTION";
+          }
         )
         .filter((row) => leaveRequestMatchesSearch(row, myLeaveSearch)),
     [myLeaveRequests, myLeaveSearch]
@@ -1024,24 +1102,66 @@ export function LeavePageClient() {
     resetKeys: [myLeaveSortId, myLeaveSearch, leaveSubTab],
   });
 
-  const teamLeavePagination = useClientPagination(sortedEmployeeRequests, {
-    resetKeys: [teamLeaveSortId, employeeRequestFilters, teamLeaveSearch],
-  });
+  const teamPageSizeOptions = [10, 25, 50, 100] as const;
+
+  const currentScope = leaveSubTab === "org" ? "org" : "team";
+
+  useEffect(() => {
+    if (!canViewTeamLeave) return;
+    if (leaveSubTab !== "team" && leaveSubTab !== "org") return;
+    const cacheKey = `${currentScope}:${employeeRequestFilters.fromDate}:${employeeRequestFilters.toDate}:${employeeRequestFilters.requestType}:${teamPage}:${teamPageSize}`;
+    const cached = teamCacheRef.current.get(cacheKey);
+    if (cached) {
+      setEmployeeRequests(cached.rows);
+      setTeamTotalPages(cached.totalPages);
+      setTeamTotalElements(cached.totalElements);
+    } else {
+      fetchTeamRequests(currentScope, teamPage, teamPageSize);
+    }
+  }, [leaveSubTab]);
+
+  const filterTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => {
+    if (!canViewTeamLeave) return;
+    if (leaveSubTab !== "team" && leaveSubTab !== "org") return;
+    if (filterTimerRef.current) clearTimeout(filterTimerRef.current);
+    filterTimerRef.current = setTimeout(() => {
+      invalidateTeamCache();
+      setTeamPage(0);
+      const scope = leaveSubTab === "org" ? "org" : "team";
+      fetchTeamRequests(scope, 0, teamPageSize);
+    }, 400);
+    return () => { if (filterTimerRef.current) clearTimeout(filterTimerRef.current); };
+  }, [employeeRequestFilters.fromDate, employeeRequestFilters.toDate, employeeRequestFilters.requestType]);
+
+  const handleTeamPageChange = useCallback((page: number) => {
+    setTeamPage(page);
+    const scope = leaveSubTab === "org" ? "org" : "team";
+    fetchTeamRequests(scope, page, teamPageSize);
+  }, [leaveSubTab, fetchTeamRequests, teamPageSize]);
+
+  const handleTeamPageSizeChange = useCallback((size: number) => {
+    setTeamPageSize(size);
+    setTeamPage(0);
+    invalidateTeamCache();
+    const scope = leaveSubTab === "org" ? "org" : "team";
+    fetchTeamRequests(scope, 0, size);
+  }, [leaveSubTab, fetchTeamRequests, invalidateTeamCache]);
 
   const leaveTabItems = useMemo(() => {
     if (isTeamLeaveRoute) {
       return [
         canViewTeamLeave ? { value: "team", label: "Team Requests" } : null,
         hasHrAccess ? { value: "org", label: "All Employee Requests" } : null,
-        showCompOffTab ? { value: "comp-off", label: "Comp Off Credit" } : null,
+        showCompOffTab ? { value: "comp-off", label: "Compensation Off Credit" } : null,
         hasHrAccess ? { value: "balances", label: "Balances" } : null,
       ].filter((item): item is { value: string; label: string } => Boolean(item));
     }
 
     return [
       { value: "my", label: "Leave Requests" },
-      showCompOffTab ? { value: "comp-off", label: "Comp Off Credit" } : null,
-      { value: "wfh", label: "WFH" },
+      showCompOffTab ? { value: "comp-off", label: "Compensation Off Credit" } : null,
+      { value: "wfh", label: "Work From Home" },
       hasHrAccess ? { value: "balances", label: "Balances" } : null,
     ].filter((item): item is { value: string; label: string } => Boolean(item));
   }, [canViewTeamLeave, hasHrAccess, isTeamLeaveRoute, showCompOffTab]);
@@ -1050,297 +1170,415 @@ export function LeavePageClient() {
     <>
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
-          <ContentCard>
-                          {showLeaveSubTabBar ? (
-                            <PageTabs
-                              embedded
-                              aria-label="Leave views"
-                              value={leaveSubTab}
-                              onValueChange={(value) =>
-                                setLeaveSubTab(
-                                  value as
-                                    | "my"
-                                    | "team"
-                                    | "org"
-                                    | "wfh"
-                                    | "comp-off"
-                                    | "balances"
-                                )
-                              }
-                              items={leaveTabItems}
-                            />
-                          ) : null}
-                          <div className={PAGE_TAB_BODY_CLASS}>
-                          {leaveSubTab === "balances" && hasHrAccess ? (
+          <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-6 max-sm:p-4">
+                           {showLeaveSubTabBar ? (
+                             <Tabs value={leaveSubTab} onValueChange={(value) => setLeaveSubTab(value as "my" | "team" | "org" | "wfh" | "comp-off" | "balances")} className="gap-0">
+                                 <div className="w-full px-5 pt-6 pb-6">
+                                   <TabsList aria-label="Leave views" className="relative h-auto gap-1.5 bg-transparent p-0">
+                                      {leaveTabItems.map((item) => (
+                                        <TabsTrigger key={item.value} value={item.value} className="relative flex-none h-10 px-6 text-sm font-medium text-muted-foreground transition-all duration-200 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black rounded-full cursor-pointer hover:text-foreground border-0 gap-2">
+                                          {item.value === "my" && <Calendar className="size-4" />}
+                                          {item.value === "team" && <Users className="size-4" />}
+                                          {item.value === "org" && <Building2 className="size-4" />}
+                                          {item.value === "comp-off" && <Clock className="size-4" />}
+                                          {item.value === "wfh" && <Home className="size-4" />}
+                                          {item.value === "balances" && <Wallet className="size-4" />}
+                                          {item.label}
+                                        </TabsTrigger>
+                                      ))}
+                                   </TabsList>
+                                 </div>
+                             </Tabs>
+                           ) : null}
+                          <div>
+                          <div hidden={!(leaveSubTab === "balances" && hasHrAccess)}>
                             <HrLeaveBalancesPanel actionLoading={actionLoading} runAction={runAction} />
-                          ) : leaveSubTab === "comp-off" ? (
+                          </div>
+                          <div hidden={leaveSubTab !== "comp-off"}>
                             <CompOffPageClient
                               embedded
                               flowScope="earn"
                               forcedTab={compOffForcedTab}
                             />
-                          ) : leaveSubTab === "my" || leaveSubTab === "wfh" ? (
-                        <div className="space-y-4">
-                          <div className="space-y-4">
-                            {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
-                            {leaveSubTab === "my" &&
-                            normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
-                              <LeaveBalanceSummary />
-                            ) : null}
-                            <LeaveWorkflowNotice variant={leaveWorkflowVariant} />
-                            <div className="space-y-3">
-                            <PageSectionHeader
-                              title={leaveSubTab === "wfh" ? "Work from Home" : "Time Off / Comp Off"}
-                            />
-                              <div className="space-y-3">
-                                <div
-                                  className={`grid grid-cols-1 gap-3 ${
-                                    leaveSubTab === "wfh" ? "sm:grid-cols-2" : "sm:grid-cols-3"
-                                  }`}
-                                >
-                                  {leaveSubTab === "my" ? (
-                                    <SelectField
-                                      label="Request Type"
-                                      required
-                                      value={leaveRequestForm.request_type}
-                                      options={leaveRequestTypeOptions}
-                                      onChange={(v) => setLeaveRequestForm((p) => ({ ...p, request_type: v }))}
-                                    />
-                                  ) : null}
-                                  <InputField
-                                    label="From Date"
-                                    required
-                                    value={leaveRequestForm.request_from_date}
-                                    onChange={(v) =>
-                                      setLeaveRequestForm((p) => ({
-                                        ...p,
-                                        request_from_date: v,
-                                        request_to_date: p.is_half_day ? v : p.request_to_date,
-                                      }))
-                                    }
-                                    type="date"
-                                  />
-                                  <InputField
-                                    label="To Date"
-                                    required
-                                    value={
-                                      leaveRequestForm.is_half_day
-                                        ? leaveRequestForm.request_from_date
-                                        : leaveRequestForm.request_to_date
-                                    }
-                                    onChange={(v) => {
-                                      if (leaveRequestForm.is_half_day) return;
-                                      setLeaveRequestForm((p) => ({ ...p, request_to_date: v }));
-                                    }}
-                                    type="date"
-                                  />
-                                </div>
-                                {leaveSubTab === "my" &&
-                                normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
-                                  <Label className="text-sm flex items-center gap-2 font-normal">
-                                    <Checkbox
-                                      checked={leaveRequestForm.is_half_day}
-                                      onCheckedChange={(checked) => {
-                                        setLeaveRequestForm((p) => ({
-                                          ...p,
-                                          is_half_day: checked,
-                                          request_to_date: checked ? p.request_from_date : p.request_to_date,
-                                        }));
-                                      }}
-                                    />
-                                    Half-day leave (single day only)
-                                  </Label>
-                                ) : null}
-                                {requiresClientApproval &&
-                                (leaveSubTab === "wfh" ||
-                                  normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE") ? (
-                                  <Label className="text-sm flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 font-normal text-amber-900">
-                                    <Checkbox
-                                      className="mt-0.5"
-                                      checked={leaveRequestForm.client_approval}
-                                      onCheckedChange={(checked) =>
-                                        setLeaveRequestForm((p) => ({
-                                          ...p,
-                                          client_approval: checked,
-                                        }))
-                                      }
-                                    />
-                                    <span>
-                                      I confirm client approval for this request (required on active client/staffing
-                                      projects).
-                                    </span>
-                                  </Label>
-                                ) : null}
-                                {leaveSubTab === "my" &&
-                                normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
-                                  <LeaveHrCcNotice />
-                                ) : null}
-                                {leaveSubTab === "my" &&
-                                normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
-                                  <LeaveManagerSelector
-                                    selectedEmails={selectedLeaveManagerEmails}
-                                    onChange={setSelectedLeaveManagerEmails}
-                                    disabled={actionLoading}
-                                  />
-                                ) : null}
-                                {leaveSubTab === "my" &&
-                                normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE" ? (
-                                  <LeaveAdditionalRecipientsSelector
-                                    selectedEmails={selectedAdditionalRecipientEmails}
-                                    onChange={setSelectedAdditionalRecipientEmails}
-                                    disabled={actionLoading}
-                                  />
-                                ) : null}
-                                {leaveSubTab === "wfh" ? (
-                                  <div className="space-y-2">
-                                    <p className="text-sm font-medium">
-                                      Select Managers <span className="text-rose-600">*</span>
-                                    </p>
-                                    <p className="text-xs text-wt-text-muted">
-                                      Selected managers receive a notification and can approve or reject the request.
-                                    </p>
-                                    {wfhManagerOptions.length > 0 ? (
-                                      <div className="max-h-48 space-y-2 overflow-auto rounded-xl border border-wt-border bg-wt-surface-2/30 p-3">
-                                        {wfhManagerOptions.map((option) => {
-                                          const email = String(option.email ?? "").trim();
-                                          if (!email) return null;
-                                          const checked = selectedWfhManagerEmails
-                                            .map((e) => e.toLowerCase())
-                                            .includes(email.toLowerCase());
-                                          return (
-                                            <label
-                                              key={email}
-                                              className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-wt-surface-2"
-                                            >
-                                              <input
-                                                type="checkbox"
-                                                className="mt-0.5"
-                                                checked={checked}
-                                                disabled={actionLoading}
-                                                onChange={() => {
-                                                  const nextSet = new Set(
-                                                    selectedWfhManagerEmails.map((e) => e.toLowerCase())
-                                                  );
-                                                  if (nextSet.has(email.toLowerCase())) {
-                                                    nextSet.delete(email.toLowerCase());
-                                                  } else {
-                                                    nextSet.add(email.toLowerCase());
-                                                  }
-                                                  const ordered = wfhManagerOptions
-                                                    .map((row) => String(row.email ?? "").trim().toLowerCase())
-                                                    .filter((v) => nextSet.has(v));
-                                                  setSelectedWfhManagerEmails(ordered);
-                                                }}
-                                              />
-                                              <span className="text-sm">
-                                                <span className="font-medium">{option.name || email}</span>
-                                                {option.project_name ? (
-                                                  <span className="block text-xs text-wt-text-muted">
-                                                    {option.project_name}
-                                                  </span>
-                                                ) : null}
-                                                <span className="block text-xs text-wt-text-muted">{email}</span>
-                                              </span>
-                                            </label>
-                                          );
-                                        })}
+                          </div>
+                          <div hidden={!(leaveSubTab === "my" || leaveSubTab === "wfh")}>
+
+                          {leaveSubTab === "wfh" ? (
+                            <div className="space-y-6">
+                              {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
+                              <Tabs value={wfhRequestViewTab} onValueChange={(v) => setWfhRequestViewTab(v as "request" | "view")} orientation="horizontal">
+                                <TabsList variant="line" className="h-9 gap-1">
+                                  <TabsTrigger value="request" className="px-3 text-xs font-medium cursor-pointer">Apply for WFH</TabsTrigger>
+                                  <TabsTrigger value="view" className="px-3 text-xs font-medium cursor-pointer">Applications</TabsTrigger>
+                                </TabsList>
+                                  <TabsContent value="request" className="pt-6">
+                                  <div className="space-y-6">
+                                    <div className="rounded-xl bg-muted/40 p-6 shadow-sm border border-border/40">
+                                      <div className="flex items-start justify-between mb-5">
+                                        <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                                          Apply for WFH
+                                        </h3>
+                                        <button
+                                          type="button"
+                                          onClick={() => setWfhExceptionOpen(true)}
+                                          className="text-xs text-sky-600 hover:text-sky-700 underline cursor-pointer"
+                                        >
+                                          Need more than 1 WFH day this week? Contact HR
+                                        </button>
                                       </div>
-                                    ) : (
-                                      <p className="text-sm text-wt-text-muted">
-                                        Loading managers…
-                                      </p>
-                                    )}
+                                      <div className="max-w-xs">
+                                        <DatePicker
+                                          label="Date"
+                                          required
+                                          value={leaveRequestForm.request_from_date}
+                                          onChange={(v) =>
+                                            setLeaveRequestForm((p) => ({
+                                              ...p,
+                                              request_from_date: v,
+                                              request_to_date: v,
+                                            }))
+                                          }
+                                          disabled={actionLoading}
+                                        />
+                                      </div>
+                                      <div className="mt-4">
+                                        <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                          <Checkbox
+                                            className="cursor-pointer"
+                                            checked={leaveRequestForm.is_half_day}
+                                            onCheckedChange={(checked) =>
+                                              setLeaveRequestForm((p) => ({
+                                                ...p,
+                                                is_half_day: checked === true,
+                                              }))
+                                            }
+                                            disabled={actionLoading}
+                                          />
+                                          <span className="text-muted-foreground">Half-day</span>
+                                        </label>
+                                      </div>
+                                      {requiresClientApproval ? (
+                                        <div className="mt-5">
+                                          <Label className="text-sm flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 font-normal text-amber-900 cursor-pointer">
+                                            <Checkbox
+                                              className="mt-0.5 cursor-pointer"
+                                              checked={leaveRequestForm.client_approval}
+                                              onCheckedChange={(checked) =>
+                                                setLeaveRequestForm((p) => ({
+                                                  ...p,
+                                                  client_approval: checked,
+                                                }))
+                                              }
+                                            />
+                                            <span>
+                                              I confirm client approval for this request (required on active client/staffing projects).
+                                            </span>
+                                          </Label>
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                    <div className="rounded-xl bg-muted/40 p-5 space-y-5 shadow-sm border border-border/40">
+                                      <LeaveManagerSelector
+                                        label="Select Managers"
+                                        selectedEmails={selectedWfhManagerEmails}
+                                        onChange={setSelectedWfhManagerEmails}
+                                        disabled={actionLoading}
+                                        options={wfhManagerOptions}
+                                        loading={wfhManagerOptionsLoading}
+                                      />
+                                      <TextAreaField label="Comments" required value={leaveRequestForm.comments} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, comments: v }))} />
+                                      <div className="flex justify-end pt-4 border-t border-border/40 mt-6">
+                                        <div className="flex items-center gap-3">
+                                          <Button variant="brand" type="button" className="px-6 h-10 font-medium" onClick={() =>
+                                              runAction(
+                                                userRequestActionLabel("WFH", editingLeaveRequestId ? "update" : "submit"),
+                                                async () => {
+                                                const fromDate = normalizeToApiDate(
+                                                  leaveRequestForm.request_from_date.trim()
+                                                );
+                                                if (!fromDate || !parseApiDate(fromDate)) {
+                                                  throw new Error("Please provide a valid date (dd/mm/yyyy).");
+                                                }
+                                                const comments = leaveRequestForm.comments.trim();
+                                                if (!comments) {
+                                                  throw new Error("Comments are required.");
+                                                }
+                                                if (comments.length > 200) {
+                                                  throw new Error("Comments must be 200 characters or less.");
+                                                }
+                                                const needsClientApproval = requiresClientApproval;
+                                                if (needsClientApproval && !leaveRequestForm.client_approval) {
+                                                  throw new Error("Client approval is required for client users.");
+                                                }
+                                                if (!selectedWfhManagerEmails.length) {
+                                                  throw new Error("Select at least one manager to notify.");
+                                                }
+                                                const payload = buildUserRequestBody(
+                                                  {
+                                                    request_from_date: fromDate,
+                                                    request_to_date: fromDate,
+                                                    request_type: "WFH",
+                                                    comments,
+                                                    is_half_day: leaveRequestForm.is_half_day,
+                                                    client_approval: needsClientApproval
+                                                      ? leaveRequestForm.client_approval
+                                                      : undefined,
+                                                    selected_manager_emails: selectedWfhManagerEmails,
+                                                  },
+                                                  editingLeaveRequestId
+                                                    ? { userRequestId: Number(editingLeaveRequestId) }
+                                                    : undefined
+                                                );
+                                                if (editingLeaveRequestId) {
+                                                  await apiClient.put(endpoints.userRequest.root, {
+                                                    contentType: "application/json",
+                                                    body: JSON.stringify(payload),
+                                                  });
+                                                } else {
+                                                  await apiClient.post(endpoints.userRequest.root, {
+                                                    contentType: "application/json",
+                                                    body: JSON.stringify(payload),
+                                                  });
+                                                }
+                                                setLeaveRequestForm(createDefaultLeaveRequestForm());
+                                                setSelectedWfhManagerEmails([]);
+                                                setSelectedAdditionalRecipientEmails([]);
+                                                setEditingLeaveRequestId("");
+                                                try {
+                                                  await loadMyLeaveRequests();
+                                                } catch {
+                                                  /* submission succeeded; ignore refresh issue */
+                                                }
+                                                invalidateLeaveBalance();
+                                              })
+                                            }
+                                            disabled={actionLoading}
+                                          >
+                                            {editingLeaveRequestId ? "Save Changes" : "Submit Request"}
+                                          </Button>
+                                          {editingLeaveRequestId ? (
+                                            <Button variant="ghost" type="button" className="px-6 h-10 font-medium" onClick={() => {
+                                                setLeaveRequestForm(createDefaultLeaveRequestForm());
+                                                setEditingLeaveRequestId("");
+                                              }}
+                                              disabled={actionLoading}
+                                            >
+                                              Cancel Edit
+                                            </Button>
+                                          ) : null}
+                                        </div>
+                                      </div>
+                                    </div>
                                   </div>
-                                ) : null}
-                                <TextAreaField label="Comments" required value={leaveRequestForm.comments} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, comments: v }))} />
-                              </div>
-                              <div className="mt-4 flex gap-2">
-                                <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
-                                    runAction(
-                                      userRequestActionLabel(
-                                        leaveSubTab === "wfh" ? "WFH" : leaveRequestForm.request_type,
-                                        editingLeaveRequestId ? "update" : "submit"
-                                      ),
-                                      async () => {
-                                      const fromDate = normalizeToApiDate(
-                                        leaveRequestForm.request_from_date.trim()
+                                </TabsContent>
+                                <TabsContent value="view" className="pt-3">
+                                  <MyLeaveRequestsView
+                                    rows={filteredWfhTabRequests}
+                                    loading={myLeaveRequestsLoading}
+                                    showRequestType
+                                    sortId={myLeaveSortId}
+                                    onSortChange={setMyLeaveSortId}
+                                    sortOptions={LEAVE_REQUEST_SORT_OPTIONS}
+                                    pagination={myLeavePagination}
+                                    actionLoading={actionLoading}
+                                    onRefresh={() => runAction("Refresh my requests", loadMyLeaveRequests)}
+                                    fromDate={myRequestsFromDate}
+                                    toDate={myRequestsToDate}
+                                    onFromDateChange={setMyRequestsFromDate}
+                                    onToDateChange={setMyRequestsToDate}
+                                    onEdit={(row) => {
+                                      const rowType = String(
+                                        row.request_type ?? row.requestType ?? "WFH"
                                       );
-                                      const toDate = normalizeToApiDate(
-                                        leaveRequestForm.request_to_date.trim()
-                                      );
-                                      if (!fromDate || !toDate) {
-                                        throw new Error("From Date and To Date are required (dd/mm/yyyy).");
-                                      }
-                                      if (!parseApiDate(fromDate) || !parseApiDate(toDate)) {
-                                        throw new Error("Please provide valid dates (dd/mm/yyyy).");
-                                      }
-                                      if (compareApiDates(toDate, fromDate) < 0) {
-                                        throw new Error("To Date cannot be earlier than From Date.");
-                                      }
-                                      const comments = leaveRequestForm.comments.trim();
-                                      if (!comments) {
-                                        throw new Error("Comments are required.");
-                                      }
-                                      if (comments.length > 200) {
-                                        throw new Error("Comments must be 200 characters or less.");
-                                      }
-                                      if (leaveRequestForm.is_half_day && fromDate !== toDate) {
-                                        throw new Error("Half-day request must be for one day.");
-                                      }
-                                      const requestType =
-                                        leaveSubTab === "wfh"
-                                          ? "WFH"
-                                          : leaveRequestForm.request_type;
-                                      const needsClientApproval =
-                                        requiresClientApproval &&
-                                        (leaveSubTab === "wfh" ||
-                                          normalizeUserRequestType(requestType) === "LEAVE");
-                                      if (needsClientApproval && !leaveRequestForm.client_approval) {
-                                        throw new Error("Client approval is required for client users.");
-                                      }
-                                      if (
-                                        leaveSubTab === "my" &&
-                                        normalizeUserRequestType(requestType) === "LEAVE" &&
-                                        !selectedLeaveManagerEmails.length
-                                      ) {
-                                        throw new Error("Select at least one manager to notify.");
-                                      }
-                                      if (
-                                        leaveSubTab === "wfh" &&
-                                        !selectedWfhManagerEmails.length
-                                      ) {
-                                        throw new Error("Select at least one manager to notify.");
-                                      }
-                                      const isCompOffUsage =
-                                        normalizeCompOffRequestType(requestType) === "COMP_OFF";
-                                      if (isCompOffUsage) {
-                                        const days = calendarDaysInclusive(fromDate, toDate);
-                                        if (days < 1) {
-                                          throw new Error("Select at least one calendar day.");
-                                        }
-                                        const available =
-                                          await compOffService.resolveAvailableUnits(fromDate);
-                                        if (available < days) {
-                                          throw new Error(
-                                            `Insufficient comp-off balance. Available: ${
-                                              Number.isFinite(available) ? available : 0
-                                            }, requested: ${days} day(s).`
-                                          );
-                                        }
-                                        const managerCompOffEmail =
-                                          await compOffService.resolveUsageManagerCompOffEmail();
-                                        if (!managerCompOffEmail) {
-                                          throw new Error(
-                                            "Could not resolve project manager for comp-off. Ensure you are allocated to a project with a manager."
-                                          );
-                                        }
-                                        await compOffService.createUsageRequest({
-                                          request_from_date: fromDate,
-                                          request_to_date: toDate,
-                                          request_type: "COMP_OFF",
-                                          comments,
-                                          manager_comp_off_email: managerCompOffEmail,
+                                      setLeaveRequestForm({
+                                        request_from_date: String(row.request_from_date ?? row.requestFromDate ?? ""),
+                                        request_to_date: String(row.request_to_date ?? row.requestToDate ?? ""),
+                                        request_type: rowType,
+                                        comments: String(row.comments ?? ""),
+                                        is_half_day: Boolean(row.is_half_day ?? row.isHalfDay ?? false),
+                                        client_approval: false,
+                                      });
+                                      const requestId = String(
+                                        row.user_request_id ??
+                                          row.userRequestId ??
+                                          row.request_id ??
+                                          row.requestId ??
+                                          row.id ??
+                                          ""
+                                      ).trim();
+                                      setEditingLeaveRequestId(requestId);
+                                      setWfhRequestViewTab("request");
+                                    }}
+                                    onRevoke={(requestId) =>
+                                      runAction(
+                                        userRequestActionLabel("WFH", "revoke"),
+                                        async () => {
+                                        await apiClient.delete(endpoints.userRequest.root, {
+                                          contentType: "application/json",
+                                          body: JSON.stringify({
+                                            user_request_id: Number(requestId),
+                                          }),
                                         });
+                                        if (editingLeaveRequestId === requestId) {
+                                          setEditingLeaveRequestId("");
+                                          setLeaveRequestForm(createDefaultLeaveRequestForm());
+                                        }
+                                        await loadMyLeaveRequests();
+                                      })
+                                    }
+                                  />
+                                </TabsContent>
+                              </Tabs>
+                            </div>
+                          ) : (
+                            <>
+                              {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
+                              <div className="mb-6"><LeaveBalanceSummary selectedType={normalizeUserRequestType(leaveRequestForm.request_type)} /></div>
+                              <Tabs value={requestViewTab} onValueChange={(v) => setRequestViewTab(v as "request" | "view")} orientation="horizontal">
+                                <TabsList variant="line" className="h-9 gap-1">
+                                  <TabsTrigger value="request" className="px-3 text-xs font-medium cursor-pointer">Apply for Leave</TabsTrigger>
+                                  <TabsTrigger value="view" className="px-3 text-xs font-medium cursor-pointer">Applications</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="request" className="pt-6">
+                                  <LeaveRequestForm
+                                    values={leaveRequestForm}
+                                    onChange={(v) => setLeaveRequestForm(v)}
+                                    selectedManagerEmails={selectedLeaveManagerEmails}
+                                    onManagerEmailsChange={setSelectedLeaveManagerEmails}
+                                    selectedAdditionalEmails={selectedAdditionalRecipientEmails}
+                                    onAdditionalEmailsChange={setSelectedAdditionalRecipientEmails}
+                                    editingLeaveRequestId={editingLeaveRequestId}
+                                    requiresClientApproval={requiresClientApproval}
+                                    actionLoading={actionLoading}
+                                    leaveRequestTypeOptions={leaveRequestTypeOptions}
+                                    onViewCompOffCredits={() => setCompOffCreditsOpen(true)}
+                                    onSubmit={() =>
+                                      runAction(
+                                        userRequestActionLabel(
+                                          leaveRequestForm.request_type,
+                                          editingLeaveRequestId ? "update" : "submit"
+                                        ),
+                                        async () => {
+                                        const fromDate = normalizeToApiDate(
+                                          leaveRequestForm.request_from_date.trim()
+                                        );
+                                        const toDate = normalizeToApiDate(
+                                          leaveRequestForm.request_to_date.trim()
+                                        );
+                                        if (!fromDate || !toDate) {
+                                          throw new Error("From Date and To Date are required (dd/mm/yyyy).");
+                                        }
+                                        if (!parseApiDate(fromDate) || !parseApiDate(toDate)) {
+                                          throw new Error("Please provide valid dates (dd/mm/yyyy).");
+                                        }
+                                        if (compareApiDates(toDate, fromDate) < 0) {
+                                          throw new Error("To Date cannot be earlier than From Date.");
+                                        }
+                                        const comments = leaveRequestForm.comments.trim();
+                                        if (!comments) {
+                                          throw new Error("Comments are required.");
+                                        }
+                                        if (comments.length > 200) {
+                                          throw new Error("Comments must be 200 characters or less.");
+                                        }
+                                        if (leaveRequestForm.is_half_day && fromDate !== toDate) {
+                                          throw new Error("Half-day request must be for one day.");
+                                        }
+                                        const requestType = leaveRequestForm.request_type;
+                                        const needsClientApproval =
+                                          requiresClientApproval &&
+                                          (normalizeUserRequestType(requestType) === "LEAVE" ||
+                                           normalizeUserRequestType(requestType) === "OPTIONAL");
+                                        if (needsClientApproval && !leaveRequestForm.client_approval) {
+                                          throw new Error("Client approval is required for client users.");
+                                        }
+                                        if (
+                                          (normalizeUserRequestType(requestType) === "LEAVE" ||
+                                           normalizeUserRequestType(requestType) === "OPTIONAL") &&
+                                          !selectedLeaveManagerEmails.length
+                                        ) {
+                                          throw new Error("Select at least one manager to notify.");
+                                        }
+                                        const isCompOffUsage =
+                                          normalizeCompOffRequestType(requestType) === "COMP_OFF";
+                                        if (isCompOffUsage) {
+                                          const days = calendarDaysInclusive(fromDate, toDate);
+                                          if (days < 1) {
+                                            throw new Error("Select at least one calendar day.");
+                                          }
+                                          const available =
+                                            await compOffService.resolveAvailableUnits(fromDate);
+                                          if (available < days) {
+                                            throw new Error(
+                                              `Insufficient comp-off balance. Available: ${
+                                                Number.isFinite(available) ? available : 0
+                                              }, requested: ${days} day(s).`
+                                            );
+                                          }
+                                          const managerCompOffEmail =
+                                            await compOffService.resolveUsageManagerCompOffEmail();
+                                          if (!managerCompOffEmail) {
+                                            throw new Error(
+                                              "Could not resolve project manager for comp-off. Ensure you are allocated to a project with a manager."
+                                            );
+                                          }
+                                          await compOffService.createUsageRequest({
+                                            request_from_date: fromDate,
+                                            request_to_date: toDate,
+                                            request_type: "COMP_OFF",
+                                            comments,
+                                            manager_comp_off_email: managerCompOffEmail,
+                                          });
+                                          setLeaveRequestForm(createDefaultLeaveRequestForm());
+                                          setSelectedLeaveManagerEmails([]);
+                                          setSelectedWfhManagerEmails([]);
+                                          setSelectedAdditionalRecipientEmails([]);
+                                          setEditingLeaveRequestId("");
+                                          try {
+                                            await loadMyLeaveRequests();
+                                          } catch {
+                                            /* submission succeeded */
+                                          }
+                                          return;
+                                        }
+                                        const isLeaveOrOptional =
+                                          normalizeUserRequestType(requestType) === "LEAVE" ||
+                                          normalizeUserRequestType(requestType) === "OPTIONAL";
+                                        const payload = buildUserRequestBody(
+                                          {
+                                            request_from_date: fromDate,
+                                            request_to_date: toDate,
+                                            request_type: requestType,
+                                            comments,
+                                            is_half_day: leaveRequestForm.is_half_day,
+                                            client_approval: needsClientApproval
+                                              ? leaveRequestForm.client_approval
+                                              : undefined,
+                                            selected_manager_emails:
+                                              isLeaveOrOptional
+                                                ? selectedLeaveManagerEmails
+                                                : undefined,
+                                            additional_recipient_emails:
+                                              isLeaveOrOptional &&
+                                              selectedAdditionalRecipientEmails.length
+                                                ? selectedAdditionalRecipientEmails
+                                                : undefined,
+                                          },
+                                          editingLeaveRequestId
+                                            ? { userRequestId: Number(editingLeaveRequestId) }
+                                            : undefined
+                                        );
+                                        if (editingLeaveRequestId) {
+                                          await apiClient.put(endpoints.userRequest.root, {
+                                            contentType: "application/json",
+                                            body: JSON.stringify(payload),
+                                          });
+                                        } else {
+                                          await apiClient.post(endpoints.userRequest.root, {
+                                            contentType: "application/json",
+                                            body: JSON.stringify(payload),
+                                          });
+                                        }
                                         setLeaveRequestForm(createDefaultLeaveRequestForm());
                                         setSelectedLeaveManagerEmails([]);
                                         setSelectedWfhManagerEmails([]);
@@ -1349,339 +1587,118 @@ export function LeavePageClient() {
                                         try {
                                           await loadMyLeaveRequests();
                                         } catch {
-                                          /* submission succeeded */
+                                          /* submission succeeded; ignore refresh issue */
                                         }
-                                        return;
-                                      }
-                                      const payload = buildUserRequestBody(
-                                        {
-                                          request_from_date: fromDate,
-                                          request_to_date: toDate,
-                                          request_type: requestType,
-                                          comments,
-                                          is_half_day: leaveRequestForm.is_half_day,
-                                          client_approval: needsClientApproval
-                                            ? leaveRequestForm.client_approval
-                                            : undefined,
-                                          selected_manager_emails:
-                                            leaveSubTab === "my" &&
-                                            normalizeUserRequestType(requestType) === "LEAVE"
-                                              ? selectedLeaveManagerEmails
-                                              : leaveSubTab === "wfh"
-                                                ? selectedWfhManagerEmails
-                                                : undefined,
-                                          additional_recipient_emails:
-                                            leaveSubTab === "my" &&
-                                            normalizeUserRequestType(requestType) === "LEAVE" &&
-                                            selectedAdditionalRecipientEmails.length
-                                              ? selectedAdditionalRecipientEmails
-                                              : undefined,
-                                        },
-                                        editingLeaveRequestId
-                                          ? { userRequestId: Number(editingLeaveRequestId) }
-                                          : undefined
-                                      );
-                                      if (editingLeaveRequestId) {
-                                        await apiClient.put(endpoints.userRequest.root, {
-                                          contentType: "application/json",
-                                          body: JSON.stringify(payload),
-                                        });
-                                      } else {
-                                        await apiClient.post(endpoints.userRequest.root, {
-                                          contentType: "application/json",
-                                          body: JSON.stringify(payload),
-                                        });
-                                      }
-                                      setLeaveRequestForm(createDefaultLeaveRequestForm());
-                                      setSelectedLeaveManagerEmails([]);
-                                      setSelectedWfhManagerEmails([]);
-                                      setSelectedAdditionalRecipientEmails([]);
-                                      setEditingLeaveRequestId("");
-                                      try {
-                                        await loadMyLeaveRequests();
-                                      } catch {
-                                        /* submission succeeded; ignore refresh issue */
-                                      }
-                                    })
-                                  }
-                                  disabled={actionLoading}
-                                >
-                                  {editingLeaveRequestId ? "Save Changes" : "Submit Request"}
-                                </Button>
-                                {editingLeaveRequestId ? (
-                                  <Button variant="ghost" type="button" className="px-3 py-2" onClick={() => {
+                                      })
+                                    }
+                                    onCancelEdit={() => {
                                       setLeaveRequestForm(createDefaultLeaveRequestForm());
                                       setEditingLeaveRequestId("");
                                     }}
-                                    disabled={actionLoading}
-                                  >
-                                    Cancel Edit
-                                  </Button>
-                                ) : null}
-                              </div>
-                            </div>
-          
-                            <div className="space-y-3">
-                              <h3 className="font-semibold">My Previous Requests</h3>
-                              <div className="flex flex-nowrap items-end gap-2 overflow-x-auto pb-0.5">
-                                <label className="sr-only" htmlFor="my-leave-search">
-                                  Search my requests
-                                </label>
-                                <input
-                                  id="my-leave-search"
-                                  type="search"
-                                  className="input-field min-w-[200px] shrink-0 px-3 py-2 text-sm h-10"
-                                  placeholder="Search by type, date, status…"
-                                  value={myLeaveSearch}
-                                  onChange={(e) => setMyLeaveSearch(e.target.value)}
-                                  aria-label="Search my leave requests"
-                                />
-                                <Button
-                                  variant="brand"
-                                  type="button"
-                                  className="shrink-0 px-3 py-2 h-10"
-                                  onClick={() => runAction("Refresh my requests", loadMyLeaveRequests)}
-                                  disabled={actionLoading || myLeaveRequestsLoading}
-                                >
-                                  Refresh
-                                </Button>
-                              </div>
-                              <ScrollableTable
-                                maxHeightClass="max-h-[min(50vh,380px)]"
-                                className={LEAVE_REQUESTS_TABLE_MIN_HEIGHT}
-                              >
-                                <WtTable>
-                                  <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                                    <TableRow className="hover:bg-transparent">
-                                      <TableHead>Request Type</TableHead>
-                                      <TableHead>
-                                        <TableSortHeader
-                                          label="From"
-                                          activeDirection={activeSortDirectionForColumn(
-                                            "from",
-                                            myLeaveSortId,
-                                            LEAVE_REQUEST_SORT_OPTIONS
-                                          )}
-                                          sortable
-                                          onSort={() =>
-                                            setMyLeaveSortId(
-                                              toggleColumnSort(
-                                                "from",
-                                                myLeaveSortId,
-                                                LEAVE_REQUEST_SORT_OPTIONS
-                                              )
-                                            )
-                                          }
-                                        />
-                                      </TableHead>
-                                      <TableHead>To</TableHead>
-                                      <TableHead>Manager Status</TableHead>
-                                      <TableHead>Manager Reason</TableHead>
-                                      <TableHead>Status</TableHead>
-                                      <TableHead>Comments</TableHead>
-                                      <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {myLeaveRequestsLoading ? (
-                                      Array.from({ length: 5 }).map((_, rowIndex) => (
-                                        <TableRow key={`my-leave-skeleton-${rowIndex}`}>
-                                          {Array.from({ length: MY_LEAVE_TABLE_COL_COUNT }).map(
-                                            (_, colIndex) => (
-                                              <TableCell key={colIndex} className="px-3 py-2">
-                                                <Skeleton className="h-4 w-full" />
-                                              </TableCell>
-                                            )
-                                          )}
-                                        </TableRow>
-                                      ))
-                                    ) : myLeavePagination.pageItems.length ? (
-                                      myLeavePagination.pageItems.map((row, idx) => {
-                                        const requestId = String(
-                                          row.user_request_id ??
-                                            row.userRequestId ??
-                                            row.request_id ??
-                                            row.requestId ??
-                                            row.id ??
-                                            ""
-                                        ).trim();
-                                        const rowRecord = row as Record<string, unknown>;
-                                        const finalStatus = requestFinalStatus(rowRecord);
-                                        const managerStatus = requestManagerStatus(rowRecord);
-                                        const managerReason = formatStageRejectionReason(
-                                          managerStatus,
-                                          pickRowField(rowRecord, "manager_reason", "managerReason")
-                                        );
-                                        const isPending = finalStatus === "PENDING";
-                                        return (
-                                          <TableRow key={`${requestId || "myreq"}-${idx}`}>
-                                            <TableCell className="px-3 py-2 whitespace-nowrap">
-                                              {formatUserRequestTypeLabel(row.request_type ?? row.requestType)}
-                                            </TableCell>
-                                            <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.request_from_date ?? row.requestFromDate ?? "—")}</TableCell>
-                                            <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.request_to_date ?? row.requestToDate ?? "—")}</TableCell>
-                                            <TableCell className="px-3 py-2 whitespace-nowrap">
-                                              {formatApprovalStageLabel(managerStatus)}
-                                            </TableCell>
-                                            <TableCell
-                                              className="px-3 py-2 max-w-[200px] truncate"
-                                              title={managerReason !== "—" ? managerReason : undefined}
-                                            >
-                                              {managerReason}
-                                            </TableCell>
-                                            <TableCell className="px-3 py-2 whitespace-nowrap">
-                                              {formatApprovalStageLabel(finalStatus)}
-                                            </TableCell>
-                                            <TableCell className="px-3 py-2 max-w-[240px] truncate">{String(row.comments ?? "—")}</TableCell>
-                                            <TableCell className="px-3 py-2 text-right">
-                                              <div className="inline-flex items-center justify-end gap-1">
-                                                <Button variant="brand" size="xs" type="button" className="px-2.5 py-1.5 text-xs" disabled={actionLoading || !requestId || !isPending} onClick={() => {
-                                                    const rowType = String(
-                                                      row.request_type ?? row.requestType ?? "LEAVE"
-                                                    );
-                                                    setLeaveRequestForm({
-                                                      request_from_date: String(row.request_from_date ?? row.requestFromDate ?? ""),
-                                                      request_to_date: String(row.request_to_date ?? row.requestToDate ?? ""),
-                                                      request_type: rowType,
-                                                      comments: String(row.comments ?? ""),
-                                                      is_half_day: Boolean(row.is_half_day ?? row.isHalfDay ?? false),
-                                                      client_approval: false,
-                                                    });
-                                                    setEditingLeaveRequestId(requestId);
-                                                    if (normalizeUserRequestType(rowType) === "WFH") {
-                                                      setLeaveSubTab("wfh");
-                                                    } else {
-                                                      setLeaveSubTab("my");
-                                                    }
-                                                  }}
-                                                >
-                                                  Edit
-                                                </Button>
-                                                <Button
-                                                  type="button"
-                                                  variant="destructive"
-                                                  size="xs"
-                                                  disabled={actionLoading || !requestId || !isPending}
-                                                  onClick={() =>
-                                                    runAction(
-                                                      userRequestActionLabel(
-                                                        row.request_type ?? row.requestType,
-                                                        "revoke"
-                                                      ),
-                                                      async () => {
-                                                      await apiClient.delete(endpoints.userRequest.root, {
-                                                        contentType: "application/json",
-                                                        body: JSON.stringify({
-                                                          user_request_id: Number(requestId),
-                                                        }),
-                                                      });
-                                                      if (editingLeaveRequestId === requestId) {
-                                                        setEditingLeaveRequestId("");
-                                                        setLeaveRequestForm(createDefaultLeaveRequestForm());
-                                                      }
-                                                      await loadMyLeaveRequests();
-                                                    })
-                                                  }
-                                                >
-                                                  Revoke
-                                                </Button>
-                                              </div>
-                                            </TableCell>
-                                          </TableRow>
-                                        );
+                                  />
+                                </TabsContent>
+                                <TabsContent value="view" className="pt-3">
+                                  <MyLeaveRequestsView
+                                    rows={filteredLeaveTabRequests}
+                                    loading={myLeaveRequestsLoading}
+                                    sortId={myLeaveSortId}
+                                    onSortChange={setMyLeaveSortId}
+                                    sortOptions={LEAVE_REQUEST_SORT_OPTIONS}
+                                    pagination={myLeavePagination}
+                                    actionLoading={actionLoading}
+                                    onRefresh={() => runAction("Refresh my requests", loadMyLeaveRequests)}
+                                    fromDate={myRequestsFromDate}
+                                    toDate={myRequestsToDate}
+                                    onFromDateChange={setMyRequestsFromDate}
+                                    onToDateChange={setMyRequestsToDate}
+                                    onEdit={(row) => {
+                                      const rowType = String(
+                                        row.request_type ?? row.requestType ?? "LEAVE"
+                                      );
+                                      setLeaveRequestForm({
+                                        request_from_date: String(row.request_from_date ?? row.requestFromDate ?? ""),
+                                        request_to_date: String(row.request_to_date ?? row.requestToDate ?? ""),
+                                        request_type: rowType,
+                                        comments: String(row.comments ?? ""),
+                                        is_half_day: Boolean(row.is_half_day ?? row.isHalfDay ?? false),
+                                        client_approval: false,
+                                      });
+                                      const requestId = String(
+                                        row.user_request_id ??
+                                          row.userRequestId ??
+                                          row.request_id ??
+                                          row.requestId ??
+                                          row.id ??
+                                          ""
+                                      ).trim();
+                                      setEditingLeaveRequestId(requestId);
+                                      setRequestViewTab("request");
+                                    }}
+                                    onRevoke={(requestId) =>
+                                      runAction(
+                                        userRequestActionLabel("LEAVE", "revoke"),
+                                        async () => {
+                                        await apiClient.delete(endpoints.userRequest.root, {
+                                          contentType: "application/json",
+                                          body: JSON.stringify({
+                                            user_request_id: Number(requestId),
+                                          }),
+                                        });
+                                        if (editingLeaveRequestId === requestId) {
+                                          setEditingLeaveRequestId("");
+                                          setLeaveRequestForm(createDefaultLeaveRequestForm());
+                                        }
+                                        await loadMyLeaveRequests();
                                       })
-                                    ) : (
-                                      <TableRow className="hover:bg-transparent">
-                                        <TableCell
-                                          colSpan={MY_LEAVE_TABLE_COL_COUNT}
-                                          className="h-[280px] text-center align-middle text-sm text-wt-text-muted"
-                                        >
-                                          {(leaveSubTab === "wfh"
-                                            ? filteredWfhTabRequests
-                                            : filteredLeaveTabRequests
-                                          ).length
-                                            ? "No requests match your search."
-                                            : UI_COPY.noRecordsFound}
-                                        </TableCell>
-                                      </TableRow>
-                                    )}
-                                  </TableBody>
-                                </WtTable>
-                              </ScrollableTable>
-                              {activeSelfServeRequests.length > 0 ? (
-                                <ListPagination
-                                  className="mt-3"
-                                  page={myLeavePagination.page}
-                                  totalPages={myLeavePagination.totalPages}
-                                  totalItems={myLeavePagination.totalItems}
-                                  rangeStart={myLeavePagination.rangeStart}
-                                  rangeEnd={myLeavePagination.rangeEnd}
-                                  pageSize={myLeavePagination.pageSize}
-                                  pageSizeOptions={myLeavePagination.pageSizeOptions}
-                                  onPageChange={myLeavePagination.setPage}
-                                  onPageSizeChange={myLeavePagination.setPageSize}
-                                />
-                              ) : null}
-                            </div>
-                          </div>
+                                    }
+                                  />
+                                </TabsContent>
+                              </Tabs>
+                            </>
+                          )}
                         </div>
-                          ) : (leaveSubTab === "team" || leaveSubTab === "org") && canViewTeamLeave ? (
-                        <div className="space-y-4">
-                          {leaveSubTab === "team" && hasManagerAccess && !hasHrAccess ? (
-                            <ManagerTeamOnLeavePanel />
+                          {leaveSubTab === "org" && hasHrAccess ? (
+                            <div className="mb-8">
+                              <HrWfhExceptionPanel actionLoading={actionLoading} runAction={runAction} />
+                            </div>
                           ) : null}
-                          {hasHrAccess ? (
-                            <LeaveWorkflowNotice
-                              variant="hr"
-                              scope={leaveSubTab === "org" ? "org" : "team"}
-                            />
-                          ) : hasDmAccess ? (
-                            <LeaveWorkflowNotice variant="dm" />
-                          ) : null}
-                          <div className="flex w-full items-end gap-3">
-                            <div className="min-w-0 flex-[2]">
-                              <InputField
-                                label="Search"
+                          <div hidden={!((leaveSubTab === "team" || leaveSubTab === "org") && canViewTeamLeave)}>
+                        <div className="bg-white dark:bg-zinc-950 rounded-xl border border-border/40 shadow-sm p-6 space-y-5">
+                          <div className="flex flex-col gap-3">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end w-full">
+                              <div className="w-full sm:min-w-[140px] sm:flex-1">
+                                <SelectField
+                                  label="Request Type"
+                                  value={employeeRequestFilters.requestType}
+                                  options={[...USER_REQUEST_FILTER_TYPE_OPTIONS]}
+                                  onChange={(v) => setEmployeeRequestFilters((p) => ({ ...p, requestType: v }))}
+                                  className="min-w-0"
+                                />
+                              </div>
+                              <div className="w-full sm:min-w-[140px] sm:flex-1">
+                                <DatePicker
+                                  label="From Date"
+                                  value={employeeRequestFilters.fromDate}
+                                  onChange={(v) => setEmployeeRequestFilters((p) => ({ ...p, fromDate: v }))}
+                                />
+                              </div>
+                              <div className="w-full sm:min-w-[140px] sm:flex-1">
+                                <DatePicker
+                                  label="To Date"
+                                  value={employeeRequestFilters.toDate}
+                                  onChange={(v) => setEmployeeRequestFilters((p) => ({ ...p, toDate: v }))}
+                                />
+                              </div>
+                            </div>
+                            <div className="flex flex-col w-full">
+                              <input
                                 type="search"
                                 value={teamLeaveSearch}
-                                onChange={setTeamLeaveSearch}
-                                placeholder="Search by employee, type, status…"
+                                onChange={(e) => setTeamLeaveSearch(e.target.value)}
+                                placeholder="Search by employee name…"
+                                className="h-10 w-full min-w-0 rounded-lg border border-input bg-transparent px-3 py-1 text-sm transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-0 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50"
                               />
                             </div>
-                            <SelectField
-                              label="Request Type"
-                              value={employeeRequestFilters.requestType}
-                              options={[...USER_REQUEST_FILTER_TYPE_OPTIONS]}
-                              onChange={(v) => setEmployeeRequestFilters((p) => ({ ...p, requestType: v }))}
-                              className="min-w-0 flex-1"
-                            />
-                            <ApiDateField
-                              label="From Date"
-                              value={employeeRequestFilters.fromDate}
-                              onChange={(v) => setEmployeeRequestFilters((p) => ({ ...p, fromDate: v }))}
-                              className="min-w-0 flex-1"
-                            />
-                            <ApiDateField
-                              label="To Date"
-                              value={employeeRequestFilters.toDate}
-                              onChange={(v) => setEmployeeRequestFilters((p) => ({ ...p, toDate: v }))}
-                              className="min-w-0 flex-1"
-                            />
-                            <Button
-                              variant="brand"
-                              type="button"
-                              className="shrink-0 px-3 py-2 h-10"
-                              onClick={() =>
-                                runAction(
-                                  leaveSubTab === "org" ? "Refresh employee requests" : "Refresh team requests",
-                                  () =>
-                                    fetchTeamRequests(leaveSubTab === "org" ? "org" : "team")
-                                )
-                              }
-                              disabled={actionLoading || teamRequestsLoading}
-                            >
-                              Fetch Requests
-                            </Button>
                           </div>
 
                           <ScrollableTable
@@ -1689,9 +1706,9 @@ export function LeavePageClient() {
                             className={LEAVE_REQUESTS_TABLE_MIN_HEIGHT}
                           >
                             <WtTable>
-                              <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                                <TableRow className="hover:bg-transparent">
-                                  <TableHead>
+                              <TableHeader className={`${WT_STICKY_TABLE_HEAD_CLASS} text-[11px] font-semibold tracking-wider text-muted-foreground/70 bg-muted/30`}>
+                                <TableRow className="hover:bg-transparent h-10">
+                                  <TableHead className="font-semibold px-4">
                                     <TableSortHeader
                                       label="Employee"
                                       activeDirection={activeSortDirectionForColumn(
@@ -1711,10 +1728,9 @@ export function LeavePageClient() {
                                       }
                                     />
                                   </TableHead>
-                                  <TableHead>Type</TableHead>
-                                  <TableHead>
+                                  <TableHead className="font-semibold px-4">
                                     <TableSortHeader
-                                      label="From"
+                                      label="Duration"
                                       activeDirection={activeSortDirectionForColumn(
                                         "from",
                                         teamLeaveSortId,
@@ -1732,24 +1748,9 @@ export function LeavePageClient() {
                                       }
                                     />
                                   </TableHead>
-                                  <TableHead>To</TableHead>
-                                  <TableHead>
-                                    {hasHrAccess || hasDmAccess ? "Final Status" : "Status"}
-                                  </TableHead>
-                                  {hasHrAccess || hasDmAccess ? (
-                                    <>
-                                      <TableHead>
-                                        {firstLineStatusColumnLabel}
-                                      </TableHead>
-                                      {hasHrAccess ? (
-                                        <TableHead>
-                                          Manager Reason
-                                        </TableHead>
-                                      ) : null}
-                                    </>
-                                  ) : null}
-                                  <TableHead>Comments</TableHead>
-                                  <TableHead className="text-right">Actions</TableHead>
+                                  <TableHead className="font-semibold px-4">Manager status</TableHead>
+                                  <TableHead className="font-semibold px-4">Details</TableHead>
+                                  <TableHead className="font-semibold px-4 text-right">Actions</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -1757,14 +1758,14 @@ export function LeavePageClient() {
                                   Array.from({ length: 5 }).map((_, rowIndex) => (
                                     <TableRow key={`team-leave-skeleton-${rowIndex}`}>
                                       {Array.from({ length: teamTableColCount }).map((_, colIndex) => (
-                                        <TableCell key={colIndex} className="px-3 py-2">
+                                        <TableCell key={colIndex} className="px-4 py-3">
                                           <Skeleton className="h-4 w-full" />
                                         </TableCell>
                                       ))}
                                     </TableRow>
                                   ))
-                                ) : teamLeavePagination.pageItems.length ? (
-                                  teamLeavePagination.pageItems.map((row, idx) => {
+                                ) : sortedEmployeeRequests.length ? (
+                                  sortedEmployeeRequests.map((row, idx) => {
                                     const requestId = String(
                                       row.user_request_id ??
                                         row.userRequestId ??
@@ -1789,10 +1790,10 @@ export function LeavePageClient() {
                                     const showManagerActions =
                                       (hasManagerAccess || hasDmAccess) &&
                                       !hrCanActOnRow &&
-                                      canManagerActOnRequest(rowRecord, { hasManagerAccess, hasDmAccess });
+                                      canManagerActOnRequest(rowRecord, { hasManagerAccess, hasDmAccess, actorEmail: userEmail });
                                     const showManagerReject =
                                       showManagerActions &&
-                                      canManagerRejectRequest(rowRecord, { hasManagerAccess, hasDmAccess });
+                                      canManagerRejectRequest(rowRecord, { hasManagerAccess, hasDmAccess, actorEmail: userEmail });
                                     const blockedHint = hrTeamActionBlockedHint(rowRecord, { hasHrAccess });
                                     const isRowUpdating = teamStatusUpdatingId === requestId;
                                     const rowEmail = requestRowEmail(row as Record<string, unknown>);
@@ -1806,41 +1807,60 @@ export function LeavePageClient() {
                                         row.user_email ??
                                         "—"
                                     ).trim();
+                                    const fromDate = String(row.request_from_date ?? row.requestFromDate ?? "").trim();
+                                    const toDate = String(row.request_to_date ?? row.requestToDate ?? "").trim();
+                                    const duration = fromDate && toDate ? `${fromDate} – ${toDate}` : "—";
+                                    const comments = String(row.comments ?? "").trim();
+                                    const hasDetails = managerReason || comments;
+                                    const statusBadgeClass =
+                                      status === "APPROVED"
+                                        ? filledBadgeClass("success")
+                                        : status === "REJECTED"
+                                          ? filledBadgeClass("danger")
+                                          : status === "PENDING"
+                                            ? filledBadgeClass("warning")
+                                            : "";
                                     return (
-                                      <TableRow key={`${requestId || "req"}-${idx}`}>
-                                        <TableCell className="px-3 py-2 whitespace-nowrap">
-                                          {employee || "—"}
+                                      <TableRow
+                                        key={`${requestId || "req"}-${idx}`}
+                                        className={idx % 2 === 1 ? "bg-muted/20" : ""}
+                                      >
+                                        <TableCell className="px-4 py-3 whitespace-nowrap">
+                                          <span className="font-medium text-foreground">{employee || "—"}</span>
                                           {isAm ? (
                                             <Badge variant="secondary" className={`ml-2 text-[10px] ${filledBadgeClass("info")}`}>
                                               AM
                                             </Badge>
                                           ) : null}
                                         </TableCell>
-                                        <TableCell className="px-3 py-2 whitespace-nowrap">
-                                          {formatUserRequestTypeLabel(row.request_type ?? row.requestType)}
+                                        <TableCell className="px-4 py-3 whitespace-nowrap text-muted-foreground text-xs">
+                                          {duration}
                                         </TableCell>
-                                        <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.request_from_date ?? row.requestFromDate ?? "—")}</TableCell>
-                                        <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.request_to_date ?? row.requestToDate ?? "—")}</TableCell>
-                                        <TableCell className="px-3 py-2 whitespace-nowrap">
-                                          {formatApprovalStageLabel(status)}
+                                        <TableCell className="px-4 py-3 whitespace-nowrap">
+                                          <Badge
+                                            variant="secondary"
+                                            className={`rounded-full border-0 font-normal ${managerStatus ? (filledBadgeClass(managerStatus === "APPROVED" ? "success" : managerStatus === "REJECTED" ? "danger" : "warning") || "bg-muted/60 text-muted-foreground") : "bg-muted/60 text-muted-foreground"}`}
+                                            title={managerStatus}
+                                          >
+                                            {managerStatus || "—"}
+                                          </Badge>
                                         </TableCell>
-                                        {hasHrAccess || hasDmAccess ? (
-                                          <>
-                                            <TableCell className="px-3 py-2 whitespace-nowrap">
-                                              {formatApprovalStageLabel(managerStatus)}
-                                            </TableCell>
-                                            {hasHrAccess ? (
-                                              <TableCell
-                                                className="px-3 py-2 max-w-[220px] truncate"
-                                                title={managerReason || undefined}
-                                              >
-                                                {managerReason || "—"}
-                                              </TableCell>
-                                            ) : null}
-                                          </>
-                                        ) : null}
-                                        <TableCell className="px-3 py-2 max-w-[220px] truncate">{String(row.comments ?? "—")}</TableCell>
-                                        <TableCell className="px-3 py-2 text-right">
+                                        <TableCell className="px-4 py-3">
+                                          {hasDetails ? (
+                                            <span
+                                              className="inline-flex items-center gap-1 text-xs text-muted-foreground cursor-help"
+                                              title={`${managerReason ? `Reason: ${managerReason}` : ""}${managerReason && comments ? " | " : ""}${comments ? `Comments: ${comments}` : ""}`}
+                                            >
+                                              <Info className="size-3.5 shrink-0" />
+                                              <span className="truncate max-w-[120px]">
+                                                {managerReason || comments}
+                                              </span>
+                                            </span>
+                                          ) : (
+                                            <span className="text-xs text-muted-foreground/50">—</span>
+                                          )}
+                                        </TableCell>
+                                        <TableCell className="px-4 py-3 text-right">
                                           {hrCanActOnRow ? (
                                             <div className="inline-flex items-center justify-end gap-1">
                                               <Button
@@ -1863,7 +1883,10 @@ export function LeavePageClient() {
                                                           "APPROVED",
                                                           { requireReasonOnReject: false }
                                                         );
-                                                        await loadEmployeeRequestsForApprover(leaveSubTab === "org" ? "org" : "team");
+                                                        const scope = leaveSubTab === "org" ? "org" : "team";
+                                                        invalidateTeamCache();
+                                                        invalidateLeaveBalance();
+                                                        await loadEmployeeRequestsForApprover(scope, teamPage, teamPageSize, true);
                                                       } finally {
                                                         setTeamStatusUpdatingId(null);
                                                       }
@@ -1892,7 +1915,10 @@ export function LeavePageClient() {
                                                           "REJECTED",
                                                           { requireReasonOnReject: false }
                                                         );
-                                                        await loadEmployeeRequestsForApprover(leaveSubTab === "org" ? "org" : "team");
+                                                        const scope = leaveSubTab === "org" ? "org" : "team";
+                                                        invalidateTeamCache();
+                                                        invalidateLeaveBalance();
+                                                        await loadEmployeeRequestsForApprover(scope, teamPage, teamPageSize, true);
                                                       } finally {
                                                         setTeamStatusUpdatingId(null);
                                                       }
@@ -1921,7 +1947,10 @@ export function LeavePageClient() {
                                                       await updateEmployeeRequestStatus(requestId, "APPROVED", {
                                                         requireReasonOnReject: false,
                                                       });
-                                                      await loadEmployeeRequestsForApprover(leaveSubTab === "org" ? "org" : "team");
+                                                      const scope = leaveSubTab === "org" ? "org" : "team";
+                                                      invalidateTeamCache();
+                                                      invalidateLeaveBalance();
+                                                      await loadEmployeeRequestsForApprover(scope, teamPage, teamPageSize, true);
                                                     }
                                                   )
                                                 }
@@ -1946,9 +1975,9 @@ export function LeavePageClient() {
                                               ) : null}
                                             </div>
                                           ) : blockedHint ? (
-                                            <span className="text-xs text-wt-text-muted">{blockedHint}</span>
+                                            <span className="text-xs text-muted-foreground">{blockedHint}</span>
                                           ) : (
-                                            <span className="text-wt-text-muted">—</span>
+                                            <span className="text-muted-foreground/50">—</span>
                                           )}
                                         </TableCell>
                                       </TableRow>
@@ -1958,11 +1987,16 @@ export function LeavePageClient() {
                                   <TableRow className="hover:bg-transparent">
                                     <TableCell
                                       colSpan={teamTableColCount}
-                                      className="h-[280px] text-center align-middle text-sm text-wt-text-muted"
+                                      className="h-[280px] text-center align-middle"
                                     >
-                                      {employeeRequests.length
-                                        ? "No requests match your search."
-                                        : UI_COPY.noRecordsFound}
+                                      <div className="flex flex-col items-center gap-2">
+                                        <Users className="size-8 text-muted-foreground/30" />
+                                        <span className="text-sm text-muted-foreground">
+                                          {employeeRequests.length
+                                            ? "No requests match your search."
+                                            : "No Data"}
+                                        </span>
+                                      </div>
                                     </TableCell>
                                   </TableRow>
                                 )}
@@ -1970,23 +2004,24 @@ export function LeavePageClient() {
                             </WtTable>
                           </ScrollableTable>
                           {sortedEmployeeRequests.length > 0 ? (
-                            <ListPagination
-                              className="mt-3"
-                              page={teamLeavePagination.page}
-                              totalPages={teamLeavePagination.totalPages}
-                              totalItems={teamLeavePagination.totalItems}
-                              rangeStart={teamLeavePagination.rangeStart}
-                              rangeEnd={teamLeavePagination.rangeEnd}
-                              pageSize={teamLeavePagination.pageSize}
-                              pageSizeOptions={teamLeavePagination.pageSizeOptions}
-                              onPageChange={teamLeavePagination.setPage}
-                              onPageSizeChange={teamLeavePagination.setPageSize}
-                            />
+                            <div className="border-t border-border/40 pt-4">
+                              <ListPagination
+                                page={teamPage}
+                                totalPages={teamTotalPages}
+                                totalItems={teamTotalElements}
+                                rangeStart={teamTotalElements === 0 ? 0 : teamPage * teamPageSize + 1}
+                                rangeEnd={Math.min(teamTotalElements, (teamPage + 1) * teamPageSize)}
+                                pageSize={teamPageSize}
+                                pageSizeOptions={teamPageSizeOptions}
+                                onPageChange={handleTeamPageChange}
+                                onPageSizeChange={handleTeamPageSizeChange}
+                              />
+                            </div>
                           ) : null}
                         </div>
-                          ) : null}
                           </div>
-                        </ContentCard>
+                          </div>
+                        </section>
         </OnboardingGate>
       </DashboardPageShell>
             <UserRequestRejectDialog
@@ -2012,6 +2047,12 @@ export function LeavePageClient() {
                 )
               }
               loading={actionLoading}
+            />
+            <CompOffCreditsDialog open={compOffCreditsOpen} onClose={() => setCompOffCreditsOpen(false)} />
+            <WfhExceptionModal
+              open={wfhExceptionOpen}
+              onClose={() => setWfhExceptionOpen(false)}
+              onSubmit={handleSubmitWfhException}
             />
     </>
   );

@@ -128,6 +128,57 @@ export async function listScopedUserRequests(params: {
   });
 }
 
+export async function fetchPaginatedScopedUserRequests(params: {
+  fromDate: string;
+  toDate: string;
+  requestType?: string;
+  empEmails?: string;
+  page: number;
+  size: number;
+}): Promise<{
+  rows: Array<Record<string, unknown>>;
+  totalPages: number;
+  totalElements: number;
+}> {
+  const normalizedFrom = toApiDateParam(params.fromDate) ?? params.fromDate.trim();
+  const normalizedTo = toApiDateParam(params.toDate) ?? params.toDate.trim();
+  const query: Record<string, string> = {
+    fromDate: normalizedFrom,
+    toDate: normalizedTo,
+    requestType: params.requestType?.trim() || "ALL",
+    page: String(params.page),
+    size: String(params.size),
+  };
+  if (params.empEmails?.trim()) query.empEmails = params.empEmails.trim();
+
+  try {
+    const res = await apiClient.get<ApiEnvelope<unknown>>(endpoints.userRequest.root, {
+      query: applyApiDateQuery(query, ["fromDate", "toDate"]),
+    });
+    const payload =
+      res && typeof res === "object" && "data" in (res as object)
+        ? (res as ApiEnvelope<unknown>).data
+        : res;
+
+    const rows = dedupeUserRequestRows(extractUserRequestListRows(payload));
+
+    const dataObj = payload as Record<string, unknown> | null;
+    const tp = Number(dataObj?.total_pages ?? dataObj?.totalPages ?? 1);
+    const te = Number(dataObj?.total_elements ?? dataObj?.totalElements ?? rows.length);
+
+    return {
+      rows,
+      totalPages: Number.isFinite(tp) && tp > 0 ? tp : 1,
+      totalElements: Number.isFinite(te) ? te : rows.length,
+    };
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 404 || error.status === 405)) {
+      return { rows: [], totalPages: 0, totalElements: 0 };
+    }
+    throw error;
+  }
+}
+
 
 
 export const STAGE_USER_REQUEST_TYPES = ["LEAVE", "WFH", "COMP_OFF"] as const;
@@ -358,7 +409,7 @@ export function hrTeamActionBlockedHint(
   const requestType = pickRowField(row, "request_type", "requestType");
 
   if (isLeaveRequestType(requestType) || isLeaveOrWfhRequestType(requestType)) {
-    return "Manager approval is final for leave and WFH";
+    return null;
   }
 
   if (!isLeaveOrWfhRequestType(requestType) && !isCompOffRequestType(requestType)) {

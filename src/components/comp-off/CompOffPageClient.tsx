@@ -1,9 +1,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
-import { CONTENT_CARD_CLASS, INNER_PANEL_CLASS } from "@/components/dashboard/ui/uiLayout";
-import { cn } from "@/lib/utils";
+import { PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Clock, Loader2, RefreshCw, Inbox } from "lucide-react";
+import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -14,6 +15,7 @@ import {
   WT_STICKY_TABLE_HEAD_CLASS,
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
+import { useClientPagination } from "@/hooks/useClientPagination";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -26,8 +28,8 @@ import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { ProjectSelectField } from "@/components/comp-off/ProjectSelectField";
-import { WeekendMultiDateField } from "@/components/comp-off/WeekendMultiDateField";
+
+import { DatePicker } from "@/components/ui/date-picker";
 import { useAccountManagerEmails } from "@/hooks/useAccountManagerEmails";
 import { useManagerPortfolioEmails } from "@/hooks/comp-off/useManagerPortfolioEmails";
 import { requestRowEmail } from "@/utils/learning/onboardOptions";
@@ -88,9 +90,9 @@ function todayYmd(): string {
 }
 
 function defaultRequestRange(): { from: string; to: string } {
-  const to = new Date();
-  const from = new Date();
-  from.setFullYear(from.getFullYear() - 1);
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
 }
 
@@ -156,13 +158,9 @@ export function CompOffPageClient({
       setMainTab(forcedTab);
       return;
     }
-    if (!canApplyCompOff && (hasHrAccess || hasManagerAccess)) {
-      setMainTab("team");
-      return;
-    }
     if (pathname.includes("/dashboard/comp-off/team")) setMainTab("team");
     else if (pathname.includes("/dashboard/comp-off")) setMainTab("my");
-  }, [forcedTab, pathname, canApplyCompOff, hasHrAccess, hasManagerAccess]);
+  }, [forcedTab, pathname]);
 
   const [balanceUnits, setBalanceUnits] = useState<number | null>(null);
   const [balanceAsOf, setBalanceAsOf] = useState(todayYmd());
@@ -178,7 +176,7 @@ export function CompOffPageClient({
   const [managerOptionsLoading, setManagerOptionsLoading] = useState(false);
 
   const [earnForm, setEarnForm] = useState({
-    worked_dates: [] as string[],
+    worked_date: "",
     project_code: "",
     manager_comp_off_email: "",
     comments: "",
@@ -189,9 +187,14 @@ export function CompOffPageClient({
     comments: "",
   });
   const [editingRequestId, setEditingRequestId] = useState("");
+  const [compOffSubTab, setCompOffSubTab] = useState<"apply" | "view">("apply");
 
   const [myRequests, setMyRequests] = useState<Array<Record<string, unknown>>>([]);
   const [myRequestsFlowFilter, setMyRequestsFlowFilter] = useState<"ALL" | "EARN" | "USAGE">("ALL");
+  const [myRequestsFrom, setMyRequestsFrom] = useState(() => defaultRequestRange().from);
+  const [myRequestsTo, setMyRequestsTo] = useState(() => defaultRequestRange().to);
+  const myRequestsCacheRef = useRef<Map<string, Array<Record<string, unknown>>>>(new Map());
+  const teamRequestsCacheRef = useRef<Map<string, Array<Record<string, unknown>>>>(new Map());
   const [teamRequests, setTeamRequests] = useState<Array<Record<string, unknown>>>([]);
   const [teamEmployeeNames, setTeamEmployeeNames] = useState<Record<string, string>>({});
   const [teamRequestUpdatingId, setTeamRequestUpdatingId] = useState<string | null>(null);
@@ -284,6 +287,12 @@ export function CompOffPageClient({
       return t === "COMP_OFF";
     });
   }, [myRequests, myRequestsFlowFilter]);
+  const viewPagination = useClientPagination(filteredMyRequests, {
+    resetKeys: [myRequestsFrom, myRequestsTo],
+  });
+  const teamPaginated = useClientPagination(teamRequests, {
+    resetKeys: [teamFilters.from, teamFilters.to, teamFilters.flow],
+  });
 
   const selectedProject = useMemo(
     () => projectOptions.find((p) => p.code === earnForm.project_code.trim()),
@@ -394,10 +403,14 @@ export function CompOffPageClient({
       setMyRequests([]);
       return;
     }
-    const future = new Date();
-    future.setFullYear(future.getFullYear() + 2);
-    const from = "2000-01-01";
-    const to = future.toISOString().slice(0, 10);
+    const from = myRequestsFrom || defaultRequestRange().from;
+    const to = myRequestsTo || defaultRequestRange().to;
+    const cacheKey = `${from}:${to}:${earnOnly}`;
+    const cached = myRequestsCacheRef.current.get(cacheKey);
+    if (cached) {
+      setMyRequests(cached);
+      return;
+    }
     const earnRows = await compOffService.listEarnRequestRows({ fromDate: from, toDate: to });
     let usageRows: Array<Record<string, unknown>> = [];
     if (!earnOnly) {
@@ -440,6 +453,7 @@ export function CompOffPageClient({
       );
       return compareApiDates(db, da);
     });
+    myRequestsCacheRef.current.set(cacheKey, deduped);
     setMyRequests(deduped);
     const hasApprovedEarn = deduped.some((row) => {
       const t = normalizeCompOffRequestType(row.request_type ?? row.requestType);
@@ -453,7 +467,7 @@ export function CompOffPageClient({
     if (shouldRefreshBalance) {
       void loadBalanceAndGrants();
     }
-  }, [userEmail, loadBalanceAndGrants, earnOnly]);
+  }, [userEmail, loadBalanceAndGrants, earnOnly, myRequestsFrom, myRequestsTo]);
 
   const applyTeamRequests = useCallback(async (merged: Array<Record<string, unknown>>) => {
     setTeamDecisions((prev) => {
@@ -530,6 +544,16 @@ export function CompOffPageClient({
   const loadTeamRequests = useCallback(async (opts?: { raiseOnError?: boolean }) => {
     const from = teamFilters.from.trim() || defaultRequestRange().from;
     const to = teamFilters.to.trim() || defaultRequestRange().to;
+    const cacheKey = `${from}:${to}:${earnOnly}:${teamFilters.flow}:${managerOnlyReview}`;
+    const cached = teamRequestsCacheRef.current.get(cacheKey);
+    if (cached) {
+      setTeamRequests(applyTeamRequestDecisions(cached, teamDecisionsRef.current));
+      const emails = cached.map((row) => requestRowEmail(row)).filter(Boolean);
+      if (emails.length) {
+        resolveEmployeeNamesByEmail(emails).then((names) => setTeamEmployeeNames(names)).catch(() => {});
+      }
+      return;
+    }
 
     try {
     const teamFlow = earnOnly ? "EARN" : teamFilters.flow;
@@ -588,6 +612,7 @@ export function CompOffPageClient({
         return true;
       });
       await applyTeamRequests(merged);
+      teamRequestsCacheRef.current.set(cacheKey, applyTeamRequestDecisions(merged, teamDecisionsRef.current));
       return;
     }
 
@@ -647,6 +672,7 @@ export function CompOffPageClient({
       return true;
     });
     await applyTeamRequests(merged);
+    teamRequestsCacheRef.current.set(cacheKey, applyTeamRequestDecisions(merged, teamDecisionsRef.current));
     } catch (error) {
       setTeamEmployeeNames({});
       setTeamRequests([]);
@@ -677,12 +703,19 @@ export function CompOffPageClient({
     await loadTeamRequests();
   }
 
+  const canReviewTeam = managerOnlyReview || hasHrAccess;
+  const showMyCompOff =
+    forcedTab === "my" || (!forcedTab && mainTab !== "team");
+  const showTeamReview =
+    forcedTab === "team" ||
+    (!forcedTab && canReviewTeam && mainTab === "team");
+
   useEffect(() => {
-    if (!canApplyCompOff) return;
+    if (!showMyCompOff) return;
     void loadBalanceAndGrants();
     void loadAssignedProjects();
     void loadMyRequests();
-  }, [canApplyCompOff, loadBalanceAndGrants, loadAssignedProjects, loadMyRequests]);
+  }, [showMyCompOff, loadBalanceAndGrants, loadAssignedProjects, loadMyRequests]);
 
   useEffect(() => {
     if (balanceUnits === null && grants.length === 0 && !grantsLoading) {
@@ -710,13 +743,15 @@ export function CompOffPageClient({
   ]);
 
   useEffect(() => {
-    if (!embedded || forcedTab !== "team" || teamReloadKey === undefined) return;
-    if (!hasManagerAccess && !hasHrAccess) return;
+    if (!embedded || teamReloadKey === undefined) return;
+    const onTeam = forcedTab === "team" || mainTab === "team";
+    if (!onTeam || (!hasManagerAccess && !hasHrAccess)) return;
     if (managerOnlyReview && managerPortfolioLoading) return;
     void loadTeamRequests().catch(() => undefined);
   }, [
     embedded,
     forcedTab,
+    mainTab,
     teamReloadKey,
     hasManagerAccess,
     hasHrAccess,
@@ -726,7 +761,16 @@ export function CompOffPageClient({
   ]);
 
   useEffect(() => {
-    if (mainTab !== "my" || !canApplyCompOff) return;
+    if (!showMyCompOff) return;
+    if (!myRequestsFrom || !myRequestsTo) return;
+    const id = window.setTimeout(() => {
+      void loadMyRequests();
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [showMyCompOff, myRequestsFrom, myRequestsTo, loadMyRequests]);
+
+  useEffect(() => {
+    if (!showMyCompOff) return;
     void loadMyRequests();
     void loadBalanceAndGrants();
     setManagerOptionsLoading(true);
@@ -738,10 +782,10 @@ export function CompOffPageClient({
     }).finally(() => {
       setManagerOptionsLoading(false);
     });
-  }, [mainTab, canApplyCompOff, loadMyRequests, loadBalanceAndGrants]);
+  }, [showMyCompOff, loadMyRequests, loadBalanceAndGrants]);
 
   useEffect(() => {
-    if (mainTab !== "my" || !canApplyCompOff) return;
+    if (!showMyCompOff) return;
     const refreshEmployeeView = () => {
       void loadMyRequests();
       void loadBalanceAndGrants();
@@ -755,18 +799,19 @@ export function CompOffPageClient({
       window.removeEventListener("focus", refreshEmployeeView);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [mainTab, canApplyCompOff, loadMyRequests, loadBalanceAndGrants]);
+  }, [showMyCompOff, loadMyRequests, loadBalanceAndGrants]);
 
   async function submitEarn() {
-    const workedDates = earnForm.worked_dates.map((d) => normalizeToApiDate(d.trim())).filter(Boolean);
+    const workedDate = normalizeToApiDate(earnForm.worked_date.trim());
     const projectCode = earnForm.project_code.trim();
     const comments = earnForm.comments.trim();
     if (!projectCode) throw new Error("Project is required.");
-    if (!workedDates.length) throw new Error("At least one weekend worked date is required.");
-    for (const workedDate of workedDates) {
-      if (!isWeekendYmd(workedDate)) {
-        throw new Error("Worked dates must be weekends (Saturday or Sunday).");
-      }
+    if (!workedDate) throw new Error("A weekend worked date is required.");
+    if (!isWeekendYmd(workedDate)) {
+      throw new Error("Worked date must be a weekend (Saturday or Sunday).");
+    }
+    if (compareApiDates(workedDate, todayYmd()) > 0) {
+      throw new Error("Worked date cannot be in the future.");
     }
     if (!selectedManagerEmails.length) throw new Error("At least one primary manager must be selected.");
     if (!comments) throw new Error("Comments are required.");
@@ -774,19 +819,17 @@ export function CompOffPageClient({
     if (editingRequestId) {
       throw new Error("Editing earn requests is not supported. Revoke and submit a new earn request.");
     }
-    for (const workedDate of workedDates) {
-      await compOffService.createEarnRequest({
-        worked_date: workedDate,
-        workedDate,
-        project_code: projectCode,
-        projectCode,
-        work_description: comments,
-        workDescription: comments,
-        manager_emails: selectedManagerEmails,
-        managerEmails: selectedManagerEmails,
-      });
-    }
-    setEarnForm({ worked_dates: [], project_code: "", manager_comp_off_email: "", comments: "" });
+    await compOffService.createEarnRequest({
+      worked_date: workedDate,
+      workedDate,
+      project_code: projectCode,
+      projectCode,
+      work_description: comments,
+      workDescription: comments,
+      manager_emails: selectedManagerEmails,
+      managerEmails: selectedManagerEmails,
+    });
+    setEarnForm({ worked_date: "", project_code: "", manager_comp_off_email: "", comments: "" });
     setSelectedManagerEmails([]);
     setEditingRequestId("");
     await Promise.all([loadMyRequests(), loadBalanceAndGrants()]);
@@ -836,622 +879,513 @@ export function CompOffPageClient({
     await loadMyRequests();
   }
 
-  const canReviewTeam = managerOnlyReview || hasHrAccess;
-  const showMyCompOff =
-    !earnOnly || forcedTab !== "team"
-      ? forcedTab === "my" || (!forcedTab && canApplyCompOff && mainTab !== "team")
-      : false;
-  const showTeamReview =
-    forcedTab === "team" ||
-    (earnOnly && embedded && canReviewTeam) ||
-    (!earnOnly && !forcedTab && canReviewTeam && (!canApplyCompOff || mainTab === "team"));
-
   const pageBody = (
-    <section className={cn(embedded ? "space-y-4" : CONTENT_CARD_CLASS)}>
-      {!embedded && canApplyCompOff && canReviewTeam ? (
-        <PageTabs
-          embedded
-          aria-label="Comp-off views"
-          value={mainTab}
-          onValueChange={(value) => setMainTab(value as "my" | "team")}
-          items={[
-            { value: "my", label: "My Comp-off" },
-            { value: "team", label: "Team Review" },
-          ]}
-        />
+    <section>
+      {!forcedTab && canReviewTeam ? (
+        <div className="flex items-center justify-between border-b border-wt-border px-5 pb-4 pt-6">
+          <Tabs value={mainTab} onValueChange={(value) => setMainTab(value as "my" | "team")} className="gap-0">
+            <TabsList aria-label="Comp-off views" className="gap-3 bg-transparent p-0">
+              <TabsTrigger value="my" className="cursor-pointer">My Comp-off</TabsTrigger>
+              <TabsTrigger value="team" className="cursor-pointer">Team Review</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       ) : null}
-      <div className={PAGE_TAB_BODY_CLASS}>
-      {!embedded ? <h2 className="text-xl font-semibold text-wt-text">Comp-off</h2> : null}
+      {showMyCompOff ? (
+        <div className={`${!embedded ? "pt-6" : ""} space-y-4 px-5 pb-5`}>
+          {!embedded ? <h2 className="text-xl font-semibold tracking-tight text-wt-text">Comp-off</h2> : null}
+          <Tabs value={compOffSubTab} onValueChange={(v) => setCompOffSubTab(v as "apply" | "view")} orientation="horizontal">
+            <TabsList variant="line" className="h-9 gap-1">
+              <TabsTrigger value="apply" className="px-3 text-xs font-medium cursor-pointer">Apply for Compensation Off</TabsTrigger>
+              <TabsTrigger value="view" className="px-3 text-xs font-medium cursor-pointer">View Applications</TabsTrigger>
+            </TabsList>
 
-            {showMyCompOff ? (
+            <TabsContent value="apply" className="pt-6">
               <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className={INNER_PANEL_CLASS}>
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="font-semibold text-sm">Comp-off balance</h3>
-                        {earnOnly && canApplyCompOff ? (
-                          <p className="text-xs text-wt-text-muted mt-1">
-                            To use balance, submit a <strong>Comp off</strong> request under{" "}
-                            <strong>Leave requests</strong>.
-                          </p>
-                        ) : null}
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-2xl font-semibold text-wt-text">{displayBalance}</p>
-                        <p className="text-xs text-wt-text-muted">unit{displayBalance === 1 ? "" : "s"}</p>
-                      </div>
+                {/* Balance Card */}
+                <div className="bg-muted/40 rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-sm text-muted-foreground flex items-center gap-1.5"><Clock className="size-3.5" />Comp Off Balance</p>
+                      <p className="text-3xl font-bold text-foreground mt-1">
+                        {displayBalance}{" "}
+                        <span className="text-lg font-normal text-muted-foreground">
+                          unit{displayBalance === 1 ? "" : "s"}
+                        </span>
+                      </p>
                     </div>
-                  </div>
-                  <div className={INNER_PANEL_CLASS}>
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="font-semibold text-sm">Next Expiry</h3>
-                        <p className="text-xs text-wt-text-muted mt-1">Nearest credit expiry date</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-2xl font-semibold text-wt-text">
-                          {nearestExpiryDate ? formatApiDateDisplay(nearestExpiryDate) : "—"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {grants.length ? (
-                  <div className={cn(INNER_PANEL_CLASS, "space-y-2")}>
-                    <h3 className="font-semibold text-sm">Credit Breakdown</h3>
-                    <ScrollableTable maxHeightClass="max-h-48">
-                      <WtTable>
-                        <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                          <TableRow className="hover:bg-transparent">
-                            <TableHead>Worked</TableHead>
-                            <TableHead>Expires</TableHead>
-                            <TableHead>Remaining</TableHead>
-                            <TableHead>Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {grants.map((grant, idx) => {
-                            const expiry = normalizeToApiDate(grantExpiryDate(grant)) || grantExpiryDate(grant);
-                            const worked = normalizeToApiDate(grant.worked_date ?? grant.workedDate ?? "") || (grant.worked_date ?? grant.workedDate);
-                            const status = grantStatus(grant);
-                            const remaining = grantRemainingUnits(grant);
-                            return (
-                              <TableRow key={grant.grant_id ?? grant.grantId ?? idx}>
-                                <TableCell className="px-3 py-1.5 text-sm">{worked ? formatApiDateDisplay(worked) : "—"}</TableCell>
-                                <TableCell className="px-3 py-1.5 text-sm">{expiry ? formatApiDateDisplay(expiry) : "—"}</TableCell>
-                                <TableCell className="px-3 py-1.5 text-sm">{Number.isFinite(remaining) ? remaining : "—"}</TableCell>
-                                <TableCell className="px-3 py-1.5 text-sm">{status}</TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </WtTable>
-                    </ScrollableTable>
-                  </div>
-                ) : null}
-
-                <div className={`grid gap-4 ${earnOnly ? "lg:grid-cols-1" : "lg:grid-cols-2"}`}>
-                    <div className={cn(INNER_PANEL_CLASS, "space-y-3")}>
-                    <div>
-                      <h3 className="font-semibold">Earn Credit</h3>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <ProjectSelectField
-                        label="Project"
-                        required
-                        value={earnForm.project_code}
-                        options={projectOptions}
-                        onChange={onEarnProjectChange}
-                      />
-                      <WeekendMultiDateField
-                        label="Worked date"
-                        required
-                        value={earnForm.worked_dates}
-                        onChange={(dates) => setEarnForm((p) => ({ ...p, worked_dates: dates }))}
-                        maxDates={2}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-wt-text">Primary manager(s)</label>
-                      {managerOptionsLoading ? (
-                        <p className="text-xs text-wt-text-muted">Loading managers...</p>
-                      ) : managerOptions.length ? (
-                        <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto border border-wt-border rounded-lg p-2">
-                          {managerOptions.map((mgr) => {
-                            const isSelected = selectedManagerEmails.includes(mgr.email);
-                            return (
-                              <label key={mgr.email} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-wt-surface-2 px-2 py-1 rounded">
-                                <input
-                                  type="checkbox"
-                                  className="accent-wt-brand size-4"
-                                  checked={isSelected}
-                                  onChange={() => {
-                                    setSelectedManagerEmails((prev) =>
-                                      isSelected ? prev.filter((e) => e !== mgr.email) : [...prev, mgr.email]
-                                    );
-                                  }}
-                                />
-                                <span>{mgr.name}</span>
-                                {mgr.project_code ? (
-                                  <span className="text-xs text-wt-text-muted">({mgr.project_code})</span>
-                                ) : null}
-                              </label>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-wt-text-muted">No managers available for your projects.</p>
-                      )}
-                      {!selectedManagerEmails.length ? (
-                        <p className="text-xs text-wt-error">Select at least one manager.</p>
-                      ) : null}
-                    </div>
-                    <TextAreaField
-                      label="Comments / Work description"
-                      required
-                      value={earnForm.comments}
-                      onChange={(v) => setEarnForm((p) => ({ ...p, comments: v }))}
-                    />
-                    <Button variant="brand" type="button" className="px-3 py-2" disabled={ actionLoading || !earnForm.project_code.trim() || !earnForm.worked_dates.length || !selectedManagerEmails.length || !earnForm.comments.trim() } onClick={() =>
-                        runAction(compOffEarnActionLabel(editingRequestId ? "update" : "submit"), submitEarn)
-                      }
-                    >
-                      {editingRequestId ? "Save earn request" : "Submit earn request"}
-                    </Button>
-                  </div>
-
-                  {!earnOnly ? (
-                  <div
-                    className={cn(INNER_PANEL_CLASS, "space-y-3", !canUseCompOff && "opacity-75")}
-                  >
-                    <div>
-                      <h3 className="font-semibold">Use Comp-Off</h3>
-                      <p className="text-xs text-wt-text-muted mt-1">
-                        To use comp-off balance, submit a request from{" "}
-                        <strong>My leave requests</strong>.
+                    <div className="text-right shrink-0">
+                      <p className="text-xs text-muted-foreground">Next expiry</p>
+                      <p className="text-sm font-medium text-foreground mt-0.5">
+                        {nearestExpiryDate ? formatApiDateDisplay(nearestExpiryDate) : "\u2014"}
                       </p>
                     </div>
                   </div>
-                  ) : null}
                 </div>
 
-                <div className={INNER_PANEL_CLASS}>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold">{earnOnly ? "My earn requests" : "My requests"}</h3>
-                    <div className="flex items-end gap-2">
-                      {!earnOnly ? (
-                      <SelectField
-                        label="Flow"
-                        value={myRequestsFlowFilter}
-                        options={["ALL", "EARN", "USAGE"]}
-                        onChange={(v) =>
-                          setMyRequestsFlowFilter(v as "ALL" | "EARN" | "USAGE")
-                        }
-                      />
-                      ) : null}
-                      <Button variant="brand" size="sm" type="button" className="px-3 py-2 text-sm" disabled={actionLoading} onClick={() => runAction("Refresh my comp-off requests", loadMyRequests)}
-                      >
-                        Refresh
-                      </Button>
-                    </div>
-                  </div>
-                  {filteredMyRequests.length ? (
-                    <ScrollableTable maxHeightClass="max-h-[min(50vh,400px)]">
-                      <WtTable>
-                        <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                          <TableRow className="hover:bg-transparent">
-                            {earnOnly ? (
-                              <>
-                                <TableHead>Project</TableHead>
-                                <TableHead>Worked date</TableHead>
-                              </>
-                            ) : (
-                              <>
-                                <TableHead>Type</TableHead>
-                                <TableHead>From</TableHead>
-                                <TableHead>To</TableHead>
-                              </>
-                            )}
-                            <TableHead>Status</TableHead>
-                            <TableHead>Manager status</TableHead>
-                            {!earnOnly ? (
-                              <>
-                                <TableHead>Manager reason</TableHead>
-                                <TableHead>HR status</TableHead>
-                              </>
-                            ) : null}
-                            <TableHead>Comments</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredMyRequests.map((row, idx) => {
-                            const id = requestRowId(row);
-                            const status = requestRowStatus(row);
-                            const isPending = isPendingRequestStatus(status);
-                            const flow = normalizeCompOffRequestType(
-                              row.request_type ?? row.requestType
-                            );
-                            const canEdit = isPending && Boolean(id) && flow === "COMP_OFF";
-                            const mgrStatus =
-                              flow === "COMP_OFF_EARN"
-                                ? requestEarnManagerStatus(row)
-                                : requestManagerStatus(row);
-                            const mgrReason = earnOnly
-                              ? "—"
-                              : formatStageRejectionReason(
-                                  mgrStatus,
-                                  pickRowField(row, "manager_reason", "managerReason")
-                                );
-                            const hrSt =
-                              !earnOnly && flow === "COMP_OFF" ? requestHrStatus(row) : "—";
-                            return (
-                              <TableRow key={`${id || idx}`}>
-                                {earnOnly ? (
-                                  <>
-                                    <TableCell className="px-3 py-2 whitespace-nowrap">{earnProjectLabel(row)}</TableCell>
-                                    <TableCell className="px-3 py-2 whitespace-nowrap">
-                                      {String(
-                                        pickRowField(
-                                          row,
-                                          "worked_date",
-                                          "workedDate",
-                                          "request_from_date",
-                                          "requestFromDate"
-                                        ) ?? "—"
-                                      )}
-                                    </TableCell>
-                                  </>
-                                ) : (
-                                  <>
-                                    <TableCell className="px-3 py-2 whitespace-nowrap">{requestTypeLabel(flow)}</TableCell>
-                                    <TableCell className="px-3 py-2 whitespace-nowrap">
-                                      {String(
-                                        pickRowField(row, "request_from_date", "requestFromDate") ?? "—"
-                                      )}
-                                    </TableCell>
-                                    <TableCell className="px-3 py-2 whitespace-nowrap">
-                                      {String(
-                                        pickRowField(row, "request_to_date", "requestToDate") ?? "—"
-                                      )}
-                                    </TableCell>
-                                  </>
-                                )}
-                                <TableCell className="px-3 py-2 whitespace-nowrap">{status}</TableCell>
-                                <TableCell className="px-3 py-2 whitespace-nowrap">{mgrStatus}</TableCell>
-                                {!earnOnly ? (
-                                  <>
-                                    <TableCell
-                                      className="px-3 py-2 max-w-[140px] truncate"
-                                      title={mgrReason !== "—" ? mgrReason : undefined}
-                                    >
-                                      {mgrReason}
-                                    </TableCell>
-                                    <TableCell className="px-3 py-2 whitespace-nowrap">
-                                      {flow === "COMP_OFF" ? hrSt : "—"}
-                                    </TableCell>
-                                  </>
-                                ) : null}
-                                <TableCell className="px-3 py-2 max-w-[200px] truncate">
-                                  {String(
-                                    pickRowField(
-                                      row,
-                                      "comments",
-                                      "comment",
-                                      "description",
-                                      "remarks",
-                                      "work_description",
-                                      "workDescription"
-                                    ) ?? "—"
-                                  )}
-                                </TableCell>
-                                <TableCell className="px-3 py-2 text-right">
-                                  {isPending && id ? (
-                                    <div className="inline-flex gap-1">
-                                      {canEdit ? (
-                                        <Button variant="brand" size="xs" type="button" className="px-2 py-1 text-xs" disabled={actionLoading} onClick={() => {
-                                            setUsageForm({
-                                              request_from_date: String(
-                                                pickRowField(row, "request_from_date", "requestFromDate") ?? ""
-                                              ),
-                                              request_to_date: String(
-                                                pickRowField(row, "request_to_date", "requestToDate") ?? ""
-                                              ),
-                                              comments: String(
-                                                pickRowField(
-                                                  row,
-                                                  "comments",
-                                                  "comment",
-                                                  "description",
-                                                  "remarks"
-                                                ) ?? ""
-                                              ),
-                                            });
-                                            setEditingRequestId(id);
-                                          }}
-                                        >
-                                          Edit
-                                        </Button>
-                                      ) : null}
-                                      <Button
-                                        type="button"
-                                        variant="destructive"
-                                        size="xs"
-                                        disabled={actionLoading}
-                                        onClick={() =>
-                                          runAction(
-                                            flow === "COMP_OFF_EARN"
-                                              ? compOffEarnActionLabel("revoke")
-                                              : compOffUsageActionLabel("revoke"),
-                                            async () => {
-                                              if (flow === "COMP_OFF_EARN") {
-                                                await compOffService.cancelEarnRequest(Number(id));
-                                              } else {
-                                                await compOffService.deleteRequest(Number(id));
-                                              }
-                                              if (editingRequestId === id) setEditingRequestId("");
-                                              await loadMyRequests();
-                                            }
-                                          )
-                                        }
-                                      >
-                                        Cancel
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <span className="text-wt-text-muted">—</span>
-                                  )}
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </WtTable>
-                    </ScrollableTable>
-                  ) : (
-                    <p className="text-sm text-wt-text-muted">No comp-off requests yet.</p>
-                  )}
-                </div>
-              </div>
-            ) : showTeamReview ? (
-              <div className={cn(INNER_PANEL_CLASS, "space-y-4")}>
-                <div className="flex flex-wrap items-end gap-3">
-                  {!useParentTeamDates ? (
-                    <>
-                      <InputField
-                        label="From"
-                        type="date"
-                        value={teamFilters.from}
-                        onChange={(v) => setTeamFilters((p) => ({ ...p, from: v }))}
-                      />
-                      <InputField
-                        label="To"
-                        type="date"
-                        value={teamFilters.to}
-                        onChange={(v) => setTeamFilters((p) => ({ ...p, to: v }))}
-                      />
-                    </>
-                  ) : null}
-                  {(managerOnlyReview || hasHrAccess) && !earnOnly ? (
+                {/* Earn Credit form */}
+                <div className="bg-muted/40 rounded-xl p-6 space-y-4 shadow-sm">
+                  <h3 className="font-semibold tracking-tight text-foreground">Earn Credit</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <SelectField
-                      label="Flow"
-                      value={teamFilters.flow}
-                      options={[
-                        { value: "ALL", label: "All" },
-                        { value: "EARN", label: "Earn Credit" },
-                        { value: "USAGE", label: "Usage" },
-                      ]}
-                      onChange={(v) =>
-                        setTeamFilters((p) => ({
-                          ...p,
-                          flow: v as "ALL" | "EARN" | "USAGE",
-                        }))
-                      }
+                      label="Project"
+                      required
+                      value={earnForm.project_code}
+                      options={projectOptions.map((p) => ({ value: p.code, label: p.label }))}
+                      onChange={onEarnProjectChange}
+                      placeholder="Select"
                     />
-                  ) : null}
-                  <Button variant="brand" type="button" className="px-3 py-2 h-10" disabled={actionLoading} onClick={() =>
-                      runAction(compOffTeamReviewActionLabel("COMP_OFF", "fetch"), () =>
-                        loadTeamRequests({ raiseOnError: true })
-                      )
+                    <DatePicker
+                      label="Worked date"
+                      required
+                      value={earnForm.worked_date}
+                      onChange={(v) => setEarnForm((p) => ({ ...p, worked_date: v }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Primary managers + Comments */}
+                <div className="bg-muted/40 rounded-xl p-6 space-y-4 shadow-sm">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-foreground">Primary manager(s)</label>
+                    {managerOptionsLoading ? (
+                      <p className="text-xs text-muted-foreground">Loading managers...</p>
+                    ) : managerOptions.length ? (
+                      <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto border rounded-lg p-2">
+                        {managerOptions.map((mgr) => {
+                          const isSelected = selectedManagerEmails.includes(mgr.email);
+                          return (
+                            <label key={mgr.email} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent px-2 py-1 rounded">
+                              <input
+                                type="checkbox"
+                                className="accent-wt-brand size-4 cursor-pointer"
+                                checked={isSelected}
+                                onChange={() => {
+                                  setSelectedManagerEmails((prev) =>
+                                    isSelected ? prev.filter((e) => e !== mgr.email) : [...prev, mgr.email]
+                                  );
+                                }}
+                              />
+                              <span>{mgr.name}</span>
+                              {mgr.project_code ? (
+                                <span className="text-xs text-muted-foreground">({mgr.project_code})</span>
+                              ) : null}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No managers available for your projects.</p>
+                    )}
+                    {!selectedManagerEmails.length ? (
+                      <p className="text-xs text-destructive">Select at least one manager.</p>
+                    ) : null}
+                  </div>
+                  <TextAreaField
+                    label="Comments / Work description"
+                    required
+                    value={earnForm.comments}
+                    onChange={(v) => setEarnForm((p) => ({ ...p, comments: v }))}
+                  />
+                  <Button variant="brand" type="button" className="px-3 py-2" disabled={actionLoading || !earnForm.project_code.trim() || !earnForm.worked_date.trim() || !selectedManagerEmails.length || !earnForm.comments.trim()} onClick={() =>
+                      runAction(compOffEarnActionLabel(editingRequestId ? "update" : "submit"), submitEarn)
                     }
                   >
-                    Fetch requests
+                    {editingRequestId ? "Save earn request" : "Submit earn request"}
                   </Button>
                 </div>
 
-                {teamRequests.length ? (
-                  <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
-                    <WtTable>
-                      <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                        <TableRow className="hover:bg-transparent">
-                          <TableHead>Employee</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>From</TableHead>
-                          <TableHead>To</TableHead>
-                          <TableHead>Description</TableHead>
-                          {isHrOnly ? (
-                            <>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Manager status</TableHead>
-                              <TableHead>Manager reason</TableHead>
-                            </>
-                          ) : (
-                            <>
-                              <TableHead>Manager status</TableHead>
-                              {!managerOnlyReview ? (
-                                <TableHead>Manager reason</TableHead>
-                              ) : null}
-                              {hasHrAccess ? (
-                                <TableHead>HR status</TableHead>
-                              ) : null}
-                              <TableHead className="text-right">Actions</TableHead>
-                            </>
-                          )}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {teamRequests.map((row, idx) => {
-                          const id = requestRowId(row);
-                          const flow = normalizeCompOffRequestType(
-                            row.request_type ?? row.requestType
-                          );
-                          const finalStatus = requestFinalStatus(row);
-                          const managerStatus =
-                            flow === "COMP_OFF_EARN"
-                              ? requestEarnManagerStatus(row)
-                              : requestManagerStatus(row);
-                          const managerReason = formatStageRejectionReason(
-                            managerStatus,
-                            pickRowField(row, "manager_reason", "managerReason")
-                          );
-                          const hrStatus = requestHrStatus(row);
-                          const rowEmail = requestRowEmail(row);
-                          const isAm = rowEmail ? accountManagerEmails.has(rowEmail) : false;
-                          const routedManager = String(
-                            pickRowField(row, "manager_comp_off_email", "managerCompOffEmail") ?? ""
-                          )
-                            .trim()
-                            .toLowerCase();
-                          const managerRoutedOk =
-                            hasManagerAccess &&
-                            ((userEmail && routedManager === userEmail) ||
-                              (rowEmail ? managerTeamEmails.has(rowEmail) : false));
-                          const isRowUpdating = teamRequestUpdatingId === id;
-                          const canManagerActEarn =
-                            flow === "COMP_OFF_EARN" &&
-                            hasManagerAccess &&
-                            !isHrOnly &&
-                            managerStatus === "PENDING" &&
-                            managerRoutedOk;
-                          const canManagerActUsage =
-                            flow === "COMP_OFF" &&
-                            hasManagerAccess &&
-                            managerStatus === "PENDING" &&
-                            managerRoutedOk;
-                          const canHrActUsage =
-                            hasHrAccess &&
-                            flow === "COMP_OFF" &&
-                            canHrActOnCompOff(row, { hasHrAccess });
-                          const canReview =
-                            !isRowUpdating &&
-                            (canManagerActEarn || canManagerActUsage || canHrActUsage);
-                          return (
-                            <TableRow key={`${id || idx}`}>
-                              <TableCell className="px-3 py-2 whitespace-nowrap">
-                                {compOffEmployeeDisplayName(row, teamEmployeeNames)}
-                                {isAm ? (
-                                  <Badge variant="secondary" className={`ml-2 text-[10px] ${filledBadgeClass("info")}`}>
-                                    AM
-                                  </Badge>
-                                ) : null}
-                              </TableCell>
-                              <TableCell className="px-3 py-2 whitespace-nowrap">{requestTypeLabel(flow)}</TableCell>
-                              <TableCell className="px-3 py-2 whitespace-nowrap">
-                                {String(
-                                  pickRowField(row, "request_from_date", "requestFromDate") ?? "—"
-                                )}
-                              </TableCell>
-                              <TableCell className="px-3 py-2 whitespace-nowrap">
-                                {String(
-                                  pickRowField(row, "request_to_date", "requestToDate") ?? "—"
-                                )}
-                              </TableCell>
-                              <TableCell
-                                className="px-3 py-2 max-w-[200px] truncate"
-                                title={String(
-                                  pickRowField(row, "comments", "comment", "description", "remarks") ?? ""
-                                )}
+                {!earnOnly ? (
+                  <div className="space-y-4">
+                    <h3 className="font-semibold tracking-tight text-foreground">Use Comp Off</h3>
+                    <p className="text-xs text-muted-foreground">
+                      To use comp-off balance, submit a request from{" "}
+                      <strong>My leave requests</strong>.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="view" className="pt-3">
+              <div className="flex items-center justify-between pb-3 border-b border-border/50">
+                <h3 className="text-base font-semibold tracking-tight">Applications</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">From</span>
+                  <DatePicker label="" value={myRequestsFrom} onChange={(v) => { setMyRequestsFrom(v); myRequestsCacheRef.current.clear(); }} />
+                  <span className="text-muted-foreground">—</span>
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">To</span>
+                  <DatePicker label="" value={myRequestsTo} onChange={(v) => { setMyRequestsTo(v); myRequestsCacheRef.current.clear(); }} />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    type="button"
+                    onClick={() => runAction("Refresh", loadMyRequests)}
+                    disabled={actionLoading}
+                    className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+                  >
+                    <RefreshCw className={`size-4 ${actionLoading ? "animate-spin" : ""}`} />
+                  </Button>
+                </div>
+              </div>
+
+              {actionLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+              <ScrollableTable maxHeightClass="max-h-[min(50vh,380px)]">
+                <WtTable>
+                  <TableHeader className={`${WT_STICKY_TABLE_HEAD_CLASS} text-[11px] font-semibold tracking-wider text-muted-foreground bg-muted/40`}>
+                    <TableRow className="hover:bg-transparent h-10">
+                      <TableHead className="font-semibold px-3">Employee Name</TableHead>
+                      <TableHead className="font-semibold px-3">Date of Request</TableHead>
+                      <TableHead className="font-semibold px-3">Project</TableHead>
+                      <TableHead className="font-semibold px-3">Comp Off Days</TableHead>
+                      <TableHead className="font-semibold px-3">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {viewPagination.pageItems.length ? (
+                      viewPagination.pageItems.map((row, idx) => {
+                        const id = requestRowId(row);
+                        const status = requestRowStatus(row);
+                        const flow = normalizeCompOffRequestType(row.request_type ?? row.requestType);
+                        const dateDisplay =
+                          flow === "COMP_OFF_EARN"
+                            ? String(
+                                pickRowField(row, "worked_date", "workedDate", "request_from_date", "requestFromDate") ?? ""
+                              )
+                            : `${String(pickRowField(row, "request_from_date", "requestFromDate") ?? "")} \u2013 ${String(
+                                pickRowField(row, "request_to_date", "requestToDate") ?? ""
+                              )}`;
+                        const projectLabel = earnProjectLabel(row);
+                        const days = flow === "COMP_OFF_EARN"
+                          ? 1
+                          : calendarDaysInclusive(
+                              String(pickRowField(row, "request_from_date", "requestFromDate") ?? ""),
+                              String(pickRowField(row, "request_to_date", "requestToDate") ?? "")
+                            );
+                        return (
+                          <TableRow key={`${id || idx}`} className={idx % 2 === 1 ? "bg-muted/20" : ""}>
+                            <TableCell className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">
+                              {user?.name || user?.email || "\u2014"}
+                            </TableCell>
+                            <TableCell className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">
+                              {dateDisplay}
+                            </TableCell>
+                            <TableCell className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">
+                              {projectLabel}
+                            </TableCell>
+                            <TableCell className="px-3 py-2.5 whitespace-nowrap text-muted-foreground tabular-nums">
+                              {days}
+                            </TableCell>
+                            <TableCell className="px-3 py-2.5 whitespace-nowrap">
+                              <Badge
+                                className={
+                                  status === "APPROVED"
+                                    ? `rounded-full border-0 font-normal text-[11px] ${filledBadgeClass("success")}`
+                                    : status === "REJECTED"
+                                      ? `rounded-full border-0 font-normal text-[11px] ${filledBadgeClass("danger")}`
+                                      : "rounded-full border-0 font-normal text-[11px] bg-muted/60 text-muted-foreground"
+                                }
                               >
-                                {String(
-                                  pickRowField(row, "comments", "comment", "description", "remarks") ?? "—"
-                                )}
+                                {status === "APPROVED"
+                                  ? "Approved"
+                                  : status === "REJECTED"
+                                    ? "Rejected"
+                                    : "Pending"}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell colSpan={5} className="h-[200px] text-center align-middle">
+                          <div className="flex flex-col items-center gap-2">
+                            <Inbox className="size-8 text-muted-foreground/40" />
+                            <span className="text-sm text-muted-foreground">
+                              No applications yet.
+                            </span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </WtTable>
+              </ScrollableTable>
+              )}
+              {viewPagination.totalItems > 0 ? (
+                <div className="border-t border-border/50 px-0 py-3">
+                  <ListPagination
+                    page={viewPagination.page}
+                    totalPages={viewPagination.totalPages}
+                    totalItems={viewPagination.totalItems}
+                    rangeStart={viewPagination.rangeStart}
+                    rangeEnd={viewPagination.rangeEnd}
+                    pageSize={viewPagination.pageSize}
+                    pageSizeOptions={viewPagination.pageSizeOptions}
+                    onPageChange={viewPagination.setPage}
+                    onPageSizeChange={viewPagination.setPageSize}
+                  />
+                </div>
+              ) : null}
+            </TabsContent>
+          </Tabs>
+        </div>
+      ) : null}
+
+      {showTeamReview ? (
+        <div className={`space-y-3 px-5 pb-4 ${!embedded ? "pt-4" : ""}`}>
+          {!embedded ? <h2 className="text-xl font-semibold text-wt-text">Comp-off</h2> : null}
+          <div className="flex items-center justify-between pb-3 border-b border-border/50">
+            <h3 className="text-base font-semibold tracking-tight">Applications</h3>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">From</span>
+              <DatePicker label="" value={teamFilters.from} onChange={(v) => { setTeamFilters((p) => ({ ...p, from: v })); teamRequestsCacheRef.current.clear(); }} />
+              <span className="text-muted-foreground">—</span>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">To</span>
+              <DatePicker label="" value={teamFilters.to} onChange={(v) => { setTeamFilters((p) => ({ ...p, to: v })); teamRequestsCacheRef.current.clear(); }} />
+              {(managerOnlyReview || hasHrAccess) && !earnOnly ? (
+                <SelectField
+                  label="Flow"
+                  value={teamFilters.flow}
+                  options={[
+                    { value: "ALL", label: "All" },
+                    { value: "EARN", label: "Earn Credit" },
+                    { value: "USAGE", label: "Usage" },
+                  ]}
+                  onChange={(v) =>
+                    setTeamFilters((p) => ({
+                      ...p,
+                      flow: v as "ALL" | "EARN" | "USAGE",
+                    }))
+                  }
+                />
+              ) : null}
+              <Button variant="ghost" size="icon" type="button" className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground" disabled={actionLoading} onClick={() => runAction(compOffTeamReviewActionLabel("COMP_OFF", "fetch"), () => loadTeamRequests({ raiseOnError: true }))}>
+                <RefreshCw className={`size-4 ${actionLoading ? "animate-spin" : ""}`} />
+              </Button>
+            </div>
+          </div>
+
+          {actionLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="size-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : teamPaginated.pageItems.length ? (
+            <>
+              <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
+              <WtTable>
+                <TableHeader className={`${WT_STICKY_TABLE_HEAD_CLASS} text-[11px] font-semibold tracking-wider text-muted-foreground bg-muted/40`}>
+                  <TableRow className="hover:bg-transparent h-10">
+                    <TableHead className="font-semibold px-3">Employee</TableHead>
+                    <TableHead className="font-semibold px-3">From</TableHead>
+                    <TableHead className="font-semibold px-3">To</TableHead>
+                    <TableHead className="font-semibold px-3">Description</TableHead>
+                    {isHrOnly ? (
+                      <>
+                        <TableHead className="font-semibold px-3">Manager status</TableHead>
+                        <TableHead className="font-semibold px-3">Manager reason</TableHead>
+                      </>
+                    ) : (
+                      <>
+                        <TableHead className="font-semibold px-3">Manager status</TableHead>
+                        {!managerOnlyReview ? (
+                          <TableHead className="font-semibold px-3">Manager reason</TableHead>
+                        ) : null}
+                        {hasHrAccess ? (
+                          <TableHead className="font-semibold px-3">HR status</TableHead>
+                        ) : null}
+                        <TableHead className="text-right font-semibold px-3">Actions</TableHead>
+                      </>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {teamPaginated.pageItems.map((row, idx) => {
+                    const id = requestRowId(row);
+                    const flow = normalizeCompOffRequestType(
+                      row.request_type ?? row.requestType
+                    );
+                    const finalStatus = requestFinalStatus(row);
+                    const managerStatus =
+                      flow === "COMP_OFF_EARN"
+                        ? requestEarnManagerStatus(row)
+                        : requestManagerStatus(row);
+                    const managerReason = formatStageRejectionReason(
+                      managerStatus,
+                      pickRowField(row, "manager_reason", "managerReason")
+                    );
+                    const hrStatus = requestHrStatus(row);
+                    const rowEmail = requestRowEmail(row);
+                    const isAm = rowEmail ? accountManagerEmails.has(rowEmail) : false;
+                    const routedManager = String(
+                      pickRowField(row, "manager_comp_off_email", "managerCompOffEmail") ?? ""
+                    )
+                      .trim()
+                      .toLowerCase();
+                    const managerRoutedOk =
+                      hasManagerAccess &&
+                      ((userEmail && routedManager === userEmail) ||
+                        (rowEmail ? managerTeamEmails.has(rowEmail) : false));
+                    const isRowUpdating = teamRequestUpdatingId === id;
+                    const canManagerActEarn =
+                      flow === "COMP_OFF_EARN" &&
+                      hasManagerAccess &&
+                      !isHrOnly &&
+                      managerStatus === "PENDING" &&
+                      managerRoutedOk;
+                    const canManagerActUsage =
+                      flow === "COMP_OFF" &&
+                      hasManagerAccess &&
+                      managerStatus === "PENDING" &&
+                      managerRoutedOk;
+                    const canHrActUsage =
+                      hasHrAccess &&
+                      flow === "COMP_OFF" &&
+                      canHrActOnCompOff(row, { hasHrAccess });
+                    const canReview =
+                      !isRowUpdating &&
+                      (canManagerActEarn || canManagerActUsage || canHrActUsage);
+                    const renderStatusBadge = (value: string) => {
+                      if (value === "\u2014" || !value) return <span className="text-muted-foreground">{value || "\u2014"}</span>;
+                      const tone = value === "APPROVED" ? "success" : value === "PENDING" ? "warning" : value === "REJECTED" ? "danger" : "neutral";
+                      return <Badge variant="secondary" className={filledBadgeClass(tone)}>{value}</Badge>;
+                    };
+                    return (
+                      <TableRow key={`${id || idx}`}>
+                        <TableCell className="px-3 py-2.5 whitespace-nowrap">
+                          {compOffEmployeeDisplayName(row, teamEmployeeNames)}
+                          {isAm ? (
+                            <Badge variant="secondary" className={`ml-2 text-[10px] ${filledBadgeClass("info")}`}>
+                              AM
+                            </Badge>
+                          ) : null}
+                        </TableCell>
+                        <TableCell className="px-3 py-2.5 whitespace-nowrap">
+                          {String(
+                            pickRowField(row, "request_from_date", "requestFromDate") ?? "\u2014"
+                          )}
+                        </TableCell>
+                        <TableCell className="px-3 py-2.5 whitespace-nowrap">
+                          {String(
+                            pickRowField(row, "request_to_date", "requestToDate") ?? "\u2014"
+                          )}
+                        </TableCell>
+                        <TableCell
+                          className="px-3 py-2.5 max-w-[200px] truncate"
+                          title={String(
+                            pickRowField(row, "comments", "comment", "description", "remarks") ?? ""
+                          )}
+                        >
+                          {String(
+                            pickRowField(row, "comments", "comment", "description", "remarks") ?? "\u2014"
+                          )}
+                        </TableCell>
+                        {isHrOnly ? (
+                          <>
+                            <TableCell className="px-3 py-2.5 whitespace-nowrap">
+                              {renderStatusBadge(managerStatus)}
+                            </TableCell>
+                            <TableCell
+                              className="px-3 py-2.5 max-w-[180px] truncate"
+                              title={managerReason !== "\u2014" ? managerReason : undefined}
+                            >
+                              {managerReason}
+                            </TableCell>
+                          </>
+                        ) : (
+                          <>
+                            <TableCell className="px-3 py-2.5 whitespace-nowrap">
+                              {renderStatusBadge(managerStatus)}
+                            </TableCell>
+                            {!managerOnlyReview ? (
+                              <TableCell
+                                className="px-3 py-2.5 max-w-[180px] truncate"
+                                title={managerReason !== "\u2014" ? managerReason : undefined}
+                              >
+                                {managerReason}
                               </TableCell>
-                              {isHrOnly ? (
-                                <>
-                                  <TableCell className="px-3 py-2 whitespace-nowrap">
-                                    {finalStatus}
-                                  </TableCell>
-                                  <TableCell className="px-3 py-2 whitespace-nowrap">
-                                    {managerStatus}
-                                  </TableCell>
-                                  <TableCell
-                                    className="px-3 py-2 max-w-[180px] truncate"
-                                    title={managerReason !== "—" ? managerReason : undefined}
+                            ) : null}
+                            {hasHrAccess ? (
+                              <TableCell className="px-3 py-2.5 whitespace-nowrap">
+                                {flow === "COMP_OFF" ? renderStatusBadge(hrStatus) : "\u2014"}
+                              </TableCell>
+                            ) : null}
+                            <TableCell className="px-3 py-2.5 text-right whitespace-nowrap">
+                              {canReview && flow ? (
+                                <div className="inline-flex items-center gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="xs"
+                                    className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
+                                    disabled={!id || isRowUpdating}
+                                    onClick={() =>
+                                      runAction(
+                                        compOffTeamReviewActionLabel(flow, "approve"),
+                                        async () => {
+                                          await decideTeamRequest(id, flow, "APPROVED");
+                                          await loadTeamRequests();
+                                        }
+                                      )
+                                    }
                                   >
-                                    {managerReason}
-                                  </TableCell>
-                                </>
+                                    {isRowUpdating ? "\u2026" : "Approve"}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="xs"
+                                    disabled={!id || isRowUpdating}
+                                    onClick={() => openRejectDialog(id, flow)}
+                                  >
+                                    Reject
+                                  </Button>
+                                </div>
                               ) : (
-                                <>
-                                  <TableCell className="px-3 py-2 whitespace-nowrap">
-                                    {managerStatus}
-                                  </TableCell>
-                                  {!managerOnlyReview ? (
-                                    <TableCell
-                                      className="px-3 py-2 max-w-[180px] truncate"
-                                      title={managerReason !== "—" ? managerReason : undefined}
-                                    >
-                                      {managerReason}
-                                    </TableCell>
-                                  ) : null}
-                                  {hasHrAccess ? (
-                                    <TableCell className="px-3 py-2 whitespace-nowrap">
-                                      {flow === "COMP_OFF" ? hrStatus : "—"}
-                                    </TableCell>
-                                  ) : null}
-                                  <TableCell className="px-3 py-2 text-right whitespace-nowrap">
-                                    {canReview && flow ? (
-                                      <div className="inline-flex items-center gap-1">
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="xs"
-                                          className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
-                                          disabled={!id || isRowUpdating}
-                                          onClick={() =>
-                                            runAction(
-                                              compOffTeamReviewActionLabel(flow, "approve"),
-                                              async () => {
-                                                await decideTeamRequest(id, flow, "APPROVED");
-                                                await loadTeamRequests();
-                                              }
-                                            )
-                                          }
-                                        >
-                                          {isRowUpdating ? "…" : "Approve"}
-                                        </Button>
-                                        <Button
-                                          type="button"
-                                          variant="destructive"
-                                          size="xs"
-                                          disabled={!id || isRowUpdating}
-                                          onClick={() => openRejectDialog(id, flow)}
-                                        >
-                                          Reject
-                                        </Button>
-                                      </div>
-                                    ) : (
-                                      <span className="text-wt-text-muted">—</span>
-                                    )}
-                                  </TableCell>
-                                </>
+                                <span className="text-muted-foreground">{"\u2014"}</span>
                               )}
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </WtTable>
-                  </ScrollableTable>
-                ) : (
-                  <p className="text-sm text-wt-text-muted">
-                    No requests loaded. Click <strong>Fetch requests</strong>.
-                  </p>
-                )}
+                            </TableCell>
+                          </>
+                        )}
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </WtTable>
+            </ScrollableTable>
+            {teamPaginated.totalItems > 0 ? (
+              <div className="border-t border-border/50 px-0 py-3">
+                <ListPagination
+                  page={teamPaginated.page}
+                  totalPages={teamPaginated.totalPages}
+                  totalItems={teamPaginated.totalItems}
+                  rangeStart={teamPaginated.rangeStart}
+                  rangeEnd={teamPaginated.rangeEnd}
+                  pageSize={teamPaginated.pageSize}
+                  pageSizeOptions={teamPaginated.pageSizeOptions}
+                  onPageChange={teamPaginated.setPage}
+                  onPageSizeChange={teamPaginated.setPageSize}
+                />
               </div>
             ) : null}
-      </div>
+            </>
+          ) : (
+            <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+              {actionLoading ? (
+                <Loader2 className="size-5 animate-spin mr-2" />
+              ) : (
+                <span>
+                  No requests loaded. Click <strong>Fetch requests</strong>.
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      ) : null}
     </section>
   );
 

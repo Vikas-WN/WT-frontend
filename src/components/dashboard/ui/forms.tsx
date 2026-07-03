@@ -330,7 +330,7 @@ export function DropdownSelectField({
         items={items}
         isItemEqualToValue={selectItemsEqual}
       >
-        <SelectTrigger id={fieldId} aria-busy={loading || undefined}>
+        <SelectTrigger id={fieldId} aria-busy={loading || undefined} className="cursor-pointer">
           <SelectValue placeholder={loading ? loadingLabel : placeholder} />
         </SelectTrigger>
         <SelectContent className="max-w-[min(calc(100vw-2rem),28rem)]">
