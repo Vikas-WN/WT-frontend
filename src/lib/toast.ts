@@ -1,11 +1,16 @@
 import { toast } from "sonner";
 
-export const TOAST_DURATION_MS = 2800;
+export const TOAST_DURATION_MS = 3600;
 
-export function showSuccessToast(message: string) {
-  toast.success(message, { duration: TOAST_DURATION_MS });
+const sharedToastOptions = {
+  duration: TOAST_DURATION_MS,
+  closeButton: true,
+} as const;
+
+export function showSuccessToast(message: string, id?: string) {
+  toast.success(message, { ...sharedToastOptions, ...(id ? { id } : {}) });
 }
 
-export function showErrorToast(message: string) {
-  toast.error(message, { duration: TOAST_DURATION_MS });
+export function showErrorToast(message: string, id?: string) {
+  toast.error(message, { ...sharedToastOptions, ...(id ? { id } : {}) });
 }

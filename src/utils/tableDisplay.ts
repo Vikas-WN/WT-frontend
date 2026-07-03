@@ -1,3 +1,5 @@
+import { formatUserTypeLabel } from "@/utils/offboardingFormState";
+import { formatRoleDisplayValue } from "@/utils/roles";
 import { toTitleCase } from "@/utils/titleCase";
 
 const EMAIL_COLUMN_KEYS = new Set([
@@ -141,7 +143,7 @@ const COLUMN_HEADER_LABELS: Record<string, string> = {
   date_of_birth: "Date of birth",
   phone_number: "Phone number",
   created_on: "Created on",
-  user_type: "User type",
+  user_type: "User Type",
   work_mode: "Work mode",
   log_date: "Log date",
   request_from_date: "From",
@@ -158,6 +160,19 @@ export function formatTableColumnHeader(column: string): string {
   return toTitleCase(column.replaceAll("_", " "))
     .replace(/\bUrl\b/g, "URL")
     .replace(/\bId\b/g, "ID");
+}
+
+export function formatTableCellValue(column: string, value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  const key = normalizeColumnKey(column);
+  if (key === "user_type" || key === "usertype") {
+    return formatUserTypeLabel(String(value));
+  }
+  if (key === "role" || key.endsWith("_role") || key === "portal_role" || key === "roles") {
+    return formatRoleDisplayValue(value);
+  }
+  const text = String(value).trim();
+  return text || "—";
 }
 
 export function prepareTableForDisplay(

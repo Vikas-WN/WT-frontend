@@ -29,6 +29,7 @@ import {
   mergeEmailSelection,
 } from "@/utils/dashboard/invitedEmployees";
 import {
+  formatTableCellValue,
   formatTableColumnHeader,
   prepareTableForDisplay,
   resolveEmployeeNameFromRow,
@@ -46,22 +47,6 @@ const DATA_COLUMNS = [
 
 const SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
   {
-    id: "created_on_desc",
-    label: "Created",
-    columnKeys: ["created_on"],
-    direction: "desc",
-    type: "date",
-    getValue: (row) => pickRowField(row, ["created_at", "createdAt", "created_on"]),
-  },
-  {
-    id: "created_on_asc",
-    label: "Created",
-    columnKeys: ["created_on"],
-    direction: "asc",
-    type: "date",
-    getValue: (row) => pickRowField(row, ["created_at", "createdAt", "created_on"]),
-  },
-  {
     id: "name_asc",
     label: "Name",
     columnKeys: ["name"],
@@ -74,6 +59,20 @@ const SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
     columnKeys: ["name"],
     direction: "desc",
     getValue: (row) => pickRowField(row, ["name"]),
+  },
+  {
+    id: "created_on_asc",
+    label: "Created On",
+    columnKeys: ["created_on"],
+    direction: "asc",
+    getValue: (row) => pickRowField(row, ["created_on", "created_at", "createdAt"]),
+  },
+  {
+    id: "created_on_desc",
+    label: "Created On",
+    columnKeys: ["created_on"],
+    direction: "desc",
+    getValue: (row) => pickRowField(row, ["created_on", "created_at", "createdAt"]),
   },
   {
     id: "email_asc",
@@ -94,7 +93,6 @@ const SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
 type Props = {
   rows: Array<Record<string, unknown>>;
   searchResetKey?: string;
-  actionLoading?: boolean;
   resendingEmail?: string | null;
   bulkResending?: boolean;
   onResendInvite: (email: string) => void;
@@ -104,7 +102,6 @@ type Props = {
 export function InvitedEmployeesTable({
   rows,
   searchResetKey = "",
-  actionLoading = false,
   resendingEmail = null,
   bulkResending = false,
   onResendInvite,
@@ -149,7 +146,7 @@ export function InvitedEmployeesTable({
     resendableEmailsOnPage.some((email) => selectedEmails.includes(email)) &&
     !allResendableOnPageSelected;
 
-  const selectionBusy = actionLoading || bulkResending || Boolean(resendingEmail);
+  const selectionBusy = bulkResending || Boolean(resendingEmail);
 
   function toggleRowSelection(email: string, checked: boolean) {
     const normalized = email.trim().toLowerCase();
@@ -207,7 +204,7 @@ export function InvitedEmployeesTable({
         </div>
       ) : null}
       <div
-        className="relative wt-scroll-both max-h-[min(70vh,520px)] rounded-xl border border-wt-border"
+        className="wt-scroll-x-visible wt-scroll-both-chain relative max-h-[min(70vh,520px)] rounded-xl border border-wt-border"
         style={{ overscrollBehaviorY: "auto" }}
         ref={tableScrollRef}
         onWheel={(event) => {
@@ -227,7 +224,7 @@ export function InvitedEmployeesTable({
           pageScroller.scrollBy({ top: deltaY, behavior: "auto" });
         }}
       >
-        <WtTable>
+        <WtTable className="min-w-max">
           <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-10">
@@ -289,7 +286,7 @@ export function InvitedEmployeesTable({
                   </TableCell>
                   {displayColumns.map((col) => (
                     <TableCell key={col} className="px-3 py-2 whitespace-nowrap">
-                      {row[col] === null || row[col] === undefined ? "—" : String(row[col])}
+                      {formatTableCellValue(col, row[col])}
                     </TableCell>
                   ))}
                   <TableCell className="px-3 py-2 whitespace-nowrap">
@@ -300,7 +297,10 @@ export function InvitedEmployeesTable({
                         type="button"
                         className="px-2.5 py-1 text-xs"
                         disabled={selectionBusy || isResending}
-                        onClick={() => onResendInvite(email)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onResendInvite(email);
+                        }}
                       >
                         {isResending ? "Resending Invite…" : "Resend Invite"}
                       </Button>

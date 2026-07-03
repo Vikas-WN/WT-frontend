@@ -11,10 +11,13 @@ import { CARD_FORM_GRID_CLASS, CARD_FORM_ACTIONS_CLASS } from "@/components/dash
 import { FormGridSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { isValidPersonName } from "@/utils/dashboard/validation";
 import {
-  bandSelectOptions,
+  bandDisplayLabel,
+  bandSelectOptionsForUserType,
   bandsForDepartment,
+  internBandDisplayLabel,
   resolveInternBandId,
 } from "@/utils/dashboard/validation";
+import { parseApiDate } from "@/utils/apiDate";
 import { parseDesignationList } from "@/utils/masters";
 import type { OnboardFormState } from "@/utils/onboardFormState";
 import type { OnboardOptionsResponse } from "@/types/onboard-options";
@@ -43,13 +46,18 @@ function validateWorkStep(form: OnboardFormState, internBandId: number, defaultC
 
   if (!empId) throw new Error("Employee ID is required.");
   if (empId.length > 50) throw new Error("Employee ID must be at most 50 characters.");
+  if (!/^[A-Za-z0-9]+$/.test(empId)) {
+    throw new Error("Employee ID must contain only letters and numbers (no spaces or special characters).");
+  }
   if (!email || !name) throw new Error("Work Email and Name are required.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new Error("Please enter a valid Work Email.");
   }
   if (!form.user_type) throw new Error("User Type is required.");
   if (!department) throw new Error("Department is required.");
-  if (!role) throw new Error("Designation is required.");
+  if (!role) {
+    throw new Error("Designation is required. Please select a valid designation for the chosen band.");
+  }
   if (!form.work_mode) throw new Error("Work Mode is required.");
   if (!form.work_location_type) throw new Error("Work Location is required.");
   if (!form.category) throw new Error("Category is required.");
@@ -72,8 +80,19 @@ function validateWorkStep(form: OnboardFormState, internBandId: number, defaultC
 
   if (form.user_type === "INTERN") {
     if (!form.doi.trim()) throw new Error("Date of Internship is required for interns.");
-    if (!form.internship_duration.trim()) {
+    if (!parseApiDate(form.doi)) {
+      throw new Error("Please enter a valid internship date in DD/MM/YYYY format.");
+    }
+    const durationRaw = form.internship_duration.trim();
+    if (!durationRaw) {
       throw new Error("Internship Duration is required for interns.");
+    }
+    if (!/^\d+$/.test(durationRaw)) {
+      throw new Error("Internship Duration must be a whole number. Only numeric values are allowed.");
+    }
+    const durationMonths = Number(durationRaw);
+    if (durationMonths < 1 || durationMonths > 60) {
+      throw new Error("Please enter a valid internship duration in months (1–60).");
     }
   } else if (!form.doj.trim()) {
     throw new Error("Date of Joining is required.");
@@ -101,11 +120,20 @@ export function HrOnboardForm({
     return Number.isFinite(id) && id > 0 ? id : 0;
   }, [bands]);
 
+  const bandOptions = useMemo(
+    () => bandSelectOptionsForUserType(bands, form.department, form.user_type, internBandId),
+    [bands, form.department, form.user_type, internBandId]
+  );
+
+  const internBandLabel = useMemo(
+    () => internBandDisplayLabel(bands, internBandId),
+    [bands, internBandId]
+  );
+
   const departmentBands = useMemo(
     () => bandsForDepartment(bands, form.department),
     [bands, form.department]
   );
-  const bandOptions = useMemo(() => bandSelectOptions(departmentBands), [departmentBands]);
 
   const designationBandId = useMemo(() => {
     if (form.user_type === "CONSULTANT") return defaultConsultantBandId;
@@ -148,28 +176,49 @@ export function HrOnboardForm({
   }, [designationsQ.isError, designationsQ.error]);
 
   useEffect(() => {
-    if (form.user_type !== "INTERN") return;
+    if (form.user_type !== "INTERN" || internBandId <= 0) return;
     setForm((prev) => (prev.band_id === internBandId ? prev : { ...prev, band_id: internBandId }));
   }, [form.user_type, internBandId, setForm]);
 
   useEffect(() => {
+    if (designationLoading) return;
+    if (designationOptions.length === 1) {
+      const onlyRole = designationOptions[0]?.value ?? "";
+      if (onlyRole && form.role !== onlyRole) {
+        setForm((prev) => ({ ...prev, role: onlyRole }));
+      }
+      return;
+    }
+    if (!form.role) return;
+    const validRoles = new Set(designationOptions.map((option) => option.value).filter(Boolean));
+    if (designationOptions.length > 0 && !validRoles.has(form.role)) {
+      setForm((prev) => ({ ...prev, role: "" }));
+    }
+  }, [designationOptions, designationLoading, form.role, setForm]);
+
+  useEffect(() => {
     if (!form.department.trim()) return;
+    if (form.user_type === "INTERN") return;
     const currentBandId = Number(form.band_id);
     if (!currentBandId) return;
     const stillValid = departmentBands.some((row) => Number(row.id) === currentBandId);
     if (!stillValid) {
       setForm((prev) => ({ ...prev, band_id: 0, role: "" }));
     }
-  }, [departmentBands, form.band_id, form.department, setForm]);
-
-  useEffect(() => {
-    if (designationOptions.length !== 1) return;
-    const onlyRole = designationOptions[0]?.value ?? "";
-    if (!onlyRole) return;
-    setForm((prev) => (prev.role === onlyRole ? prev : { ...prev, role: onlyRole }));
-  }, [designationOptions, setForm]);
+  }, [departmentBands, form.band_id, form.department, form.user_type, setForm]);
 
   function submit() {
+    if (designationLoading) {
+      onError("Designations are still loading. Please wait a moment.");
+      return;
+    }
+    if (!designationOptions.length) {
+      onError(
+        "No designation is configured for the selected band. Please choose a different department or band."
+      );
+      return;
+    }
+
     void runAction("Create And Invite Employee", async () => {
       const { empId, email, name, department, role, bandId, reportingManagerId } = validateWorkStep(
         form,
@@ -240,7 +289,7 @@ export function HrOnboardForm({
           label="Employee ID"
           required
           value={form.emp_id}
-          onChange={(v) => setForm((p) => ({ ...p, emp_id: v }))}
+          onChange={(v) => setForm((p) => ({ ...p, emp_id: v.replace(/[^A-Za-z0-9]/g, "") }))}
         />
         <InputField
           label="Work Email"
@@ -281,33 +330,49 @@ export function HrOnboardForm({
             setForm((p) => ({
               ...p,
               department: v,
-              band_id: 0,
+              band_id: p.user_type === "INTERN" ? internBandId : 0,
               role: "",
             }))
           }
         />
         {form.user_type !== "CONSULTANT" ? (
-          <DropdownSelectField
-            label="Band"
-            required
-            placeholder={
-              !form.department.trim()
-                ? "Select Department First"
-                : bandOptions.length
-                  ? "Select"
-                  : "No Bands Available"
-            }
-            value={form.band_id ? String(form.band_id) : ""}
-            disabled={form.user_type === "INTERN" || !form.department.trim() || !bandOptions.length}
-            options={bandOptions}
-            onChange={(v) =>
-              setForm((p) => ({
-                ...p,
-                band_id: Number(v) || 0,
-                role: "",
-              }))
-            }
-          />
+          form.user_type === "INTERN" ? (
+            <DropdownSelectField
+              label="Band"
+              required
+              placeholder={!form.department.trim() ? "Select Department First" : "Select"}
+              value={form.department.trim() && form.band_id > 0 ? String(form.band_id) : ""}
+              disabled
+              options={
+                form.band_id > 0
+                  ? [{ value: String(form.band_id), label: internBandLabel || "B8 - Intern" }]
+                  : []
+              }
+              onChange={() => {}}
+            />
+          ) : (
+            <DropdownSelectField
+              label="Band"
+              required
+              placeholder={
+                !form.department.trim()
+                  ? "Select Department First"
+                  : bandOptions.length
+                    ? "Select"
+                    : "No Bands Available"
+              }
+              value={form.band_id ? String(form.band_id) : ""}
+              disabled={!form.department.trim() || !bandOptions.length}
+              options={bandOptions}
+              onChange={(v) =>
+                setForm((p) => ({
+                  ...p,
+                  band_id: Number(v) || 0,
+                  role: "",
+                }))
+              }
+            />
+          )
         ) : null}
         <DropdownSelectField
           label="Designation"
@@ -366,6 +431,7 @@ export function HrOnboardForm({
           value={form.reporting_manager_id}
           disabled={!options.reporting_managers.length}
           options={options.reporting_managers}
+          className="[&_[data-slot=select-content]]:max-w-[min(calc(100vw-2rem),28rem)] [&_[data-slot=select-item]]:max-w-full [&_[data-slot=select-item]_span]:truncate"
           onChange={(v) => setForm((p) => ({ ...p, reporting_manager_id: v }))}
         />
         {form.user_type === "INTERN" ? (
@@ -380,7 +446,7 @@ export function HrOnboardForm({
               label="Internship Duration (Months)"
               required
               value={form.internship_duration}
-              onChange={(v) => setForm((p) => ({ ...p, internship_duration: v }))}
+              onChange={(v) => setForm((p) => ({ ...p, internship_duration: v.replace(/\D/g, "") }))}
             />
           </>
         ) : (

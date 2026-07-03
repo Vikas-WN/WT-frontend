@@ -1,3 +1,16 @@
+import { toTitleCase } from "@/utils/titleCase";
+
+/** User-facing labels for canonical session roles (matches Masters role assignment). */
+const SESSION_ROLE_LABELS: Record<string, string> = {
+  ROLE_EMPLOYEE: "Employee",
+  ROLE_HR: "HR",
+  ROLE_MANAGER: "Manager",
+  ROLE_ADMIN: "Admin",
+  ROLE_FINANCE: "Finance",
+  ROLE_AM: "Account Manager",
+  ROLE_DM: "Delivery Manager",
+};
+
 /** Canonical ROLE_* names for auth/session (matches backend resolve_session_roles). */
 export function normalizeRoleName(role: string): string {
   const token = role.trim().toUpperCase();
@@ -13,6 +26,88 @@ export function normalizeRoles(roles: string[]): string[] {
   }
   return Array.from(out).sort();
 }
+
+/** True when a value is a backend session role token (e.g. ROLE_EMPLOYEE), not a job designation. */
+export function isSessionRoleValue(value: string): boolean {
+  const token = value.trim().toUpperCase();
+  if (!token) return false;
+  if (SESSION_ROLE_LABELS[token]) return true;
+  return Boolean(SESSION_ROLE_LABELS[normalizeRoleName(token)]);
+}
+
+/** Format a session role for display; leaves job designations unchanged. */
+export function formatRoleLabel(value: string): string {
+  const token = value.trim();
+  if (!token) return "—";
+  const upper = token.toUpperCase();
+  const normalized = normalizeRoleName(upper);
+  const mapped = SESSION_ROLE_LABELS[normalized] ?? SESSION_ROLE_LABELS[upper];
+  if (mapped) return mapped;
+  if (/^ROLE_[A-Z0-9_]+$/.test(upper)) {
+    return toTitleCase(upper.slice(5).replace(/_/g, " "));
+  }
+  return token;
+}
+
+export function formatRoleDisplayValue(value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  const text = String(value).trim();
+  if (!text || text === "—") return "—";
+  if (isSessionRoleValue(text)) return formatRoleLabel(text);
+  return text;
+}
+
+/** Portal roles HR can set for an employee (user_roles, GLOBAL scope). */
+export const PORTAL_ROLE_SELECT_OPTIONS = [
+  { value: "ROLE_EMPLOYEE", label: "Employee" },
+  { value: "ROLE_HR", label: "HR" },
+  { value: "ROLE_ADMIN", label: "Admin" },
+  { value: "ROLE_FINANCE", label: "Finance" },
+  { value: "ROLE_AM", label: "Account Manager" },
+  { value: "ROLE_DM", label: "Delivery Manager" },
+  { value: "ROLE_MANAGER", label: "Manager" },
+] as const;
+
+const PORTAL_ROLE_PRIORITY = [
+  "ROLE_ADMIN",
+  "ROLE_HR",
+  "ROLE_FINANCE",
+  "ROLE_DM",
+  "ROLE_AM",
+  "ROLE_MANAGER",
+] as const;
+
+export function normalizePortalRoles(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return normalizeRoles(value.map((role) => String(role).trim()).filter(Boolean));
+}
+
+export function pickPrimaryPortalRole(roles: string[]): string {
+  const normalized = normalizeRoles(roles);
+  for (const role of PORTAL_ROLE_PRIORITY) {
+    if (normalized.includes(role)) return role;
+  }
+  return "ROLE_EMPLOYEE";
+}
+
+export function formatPrimaryPortalRoleLabel(roles: unknown): string {
+  return formatRoleLabel(pickPrimaryPortalRole(normalizePortalRoles(roles)));
+}
+
+export function pickPortalRoles(profile: Record<string, unknown>): string[] {
+  return normalizePortalRoles(profile.portal_roles ?? profile.portalRoles);
+}
+
+export function formatPortalRolesDisplay(roles: string[]): string {
+  const elevated = normalizePortalRoles(roles).filter((role) => role !== "ROLE_EMPLOYEE");
+  if (!elevated.length) return "Employee";
+  return elevated.map((role) => formatRoleLabel(role)).join(", ");
+}
+
+/** @deprecated Use PORTAL_ROLE_SELECT_OPTIONS */
+export const PORTAL_ROLE_ASSIGN_OPTIONS = PORTAL_ROLE_SELECT_OPTIONS.filter(
+  (option) => option.value !== "ROLE_EMPLOYEE"
+);
 
 export function hasHrRole(roles: string[]): boolean {
   const normalized = normalizeRoles(roles);

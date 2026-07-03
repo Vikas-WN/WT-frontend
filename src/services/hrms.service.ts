@@ -833,6 +833,10 @@ export const hrmsService = {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.notifications.readAll);
   },
 
+  markNotificationRead(notificationId: string) {
+    return apiClient.put<ApiEnvelope<unknown>>(endpoints.notifications.readById(notificationId));
+  },
+
   uploadFile(url: string, file: File) {
     const fd = new FormData();
     fd.append("file", file);
@@ -895,6 +899,24 @@ export const hrmsService = {
       role: payload.role ?? payload.roleName,
     };
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.roleAdmin.assignRole, {
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+  },
+
+  setPortalRole(payload: {
+    target_email?: string;
+    role?: string;
+    userEmail?: string;
+    roleName?: string;
+  }) {
+    const body = {
+      userEmail: payload.userEmail ?? payload.target_email,
+      roleName: payload.roleName ?? payload.role,
+      target_email: payload.target_email ?? payload.userEmail,
+      role: payload.role ?? payload.roleName,
+    };
+    return apiClient.post<ApiEnvelope<unknown>>(endpoints.roleAdmin.setPortalRole, {
       contentType: "application/json",
       body: JSON.stringify(body),
     });

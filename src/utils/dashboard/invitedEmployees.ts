@@ -8,11 +8,15 @@ import { resolveEmployeeNameFromRow } from "@/utils/tableDisplay";
 
 
 
-export function defaultInvitedEmployeesDateRange(): { from: string; to: string } {
-  const now = new Date();
-  const from = new Date(now.getFullYear(), now.getMonth(), 1);
-  const to = new Date(now.getFullYear(), now.getMonth()+1, 0)
+export function lastSevenDaysInvitedEmployeesDateRange(): { from: string; to: string } {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(to.getDate() - 6);
   return { from: formatApiDate(from), to: formatApiDate(to) };
+}
+
+export function defaultInvitedEmployeesDateRange(): { from: string; to: string } {
+  return lastSevenDaysInvitedEmployeesDateRange();
 }
 
 export function invitedRowCreatedAtApiDate(row: Record<string, unknown>): string | null {

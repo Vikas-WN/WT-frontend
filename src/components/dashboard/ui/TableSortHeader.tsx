@@ -32,7 +32,7 @@ export function TableSortHeader({
       size="sm"
       onClick={onSort}
       className={cn(
-        "-ml-2 h-8 px-2 text-sm font-medium text-wt-text-muted hover:bg-transparent hover:text-wt-text-muted",
+        "-ml-2 h-8 px-2 text-sm font-medium text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text dark:text-wt-text dark:hover:text-wt-text",
         className
       )}
       aria-label={`Sort by ${label}`}
@@ -48,7 +48,9 @@ export function TableSortHeader({
       <SortIcon
         className={cn(
           "size-3.5 shrink-0",
-          activeDirection ? "text-foreground" : "text-muted-foreground"
+          activeDirection
+            ? "text-wt-text"
+            : "text-wt-text-muted dark:text-wt-text-faint"
         )}
         aria-hidden
       />

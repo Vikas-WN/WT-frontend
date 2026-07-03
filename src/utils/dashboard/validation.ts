@@ -42,10 +42,22 @@ export function bandSelectOptions(
     .filter((item) => item.value && item.label);
 }
 
+export function internBandDisplayLabel(
+  bands: Array<Record<string, unknown>>,
+  internBandId: number
+): string {
+  if (internBandId > 0) {
+    const row = bands.find((band) => Number(band.id) === internBandId);
+    const label = row ? bandDisplayLabel(row) : "";
+    if (label) return label;
+  }
+  return internBandId === 8 ? "B8 - Intern" : internBandId > 0 ? `Band ${internBandId}` : "";
+}
+
 export function resolveInternBandId(bands: Array<Record<string, unknown>>): number {
   const internHit = bands.find((row) => {
-    const name = String(row.name ?? row.band_name ?? "").trim();
-    return name.length > 0 && bandNameMatchKey(name) === "B8INTERN";
+    const key = bandNameMatchKey(String(row.name ?? row.band_name ?? ""));
+    return key === "B8INTERN" || (key.includes("B8") && key.includes("INTERN"));
   });
   const internId = internHit?.id != null ? Number(internHit.id) : NaN;
   if (Number.isFinite(internId) && internId > 0) return internId;
@@ -55,6 +67,24 @@ export function resolveInternBandId(bands: Array<Record<string, unknown>>): numb
   );
   const genericId = genericB8?.id != null ? Number(genericB8.id) : NaN;
   return Number.isFinite(genericId) && genericId > 0 ? genericId : 8;
+}
+
+export function bandSelectOptionsForUserType(
+  bands: Array<Record<string, unknown>>,
+  department: string,
+  userType: string,
+  internBandId: number
+): Array<{ value: string; label: string }> {
+  const opts = bandSelectOptions(bandsForDepartment(bands, department));
+  if (userType !== "INTERN" || internBandId <= 0) return opts;
+  if (opts.some((option) => option.value === String(internBandId))) return opts;
+
+  const internRow = bands.find((row) => Number(row.id) === internBandId);
+  if (!internRow) {
+    return [{ value: String(internBandId), label: `Band ${internBandId}` }, ...opts];
+  }
+
+  return [{ value: String(internBandId), label: bandDisplayLabel(internRow) }, ...opts];
 }
 
 /** India mobile: optional +91, then 10 digits starting 6–9 */

@@ -67,12 +67,12 @@ export function SearchableSelectCombobox({
         showClear={false}
         className={cn("w-full", inputClassName)}
       />
-      <ComboboxContent side="bottom" sideOffset={4}>
+      <ComboboxContent side="bottom" sideOffset={4} className="max-w-[min(calc(100vw-2rem),28rem)]">
         <ComboboxEmpty>{loading ? loadingLabel : "No matches"}</ComboboxEmpty>
         <ComboboxList>
           {(item) => (
-            <ComboboxItem key={item.value || `opt-${item.label}`} value={item}>
-              {item.label}
+            <ComboboxItem key={item.value || `opt-${item.label}`} value={item} className="max-w-full">
+              <span className="block truncate">{item.label}</span>
             </ComboboxItem>
           )}
         </ComboboxList>
