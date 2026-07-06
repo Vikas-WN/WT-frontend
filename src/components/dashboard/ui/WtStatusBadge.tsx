@@ -4,18 +4,9 @@ import { cn } from "@/lib/utils";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import {
   formatEmployeeStatusLabel,
-  getEmployeeStatusTone,
+  getEmployeeStatusBadgeClassName,
   normalizeEmployeeStatusKey,
-  type EmployeeStatusTone,
 } from "@/utils/userStatus";
-
-const EMPLOYEE_STATUS_TONE: Record<EmployeeStatusTone, string> = {
-  active: filledBadgeClass("success"),
-  inactive: filledBadgeClass("danger"),
-  invited: filledBadgeClass("neutral"),
-  serving_notice: filledBadgeClass("warning"),
-  neutral: filledBadgeClass("neutral"),
-};
 
 function formatTrainingStatusLabel(status: string): string {
   const s = status.trim().toUpperCase();
@@ -43,14 +34,13 @@ export function EmployeeStatusBadge({ status }: { status: string }) {
   const label = formatEmployeeStatusLabel(status);
 
   return (
-    <Badge
-      variant="secondary"
-      className={EMPLOYEE_STATUS_TONE[getEmployeeStatusTone(status)]}
+    <span
+      className={getEmployeeStatusBadgeClassName(status)}
       role="status"
       aria-label={`Status: ${label}`}
     >
       {label}
-    </Badge>
+    </span>
   );
 }
 

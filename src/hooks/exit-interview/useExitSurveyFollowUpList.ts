@@ -34,7 +34,7 @@ export type ExitSurveyFollowUpQueryResult = {
 
 function mapFollowUpItem(item: OffboardListItem): ExitSurveyFollowUpRow {
   return {
-    emp_id: item.emp_id ?? "",
+    emp_id: item.emp_id ?? null,
     employee_name: item.employee_name,
     email: item.email,
     last_working_day: item.last_working_day,
@@ -46,17 +46,6 @@ function mapFollowUpItem(item: OffboardListItem): ExitSurveyFollowUpRow {
     exit_survey_submitted: Boolean(item.exit_survey_submitted),
     can_resend_exit_survey: item.can_resend_exit_survey !== false,
     can_view_submission: item.can_view_submission,
-    exit_type: "",
-    reason: null,
-    expected_behavior: null,
-    critical_skill: null,
-    is_regretted: false,
-    notice_period_days: 0,
-    designation: null,
-    band_name: null,
-    band_role: null,
-    project_manager: null,
-    status: item.employee_status ?? undefined,
   };
 }
 

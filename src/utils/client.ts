@@ -66,10 +66,7 @@ export function parseClientRow(row: Record<string, unknown>): ClientRecord | nul
   };
 }
 
-export function parseClientList(data: unknown): ClientRecord[] {
-  if (!data || typeof data !== "object") return [];
-  const envelope = data as Record<string, unknown>;
-  const payload = envelope.data ?? data;
+function parseClientItems(payload: unknown): ClientRecord[] {
   if (Array.isArray(payload)) {
     return payload
       .map((row) => parseClientRow(row as Record<string, unknown>))
@@ -84,6 +81,20 @@ export function parseClientList(data: unknown): ClientRecord[] {
     }
   }
   return [];
+}
+
+export function parseClientList(data: unknown): ClientRecord[] {
+  if (!data) return [];
+  if (Array.isArray(data)) return parseClientItems(data);
+  if (typeof data !== "object") return [];
+
+  const envelope = data as Record<string, unknown>;
+  const nested = envelope.data;
+  if (nested !== undefined) {
+    const fromNested = parseClientItems(nested);
+    if (fromNested.length) return fromNested;
+  }
+  return parseClientItems(envelope);
 }
 
 export function clientToFormState(client: ClientRecord) {

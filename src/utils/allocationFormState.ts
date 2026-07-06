@@ -5,6 +5,8 @@ export type ProjectFormState = {
   client_id: string;
   client_name: string;
   account_manager_email: string;
+  delivery_manager_email: string;
+  project_manager_emails: string[];
   start_date: string;
   end_date: string;
 };
@@ -29,6 +31,8 @@ export function createEmptyProjectForm(): ProjectFormState {
     client_id: "",
     client_name: "",
     account_manager_email: "",
+    delivery_manager_email: "",
+    project_manager_emails: [],
     start_date: "",
     end_date: "",
   };

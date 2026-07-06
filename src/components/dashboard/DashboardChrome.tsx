@@ -28,6 +28,7 @@ import {
   getDashboardSectionLabel,
 } from "@/constants/dashboardNavigation";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
+import { cleanEmployeeName } from "@/utils/employeeDirectory";
 import { useExitInterviewProfile } from "@/hooks/exit-interview/useExitInterviewProfile";
 import { shouldShowExitSurveyInNav } from "@/utils/exitInterview";
 import { shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
@@ -158,7 +159,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const isHrPortalUser =
     (userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN")) &&
     !userRoles.includes("ROLE_EMPLOYEE");
-  const { isOffboarded, isServingNotice, profile } = useDashboardAccess();
+  const { isOffboarded, isServingNotice, isExitSurveyOnlyAccess, profile } = useDashboardAccess();
   const shouldLoadExitInterviewProfile = useMemo(() => {
     if (!user) return false;
     if (pathname.startsWith(DASHBOARD_ROUTES["exit-interview"])) return true;
@@ -167,10 +168,11 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   }, [user, pathname, isHrPortalUser, userRoles, isServingNotice, isOffboarded]);
   const exitProfileQ = useExitInterviewProfile({ enabled: shouldLoadExitInterviewProfile });
   const showExitSurveyNav = useMemo(() => {
+    if (isExitSurveyOnlyAccess) return true;
     const flags = exitProfileQ.data?.flags;
     if (!flags) return false;
     return shouldShowExitSurveyInNav(flags);
-  }, [exitProfileQ.data?.flags]);
+  }, [exitProfileQ.data?.flags, isExitSurveyOnlyAccess]);
 
   const navChildActiveOptions = useMemo(
     () => ({ hasHrAccess, hasManagerAccess, hasDmAccess }),
@@ -189,11 +191,11 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       hasAccountManagerAccess,
       showExitSurvey: showExitSurveyNav,
     });
-    if (isOffboarded) {
+    if (isExitSurveyOnlyAccess) {
       return filterNavigationForOffboardedUser(base, { showExitSurvey: showExitSurveyNav });
     }
     return base;
-  }, [userRoles, hasHrAccess, hasAccountManagerAccess, isOffboarded, showExitSurveyNav]);
+  }, [userRoles, hasHrAccess, hasAccountManagerAccess, isExitSurveyOnlyAccess, showExitSurveyNav]);
 
   const isExitSurveyRoute = pathname.startsWith(DASHBOARD_ROUTES["exit-interview"]);
 
@@ -217,6 +219,12 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       return next;
     });
   }, []);
+
+  useEffect(() => {
+    if (!user || isHrPortalUser || !isExitSurveyOnlyAccess) return;
+    if (isExitSurveyRoute) return;
+    router.replace(DASHBOARD_ROUTES["exit-interview"]);
+  }, [user, isHrPortalUser, isExitSurveyOnlyAccess, isExitSurveyRoute, router]);
 
   useEffect(() => {
     setSidebarCollapsed(readSidebarCollapsed());
@@ -246,7 +254,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   }, [theme]);
 
   const loadNotifications = useCallback(async () => {
-    if (isOffboarded) return;
+    if (isExitSurveyOnlyAccess) return;
     setNotificationsLoading(true);
     setNotificationsError(null);
     try {
@@ -271,7 +279,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     } finally {
       setNotificationsLoading(false);
     }
-  }, [isOffboarded, queryClient, user?.email]);
+  }, [isExitSurveyOnlyAccess, queryClient, user?.email]);
 
   const handleNotificationClick = useCallback(
     async (row: NotificationItem) => {
@@ -301,7 +309,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    if (isOffboarded) return;
+    if (isExitSurveyOnlyAccess) return;
     void loadNotifications();
     const intervalId = window.setInterval(() => {
       void loadNotifications();
@@ -314,7 +322,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       window.clearInterval(intervalId);
       window.removeEventListener("focus", onFocus);
     };
-  }, [isOffboarded, loadNotifications]);
+  }, [isExitSurveyOnlyAccess, loadNotifications]);
 
   const runAction = useCallback(async (label: string, fn: () => Promise<unknown>) => {
     setActionLoading(true);
@@ -333,6 +341,9 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const isLearningRoute = pathname.startsWith("/dashboard/learning-development");
 
   const pageTitle = useMemo(() => {
+    if (isExitSurveyOnlyAccess && !isExitSurveyRoute) {
+      return "Exit Survey";
+    }
     if (isOffboarded && !isExitSurveyRoute && !isLearningRoute) {
       return "You Are Offboarded";
     }
@@ -348,6 +359,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     hasDmAccess,
     hasHrAccess,
     hasManagerAccess,
+    isExitSurveyOnlyAccess,
     isExitSurveyRoute,
     isLearningRoute,
     isNavChildActive,
@@ -361,9 +373,13 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   const sidebarDisplayName = useMemo(() => {
+    if (profile && typeof profile === "object") {
+      const fromProfile = cleanEmployeeName(profile as Record<string, unknown>).trim();
+      if (fromProfile) return fromProfile;
+    }
     const name = String(profile?.name ?? user?.name ?? user?.email ?? "").trim();
     return name || "Profile";
-  }, [profile?.name, user?.email, user?.name]);
+  }, [profile, user?.email, user?.name]);
 
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
 
@@ -400,7 +416,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         profile={profile}
         sidebarDisplayName={sidebarDisplayName}
         canAccessProfile={canAccessProfile}
-        isOffboarded={isOffboarded}
+        isOffboarded={isExitSurveyOnlyAccess}
         onLogout={logout}
       />
 
@@ -450,7 +466,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            {!isOffboarded ? (
+            {!isExitSurveyOnlyAccess ? (
             <details
               ref={notificationsPanelRef}
               className="group relative"

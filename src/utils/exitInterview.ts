@@ -125,7 +125,7 @@ function validateTextarea(field: FormField, value: unknown, errors: Record<strin
   const text = String(value ?? "").trim();
   if (!field.required || text) return;
   if (field.key === "reporting_managers") {
-    errors[field.key] = "Enter manager name(s).";
+    errors[field.key] = "Select at least one manager.";
     return;
   }
   errors[field.key] = "This field is required.";
@@ -256,7 +256,7 @@ export function exitInterviewFieldsWithResponses(
 
 export function textareaPlaceholder(field: FormField): string | undefined {
   if (field.key === "reporting_managers") {
-    return "Enter manager name(s)";
+    return "Search and select managers";
   }
   return undefined;
 }
