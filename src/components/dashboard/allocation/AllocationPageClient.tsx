@@ -30,10 +30,9 @@ import {
   userRequestActionLabel,
 } from "@/utils/actionToast";
 import { AllocationExtensionPanel } from "@/components/dashboard/sections/AllocationExtensionPanel";
-import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
-import { ClientSelect } from "@/components/allocation/ClientSelect";
 import { AllocatedPercentSelect } from "@/components/allocation/AllocatedPercentSelect";
-import { AssignProjectManagerPanel } from "@/components/allocation/AssignProjectManagerPanel";
+import { AllocateEmployeeDialog } from "@/components/allocation/AllocateEmployeeDialog";
+import { CreateProjectDialog } from "@/components/allocation/CreateProjectDialog";
 import { ProjectTypeSelect } from "@/components/allocation/ProjectTypeSelect";
 import { ProjectTypeFilterSelect } from "@/components/allocation/ProjectTypeFilterSelect";
 import { useAllocationEmployees } from "@/hooks/useAllocationEmployees";
@@ -423,8 +422,6 @@ export function AllocationPageClient() {
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) && n > 0;
   }, [selfProfileForm.yoe]);
-  const [projectForm, setProjectForm] = useState(createEmptyProjectForm);
-  const [editingProjectCode, setEditingProjectCode] = useState<string>("");
   const [projectFilters, setProjectFilters] = useState({
     search: "",
     project_type: "ALL",
@@ -446,12 +443,10 @@ export function AllocationPageClient() {
   const [allocationForm, setAllocationForm] = useState(createEmptyAllocationForm);
   const [editingAllocationId, setEditingAllocationId] = useState<string>("");
   const [allocationHrSubTab, setAllocationHrSubTab] = useState<
-    "project" | "allocate" | "assign-pm" | "list"
+    "project" | "allocate" | "list"
   >("project");
-  const [pmAssignPrefill, setPmAssignPrefill] = useState<{
-    projectCode?: string;
-    userEmail?: string;
-  } | null>(null);
+  const [createProjectDialogOpen, setCreateProjectDialogOpen] = useState(false);
+  const [allocateDialogOpen, setAllocateDialogOpen] = useState(false);
   const [timelogSubTab, setTimelogSubTab] = useState<"my" | "team">("my");
   const [leaveSubTab, setLeaveSubTab] = useState<"my" | "team">("my");
   const userRoles = user?.roles ?? [];
@@ -1349,6 +1344,16 @@ export function AllocationPageClient() {
     [allocationForm.project_code, hrProjectRawRows, allocationProjects]
   );
   const isStaffingProjectAllocation = isStaffingProjectTypeCode(selectedAllocationProjectType);
+  const isStaffingProjectByCode = useCallback(
+    (projectCode: string) =>
+      isStaffingProjectTypeCode(
+        resolveProjectTypeForProjectCode(projectCode, {
+          projects: hrProjectRawRows,
+          allocationProjects,
+        })
+      ),
+    [allocationProjects, hrProjectRawRows]
+  );
   useEffect(() => {
     const code = allocationForm.project_code.trim();
     if (!code) return;
@@ -2481,10 +2486,9 @@ export function AllocationPageClient() {
     if (talentPoolPrefillHandled.current === email) return;
     talentPoolPrefillHandled.current = email;
     setAllocationForm((prev) => ({ ...prev, employee_email: email }));
+    setEditingAllocationId("");
     setAllocationHrSubTab("allocate");
-    requestAnimationFrame(() => {
-      allocationFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    setAllocateDialogOpen(true);
   }, [hasHrAccess, searchParams]);
 
   const filteredProjects = useMemo(() => {
@@ -3393,7 +3397,7 @@ export function AllocationPageClient() {
                                 value={allocationHrSubTab}
                                 onValueChange={(value) => {
                                   setAllocationHrSubTab(
-                                    value as "project" | "allocate" | "assign-pm" | "list"
+                                    value as "project" | "allocate" | "list"
                                   );
                                   if (value === "list") {
                                     void loadAllocationsForHr();
@@ -3401,139 +3405,48 @@ export function AllocationPageClient() {
                                   }
                                 }}
                                 items={[
-                                  { value: "project", label: "Create Project" },
+                                  { value: "project", label: "Projects" },
                                   { value: "allocate", label: "Project Allocation" },
-                                  { value: "assign-pm", label: "Assign Project Manager" },
                                   { value: "list", label: "Allocation List" },
                                 ]}
                               />
                               <div className={PAGE_TAB_BODY_CLASS}>
                               {allocationHrSubTab === "project" ? (
                               <div ref={projectCrudFormRef} className="space-y-4">
-                                <h3 className="font-semibold">Create Project</h3>
-                                <div className="grid sm:grid-cols-2 gap-3">
-                                  <InputField
-                                    label="Project Name"
-                                    required
-                                    value={projectForm.project_name}
-                                    onChange={(v) => setProjectForm((p) => ({ ...p, project_name: v }))}
-                                  />
-                                  <ClientSelect
-                                    required
-                                    value={projectForm.client_id}
-                                    onChange={(v) => setProjectForm((p) => ({ ...p, client_id: v }))}
-                                    onClientSelected={(client) =>
-                                      setProjectForm((p) => ({
-                                        ...p,
-                                        client_id: String(client.id),
-                                        client_name: client.name,
-                                        account_manager_email:
-                                          client.accountManagerEmail || p.account_manager_email,
-                                      }))
-                                    }
-                                  />
-                                  <AccountManagerSelect
-                                    required
-                                    value={projectForm.account_manager_email}
-                                    onChange={(v) =>
-                                      setProjectForm((p) => ({ ...p, account_manager_email: v }))
-                                    }
-                                  />
-                                  <ProjectTypeSelect
-                                    required
-                                    activeOnly
-                                    enabled={hasAllocationAccess}
-                                    value={projectForm.project_type}
-                                    onChange={(v) =>
-                                      setProjectForm((p) => ({ ...p, project_type: v }))
-                                    }
-                                  />
-                                  <InputField
-                                    label="Start date"
-                                    type="date"
-                                    value={projectForm.start_date}
-                                    onChange={(v) => setProjectForm((p) => ({ ...p, start_date: v }))}
-                                  />
-                                  <InputField
-                                    label="End date"
-                                    type="date"
-                                    value={projectForm.end_date}
-                                    onChange={(v) => setProjectForm((p) => ({ ...p, end_date: v }))}
-                                  />
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                  <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
-                                      runAction(
-                                        editingProjectCode ? "Update Project" : "Create Project",
-                                        async () => {
-                                          const name = projectForm.project_name.trim();
-                                          if (!name) {
-                                            throw new Error("Project name is required.");
-                                          }
-                                          const clientId = Number(projectForm.client_id);
-                                          if (!Number.isFinite(clientId) || clientId <= 0) {
-                                            throw new Error("Client is required.");
-                                          }
-                                          if (
-                                            !projectForm.project_type ||
-                                            !isKnownProjectTypeCode(
-                                              projectForm.project_type,
-                                              activeProjectTypes
-                                            )
-                                          ) {
-                                            throw new Error("Please select a valid project type.");
-                                          }
-                                          const accountManagerEmail = normalizePickerEmail(
-                                            projectForm.account_manager_email
-                                          );
-                                          if (!accountManagerEmail) {
-                                            throw new Error("Account manager is required.");
-                                          }
-                                          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountManagerEmail)) {
-                                            throw new Error("Select a valid account manager email.");
-                                          }
-                                          const project_code = generateAutomaticProjectCode();
-                                          const startDate = projectForm.start_date.trim();
-                                          const endDate = projectForm.end_date.trim();
-                                          if (startDate && endDate && startDate > endDate) {
-                                            throw new Error("Start date must be on or before end date.");
-                                          }
-                                          await hrmsService.createProject({
-                                            project_code,
-                                            project_name: name,
-                                            project_type: projectForm.project_type,
-                                            client_id: clientId,
-                                            account_manager_email: accountManagerEmail,
-                                            ...(startDate ? { start_date: startDate } : {}),
-                                            ...(endDate ? { end_date: endDate } : {}),
-                                          });
-                                          setEditingProjectCode("");
-                                          setProjectForm(createEmptyProjectForm());
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div>
+                                    <h3 className="font-semibold">Projects</h3>
+                                    <p className="text-sm text-wt-text-muted">
+                                      Create projects with client, account manager, delivery manager, and project managers.
+                                    </p>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    <Button
+                                      variant="brand"
+                                      type="button"
+                                      className="px-3 py-2"
+                                      onClick={() => setCreateProjectDialogOpen(true)}
+                                    >
+                                      Create Project
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      className="text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
+                                      onClick={() =>
+                                        runAction("Load projects", async () => {
                                           refreshHrProjects();
-                                        }
-                                      )
-                                    }
-                                    disabled={actionLoading}
-                                  >
-                                    {editingProjectCode ? "Save Project" : "Create Project"}
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    className="text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
-                                    onClick={() =>
-                                      runAction("Load projects", async () => {
-                                        refreshHrProjects();
-                                        setProjectFilters({ search: "", project_type: "ALL" });
-                                      })
-                                    }
-                                    disabled={actionLoading}
-                                    aria-label="Refresh projects"
-                                    title="Refresh projects"
-                                  >
-                                    <IconRefresh />
-                                  </Button>
+                                          setProjectFilters({ search: "", project_type: "ALL" });
+                                        })
+                                      }
+                                      disabled={actionLoading}
+                                      aria-label="Refresh projects"
+                                      title="Refresh projects"
+                                    >
+                                      <IconRefresh />
+                                    </Button>
+                                  </div>
                                 </div>
                                 <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-3">
                                   <p className="text-sm font-medium">All Projects</p>
@@ -3658,367 +3571,30 @@ export function AllocationPageClient() {
                               ) : null}
           
                               {allocationHrSubTab === "allocate" ? (
-                              <>
-                              <div ref={allocationFormRef} className="space-y-4">
-                                <h3 className="font-semibold">Employee Allocation Form</h3>
-                                <div className="grid sm:grid-cols-2 gap-3">
-                                  <div
-                                    ref={allocationEmployeeComboboxRef}
-                                    className="relative text-xs text-wt-text-muted flex flex-col gap-1"
-                                  >
-                                    <span className="block">
-                                      <FieldLabel label="Employee" required />
-                                    </span>
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      className="input-field flex h-auto w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm font-normal text-wt-text"
-                                      aria-expanded={allocationEmployeePickerOpen}
-                                      aria-haspopup="listbox"
-                                      onClick={() => {
-                                        setAllocationEmployeePickerOpen((open) => {
-                                          const next = !open;
-                                          if (next) setAllocationEmployeePickerQuery("");
-                                          return next;
-                                        });
-                                      }}
-                                    >
-                                      <span className="min-w-0 truncate">{allocationEmployeeSelectLabel}</span>
-                                      <span className="shrink-0 text-wt-text-muted" aria-hidden>
-                                        ▾
-                                      </span>
-                                    </Button>
-                                    {allocationEmployeePickerOpen ? (
-                                      <div
-                                        className="absolute left-0 right-0 top-full z-50 mt-1 space-y-2 rounded-xl border border-wt-border bg-wt-surface-1 p-2 shadow-lg"
-                                        role="listbox"
-                                        aria-label="Employees"
-                                      >
-                                        <input
-                                          type="search"
-                                          className="input-field w-full px-3 py-2 text-sm"
-                                          placeholder="Search employees…"
-                                          value={allocationEmployeePickerQuery}
-                                          onChange={(e) => setAllocationEmployeePickerQuery(e.target.value)}
-                                          autoComplete="off"
-                                          autoFocus
-                                        />
-                                        <div className="max-h-52 overflow-auto rounded-lg border border-wt-border">
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            className="block h-auto w-full justify-start rounded-none px-3 py-2 font-normal text-wt-text-muted hover:bg-wt-surface-2"
-                                            onClick={() => {
-                                              setAllocationForm((p) => ({ ...p, employee_email: "" }));
-                                              setPickerEmployeeAllocations(null);
-                                              setPickerEmployeeAllocationsError(null);
-                                              setAllocationEmployeePickerOpen(false);
-                                              setAllocationEmployeePickerQuery("");
-                                            }}
-                                          >
-                                            Clear selection
-                                          </Button>
-                                          {allocationEmployeesPickerFiltered.length ? (
-                                            allocationEmployeesPickerFiltered.map((u) => (
-                                              <Button
-                                                key={u.email}
-                                                type="button"
-                                                role="option"
-                                                variant="ghost"
-                                                className={`block h-auto w-full justify-start rounded-none border-t border-wt-border px-3 py-2 font-normal hover:bg-wt-surface-2 ${
-                                                  allocationForm.employee_email === u.email
-                                                    ? "bg-indigo-500/10 font-medium"
-                                                    : ""
-                                                }`}
-                                                onClick={() => {
-                                                  setAllocationForm((p) => ({ ...p, employee_email: u.email }));
-                                                  setAllocationEmployeePickerOpen(false);
-                                                  setAllocationEmployeePickerQuery("");
-                                                }}
-                                              >
-                                                {u.name}
-                                              </Button>
-                                            ))
-                                          ) : (
-                                            <p className="px-3 py-4 text-center text-sm text-wt-text-muted">
-                                              No employees match your search.
-                                            </p>
-                                          )}
-                                        </div>
-                                      </div>
-                                    ) : null}
+                              <div className="space-y-4">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                  <div>
+                                    <h3 className="font-semibold">Project Allocation</h3>
+                                    <p className="text-sm text-wt-text-muted">
+                                      Allocate employees to projects and assign project managers in a guided dialog.
+                                    </p>
                                   </div>
-                                  <SelectField
-                                    label="Project"
-                                    required
-                                    value={allocationForm.project_code}
-                                    placeholder="Select project"
-                                    options={allocationProjects.map((p) => ({
-                                      value: p.code,
-                                      label: p.name,
-                                    }))}
-                                    onChange={(project_code) =>
-                                      setAllocationForm((p) => ({
-                                        ...p,
-                                        project_code,
-                                      }))
-                                    }
-                                  />
-                                  <SelectField
-                                    label="Project Role"
-                                    required
-                                    value={allocationForm.role}
-                                    placeholder="Select project role"
-                                    options={allocationRoles}
-                                    onChange={(role) =>
-                                      setAllocationForm((p) => ({
-                                        ...p,
-                                        role,
-                                      }))
-                                    }
-                                  />
-                                  <AllocatedPercentSelect
-                                    required
-                                    designation={allocationForm.role}
-                                    enabled={hasAllocationAccess}
-                                    value={allocationForm.allocated_percent}
-                                    onChange={(v) =>
-                                      setAllocationForm((p) => ({ ...p, allocated_percent: v }))
-                                    }
-                                  />
-                                  <SelectField
-                                    label="Allocation Type"
-                                    placeholder={
-                                      isStaffingProjectAllocation
-                                        ? "Staffing (required for staffing projects)"
-                                        : "Select allocation type"
-                                    }
-                                    required
-                                    value={
-                                      isStaffingProjectAllocation
-                                        ? "STAFFING"
-                                        : allocationForm.allocation_type
-                                    }
-                                    options={
-                                      isStaffingProjectAllocation
-                                        ? [{ value: "STAFFING", label: "Staffing" }]
-                                        : ["DEPLOYABLE", "STAFFING", "LOCKED"]
-                                    }
-                                    disabled={isStaffingProjectAllocation}
-                                    onChange={(v) =>
-                                      setAllocationForm((p) => ({ ...p, allocation_type: v }))
-                                    }
-                                  />
-                                  <SelectField
-                                    label="Billing Status"
-                                    placeholder="Select billing status"
-                                    required
-                                    value={allocationForm.billing_status}
-                                    options={["BILLED", "BUFFER", "INVESTMENT"]}
-                                    onChange={(v) =>
-                                      setAllocationForm((p) => ({
-                                        ...p,
-                                        billing_status:
-                                          v === "BILLED" || v === "BUFFER" || v === "INVESTMENT"
-                                            ? v
-                                            : "",
-                                      }))
-                                    }
-                                  />
-                                  <InputField label="Start Date" required value={allocationForm.start_date} onChange={(v) => setAllocationForm((p) => ({ ...p, start_date: v }))} type="date" />
-                                  <InputField label="End Date" value={allocationForm.end_date} onChange={(v) => setAllocationForm((p) => ({ ...p, end_date: v }))} type="date" />
-                                </div>
-                                {allocationForm.employee_email.trim() ? (
-                                  <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-2">
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                      <p className="text-sm font-medium">
-                                        {allocationEmployeeSelectLabel} — current &amp; future allocations
-                                      </p>
-                                      {pickerEmployeeAllocations ? (
-                                        <p className="text-xs text-wt-text-muted">
-                                          Total allocated: {pickerEmployeeAllocations.totalAllocatedPercent}%
-                                        </p>
-                                      ) : null}
-                                    </div>
-                                    {pickerEmployeeAllocationsLoading ? (
-                                      <SectionLoading label="Loading allocations…" />
-                                    ) : null}
-                                    {pickerEmployeeAllocationsError ? (
-                                      <p className="text-sm text-rose-700">{pickerEmployeeAllocationsError}</p>
-                                    ) : null}
-                                    {!pickerEmployeeAllocationsLoading &&
-                                    !pickerEmployeeAllocationsError &&
-                                    pickerEmployeeAllocations &&
-                                    pickerEmployeeAllocations.allocations.length === 0 ? (
-                                      <p className="text-sm text-wt-text-muted">
-                                        No current or future allocations for this employee.
-                                      </p>
-                                    ) : null}
-                                    {!pickerEmployeeAllocationsLoading &&
-                                    pickerEmployeeAllocations &&
-                                    pickerEmployeeAllocations.allocations.length > 0 ? (
-                                      <ScrollableTable maxHeightClass="max-h-[min(40vh,280px)]">
-                                        <WtTable>
-                                          <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                                            <TableRow className="hover:bg-transparent">
-                                              <TableHead>Project</TableHead>
-                                              <TableHead>Allocation %</TableHead>
-                                              <TableHead>Start date</TableHead>
-                                              <TableHead>End date</TableHead>
-                                            </TableRow>
-                                          </TableHeader>
-                                          <TableBody>
-                                            {pickerEmployeeAllocations.allocations.map((row, idx) => (
-                                              <TableRow
-                                                key={`${allocationRowId(row) || "picker-alloc"}-${idx}`}
-                                              >
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">
-                                                  {allocationProjectDisplayName(row)}
-                                                </TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">
-                                                  {formatAllocatedPercentDisplay(row, allocationPercentLabels)}
-                                                </TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">
-                                                  {formatApiDateDisplay(
-                                                    (row.start_date ?? row.startDate) as string | null | undefined
-                                                  ) || "—"}
-                                                </TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">
-                                                  {formatApiDateDisplay(
-                                                    (row.end_date ?? row.endDate) as string | null | undefined
-                                                  ) || "—"}
-                                                </TableCell>
-                                              </TableRow>
-                                            ))}
-                                          </TableBody>
-                                        </WtTable>
-                                      </ScrollableTable>
-                                    ) : null}
-                                  </div>
-                                ) : null}
-                                <div className="flex flex-wrap gap-2">
-                                  <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
-                                      runAction(editingAllocationId ? "Update allocation" : "Create allocation", async () => {
-                                        const employeeEmail = allocationForm.employee_email.trim();
-                                        const projectCode = allocationForm.project_code.trim();
-                                        const role = allocationForm.role.trim();
-                                        if (!employeeEmail) throw new Error("Please select an employee.");
-                                        if (!projectCode) throw new Error("Please select a project.");
-                                        if (!role) throw new Error("Please select a project role.");
-                                        if (
-                                          !allocationForm.allocated_percent ||
-                                          !isValidAllocationPercentForDesignation(
-                                            allocationForm.allocated_percent,
-                                            role,
-                                            allocationPercentOptions
-                                          )
-                                        ) {
-                                          throw new Error("Please select a valid allocation %.");
-                                        }
-                                        if (!allocationForm.allocation_type) {
-                                          throw new Error("Please select allocation type.");
-                                        }
-                                        if (!allocationForm.billing_status) {
-                                          throw new Error("Please select billing status.");
-                                        }
-                                        const startDate = normalizeToApiDate(allocationForm.start_date);
-                                        if (!startDate) {
-                                          throw new Error("Start date is required.");
-                                        }
-                                        const endDate = allocationForm.end_date
-                                          ? normalizeToApiDate(allocationForm.end_date)
-                                          : null;
-                                        const payload = {
-                                          employeeEmail,
-                                          projectCode,
-                                          role: role || null,
-                                          allocatedPercent: Number(allocationForm.allocated_percent),
-                                          startDate,
-                                          endDate,
-                                          allocationType: isStaffingProjectAllocation
-                                            ? "STAFFING"
-                                            : allocationForm.allocation_type,
-                                          billingStatus: allocationForm.billing_status,
-                                        };
-                                        const savedEditingId = editingAllocationId;
-                                        if (savedEditingId) {
-                                          const updateRes = await hrmsService.updateAllocation(
-                                            savedEditingId,
-                                            payload
-                                          );
-                                          const supersede = parseAllocationUpdateResponse(updateRes);
-                                          if (supersede) {
-                                            setAllocations((prev) =>
-                                              sortAllocationListRows(
-                                                mergeAllocationListAfterUpdate(
-                                                  prev,
-                                                  supersede,
-                                                  savedEditingId
-                                                )
-                                              )
-                                            );
-                                          }
-                                        } else {
-                                          await hrmsService.createAllocation(payload);
-                                          setPmAssignPrefill({
-                                            projectCode,
-                                            userEmail: employeeEmail,
-                                          });
-                                        }
-                                        setAllocationForm(createEmptyAllocationForm());
-                                        setEditingAllocationId("");
-                                        void queryClient.invalidateQueries({
-                                          queryKey: TALENT_POOL_QUERY_KEY,
-                                        });
-                                        await loadAllocationsForHr();
-                                        if (!savedEditingId) {
-                                          setAllocationHrSubTab("assign-pm");
-                                        } else {
-                                          setAllocationHrSubTab("list");
-                                        }
-                                      })
-                                    }
-                                    disabled={actionLoading}
-                                  >
-                                    {editingAllocationId ? "Save Allocation" : "Allocate Employee"}
-                                  </Button>
                                   <Button
+                                    variant="brand"
                                     type="button"
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    className="text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
-                                    onClick={() =>
-                                      runAction("Load allocations", async () => {
-                                        await loadAllocationsForHr();
-                                        setAllocationHrSubTab("list");
-                                        requestAnimationFrame(() => {
-                                          allocationRecordsRef.current?.scrollIntoView({
-                                            behavior: "smooth",
-                                            block: "start",
-                                          });
-                                        });
-                                      })
-                                    }
-                                    disabled={actionLoading}
-                                    aria-label="Refresh allocations"
-                                    title="Refresh allocations"
+                                    className="px-3 py-2"
+                                    onClick={() => {
+                                      setEditingAllocationId("");
+                                      setAllocationForm(createEmptyAllocationForm());
+                                      setAllocateDialogOpen(true);
+                                    }}
                                   >
-                                    <IconRefresh />
+                                    Allocate Employee
                                   </Button>
                                 </div>
                               </div>
-                              </>
                               ) : null}
 
-                              {allocationHrSubTab === "assign-pm" ? (
-                                <AssignProjectManagerPanel
-                                  projects={allocationProjects}
-                                  actionLoading={actionLoading}
-                                  runAction={runAction}
-                                  prefill={pmAssignPrefill ?? undefined}
-                                />
-                              ) : null}
-          
                               {allocationHrSubTab === "list" ? (
                                 <>
                                 <div
@@ -4252,12 +3828,7 @@ export function AllocationPageClient() {
                                                         }));
                                                         setEditingAllocationId(allocationId);
                                                         setAllocationHrSubTab("allocate");
-                                                        requestAnimationFrame(() => {
-                                                          allocationFormRef.current?.scrollIntoView({
-                                                            behavior: "smooth",
-                                                            block: "start",
-                                                          });
-                                                        });
+                                                        setAllocateDialogOpen(true);
                                                       }}
                                                     >
                                                       <IconPencil />
@@ -4489,6 +4060,35 @@ export function AllocationPageClient() {
                                 </>
                               ) : null}
                               </div>
+                              <CreateProjectDialog
+                                open={createProjectDialogOpen}
+                                onClose={() => setCreateProjectDialogOpen(false)}
+                                onCreated={() => refreshHrProjects()}
+                                activeProjectTypes={activeProjectTypes}
+                                enabled={hasAllocationAccess}
+                              />
+                              <AllocateEmployeeDialog
+                                open={allocateDialogOpen}
+                                onClose={() => {
+                                  setAllocateDialogOpen(false);
+                                  setEditingAllocationId("");
+                                  setAllocationForm(createEmptyAllocationForm());
+                                }}
+                                initialForm={allocationForm}
+                                editingAllocationId={editingAllocationId}
+                                onSaved={async () => {
+                                  setEditingAllocationId("");
+                                  setAllocationForm(createEmptyAllocationForm());
+                                  void queryClient.invalidateQueries({ queryKey: TALENT_POOL_QUERY_KEY });
+                                  await loadAllocationsForHr();
+                                  setAllocationHrSubTab("list");
+                                }}
+                                projects={allocationProjects}
+                                allocationRoles={allocationRoles}
+                                allocationPercentOptions={allocationPercentOptions}
+                                isStaffingProject={isStaffingProjectByCode}
+                                enabled={hasAllocationAccess}
+                              />
                             </ContentCard>
                           ) : (
                             <ContentCard>
