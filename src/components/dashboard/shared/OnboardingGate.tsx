@@ -23,10 +23,12 @@ export function OnboardingGate({
 }) {
   const access = useDashboardAccess();
   const isOffboarded = isOffboardedProp ?? access.isOffboarded;
+  const isServingNotice = access.isServingNotice;
   const isPortalLocked = isPortalLockedProp ?? access.isPortalLocked;
-  const requiresSelfOnboarding = isOffboarded
-    ? false
-    : (requiresSelfOnboardingProp ?? access.requiresSelfOnboarding);
+  const requiresSelfOnboarding =
+    isOffboarded || isServingNotice
+      ? false
+      : (requiresSelfOnboardingProp ?? access.requiresSelfOnboarding);
 
   if (isOffboarded) {
     return <OffboardedBanner />;

@@ -228,7 +228,7 @@ export function filterVisibleNavigation(
   return result;
 }
 
-/** Offboarded Employees may only open Exit survey under Personal (during notice only). */
+/** Employees in notice or post-exit may only open Exit Survey under Personal. */
 export function filterNavigationForOffboardedUser(
   _items: NavItem[],
   options?: { showExitSurvey?: boolean }
