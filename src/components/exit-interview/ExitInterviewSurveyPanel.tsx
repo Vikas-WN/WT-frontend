@@ -16,18 +16,7 @@ import {
   validateExitInterviewAnswers,
 } from "@/utils/exitInterview";
 
-function formatDateLabel(value: string | null): string {
-  if (!value) return "—";
-  try {
-    return new Date(`${value}T12:00:00`).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  } catch {
-    return value;
-  }
-}
+import { formatApiDateDisplay } from "@/utils/apiDate";
 
 function ExitSurveyDetailsSkeleton() {
   return (
@@ -79,9 +68,14 @@ export function ExitInterviewSurveyPanel({
 
   useEffect(() => {
     if (!formDefQ.data || initialized || !showForm) return;
-    setAnswers(initialFormAnswers(formDefQ.data));
+    const initial = initialFormAnswers(formDefQ.data);
+    const managerName = String(profileQ.data?.profile?.reporting_manager ?? "").trim();
+    if (managerName) {
+      initial.reporting_managers = managerName;
+    }
+    setAnswers(initial);
     setInitialized(true);
-  }, [formDefQ.data, initialized, showForm]);
+  }, [formDefQ.data, initialized, showForm, profileQ.data?.profile?.reporting_manager]);
 
   const daysLeft = flags?.exit_interview_days_until_last_working_day;
 
@@ -160,13 +154,13 @@ export function ExitInterviewSurveyPanel({
               <div>
                 <span className="text-wt-text-muted">Resignation date</span>
                 <p className="font-medium tabular-nums">
-                  {formatDateLabel(flags.exit_interview_resignation_date)}
+                  {formatApiDateDisplay(flags.exit_interview_resignation_date) || "—"}
                 </p>
               </div>
               <div>
                 <span className="text-wt-text-muted">Last working day</span>
                 <p className="font-medium tabular-nums">
-                  {formatDateLabel(flags.exit_interview_last_working_day)}
+                  {formatApiDateDisplay(flags.exit_interview_last_working_day) || "—"}
                 </p>
               </div>
               {daysLeft != null ? (
