@@ -2,13 +2,15 @@
 
 import type { FormField } from "@/types/exit-interview";
 import { ReadonlyDateField } from "@/components/dashboard/ui/forms";
+import { isReadonlyField, textareaPlaceholder } from "@/utils/exitInterview";
+import { formatApiDateDisplay } from "@/utils/apiDate";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
-import { isReadonlyField, textareaPlaceholder } from "@/utils/exitInterview";
+import { ExitInterviewReportingManagersSelector } from "@/components/exit-interview/ExitInterviewReportingManagersSelector";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -17,7 +19,8 @@ function FieldError({ message }: { message?: string }) {
 
 function ReadonlyControl({ field, value }: { field: FormField; value: string }) {
   if (field.widget === "readonly_date") {
-    return <ReadonlyDateField value={value} />;
+    const display = formatApiDateDisplay(value);
+    return <ReadonlyDateField value={display === "—" ? "" : display} />;
   }
   return <Input className="h-10 opacity-80" value={value} disabled readOnly />;
 }
@@ -216,7 +219,16 @@ export function ExitInterviewFormFields({
                 />
               ) : null}
 
-              {field.widget === "textarea" ? (
+              {field.key === "reporting_managers" ? (
+                <ExitInterviewReportingManagersSelector
+                  value={String(answers[field.key] ?? "")}
+                  onChange={(next) => onChange(field.key, next)}
+                  disabled={disabled}
+                  required={field.required}
+                />
+              ) : null}
+
+              {field.widget === "textarea" && field.key !== "reporting_managers" ? (
                 <Textarea
                   className="mt-0 min-h-[100px]"
                   value={String(answers[field.key] ?? "")}

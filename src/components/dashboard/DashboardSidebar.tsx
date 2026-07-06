@@ -479,26 +479,45 @@ export function DashboardSidebar({
           <div className={SIDEBAR_FOOTER_CLASS}>
             <div className={sidebarFooterCardClass(showCollapsed)}>
               <div className={sidebarFooterRowClass(showCollapsed)}>
-                {canAccessProfile && !isOffboarded ? (
-                  <Link
-                    prefetch={false}
-                    href={dashboardHref("profile")}
-                    title={showCollapsed ? sidebarDisplayName : undefined}
-                    className={sidebarProfileLinkClass(activeSection === "profile", showCollapsed)}
-                    aria-label={`View profile for ${sidebarDisplayName}`}
-                    onClick={closeMobileNav}
-                  >
-                    <UserAvatar profile={profile} fallbackName={user?.name ?? user?.email} size="xs" />
-                    <span
-                      className={cn(
-                        "min-w-0 flex-1 truncate text-xs font-medium leading-tight",
-                        showCollapsed &&
-                          "lg:pointer-events-none lg:absolute lg:-m-px lg:h-px lg:w-px lg:overflow-hidden lg:whitespace-nowrap lg:border-0 lg:p-0"
-                      )}
+                {canAccessProfile ? (
+                  isOffboarded ? (
+                    <div
+                      className={sidebarProfileLinkClass(false, showCollapsed)}
+                      title={showCollapsed ? sidebarDisplayName : undefined}
+                      aria-label={sidebarDisplayName}
                     >
-                      {sidebarDisplayName}
-                    </span>
-                  </Link>
+                      <UserAvatar profile={profile} fallbackName={user?.name ?? user?.email} size="xs" />
+                      <span
+                        className={cn(
+                          "min-w-0 flex-1 truncate text-xs font-medium leading-tight text-wt-text",
+                          showCollapsed &&
+                            "lg:pointer-events-none lg:absolute lg:-m-px lg:h-px lg:w-px lg:overflow-hidden lg:whitespace-nowrap lg:border-0 lg:p-0"
+                        )}
+                      >
+                        {sidebarDisplayName}
+                      </span>
+                    </div>
+                  ) : (
+                    <Link
+                      prefetch={false}
+                      href={dashboardHref("profile")}
+                      title={showCollapsed ? sidebarDisplayName : undefined}
+                      className={sidebarProfileLinkClass(activeSection === "profile", showCollapsed)}
+                      aria-label={`View profile for ${sidebarDisplayName}`}
+                      onClick={closeMobileNav}
+                    >
+                      <UserAvatar profile={profile} fallbackName={user?.name ?? user?.email} size="xs" />
+                      <span
+                        className={cn(
+                          "min-w-0 flex-1 truncate text-xs font-medium leading-tight",
+                          showCollapsed &&
+                            "lg:pointer-events-none lg:absolute lg:-m-px lg:h-px lg:w-px lg:overflow-hidden lg:whitespace-nowrap lg:border-0 lg:p-0"
+                        )}
+                      >
+                        {sidebarDisplayName}
+                      </span>
+                    </Link>
+                  )
                 ) : null}
                 <button
                   type="button"

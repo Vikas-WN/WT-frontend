@@ -28,6 +28,7 @@ import {
   getDashboardSectionLabel,
 } from "@/constants/dashboardNavigation";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
+import { cleanEmployeeName } from "@/utils/employeeDirectory";
 import { useExitInterviewProfile } from "@/hooks/exit-interview/useExitInterviewProfile";
 import { shouldShowExitSurveyInNav } from "@/utils/exitInterview";
 import { shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
@@ -372,9 +373,13 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   const sidebarDisplayName = useMemo(() => {
+    if (profile && typeof profile === "object") {
+      const fromProfile = cleanEmployeeName(profile as Record<string, unknown>).trim();
+      if (fromProfile) return fromProfile;
+    }
     const name = String(profile?.name ?? user?.name ?? user?.email ?? "").trim();
     return name || "Profile";
-  }, [profile?.name, user?.email, user?.name]);
+  }, [profile, user?.email, user?.name]);
 
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
 
