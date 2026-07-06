@@ -907,9 +907,9 @@ select.input-field {
 
 .wt-status-badge--serving-notice,
 .wt-status-badge--in-notice {
-  border-color: #52525b;
-  background-color: #3f3f46;
-  color: #fafafa;
+  border-color: #fcd34d;
+  background-color: #fffbeb;
+  color: #92400e;
 }
 
 .wt-status-badge--neutral {
@@ -938,9 +938,9 @@ select.input-field {
 
 [data-theme="dark"] .wt-status-badge--serving-notice,
 [data-theme="dark"] .wt-status-badge--in-notice {
-  border-color: #71717a;
-  background-color: #3f3f46;
-  color: #f4f4f5;
+  border-color: #b45309;
+  background-color: rgba(245, 158, 11, 0.18);
+  color: #fcd34d;
 }
 
 /* Black loader (fetch / submit / refresh) */

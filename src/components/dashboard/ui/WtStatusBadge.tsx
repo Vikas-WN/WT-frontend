@@ -13,7 +13,7 @@ const EMPLOYEE_STATUS_TONE: Record<EmployeeStatusTone, string> = {
   active: filledBadgeClass("success"),
   inactive: filledBadgeClass("danger"),
   invited: filledBadgeClass("neutral"),
-  serving_notice: filledBadgeClass("neutral"),
+  serving_notice: filledBadgeClass("warning"),
   neutral: filledBadgeClass("neutral"),
 };
 

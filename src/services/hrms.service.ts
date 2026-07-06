@@ -81,6 +81,7 @@ export interface InvitedUsersListData {
 
 export interface NotificationItem {
   id: number;
+  type?: string;
   title: string;
   message: string;
   is_read: boolean;
@@ -590,6 +591,7 @@ export const hrmsService = {
         project_code: payload.project_code ?? payload.projectCode,
         project_name: payload.project_name ?? payload.projectName,
         project_type: payload.project_type ?? payload.projectType,
+        client_id: payload.client_id ?? payload.clientId ?? null,
         client_name: payload.client_name ?? payload.clientName ?? null,
         account_manager_email: payload.account_manager_email ?? payload.accountManagerEmail,
         start_date: payload.start_date ?? payload.startDate,
@@ -627,6 +629,7 @@ export const hrmsService = {
           project_code: item.project_code ?? item.projectCode,
           project_name: item.project_name ?? item.projectName,
           project_type: item.project_type ?? item.projectType,
+          client_id: item.client_id ?? item.clientId ?? null,
           client_name: item.client_name ?? item.clientName ?? null,
           account_manager_email: item.account_manager_email ?? item.accountManagerEmail,
           start_date: item.start_date ?? item.startDate,
@@ -894,6 +897,34 @@ export const hrmsService = {
 
   getKpis(params: Record<string, string>) {
     return apiClient.get<unknown>(endpoints.masters.kpiDefinitions, { query: params });
+  },
+
+  listClients(params: { search?: string; activeOnly?: boolean; includeProjects?: boolean } = {}) {
+    const query: Record<string, string> = {};
+    if (params.search?.trim()) query.search = params.search.trim();
+    if (params.activeOnly) query.active_only = "true";
+    if (params.includeProjects) query.include_projects = "true";
+    return apiClient.get<unknown>(endpoints.masters.clients, { query });
+  },
+
+  getClient(clientId: number, params: { includeProjects?: boolean } = {}) {
+    const query: Record<string, string> = {};
+    if (params.includeProjects) query.include_projects = "true";
+    return apiClient.get<unknown>(endpoints.masters.clientById(clientId), { query });
+  },
+
+  createClient(payload: Record<string, unknown>) {
+    return apiClient.post<unknown>(endpoints.masters.clients, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateClient(clientId: number, payload: Record<string, unknown>) {
+    return apiClient.put<unknown>(endpoints.masters.clientById(clientId), {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
   },
 
   assignRole(payload: {

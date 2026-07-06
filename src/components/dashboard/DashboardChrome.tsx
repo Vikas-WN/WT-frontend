@@ -3,7 +3,8 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService, type NotificationItem } from "@/services/hrms.service";
@@ -16,6 +17,10 @@ import {
   parseNotificationItems,
 } from "@/utils/notifications";
 import {
+  notificationCategoryLabel,
+  resolveNotificationHref,
+} from "@/utils/notificationNavigation";
+import {
   dashboardNavigation,
   filterNavigationForOffboardedUser,
   filterVisibleNavigation,
@@ -26,6 +31,7 @@ import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAc
 import { useExitInterviewProfile } from "@/hooks/exit-interview/useExitInterviewProfile";
 import { shouldShowExitSurveyInNav } from "@/utils/exitInterview";
 import { shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
+import { selfProfileQueryKey } from "@/hooks/useSelfProfile";
 import { dashboardHref, DASHBOARD_ROUTES, isDashboardNavChildActive } from "@/constants/routes";
 import { learningSubNav } from "@/constants/learningNav";
 import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
@@ -130,6 +136,8 @@ function extractRoleFromNotificationMessage(message: string): string {
 export function DashboardChrome({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const {
     activeSection,
     expandedSection,
@@ -150,13 +158,13 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const isHrPortalUser =
     (userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN")) &&
     !userRoles.includes("ROLE_EMPLOYEE");
-  const { isOffboarded, profile } = useDashboardAccess();
+  const { isOffboarded, isServingNotice, profile } = useDashboardAccess();
   const shouldLoadExitInterviewProfile = useMemo(() => {
     if (!user) return false;
     if (pathname.startsWith(DASHBOARD_ROUTES["exit-interview"])) return true;
     if (isHrPortalUser) return false;
-    return userRoles.includes("ROLE_EMPLOYEE");
-  }, [user, pathname, isHrPortalUser, userRoles]);
+    return userRoles.includes("ROLE_EMPLOYEE") || isServingNotice || isOffboarded;
+  }, [user, pathname, isHrPortalUser, userRoles, isServingNotice, isOffboarded]);
   const exitProfileQ = useExitInterviewProfile({ enabled: shouldLoadExitInterviewProfile });
   const showExitSurveyNav = useMemo(() => {
     const flags = exitProfileQ.data?.flags;
@@ -243,7 +251,18 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     setNotificationsError(null);
     try {
       const res = await hrmsService.getNotifications({ page: "0", size: "20" });
-      setNotifications(parseNotificationItems(res.data ?? res));
+      const items = parseNotificationItems(res.data ?? res);
+      setNotifications(items);
+      if (
+        items.some(
+          (row) =>
+            String(row.type ?? "").toUpperCase() === "EXIT_INTERVIEW_REMINDER" &&
+            !notificationIsRead(row)
+        )
+      ) {
+        void queryClient.invalidateQueries({ queryKey: selfProfileQueryKey(user?.email) });
+        void queryClient.invalidateQueries({ queryKey: ["profile", "exit-interview"] });
+      }
     } catch (error) {
       setNotifications([]);
       setNotificationsError(
@@ -252,7 +271,34 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     } finally {
       setNotificationsLoading(false);
     }
-  }, [isOffboarded]);
+  }, [isOffboarded, queryClient, user?.email]);
+
+  const handleNotificationClick = useCallback(
+    async (row: NotificationItem) => {
+      const href = resolveNotificationHref(row, { userRoles });
+      if (!href) return;
+
+      const id = notificationRowId(row);
+      if (id && !notificationIsRead(row)) {
+        try {
+          await hrmsService.markNotificationRead(id);
+          setNotifications((current) =>
+            current.map((item) =>
+              notificationRowId(item) === id ? { ...item, is_read: true } : item
+            )
+          );
+        } catch {
+          /* Navigate even if mark-read fails */
+        }
+      }
+
+      if (notificationsPanelRef.current) {
+        notificationsPanelRef.current.open = false;
+      }
+      router.push(href);
+    },
+    [router, userRoles]
+  );
 
   useEffect(() => {
     if (isOffboarded) return;
@@ -449,13 +495,33 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                       const title = notificationTitle(row);
                       const message = notificationMessage(row);
                       const createdAt = formatNotificationTimestamp(row.created_at);
-                      const roleLabel = extractRoleFromNotificationMessage(message);
+                      const categoryLabel = notificationCategoryLabel(row);
+                      const roleLabel =
+                        categoryLabel !== "—"
+                          ? categoryLabel
+                          : extractRoleFromNotificationMessage(message);
+                      const href = resolveNotificationHref(row, { userRoles });
+                      const isNavigable = Boolean(href);
                       return (
                         <div
                           key={id || `notification-${idx}`}
+                          role={isNavigable ? "button" : undefined}
+                          tabIndex={isNavigable ? 0 : undefined}
+                          onClick={() => {
+                            if (isNavigable) void handleNotificationClick(row);
+                          }}
+                          onKeyDown={(event) => {
+                            if (!isNavigable) return;
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              void handleNotificationClick(row);
+                            }
+                          }}
                           className={cn(
                             "flex items-start justify-between gap-2 rounded-lg border border-wt-border p-2.5",
-                            isRead ? "bg-wt-surface-2/60" : "bg-wt-surface-2"
+                            isRead ? "bg-wt-surface-2/60" : "bg-wt-surface-2",
+                            isNavigable &&
+                              "cursor-pointer transition hover:border-indigo-300 hover:bg-wt-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
                           )}
                         >
                           <div className="min-w-0 space-y-1">
@@ -482,12 +548,13 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                             size="icon-sm"
                             className="rounded-md border border-wt-border text-wt-text-muted hover:bg-wt-surface-3 disabled:opacity-40"
                             disabled={actionLoading || isRead || !id}
-                            onClick={() =>
+                            onClick={(event) => {
+                              event.stopPropagation();
                               runAction("Mark notification read", async () => {
                                 await hrmsService.markNotificationRead(id);
                                 await loadNotifications();
-                              })
-                            }
+                              });
+                            }}
                           >
                             <IconCheck />
                           </Button>

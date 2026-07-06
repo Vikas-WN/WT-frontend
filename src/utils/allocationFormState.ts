@@ -2,6 +2,7 @@ export type ProjectFormState = {
   project_name: string;
   /** Project type code from GET /project/types */
   project_type: string;
+  client_id: string;
   client_name: string;
   account_manager_email: string;
   start_date: string;
@@ -25,6 +26,7 @@ export function createEmptyProjectForm(): ProjectFormState {
   return {
     project_name: "",
     project_type: "",
+    client_id: "",
     client_name: "",
     account_manager_email: "",
     start_date: "",

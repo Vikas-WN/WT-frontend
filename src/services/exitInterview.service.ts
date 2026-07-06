@@ -11,6 +11,7 @@ import type {
   ExitInterviewSubmitBody,
   ExitInterviewSubmitResult,
 } from "@/types/exit-interview";
+import type { ExitSurveyFollowUpListData, OffboardListQuery } from "@/types/offboard";
 
 function submissionsQuery(params: ExitInterviewSubmissionsQuery): Record<string, string> {
   const query: Record<string, string> = {
@@ -76,5 +77,24 @@ export const exitInterviewService = {
         body: JSON.stringify({ emp_ids: empIds }),
       }
     );
+  },
+
+  /** GET /exit-interview/follow-up — HR exit survey follow-up list. */
+  getFollowUpList(params: OffboardListQuery = {}) {
+    const query: Record<string, string> = {
+      page: String(params.page ?? 0),
+      size: String(params.size ?? 10),
+    };
+    const search = params.search?.trim();
+    if (search) query.search = search;
+    const type = params.type?.trim();
+    if (type) query.type = type;
+    const fromDate = params.fromDate?.trim();
+    if (fromDate) query.fromDate = fromDate;
+    const toDate = params.toDate?.trim();
+    if (toDate) query.toDate = toDate;
+    return apiClient.get<ApiEnvelope<ExitSurveyFollowUpListData>>(endpoints.exitInterview.followUp, {
+      query,
+    });
   },
 };

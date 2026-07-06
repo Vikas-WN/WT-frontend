@@ -1,12 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ApiError } from "@/api/error";
-import { hrmsService } from "@/services/hrms.service";
-import { toPagedRows } from "@/utils/apiRows";
+import { exitInterviewService } from "@/services/exitInterview.service";
 import {
-  filterInNoticeFollowUpRows,
-  mergeExitSurveyFollowUpRows,
+  sortExitSurveyFollowUpRows,
   type ExitSurveyFollowUpRow,
 } from "@/utils/exitSurveyFollowUp";
 import type { OffboardListItem } from "@/types/offboard";
@@ -35,6 +32,34 @@ export type ExitSurveyFollowUpQueryResult = {
   warning?: string;
 };
 
+function mapFollowUpItem(item: OffboardListItem): ExitSurveyFollowUpRow {
+  return {
+    emp_id: item.emp_id ?? "",
+    employee_name: item.employee_name,
+    email: item.email,
+    last_working_day: item.last_working_day,
+    resignation_date: item.resignation_date ?? null,
+    employee_status: item.employee_status ?? null,
+    submission_status: item.submission_status,
+    submitted_at: item.submitted_at ?? null,
+    lookup_id: item.lookup_id,
+    exit_survey_submitted: Boolean(item.exit_survey_submitted),
+    can_resend_exit_survey: item.can_resend_exit_survey !== false,
+    can_view_submission: item.can_view_submission,
+    exit_type: "",
+    reason: null,
+    expected_behavior: null,
+    critical_skill: null,
+    is_regretted: false,
+    notice_period_days: 0,
+    designation: null,
+    band_name: null,
+    band_role: null,
+    project_manager: null,
+    status: item.employee_status ?? undefined,
+  };
+}
+
 async function fetchExitSurveyFollowUpRows(filters: {
   search: string;
   filterType: string;
@@ -46,51 +71,18 @@ async function fetchExitSurveyFollowUpRows(filters: {
   );
   const search = filters.search.trim();
 
-  const [offboardResult, onboardResult] = await Promise.allSettled([
-    hrmsService.getOffboardList({
-      page: 0,
-      size: FOLLOW_UP_FETCH_SIZE,
-      search: search || undefined,
-      type: filters.filterType.trim() || undefined,
-      fromDate: hasCustomLwdFilter ? filters.filterFromDate.trim() || undefined : undefined,
-      toDate: hasCustomLwdFilter ? filters.filterToDate.trim() || undefined : undefined,
-    }),
-    hrmsService.getOnboardList({ page: "0", size: "500" }),
-  ]);
-
-  const offboardRes = offboardResult.status === "fulfilled" ? offboardResult.value : null;
-  const onboardRes = onboardResult.status === "fulfilled" ? onboardResult.value : null;
-
-  if (offboardResult.status === "rejected" && onboardResult.status === "rejected") {
-    throw offboardResult.reason;
-  }
-
-  const onboardRows = onboardRes
-    ? toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes)
-    : [];
-  const inNoticeRows = filterInNoticeFollowUpRows(onboardRows, {
-    search: filters.search,
-    type: filters.filterType,
-    fromDate: hasCustomLwdFilter ? filters.filterFromDate : undefined,
-    toDate: hasCustomLwdFilter ? filters.filterToDate : undefined,
+  const res = await exitInterviewService.getFollowUpList({
+    page: 0,
+    size: FOLLOW_UP_FETCH_SIZE,
+    search: search || undefined,
+    type: filters.filterType.trim() || undefined,
+    fromDate: hasCustomLwdFilter ? filters.filterFromDate.trim() || undefined : undefined,
+    toDate: hasCustomLwdFilter ? filters.filterToDate.trim() || undefined : undefined,
   });
-  const rows = mergeExitSurveyFollowUpRows(
-    (offboardRes?.data?.items ?? []) as OffboardListItem[],
-    inNoticeRows
-  );
 
-  let warning: string | undefined;
-  if (offboardResult.status === "rejected") {
-    const reason = offboardResult.reason;
-    warning =
-      reason instanceof ApiError
-        ? reason.message
-        : reason instanceof Error
-          ? reason.message
-          : "Offboard list failed; showing in-notice employees only.";
-  }
+  const rows = (res.data?.items ?? []).map(mapFollowUpItem);
 
-  return { rows, warning };
+  return { rows };
 }
 
 export function useExitSurveyFollowUpList(filters: {
@@ -112,3 +104,5 @@ export function useExitSurveyFollowUpList(filters: {
     queryFn: () => fetchExitSurveyFollowUpRows(filters),
   });
 }
+
+export { sortExitSurveyFollowUpRows };
