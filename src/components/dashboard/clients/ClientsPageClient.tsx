@@ -15,22 +15,12 @@ import {
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
 import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
-import { FormSection } from "@/components/dashboard/ui/FormSection";
-import { InputField } from "@/components/dashboard/ui/forms";
-import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
-import { InternalEmployeeSelect } from "@/components/allocation/InternalEmployeeSelect";
+import { ClientFormDialog } from "@/components/allocation/ClientFormDialog";
 import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { UI_COPY } from "@/constants/uiCopy";
 import { useClients, useInvalidateClients } from "@/hooks/clients/useClients";
-import { hrmsService } from "@/services/hrms.service";
-import {
-  createEmptyClientForm,
-  type ClientFormState,
-  type ClientRecord,
-} from "@/types/client";
-import { clientToFormState } from "@/utils/client";
-import { FORM_FIELD_CLASS } from "@/components/dashboard/ui/uiLayout";
+import type { ClientRecord } from "@/types/client";
 
 function displayPerson(name: string | null | undefined, email: string | null | undefined) {
   if (name && email) return `${name} (${email})`;
@@ -45,11 +35,8 @@ export function ClientsPageClient() {
   const queriesEnabled = authStatus === "authenticated" && canView;
 
   const [search, setSearch] = useState("");
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState<ClientFormState>(createEmptyClientForm());
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [clientDialogOpen, setClientDialogOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<ClientRecord | null>(null);
 
   const { data: clients = [], isLoading, isError, refetch } = useClients({
     enabled: queriesEnabled,
@@ -77,57 +64,14 @@ export function ClientsPageClient() {
     );
   }
 
-  function resetForm() {
-    setEditingId(null);
-    setForm(createEmptyClientForm());
-    setMessage(null);
-    setError(null);
+  function openCreateDialog() {
+    setEditingClient(null);
+    setClientDialogOpen(true);
   }
 
-  function startEdit(client: ClientRecord) {
-    setEditingId(client.id);
-    setForm(clientToFormState(client));
-    setMessage(null);
-    setError(null);
-  }
-
-  async function handleSubmit() {
-    const name = form.name.trim();
-    if (!name) {
-      setError("Client name is required.");
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-    setMessage(null);
-    try {
-      const payload = {
-        name,
-        spoc_external_name: form.spoc_external_name.trim() || null,
-        spoc_external_email: form.spoc_external_email.trim() || null,
-        spoc_external_phone: form.spoc_external_phone.trim() || null,
-        poc_internal_email: form.poc_internal_email.trim() || null,
-        account_manager_email: form.account_manager_email.trim() || null,
-        delivery_manager_email: form.delivery_manager_email.trim() || null,
-        is_active: form.is_active,
-      };
-
-      if (editingId) {
-        await hrmsService.updateClient(editingId, payload);
-        setMessage("Client updated.");
-      } else {
-        await hrmsService.createClient(payload);
-        setMessage("Client created.");
-      }
-      invalidateClients();
-      await refetch();
-      if (!editingId) resetForm();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save client.");
-    } finally {
-      setSaving(false);
-    }
+  function openEditDialog(client: ClientRecord) {
+    setEditingClient(client);
+    setClientDialogOpen(true);
   }
 
   return (
@@ -150,8 +94,13 @@ export function ClientsPageClient() {
                 placeholder="Search clients"
                 aria-label="Search clients"
               />
+              {canEdit ? (
+                <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" onClick={openCreateDialog}>
+                  Create Client
+                </Button>
+              ) : null}
               <Button
-                variant="brand"
+                variant="outline"
                 size="sm"
                 type="button"
                 className="px-4 py-2 text-sm"
@@ -212,7 +161,7 @@ export function ClientsPageClient() {
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => startEdit(client)}
+                                onClick={() => openEditDialog(client)}
                               >
                                 Edit
                               </Button>
@@ -233,89 +182,22 @@ export function ClientsPageClient() {
             )}
           </div>
         </div>
-
-        {canEdit ? (
-          <FormSection
-            title={editingId ? "Edit Client" : "Create Client"}
-            description="Each client can have multiple projects. Projects must reference a client when created."
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <InputField
-                label="Client Name"
-                required
-                value={form.name}
-                onChange={(value) => setForm((prev) => ({ ...prev, name: value }))}
-              />
-              <label className={FORM_FIELD_CLASS}>
-                <span className="text-xs font-medium text-wt-text-muted">Status</span>
-                <select
-                  className="mt-1 w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm"
-                  value={form.is_active ? "active" : "inactive"}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, is_active: e.target.value === "active" }))
-                  }
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </label>
-              <InputField
-                label="SPOC Name"
-                value={form.spoc_external_name}
-                onChange={(value) => setForm((prev) => ({ ...prev, spoc_external_name: value }))}
-              />
-              <InputField
-                label="SPOC Email"
-                value={form.spoc_external_email}
-                onChange={(value) => setForm((prev) => ({ ...prev, spoc_external_email: value }))}
-              />
-              <InputField
-                label="SPOC Phone"
-                value={form.spoc_external_phone}
-                onChange={(value) => setForm((prev) => ({ ...prev, spoc_external_phone: value }))}
-              />
-              <InternalEmployeeSelect
-                label="POC (Internal)"
-                value={form.poc_internal_email}
-                onChange={(value) => setForm((prev) => ({ ...prev, poc_internal_email: value }))}
-              />
-              <AccountManagerSelect
-                value={form.account_manager_email}
-                onChange={(value) => setForm((prev) => ({ ...prev, account_manager_email: value }))}
-              />
-              <InternalEmployeeSelect
-                label="Delivery Manager"
-                value={form.delivery_manager_email}
-                onChange={(value) => setForm((prev) => ({ ...prev, delivery_manager_email: value }))}
-              />
-            </div>
-
-            {error ? (
-              <p className="mt-4 text-sm text-rose-600" role="alert">
-                {error}
-              </p>
-            ) : null}
-            {message ? <p className="mt-4 text-sm text-emerald-700">{message}</p> : null}
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Button variant="brand" type="button" disabled={saving} onClick={() => void handleSubmit()}>
-                {saving ? UI_COPY.saving : editingId ? UI_COPY.saveChanges : "Create Client"}
-              </Button>
-              {editingId ? (
-                <Button type="button" variant="ghost" disabled={saving} onClick={resetForm}>
-                  {UI_COPY.cancel}
-                </Button>
-              ) : null}
-              <Link
-                href={DASHBOARD_ROUTES.allocation}
-                className="inline-flex items-center text-sm text-blue-600 hover:underline"
-              >
-                Go to Projects Allocation
-              </Link>
-            </div>
-          </FormSection>
-        ) : null}
       </div>
+
+      {canEdit ? (
+        <ClientFormDialog
+          open={clientDialogOpen}
+          editingClient={editingClient}
+          onClose={() => {
+            setClientDialogOpen(false);
+            setEditingClient(null);
+          }}
+          onSaved={async () => {
+            invalidateClients();
+            await refetch();
+          }}
+        />
+      ) : null}
     </DashboardPageShell>
   );
 }

@@ -14,7 +14,12 @@ export function ClientSelect({
 }: {
   value: string;
   onChange: (value: string) => void;
-  onClientSelected?: (client: { id: number; name: string; accountManagerEmail: string | null }) => void;
+  onClientSelected?: (client: {
+    id: number;
+    name: string;
+    accountManagerEmail: string | null;
+    deliveryManagerEmail: string | null;
+  }) => void;
   required?: boolean;
   activeOnly?: boolean;
   disabled?: boolean;
@@ -49,6 +54,7 @@ export function ClientSelect({
               id: client.id,
               name: client.name,
               accountManagerEmail: client.accountManagerEmail,
+              deliveryManagerEmail: client.deliveryManagerEmail,
             });
           }
         }}
