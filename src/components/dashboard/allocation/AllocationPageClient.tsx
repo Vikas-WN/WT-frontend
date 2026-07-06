@@ -31,6 +31,7 @@ import {
 } from "@/utils/actionToast";
 import { AllocationExtensionPanel } from "@/components/dashboard/sections/AllocationExtensionPanel";
 import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
+import { ClientSelect } from "@/components/allocation/ClientSelect";
 import { AllocatedPercentSelect } from "@/components/allocation/AllocatedPercentSelect";
 import { AssignProjectManagerPanel } from "@/components/allocation/AssignProjectManagerPanel";
 import { ProjectTypeSelect } from "@/components/allocation/ProjectTypeSelect";
@@ -3417,10 +3418,19 @@ export function AllocationPageClient() {
                                     value={projectForm.project_name}
                                     onChange={(v) => setProjectForm((p) => ({ ...p, project_name: v }))}
                                   />
-                                  <InputField
-                                    label="Client name"
-                                    value={projectForm.client_name}
-                                    onChange={(v) => setProjectForm((p) => ({ ...p, client_name: v }))}
+                                  <ClientSelect
+                                    required
+                                    value={projectForm.client_id}
+                                    onChange={(v) => setProjectForm((p) => ({ ...p, client_id: v }))}
+                                    onClientSelected={(client) =>
+                                      setProjectForm((p) => ({
+                                        ...p,
+                                        client_id: String(client.id),
+                                        client_name: client.name,
+                                        account_manager_email:
+                                          client.accountManagerEmail || p.account_manager_email,
+                                      }))
+                                    }
                                   />
                                   <AccountManagerSelect
                                     required
@@ -3460,6 +3470,10 @@ export function AllocationPageClient() {
                                           if (!name) {
                                             throw new Error("Project name is required.");
                                           }
+                                          const clientId = Number(projectForm.client_id);
+                                          if (!Number.isFinite(clientId) || clientId <= 0) {
+                                            throw new Error("Client is required.");
+                                          }
                                           if (
                                             !projectForm.project_type ||
                                             !isKnownProjectTypeCode(
@@ -3488,7 +3502,7 @@ export function AllocationPageClient() {
                                             project_code,
                                             project_name: name,
                                             project_type: projectForm.project_type,
-                                            client_name: projectForm.client_name.trim() || null,
+                                            client_id: clientId,
                                             account_manager_email: accountManagerEmail,
                                             ...(startDate ? { start_date: startDate } : {}),
                                             ...(endDate ? { end_date: endDate } : {}),

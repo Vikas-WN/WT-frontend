@@ -93,6 +93,12 @@ export const dashboardNavigation: NavItem[] = [
     icon: "folder",
     children: [
       {
+        id: "clients",
+        label: "Clients",
+        roles: ["ROLE_HR", "ROLE_ADMIN"],
+        icon: "bookUser",
+      },
+      {
         id: "allocation",
         label: "Projects Allocation",
         roles: ["ROLE_HR", "ROLE_ADMIN"],

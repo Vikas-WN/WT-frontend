@@ -21,7 +21,7 @@ export interface HrOffboardListItem {
   submission_status?: "SUBMITTED" | "PENDING";
 }
 
-/** GET /api/v1/user/offboard — exit survey follow-up list (`data.items[]`). */
+/** GET /api/v1/exit-interview/follow-up — exit survey follow-up list (`data.items[]`). */
 export interface OffboardListItem {
   emp_id: string | null;
   employee_name: string;
@@ -39,6 +39,13 @@ export interface OffboardListItem {
 
 export interface OffboardListData {
   items: HrOffboardListItem[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+export interface ExitSurveyFollowUpListData {
+  items: OffboardListItem[];
   total: number;
   page: number;
   size: number;

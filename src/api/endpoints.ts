@@ -195,6 +195,9 @@ export const endpoints = {
     submissionCycleByKey: `${api}/masters/submission-cycles/by-key`,
     submissionCycleById: (cycleId: string) =>
       `${api}/masters/submission-cycles/${encodeURIComponent(cycleId)}`,
+    clients: `${api}/masters/clients`,
+    clientById: (clientId: string | number) =>
+      `${api}/masters/clients/${encodeURIComponent(String(clientId))}`,
   },
 
   roleAdmin: {
@@ -226,6 +229,7 @@ export const endpoints = {
     formDefinition: `${api}/exit-interview/form-definition`,
     submit: `${api}/exit-interview`,
     submissions: `${api}/exit-interview/submissions`,
+    followUp: `${api}/exit-interview/follow-up`,
     submissionByLookupId: (lookupId: string) =>
       `${api}/exit-interview/submissions/${encodeURIComponent(lookupId)}`,
     minutesOfMeetingByLookupId: (lookupId: string) =>
