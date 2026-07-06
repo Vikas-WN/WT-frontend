@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState, useId } from "react";
 import { hrmsService } from "@/services/hrms.service";
-import { InputField, SelectField, DropdownSelectField, DatePickerField } from "@/components/dashboard/ui/forms";
-import { CARD_FORM_GRID_CLASS, CARD_FORM_ACTIONS_CLASS } from "@/components/dashboard/ui/uiLayout";
+import { FieldLabel, InputField, SelectField, DropdownSelectField, DatePickerField } from "@/components/dashboard/ui/forms";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { CARD_FORM_GRID_CLASS, CARD_FORM_ACTIONS_CLASS, FORM_FIELD_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { FormGridSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { isValidPersonName } from "@/utils/dashboard/validation";
 import {
@@ -35,6 +37,56 @@ type HrOnboardFormProps = {
   onError: (message: string) => void;
   runAction: (label: string, fn: () => Promise<void>) => void;
 };
+
+const EMPLOYEE_ID_HINT =
+  "Only letters and numbers are allowed (no spaces or special characters).";
+
+function EmployeeIdField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const fieldId = useId();
+  const hintId = `${fieldId}-hint`;
+  const errorId = `${fieldId}-error`;
+  const [invalidAttempt, setInvalidAttempt] = useState(false);
+
+  return (
+    <Field className={FORM_FIELD_CLASS}>
+      <FieldLabel label="Employee ID" required htmlFor={fieldId} />
+      <div className="space-y-2 rounded-lg border border-wt-border bg-wt-surface-2/60 p-3">
+        <Input
+          id={fieldId}
+          value={value}
+          autoComplete="off"
+          aria-describedby={invalidAttempt ? `${hintId} ${errorId}` : hintId}
+          aria-invalid={invalidAttempt || undefined}
+          className="bg-wt-surface-1"
+          onChange={(event) => {
+            const raw = event.target.value;
+            const cleaned = raw.replace(/[^A-Za-z0-9]/g, "");
+            setInvalidAttempt(cleaned.length < raw.length);
+            onChange(cleaned);
+          }}
+        />
+        <p id={hintId} className="text-xs leading-relaxed text-wt-text-muted">
+          {EMPLOYEE_ID_HINT}
+        </p>
+        {invalidAttempt ? (
+          <p
+            id={errorId}
+            role="alert"
+            className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-xs font-medium text-amber-900 dark:text-amber-100"
+          >
+            Special characters and spaces are not allowed in Employee ID.
+          </p>
+        ) : null}
+      </div>
+    </Field>
+  );
+}
 
 function validateWorkStep(form: OnboardFormState, internBandId: number, defaultConsultantBandId: number) {
   const empId = form.emp_id.trim();
@@ -285,11 +337,9 @@ export function HrOnboardForm({
         ) : (
           <>
             <div key={`${formKey}-work`} className={CARD_FORM_GRID_CLASS}>
-        <InputField
-          label="Employee ID"
-          required
+        <EmployeeIdField
           value={form.emp_id}
-          onChange={(v) => setForm((p) => ({ ...p, emp_id: v.replace(/[^A-Za-z0-9]/g, "") }))}
+          onChange={(v) => setForm((p) => ({ ...p, emp_id: v }))}
         />
         <InputField
           label="Work Email"

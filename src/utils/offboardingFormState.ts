@@ -111,6 +111,7 @@ export function formatUserTypeLabel(value: string): string {
   if (v === "FULLTIME") return "Full-Time";
   if (v === "INTERN") return "Intern";
   if (v === "CONSULTANT") return "Consultant";
+  if (v === "HR") return "HR";
   return v || "—";
 }
 

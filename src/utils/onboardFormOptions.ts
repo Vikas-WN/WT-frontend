@@ -35,15 +35,40 @@ function unwrapOnboardOptionsPayload(raw: unknown): Record<string, unknown> {
   return envelope;
 }
 
+/** Directory filter values from GET /masters/onboard-options (`directory_user_types`). */
+export const FALLBACK_DIRECTORY_USER_TYPES: OnboardOptionItem[] = [
+  { value: "FULLTIME", label: "Full time" },
+  { value: "CONSULTANT", label: "Consultant" },
+  { value: "HR", label: "HR" },
+  { value: "INTERN", label: "Intern" },
+];
+
+export function resolveDirectoryUserTypes(options: OnboardOptionsResponse): OnboardOptionItem[] {
+  return options.directory_user_types.length
+    ? options.directory_user_types
+    : FALLBACK_DIRECTORY_USER_TYPES;
+}
+
+export function directoryUserTypeFilterOptions(
+  options?: OnboardOptionsResponse | null
+): OnboardOptionItem[] {
+  const types = options ? resolveDirectoryUserTypes(options) : FALLBACK_DIRECTORY_USER_TYPES;
+  return [{ value: "", label: "All User Types" }, ...types];
+}
+
 /** GET /masters/onboard-options — `{ message, data: { ... } }` or bare options object. */
 export function parseOnboardOptions(raw: unknown): OnboardOptionsResponse {
   const row = unwrapOnboardOptionsPayload(raw);
+  const directoryUserTypes = parseOptionItems(row.directory_user_types);
 
   const parsed: OnboardOptionsResponse = {
     categories: parseOptionItems(row.categories ?? row.delivery_statuses),
     work_modes: parseOptionItems(row.work_modes),
     work_location_types: parseOptionItems(row.work_location_types),
     user_types: parseOptionItems(row.user_types),
+    directory_user_types: directoryUserTypes.length
+      ? directoryUserTypes
+      : FALLBACK_DIRECTORY_USER_TYPES,
     departments: parseOptionItems(row.departments),
     genders: parseOptionItems(row.genders),
     marital_statuses: parseOptionItems(row.marital_statuses),
@@ -87,6 +112,7 @@ export const FALLBACK_ONBOARD_OPTIONS: OnboardOptionsResponse = {
     { value: "INTERN", label: "Intern" },
     { value: "CONSULTANT", label: "Consultant" },
   ],
+  directory_user_types: FALLBACK_DIRECTORY_USER_TYPES,
   departments: [
     { value: "AI/ML", label: "AI/ML" },
     { value: "Account Manager", label: "Account Manager" },

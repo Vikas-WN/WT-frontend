@@ -299,6 +299,16 @@ export const hrmsService = {
     });
   },
 
+  updateEmployeeUserType(
+    empId: string,
+    payload: { user_type: string; transition_date?: string }
+  ) {
+    return apiClient.put<ApiEnvelope<unknown>>(endpoints.profile.employeeUserType(empId), {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
   getMyLeaveBalance() {
     return apiClient.get<ApiEnvelope<EmployeeLeaveBalancesData>>(endpoints.profile.myBalances);
   },

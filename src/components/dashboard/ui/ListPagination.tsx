@@ -9,7 +9,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { UI_COPY } from "@/constants/uiCopy";
+import { TOOLBAR_SELECT_TRIGGER_COMPACT_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { buildPaginationTokens } from "@/utils/pagination";
+import { cn } from "@/lib/utils";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 
@@ -116,7 +118,7 @@ export function ListPagination({
             >
               <SelectTrigger
                 aria-label="Rows per page"
-                className="h-8 w-[4.25rem] rounded-lg border-wt-border bg-wt-surface-1 px-2 text-xs tabular-nums shadow-sm"
+                className={cn(TOOLBAR_SELECT_TRIGGER_COMPACT_CLASS, "w-[4.25rem] min-w-[4.25rem] px-2 text-xs tabular-nums")}
               >
                 <SelectValue />
               </SelectTrigger>

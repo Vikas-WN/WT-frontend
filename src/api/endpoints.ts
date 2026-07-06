@@ -26,6 +26,8 @@ export const endpoints = {
     self: `${api}/profile`,
     myBalances: `${api}/profile/balances`,
     employeeById: (empId: string) => `${api}/employee-profile/${encodeURIComponent(empId)}`,
+    employeeUserType: (empId: string) =>
+      `${api}/employee-profile/${encodeURIComponent(empId)}/user-type`,
     employeeBalances: (empId: string) =>
       `${api}/employee-profile/${encodeURIComponent(empId)}/balances`,
   },

@@ -55,7 +55,7 @@ function IconChevronRight({ className = "" }: { className?: string }) {
 function IconLogout({ className = "" }: { className?: string }) {
   return (
     <svg
-      className={`h-5 w-5 ${className}`}
+      className={`h-4 w-4 ${className}`}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -488,10 +488,10 @@ export function DashboardSidebar({
                     aria-label={`View profile for ${sidebarDisplayName}`}
                     onClick={closeMobileNav}
                   >
-                    <UserAvatar profile={profile} fallbackName={user?.name ?? user?.email} size="sm" />
+                    <UserAvatar profile={profile} fallbackName={user?.name ?? user?.email} size="xs" />
                     <span
                       className={cn(
-                        "min-w-0 flex-1 truncate text-sm font-medium leading-snug",
+                        "min-w-0 flex-1 truncate text-xs font-medium leading-tight",
                         showCollapsed &&
                           "lg:pointer-events-none lg:absolute lg:-m-px lg:h-px lg:w-px lg:overflow-hidden lg:whitespace-nowrap lg:border-0 lg:p-0"
                       )}

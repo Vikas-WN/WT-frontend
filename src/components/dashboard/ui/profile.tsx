@@ -91,15 +91,17 @@ export function UserAvatar({
 }: {
   profile: Record<string, unknown> | null | undefined;
   fallbackName?: string | null;
-  size?: "sm" | "md";
+  size?: "xs" | "sm" | "md";
   className?: string;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   const src = resolveProfilePhotoSrc(profile);
   const displayName = String(profile?.name ?? fallbackName ?? "User").trim();
   const initial = (displayName.charAt(0) || "?").toUpperCase();
-  const sizeClass = size === "sm" ? "h-8 w-8" : "h-10 w-10";
-  const textClass = size === "sm" ? "text-xs" : "text-sm";
+  const sizeClass =
+    size === "xs" ? "h-6 w-6" : size === "sm" ? "h-8 w-8" : "h-10 w-10";
+  const textClass =
+    size === "xs" ? "text-[10px]" : size === "sm" ? "text-xs" : "text-sm";
 
   return (
     <div

@@ -28,6 +28,7 @@ export function DatePicker({
   min,
   max,
   className,
+  positionerClassName,
 }: {
   label?: string
   value: string
@@ -37,6 +38,8 @@ export function DatePicker({
   min?: string
   max?: string
   className?: string
+  /** Raise above modals (z-[200]) when the picker is used inside a dialog. */
+  positionerClassName?: string
 }) {
   const [open, setOpen] = useState(false)
 
@@ -84,8 +87,12 @@ export function DatePicker({
           </span>
         </PopoverTrigger>
         <PopoverPortal>
-          <PopoverPositioner align="start" sideOffset={4}>
-            <PopoverContent className="p-0">
+          <PopoverPositioner
+            align="start"
+            sideOffset={4}
+            className={cn("z-[250]", positionerClassName)}
+          >
+            <PopoverContent className="border-wt-border bg-wt-surface-1 p-0 shadow-lg">
             <Calendar
               mode="single"
               selected={selected ?? undefined}

@@ -22,6 +22,7 @@ import { UI_COPY } from "@/constants/uiCopy";
 import { InputField } from "@/components/dashboard/ui/forms";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
+import { PersonalHolidayCalendarView } from "@/components/dashboard/annual-calendar/PersonalHolidayCalendarView";
 import { hrmsService, type AnnualCalendarItem } from "@/services/hrms.service";
 
 function parseAnnualCalendarRows(res: unknown): AnnualCalendarItem[] {
@@ -102,6 +103,14 @@ export function AnnualCalendarPageClient() {
     setTitle("");
     setDocumentLink("");
     await loadCalendars();
+  }
+
+  if (!hasHrAccess) {
+    return (
+      <DashboardPageShell>
+        <PersonalHolidayCalendarView />
+      </DashboardPageShell>
+    );
   }
 
   return (
