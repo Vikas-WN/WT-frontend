@@ -45,7 +45,6 @@ import {
 } from "@/hooks/offboarding/useOffboardingPanelQueries";
 import {
   CONSULTANT_EXIT_TYPE,
-  DEFAULT_NOTICE_PERIOD_DAYS,
   createEmptyOffboardingForm,
   defaultLastWorkingDayFromResignation,
   EXIT_TYPE_OPTIONS,
@@ -260,14 +259,7 @@ export function OffboardingPanel() {
     if (isConsultantOffboarding) {
       return "Consultant offboarding is recorded as a Contractual exit and is excluded from attrition metrics.";
     }
-    if (!r) {
-      return `Last working day defaults to ${DEFAULT_NOTICE_PERIOD_DAYS} calendar days after resignation when not set.`;
-    }
-    if (!l) {
-      const defaultLwd = defaultLastWorkingDayFromResignation(r);
-      if (defaultLwd) {
-        return `Last working day will default to ${DEFAULT_NOTICE_PERIOD_DAYS} calendar days after resignation (${defaultLwd}).`;
-      }
+    if (!r || !l) {
       return null;
     }
     const a = new Date(r);
@@ -275,8 +267,7 @@ export function OffboardingPanel() {
     if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime()) || b < a) {
       return "Resignation date must be on or before last working day.";
     }
-    const days = Math.round((b.getTime() - a.getTime()) / 86400000);
-    return `Notice period (resignation → last working day): ${Math.max(0, days)} calendar day(s).`;
+    return null;
   }, [
     offboardingForm.resignation_date,
     offboardingForm.last_working_day,

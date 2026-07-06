@@ -41,6 +41,7 @@ import {
 import { buildProfileAssignedProjects } from "@/utils/dashboard/projects";
 import { OffboardedBanner } from "@/components/dashboard/shared/OffboardedBanner";
 import { OnboardingPendingBanner } from "@/components/dashboard/shared/OnboardingPendingBanner";
+import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { EmployeeProfileHeaderCard } from "@/components/employee-directory/EmployeeProfileHeaderCard";
 import { ProfileSectionsView } from "@/components/employee-directory/ProfileSectionsView";
 import { pickEmployeeRole } from "@/utils/employeeDirectory";
@@ -49,6 +50,7 @@ import { pickEmployeeRole } from "@/utils/employeeDirectory";
 export function ProfilePageLeanClient() {
   const { user, refresh: refreshSession } = useAuth();
   const router = useRouter();
+  const { isExitSurveyOnlyAccess } = useDashboardAccess();
   const userRoles = useMemo(() => user?.roles ?? [], [user?.roles]);
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
@@ -66,7 +68,12 @@ export function ProfilePageLeanClient() {
     isOffboardedUserStatus(user?.status)
   );
   const requiresSelfOnboarding =
-    restrictForPendingOnboarding && !isSelfOnboarded && !isOffboarded;
+    restrictForPendingOnboarding && !isSelfOnboarded && !isOffboarded && !isExitSurveyOnlyAccess;
+
+  useEffect(() => {
+    if (!isExitSurveyOnlyAccess) return;
+    router.replace(DASHBOARD_ROUTES["exit-interview"]);
+  }, [isExitSurveyOnlyAccess, router]);
 
   const [profileAssignedProjects, setProfileAssignedProjects] = useState<
     Array<Record<string, unknown>>
