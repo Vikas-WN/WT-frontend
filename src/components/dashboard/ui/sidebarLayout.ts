@@ -67,11 +67,11 @@ export const SIDEBAR_FLYOUT_CLASS =
 export const SIDEBAR_FLYOUT_TITLE_CLASS =
   "border-b border-wt-border px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wide text-wt-text-muted";
 
-export const SIDEBAR_FOOTER_CLASS = "mt-3 shrink-0";
+export const SIDEBAR_FOOTER_CLASS = "mt-2 shrink-0";
 
 export function sidebarFooterCardClass(collapsed: boolean) {
   return cn(
-    "rounded-2xl border border-wt-border bg-wt-surface-2/80 p-1.5 shadow-sm",
+    "rounded-xl border border-wt-border bg-wt-surface-2/80 p-1 shadow-sm",
     collapsed && "lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
   );
 }
@@ -159,8 +159,8 @@ export function sidebarChildBlockClass(active: boolean, extra?: string) {
 
 export function sidebarProfileLinkClass(active: boolean, collapsed = false) {
   return cn(
-    "flex min-w-0 items-center rounded-xl transition-all duration-150 ease-out",
-    collapsed ? "lg:mx-auto lg:size-10 lg:justify-center lg:p-0" : "min-w-0 flex-1 gap-2.5 px-2.5 py-2",
+    "flex min-w-0 items-center rounded-lg transition-all duration-150 ease-out",
+    collapsed ? "lg:mx-auto lg:size-8 lg:justify-center lg:p-0" : "min-w-0 flex-1 gap-2 px-2 py-1.5",
     active
       ? "bg-wt-surface-3 text-wt-text ring-1 ring-wt-border"
       : "text-wt-text-muted hover:bg-wt-surface-3/70 hover:text-wt-text"
@@ -169,8 +169,8 @@ export function sidebarProfileLinkClass(active: boolean, collapsed = false) {
 
 export function sidebarLogoutButtonClass(collapsed = false) {
   return cn(
-    "flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-1 text-wt-text-muted shadow-sm transition-all duration-150 ease-out hover:bg-wt-surface-3 hover:text-wt-text",
-    collapsed && "lg:mx-auto lg:size-10"
+    "flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-wt-border bg-wt-surface-1 text-wt-text-muted shadow-sm transition-all duration-150 ease-out hover:bg-wt-surface-3 hover:text-wt-text",
+    collapsed && "lg:mx-auto lg:size-8"
   );
 }
 

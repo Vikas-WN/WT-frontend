@@ -8,6 +8,7 @@ export interface OnboardOptionsResponse {
   work_modes: OnboardOptionItem[];
   work_location_types: OnboardOptionItem[];
   user_types: OnboardOptionItem[];
+  directory_user_types: OnboardOptionItem[];
   departments: OnboardOptionItem[];
   genders: OnboardOptionItem[];
   marital_statuses: OnboardOptionItem[];

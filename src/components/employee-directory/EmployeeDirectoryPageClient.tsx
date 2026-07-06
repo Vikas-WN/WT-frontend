@@ -21,23 +21,20 @@ import { useMemo, useState, useCallback } from "react";
 import { DASHBOARD_ROUTES, employeeDirectoryProfilePath } from "@/constants/routes";
 import { useEmployeeDirectoryAccess } from "@/hooks/employee-directory/useEmployeeDirectoryAccess";
 import { useEmployeeDirectoryList } from "@/hooks/employee-directory/useEmployeeDirectoryList";
+import { useOnboardOptions } from "@/hooks/useOnboardOptions";
 import { EmployeePortalRoleSelect } from "@/components/employee-directory/EmployeePortalRoleSelect";
+import { EmployeeUserTypeSelect } from "@/components/employee-directory/EmployeeUserTypeSelect";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { ManagementListCard, ManagementListContent } from "@/components/dashboard/ui/ManagementListCard";
 import { SearchInput } from "@/components/dashboard/ui/SearchInput";
+import { ToolbarFilterSelect } from "@/components/dashboard/ui/ToolbarFilterSelect";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   cleanEmployeeName,
   onboardRowToListRow,
   rowEmpId,
 } from "@/utils/employeeDirectory";
+import { directoryUserTypeFilterOptions, FALLBACK_ONBOARD_OPTIONS, resolveDirectoryUserTypes } from "@/utils/onboardFormOptions";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
@@ -51,19 +48,6 @@ import {
   toggleColumnSort,
 } from "@/utils/listSort";
 import { cn } from "@/lib/utils";
-
-const USER_TYPE_FILTER_OPTIONS = [
-  { value: "FULLTIME", label: "Full Time" },
-  { value: "INTERN", label: "Intern" },
-  { value: "CONSULTANT", label: "Consultant" },
-] as const;
-
-const USER_TYPE_SELECT_OPTIONS = [
-  { value: "", label: "All user types" },
-  ...USER_TYPE_FILTER_OPTIONS,
-];
-
-type UserTypeFilterValue = (typeof USER_TYPE_FILTER_OPTIONS)[number]["value"] | "";
 
 const EMPLOYEE_DIRECTORY_PAGE_SIZE = 10;
 
@@ -79,7 +63,7 @@ const LIST_COLUMNS: Array<{ key: string; label: string }> = [
   { key: "status", label: "Status" },
 ];
 
-function normalizeUserType(value: unknown): UserTypeFilterValue | string {
+function normalizeUserType(value: unknown): string {
   const normalized = String(value ?? "")
     .trim()
     .toUpperCase()
@@ -87,6 +71,7 @@ function normalizeUserType(value: unknown): UserTypeFilterValue | string {
   if (normalized === "FULLTIME") return "FULLTIME";
   if (normalized === "INTERN") return "INTERN";
   if (normalized === "CONSULTANT") return "CONSULTANT";
+  if (normalized === "HR") return "HR";
   return normalized;
 }
 
@@ -145,8 +130,17 @@ export function EmployeeDirectoryPageClient() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
-  const [userTypeFilter, setUserTypeFilter] = useState<UserTypeFilterValue>("");
+  const [userTypeFilter, setUserTypeFilter] = useState("");
   const [sortId, setSortId] = useState("doj_desc");
+  const onboardOptionsQ = useOnboardOptions();
+  const userTypeSelectOptions = useMemo(
+    () => directoryUserTypeFilterOptions(onboardOptionsQ.data),
+    [onboardOptionsQ.data]
+  );
+  const directoryUserTypeOptions = useMemo(
+    () => resolveDirectoryUserTypes(onboardOptionsQ.data ?? FALLBACK_ONBOARD_OPTIONS),
+    [onboardOptionsQ.data]
+  );
   const { authStatus, canView: canViewDirectory, canEdit: canEditDirectory, queriesEnabled } =
     useEmployeeDirectoryAccess();
   const { data: rows = [], isLoading, isError, error, refetch } = useEmployeeDirectoryList({
@@ -163,7 +157,7 @@ export function EmployeeDirectoryPageClient() {
       })
       .filter(({ empId, record, display }) => {
         if (!empId) return false;
-        if (userTypeFilter && normalizeUserType(display.user_type) !== userTypeFilter) {
+        if (userTypeFilter && normalizeUserType(record.user_type ?? record.userType) !== userTypeFilter) {
           return false;
         }
         if (!needle) return true;
@@ -234,36 +228,18 @@ export function EmployeeDirectoryPageClient() {
             onChange={setSearch}
             placeholder="Search"
             aria-label="Search employees"
-            className="h-9"
+            className="h-9 border-wt-border bg-wt-surface-1 shadow-sm"
           />
         }
         filters={
-          <div className="w-40 shrink-0">
-            <label className="sr-only" htmlFor="employee-directory-user-type">
-              User Type
-            </label>
-            <Select
-              value={userTypeFilter}
-              onValueChange={(next) => setUserTypeFilter((next ?? "ALL") as UserTypeFilterValue)}
-              items={USER_TYPE_SELECT_OPTIONS}
-            >
-              <SelectTrigger
-                id="employee-directory-user-type"
-                aria-label="User Type"
-                size="sm"
-                className="h-9 w-full shadow-none"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {USER_TYPE_SELECT_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value || "all"} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <ToolbarFilterSelect
+            id="employee-directory-user-type"
+            value={userTypeFilter}
+            onChange={setUserTypeFilter}
+            options={userTypeSelectOptions}
+            aria-label="User Type"
+            compact
+          />
         }
       >
         {isError ? (
@@ -385,6 +361,13 @@ export function EmployeeDirectoryPageClient() {
                                   portalRoles={record.portal_roles ?? record.portalRoles}
                                   canEdit={canEditDirectory}
                                   compact
+                                />
+                              ) : col.key === "user_type" ? (
+                                <EmployeeUserTypeSelect
+                                  empId={empId}
+                                  userType={record.user_type ?? record.userType}
+                                  canEdit={canEditDirectory}
+                                  options={directoryUserTypeOptions}
                                 />
                               ) : (
                                 <span className="block truncate text-wt-text">{display[col.key] ?? "—"}</span>

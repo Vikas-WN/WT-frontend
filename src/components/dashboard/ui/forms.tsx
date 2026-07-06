@@ -8,7 +8,7 @@ import {
   SearchableSelectCombobox,
   type SearchableSelectOption,
 } from "@/components/dashboard/ui/SearchableSelectCombobox";
-import { Field, FieldLabel as ShadcnFieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldLabel as ShadcnFieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   InputGroup,
@@ -172,6 +172,10 @@ export function InputField({
   required = false,
   placeholder,
   disabled = false,
+  description,
+  inputMode,
+  pattern,
+  autoComplete,
 }: {
   label: string;
   value: string;
@@ -180,8 +184,13 @@ export function InputField({
   required?: boolean;
   placeholder?: string;
   disabled?: boolean;
+  description?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  pattern?: string;
+  autoComplete?: string;
 }) {
   const fieldId = useId();
+  const descriptionId = description ? `${fieldId}-description` : undefined;
 
   if (type === "date") {
     return (
@@ -206,8 +215,17 @@ export function InputField({
         placeholder={placeholder}
         required={required}
         aria-required={required || undefined}
+        aria-describedby={descriptionId}
         disabled={disabled}
+        inputMode={inputMode}
+        pattern={pattern}
+        autoComplete={autoComplete}
       />
+      {description ? (
+        <FieldDescription id={descriptionId} className="!mt-1 text-wt-text-muted">
+          {description}
+        </FieldDescription>
+      ) : null}
     </Field>
   );
 }

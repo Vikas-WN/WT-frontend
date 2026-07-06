@@ -26,7 +26,7 @@ function PopoverPositioner({ className, ...props }: PopoverPrimitive.Positioner.
   return (
     <PopoverPrimitive.Positioner
       data-slot="popover-positioner"
-      className={cn("z-[110] outline-none", className)}
+      className={cn("z-[250] outline-none", className)}
       {...props}
     />
   )

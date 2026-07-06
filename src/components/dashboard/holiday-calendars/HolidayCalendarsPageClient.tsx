@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { ManagementListCard } from "@/components/dashboard/ui/ManagementListCard";
+import { ToolbarFilterSelect } from "@/components/dashboard/ui/ToolbarFilterSelect";
 import {
   TableBody,
   TableCell,
@@ -16,13 +17,6 @@ import {
   TableRow,
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   holidayCalendarStorageQueryKey,
   useHolidayCalendarStorage,
@@ -185,27 +179,14 @@ export function HolidayCalendarsPageClient() {
               <ArrowUpFromLine className="size-4" aria-hidden />
               Export
             </Button>
-            <div className="w-32 shrink-0">
-              <label className="sr-only" htmlFor="holiday-calendar-year">
-                Year
-              </label>
-              <Select
-                value={selectedYear}
-                onValueChange={(next) => setSelectedYear(next ?? selectedYear)}
-                items={yearSelectItems}
-              >
-                <SelectTrigger id="holiday-calendar-year" aria-label="Year" className="h-10">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {yearSelectItems.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <ToolbarFilterSelect
+              id="holiday-calendar-year"
+              value={selectedYear}
+              onChange={setSelectedYear}
+              options={yearSelectItems}
+              aria-label="Year"
+              className="w-32 min-w-32"
+            />
           </div>
         }
       >

@@ -333,6 +333,25 @@ function profileEntry(
   return { label, value, ...options };
 }
 
+function formatUserTypeTransitionHistory(profile: Record<string, unknown>): string {
+  const raw = profile.user_type_transitions ?? profile.userTypeTransitions;
+  if (!Array.isArray(raw) || !raw.length) return "—";
+
+  const lines = raw
+    .map((item) => {
+      if (!item || typeof item !== "object") return "";
+      const row = item as Record<string, unknown>;
+      const fromType = formatUserTypeLabel(String(row.from_type ?? row.fromType ?? ""));
+      const toType = formatUserTypeLabel(String(row.to_type ?? row.toType ?? ""));
+      const date = formatDirectoryDate(row.transition_date ?? row.transitionDate);
+      if (!fromType || fromType === "—" || !toType || toType === "—") return "";
+      return `${fromType} → ${toType} (${date})`;
+    })
+    .filter(Boolean);
+
+  return lines.length ? lines.join("; ") : "—";
+}
+
 /** Grouped profile fields for the HR employee directory profile view. */
 export function buildGroupedProfileSections(
   profile: Record<string, unknown>,
@@ -366,6 +385,7 @@ export function buildGroupedProfileSections(
       "User Type",
       formatUserTypeLabel(String(pickProfileField(profile, ["user_type", "userType"]) ?? ""))
     ),
+    profileEntry("User Type History", formatUserTypeTransitionHistory(profile), { fullWidth: true }),
     profileEntry("Category", formatCategoryLabel(category)),
     profileEntry(
       "Work Mode",
@@ -459,6 +479,7 @@ const PROFILE_VIEW_WORK_LABELS = new Set([
   "Reporting Manager",
   "Holiday Calendar",
   "User Type",
+  "User Type History",
   "Work Mode",
   "Work Location",
   "Category",

@@ -160,6 +160,51 @@ export function filterHolidayRowsByYear(
   return rows.filter((row) => extractYearFromHolidayDate(row.date, contextYear) === year);
 }
 
+function startOfDay(date: Date): Date {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+}
+
+export function parseHolidayCalendarDate(value: string, contextYear?: number): Date | null {
+  const parsed = parseHolidayDate(value, contextYear);
+  return parsed ? startOfDay(parsed) : null;
+}
+
+export function upcomingHolidayRowsInYear(
+  rows: HolidayCalendarRow[],
+  year: number,
+  referenceDate: Date = new Date()
+): HolidayCalendarRow[] {
+  const today = startOfDay(referenceDate);
+
+  return rows
+    .map((row) => {
+      const parsed = parseHolidayCalendarDate(row.date, year);
+      if (!parsed || parsed.getFullYear() !== year || parsed < today) return null;
+      return { row, parsed };
+    })
+    .filter((item): item is { row: HolidayCalendarRow; parsed: Date } => item != null)
+    .sort((left, right) => left.parsed.getTime() - right.parsed.getTime())
+    .map(({ row }) => row);
+}
+
+export function holidayRowsTomorrow(
+  rows: HolidayCalendarRow[],
+  year: number,
+  referenceDate: Date = new Date()
+): HolidayCalendarRow[] {
+  const today = startOfDay(referenceDate);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowTime = tomorrow.getTime();
+
+  return rows.filter((row) => {
+    const parsed = parseHolidayCalendarDate(row.date, year);
+    return parsed?.getFullYear() === year && parsed.getTime() === tomorrowTime;
+  });
+}
+
 export function normalizeHolidayCalendarRows(parsed: ParsedSpreadsheet): HolidayCalendarRow[] {
   const sourceByKey = resolveSourceColumns(parsed.columns);
   const normalized: HolidayCalendarRow[] = [];

@@ -55,6 +55,25 @@ export const FORM_CONTROL_CLASS = cn(
 );
 export const FORM_CONTROL_WITH_CHEVRON_CLASS = cn(FORM_CONTROL_CLASS, "pr-10");
 
+/** Toolbar / list filter selects — aligned with SearchInput and wt surfaces. */
+export const TOOLBAR_SELECT_TRIGGER_CLASS = cn(
+  "h-10 w-full min-w-0 rounded-lg border border-wt-border bg-wt-surface-1 px-3 text-sm font-normal text-wt-text shadow-sm",
+  "transition-colors hover:bg-wt-surface-2/70 focus-visible:border-ring focus-visible:ring-0",
+  "disabled:cursor-not-allowed disabled:opacity-50",
+  "data-placeholder:text-wt-text-muted dark:bg-wt-surface-1/90 dark:hover:bg-wt-surface-2/80"
+);
+
+export const TOOLBAR_SELECT_TRIGGER_COMPACT_CLASS = cn(
+  TOOLBAR_SELECT_TRIGGER_CLASS,
+  "h-9 rounded-lg text-sm"
+);
+
+/** In-table compact selects (e.g. portal role). */
+export const TABLE_INLINE_SELECT_TRIGGER_CLASS = cn(
+  TOOLBAR_SELECT_TRIGGER_COMPACT_CLASS,
+  "h-8 min-h-8 px-2.5 text-xs shadow-none hover:bg-wt-surface-2/80"
+);
+
 export const DETAIL_LABEL_CELL_CLASS =
   "w-[34%] min-w-[9.5rem] whitespace-nowrap align-top px-3 py-2.5 text-sm text-wt-text-muted";
 export const DETAIL_VALUE_CELL_CLASS =

@@ -69,7 +69,8 @@ export function EmployeePortalRoleSelect({
           options={options}
           disabled={saving}
           aria-label="Role"
-          selectClassName="h-8 min-h-8 px-2.5 text-xs shadow-none"
+          variant="table-inline"
+          className="min-w-[8.5rem] max-w-[11rem]"
         />
       </div>
     );

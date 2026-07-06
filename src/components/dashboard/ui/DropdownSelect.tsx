@@ -2,6 +2,11 @@
 
 import type { SearchableSelectOption } from "@/components/dashboard/ui/SearchableSelectCombobox";
 import {
+  TABLE_INLINE_SELECT_TRIGGER_CLASS,
+  TOOLBAR_SELECT_TRIGGER_CLASS,
+  TOOLBAR_SELECT_TRIGGER_COMPACT_CLASS,
+} from "@/components/dashboard/ui/uiLayout";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -14,6 +19,21 @@ export function ChevronDownIcon() {
   return null;
 }
 
+type DropdownSelectVariant = "default" | "toolbar" | "compact" | "table-inline";
+
+function triggerClassForVariant(variant: DropdownSelectVariant): string {
+  switch (variant) {
+    case "toolbar":
+      return TOOLBAR_SELECT_TRIGGER_CLASS;
+    case "compact":
+      return TOOLBAR_SELECT_TRIGGER_COMPACT_CLASS;
+    case "table-inline":
+      return TABLE_INLINE_SELECT_TRIGGER_CLASS;
+    default:
+      return "";
+  }
+}
+
 export function DropdownSelect({
   value,
   onChange,
@@ -24,6 +44,7 @@ export function DropdownSelect({
   required = false,
   className = "",
   selectClassName,
+  variant = "default",
   id,
   "aria-label": ariaLabel,
 }: {
@@ -36,6 +57,7 @@ export function DropdownSelect({
   required?: boolean;
   className?: string;
   selectClassName?: string;
+  variant?: DropdownSelectVariant;
   id?: string;
   "aria-label"?: string;
 }) {
@@ -55,13 +77,18 @@ export function DropdownSelect({
         aria-label={ariaLabel}
         aria-required={required || undefined}
         aria-busy={loading || undefined}
-        className={cn(selectClassName, className, loading ? "text-wt-text-muted" : undefined)}
+        className={cn(
+          triggerClassForVariant(variant),
+          selectClassName,
+          className,
+          loading ? "text-wt-text-muted" : undefined
+        )}
       >
         <SelectValue placeholder={loading ? loadingLabel : "Select"} />
       </SelectTrigger>
       <SelectContent>
         {loading ? (
-          <div className="px-2 py-2 text-sm text-wt-text-muted">{loadingLabel}</div>
+          <div className="px-2.5 py-2 text-sm text-wt-text-muted">{loadingLabel}</div>
         ) : (
           options.map((opt) => (
             <SelectItem key={opt.value || `opt-${opt.label}`} value={opt}>
