@@ -28,11 +28,10 @@ import { HrOnboardForm } from "@/components/employee-onboarding/HrOnboardForm";
 import { InvitedEmployeesTable } from "@/components/employee-onboarding/InvitedEmployeesTable";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { ApiDateField } from "@/components/dashboard/ui/forms";
-import {
-  ManagementListCard,
-  ManagementListContent,
-} from "@/components/dashboard/ui/ManagementListCard";
+import { ManagementListCard } from "@/components/dashboard/ui/ManagementListCard";
 import { SearchInput } from "@/components/dashboard/ui/SearchInput";
+import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
+import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { defaultDashboardPathForRoles } from "@/constants/routes";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useOnboardOptions } from "@/hooks/useOnboardOptions";
@@ -101,9 +100,7 @@ export function EmployeePageClient() {
 
   const onboardOptions = onboardOptionsQ.data ?? FALLBACK_ONBOARD_OPTIONS;
   const onboardBands = bandsQ.data ?? [];
-  const optionsLoading =
-    (onboardOptionsQ.isLoading && !onboardOptionsQ.data) ||
-    (bandsQ.isLoading && !bandsQ.data);
+  const optionsLoading = !onboardOptionsQ.data || !bandsQ.data;
 
   useEffect(() => {
     if (!hasHrAccess || bandsQ.isLoading) return;
@@ -365,34 +362,40 @@ export function EmployeePageClient() {
                       onChange={setInvitedListToDate}
                       className="w-42 shrink-0"
                     />
-                    <Button
-                      variant="brand"
-                      type="button"
-                      className="h-10 shrink-0 px-3 text-sm"
-                      onClick={() =>
-                        void refreshInvitedList({
-                          from: invitedListFromDateRef.current,
-                          to: invitedListToDateRef.current,
-                        })
-                      }
-                      disabled={invitedListLoading}
-                    >
-                      Apply Dates
-                    </Button>
-                    <Button
-                      variant="outline"
-                      type="button"
-                      className="h-10 shrink-0 border-wt-border bg-wt-surface-1 px-3 text-sm font-medium text-wt-text shadow-sm hover:bg-wt-surface-2"
-                      onClick={() => {
-                        const { from, to } = lastSevenDaysInvitedEmployeesDateRange();
-                        setInvitedListFromDate(from);
-                        setInvitedListToDate(to);
-                        void refreshInvitedList({ from, to });
-                      }}
-                      disabled={invitedListLoading}
-                    >
-                      Last 7 Days
-                    </Button>
+                    <div className="flex flex-col gap-1.5">
+                      <div aria-hidden="true" className="h-5" />
+                      <Button
+                        variant="brand"
+                        type="button"
+                        className="h-10 shrink-0 px-3 text-sm"
+                        onClick={() =>
+                          void refreshInvitedList({
+                            from: invitedListFromDateRef.current,
+                            to: invitedListToDateRef.current,
+                          })
+                        }
+                        disabled={invitedListLoading}
+                      >
+                        Apply Dates
+                      </Button>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <div aria-hidden="true" className="h-5" />
+                      <Button
+                        variant="outline"
+                        type="button"
+                        className="h-10 shrink-0 border-wt-border bg-wt-surface-1 px-3 text-sm font-medium text-wt-text shadow-sm hover:bg-wt-surface-2"
+                        onClick={() => {
+                          const { from, to } = lastSevenDaysInvitedEmployeesDateRange();
+                          setInvitedListFromDate(from);
+                          setInvitedListToDate(to);
+                          void refreshInvitedList({ from, to });
+                        }}
+                        disabled={invitedListLoading}
+                      >
+                        Last 7 Days
+                      </Button>
+                    </div>
                   </>
                 }
               >
@@ -409,31 +412,38 @@ export function EmployeePageClient() {
                     <code className="text-[11px]">toDate</code>.
                   </p>
                 ) : null}
-                <ManagementListContent
-                  isLoading={invitedListLoading}
-                  isEmpty={!invitedListLoading && !filteredInviteRows.length}
-                  emptyTitle={
-                    hasActiveNameSearch && hasInvitedSourceRows
-                      ? "No invited employees match your search."
-                      : "No invited employees in this date range."
-                  }
-                  emptyDescription={
-                    hasActiveNameSearch && hasInvitedSourceRows
-                      ? "Try a different name or clear the search."
-                      : "Try adjusting your date range or refresh the list."
-                  }
-                  skeletonRows={8}
-                  skeletonColumns={8}
-                >
-                  <InvitedEmployeesTable
-                    rows={filteredInviteRows}
-                    searchResetKey={debouncedInvitedNameSearch}
-                    resendingEmail={resendingInviteEmail}
-                    bulkResending={bulkResendingInvites}
-                    onResendInvite={resendOnboardInvite}
-                    onBulkResendInvite={resendOnboardInvitesBulk}
+                {invitedListLoading && !filteredInviteRows.length ? (
+                  <TableRowsSkeleton rows={8} columns={8} />
+                ) : !filteredInviteRows.length ? (
+                  <EmptyState
+                    title={
+                      hasActiveNameSearch && hasInvitedSourceRows
+                        ? "No invited employees match your search."
+                        : "No invited employees in this date range."
+                    }
+                    description={
+                      hasActiveNameSearch && hasInvitedSourceRows
+                        ? "Try a different name or clear the search."
+                        : "Try adjusting your date range or refresh the list."
+                    }
                   />
-                </ManagementListContent>
+                ) : (
+                  <div className="relative">
+                    {invitedListLoading ? (
+                      <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/60">
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-wt-brand border-t-transparent" />
+                      </div>
+                    ) : null}
+                    <InvitedEmployeesTable
+                      rows={filteredInviteRows}
+                      searchResetKey={debouncedInvitedNameSearch}
+                      resendingEmail={resendingInviteEmail}
+                      bulkResending={bulkResendingInvites}
+                      onResendInvite={resendOnboardInvite}
+                      onBulkResendInvite={resendOnboardInvitesBulk}
+                    />
+                  </div>
+                )}
               </ManagementListCard>
             </div>
           ) : null}

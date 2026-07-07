@@ -62,6 +62,13 @@ export function resolveInternBandId(bands: Array<Record<string, unknown>>): numb
   const internId = internHit?.id != null ? Number(internHit.id) : NaN;
   if (Number.isFinite(internId) && internId > 0) return internId;
 
+  const internFallback = bands.find((row) => {
+    const key = bandNameMatchKey(String(row.name ?? row.band_name ?? ""));
+    return key.includes("INTERN");
+  });
+  const fallbackId = internFallback?.id != null ? Number(internFallback.id) : NaN;
+  if (Number.isFinite(fallbackId) && fallbackId > 0) return fallbackId;
+
   const genericB8 = bands.find(
     (row) => bandNameMatchKey(String(row.name ?? row.band_name ?? "")) === "B8"
   );
