@@ -1,4 +1,5 @@
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   type GetObjectCommandOutput,
@@ -123,6 +124,36 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       data: {
         key,
         fileName: originalFilename,
+      },
+    });
+  } catch (error) {
+    return NextResponse.json({ error: formatS3Error(error) }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest, context: RouteContext) {
+  const unauthorized = requireSession(request);
+  if (unauthorized) return unauthorized;
+
+  const { path } = await context.params;
+  const key = objectKeyFromPath(path);
+
+  try {
+    const { bucket } = getLinodeObjectStorageConfig();
+    const client = getLinodeS3Client();
+
+    for (const candidateKey of objectKeyCandidates(key, bucket)) {
+      await client.send(
+        new DeleteObjectCommand({
+          Bucket: bucket,
+          Key: candidateKey,
+        })
+      );
+    }
+
+    return NextResponse.json({
+      data: {
+        key,
       },
     });
   } catch (error) {

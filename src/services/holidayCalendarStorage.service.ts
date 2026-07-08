@@ -40,6 +40,31 @@ async function fetchObject(objectKey: string): Promise<Response> {
   });
 }
 
+async function deleteObject(objectKey: string): Promise<void> {
+  const response = await fetch(fileApiPath(objectKey), {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  if (response.status === 404) {
+    return;
+  }
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response));
+  }
+}
+
+function pickLatestStoredCalendar(
+  storedCalendars: StoredHolidayCalendarResponse[]
+): StoredHolidayCalendarResponse {
+  return storedCalendars.reduce((latest, current) => {
+    const latestUploadedAt = latest.uploadedAt ? Date.parse(latest.uploadedAt) : 0;
+    const currentUploadedAt = current.uploadedAt ? Date.parse(current.uploadedAt) : 0;
+    return currentUploadedAt >= latestUploadedAt ? current : latest;
+  });
+}
+
 async function parseStoredFileResponse(
   response: Response,
   year: number
@@ -70,22 +95,32 @@ export const holidayCalendarStorageService = {
   },
 
   async fetchByYear(year: number): Promise<StoredHolidayCalendarResponse | null> {
-    for (const extension of HOLIDAY_CALENDAR_FILE_EXTENSIONS) {
-      const objectKey = holidayCalendarObjectKey(year, extension);
-      const response = await fetchObject(objectKey);
+    const storedCalendars = await Promise.all(
+      HOLIDAY_CALENDAR_FILE_EXTENSIONS.map(async (extension) => {
+        const objectKey = holidayCalendarObjectKey(year, extension);
+        const response = await fetchObject(objectKey);
 
-      if (response.status === 404) {
-        continue;
-      }
+        if (response.status === 404) {
+          return null;
+        }
 
-      if (!response.ok) {
-        throw new Error(await readErrorMessage(response));
-      }
+        if (!response.ok) {
+          throw new Error(await readErrorMessage(response));
+        }
 
-      return parseStoredFileResponse(response, year);
+        return parseStoredFileResponse(response, year);
+      })
+    );
+
+    const availableCalendars = storedCalendars.filter(
+      (calendar): calendar is StoredHolidayCalendarResponse => calendar != null
+    );
+
+    if (!availableCalendars.length) {
+      return null;
     }
 
-    return null;
+    return pickLatestStoredCalendar(availableCalendars);
   },
 
   async uploadFile(file: File, year: number, cleanedRows?: HolidayCalendarRow[]): Promise<void> {
@@ -111,5 +146,11 @@ export const holidayCalendarStorageService = {
     if (!response.ok) {
       throw new Error(await readErrorMessage(response));
     }
+
+    await Promise.all(
+      HOLIDAY_CALENDAR_FILE_EXTENSIONS.filter((storedExtension) => storedExtension !== extension).map(
+        (storedExtension) => deleteObject(holidayCalendarObjectKey(year, storedExtension))
+      )
+    );
   },
 };
