@@ -35,6 +35,7 @@ import {
   CARD_FORM_ACTIONS_CLASS,
   CARD_FORM_GRID_CLASS,
   CARD_STACK_CLASS,
+  TABLE_ROW_SELECTED_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
