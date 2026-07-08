@@ -42,6 +42,7 @@ export function toRegionalObjectStorageEndpoint(
 
     // `{bucket}.{region}.linodeobjects.com` — strip to regional endpoint.
     // Keep unrelated hostnames like `cluster.{region}.linodeobjects.com`.
+    const bucketName = bucket?.trim().toLowerCase();
     const looksLikeBucketHost =
       Boolean(bucket) && labelsBeforeRegion[0] === bucket!.trim().toLowerCase();
     if (looksLikeBucketHost) {
