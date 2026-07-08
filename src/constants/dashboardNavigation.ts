@@ -67,12 +67,6 @@ export const dashboardNavigation: NavItem[] = [
         icon: "userMinus",
       },
       {
-        id: "exit-interview-submissions",
-        label: "Exit Survey",
-        roles: ["ROLE_HR", "ROLE_ADMIN"],
-        icon: "fileText",
-      },
-      {
         id: "leave-team",
         label: "Leave Requests",
         roles: ["ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
@@ -149,12 +143,6 @@ export const dashboardNavigation: NavItem[] = [
         ],
         icon: "calendarDays",
       },
-      {
-        id: "exit-interview",
-        label: "Exit Survey",
-        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
-        icon: "fileText",
-      },
     ],
   },
   { kind: "link", id: "resumes", label: "Resumes", roles: ["ROLE_AM"], icon: "fileText" },
@@ -206,15 +194,12 @@ function childVisible(
 export function filterVisibleNavigation(
   items: NavItem[],
   userRoles: string[],
-  options: { hasHrAccess: boolean; hasAccountManagerAccess?: boolean; showExitSurvey?: boolean }
+  options: { hasHrAccess: boolean; hasAccountManagerAccess?: boolean }
 ): NavItem[] {
   const result: NavItem[] = [];
   for (const item of items) {
     if (item.kind === "group") {
-      const children = item.children.filter((child) => {
-        if (child.id === "exit-interview" && !options.showExitSurvey) return false;
-        return childVisible(child, userRoles, options);
-      });
+      const children = item.children.filter((child) => childVisible(child, userRoles, options));
       if (children.length) result.push({ ...item, children });
       continue;
     }
@@ -226,21 +211,6 @@ export function filterVisibleNavigation(
     }
   }
   return result;
-}
-
-/** Employees in notice or post-exit may only open Exit Survey under Personal. */
-export function filterNavigationForOffboardedUser(
-  _items: NavItem[],
-  options?: { showExitSurvey?: boolean }
-): NavItem[] {
-  if (!options?.showExitSurvey) return [];
-  const personal = dashboardNavigation.find(
-    (item) => item.kind === "group" && item.id === "personal"
-  );
-  if (!personal || personal.kind !== "group") return [];
-  const exitSurvey = personal.children.find((child) => child.id === "exit-interview");
-  if (!exitSurvey) return [];
-  return [{ ...personal, children: [exitSurvey] }];
 }
 
 export function getDashboardSectionLabel(sectionId: string): string | undefined {

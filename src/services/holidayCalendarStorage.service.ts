@@ -95,6 +95,7 @@ export const holidayCalendarStorageService = {
   },
 
   async fetchByYear(year: number): Promise<StoredHolidayCalendarResponse | null> {
+    const errors: string[] = [];
     const storedCalendars = await Promise.all(
       HOLIDAY_CALENDAR_FILE_EXTENSIONS.map(async (extension) => {
         const objectKey = holidayCalendarObjectKey(year, extension);
@@ -105,7 +106,8 @@ export const holidayCalendarStorageService = {
         }
 
         if (!response.ok) {
-          throw new Error(await readErrorMessage(response));
+          errors.push(await readErrorMessage(response));
+          return null;
         }
 
         return parseStoredFileResponse(response, year);
@@ -117,6 +119,9 @@ export const holidayCalendarStorageService = {
     );
 
     if (!availableCalendars.length) {
+      if (errors.length) {
+        throw new Error(errors[0]);
+      }
       return null;
     }
 

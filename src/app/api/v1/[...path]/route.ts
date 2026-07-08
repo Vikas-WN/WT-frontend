@@ -12,15 +12,18 @@ async function proxyRequest(request: NextRequest, pathSegments: string[]) {
   const backendUrl = `${getBackendBaseUrl()}/api/v1/${pathSegments.join("/")}${request.nextUrl.search}`;
   const headers = buildUpstreamAuthHeaders(request);
 
-  const init: RequestInit & { duplex?: "half" } = {
+  const init: RequestInit = {
     method: request.method,
     headers,
     redirect: "manual",
   };
 
   if (request.method !== "GET" && request.method !== "HEAD") {
-    init.body = request.body;
-    init.duplex = "half";
+    const body = await request.arrayBuffer();
+    if (body.byteLength > 0) {
+      init.body = body;
+      headers.set("content-length", String(body.byteLength));
+    }
   }
 
   let upstream: Response;

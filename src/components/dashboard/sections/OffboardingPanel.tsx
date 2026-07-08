@@ -13,7 +13,7 @@ import {
   WtTable,
   TableCheckbox,
 } from "@/components/dashboard/ui/wtTable";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { ApiError } from "@/api/error";
 import { hrmsService } from "@/services/hrms.service";
@@ -60,6 +60,7 @@ import {
   mergeEmpIdSelection,
   resendableOffboardEmpIds,
 } from "@/utils/exitSurveyFollowUp";
+import { normalizeEmployeeStatusKey } from "@/utils/userStatus";
 
 const USER_TYPE_FILTER_OPTIONS = ["", "FULLTIME", "INTERN", "CONSULTANT"] as const;
 
@@ -111,16 +112,20 @@ export function OffboardingPanel() {
     attritionExitCount,
     refreshOffboardingData,
   } = useOffboardingPanelQueries();
-  const listLoadedRef = useRef(false);
-  const lastRowsRef = useRef(offboardedRows);
-  const lastTotalRef = useRef(listTotal);
-  if (offboardedRows.length > 0) {
-    listLoadedRef.current = true;
-    lastRowsRef.current = offboardedRows;
-    lastTotalRef.current = listTotal;
-  }
-  const displayRows = loadingList && !offboardedRows.length ? lastRowsRef.current : offboardedRows;
-  const displayTotal = loadingList && !offboardedRows.length ? lastTotalRef.current : listTotal;
+  const [listCache, setListCache] = useState<{
+    loaded: boolean;
+    rows: typeof offboardedRows;
+    total: number;
+  }>({ loaded: false, rows: [], total: 0 });
+
+  useEffect(() => {
+    if (offboardedRows.length > 0) {
+      setListCache({ loaded: true, rows: offboardedRows, total: listTotal });
+    }
+  }, [offboardedRows, listTotal]);
+
+  const displayRows = loadingList && !offboardedRows.length ? listCache.rows : offboardedRows;
+  const displayTotal = loadingList && !offboardedRows.length ? listCache.total : listTotal;
 
   const [submitting, setSubmitting] = useState(false);
   const [resendingEmpId, setResendingEmpId] = useState<string | null>(null);
@@ -137,6 +142,8 @@ export function OffboardingPanel() {
   const selectedUserType = selectedCandidate?.user_type ?? "";
   const isInternOffboarding = selectedUserType.toUpperCase() === "INTERN";
   const isConsultantOffboarding = selectedUserType.toUpperCase() === "CONSULTANT";
+  const isInvitedOffboarding =
+    normalizeEmployeeStatusKey(selectedCandidate?.status) === "INVITED";
 
   const canSubmit = isOffboardingFormValid(offboardingForm, selectedUserType);
 
@@ -225,7 +232,9 @@ export function OffboardingPanel() {
           data?.failed_count ? `, ${data.failed_count} failed` : ""
         }.`;
       resultSummary = summary;
-      resultIsError = (data?.failed_count ?? 0) > 0;
+      resultIsError =
+        (data?.failed_count ?? 0) > 0 ||
+        (data?.sent_count ?? 0) === 0;
       setSelectedEmpIds([]);
       setBulkResendResults(data?.results ?? []);
     } catch (error) {
@@ -418,6 +427,8 @@ export function OffboardingPanel() {
           <CardTitle>Employee Offboarding</CardTitle>
           <CardDescription>
             Record resignation details and submit offboarding for an active or invited employee.
+            Active employees enter serving notice and receive the exit survey; invited employees are
+            offboarded directly without an exit survey.
           </CardDescription>
         </CardHeader>
         <Separator />
@@ -538,6 +549,12 @@ export function OffboardingPanel() {
             {offboardingNoticeLabel ? (
               <p className="text-sm text-wt-text-muted">{offboardingNoticeLabel}</p>
             ) : null}
+            {isInvitedOffboarding ? (
+              <p className="text-sm text-wt-text-muted">
+                This employee has not joined yet. They will be marked inactive immediately and will
+                not receive an exit survey.
+              </p>
+            ) : null}
             <div className={CARD_FORM_ACTIONS_CLASS}>
               <Button
                 variant="brand"
@@ -575,13 +592,13 @@ export function OffboardingPanel() {
         filters={
           <>
             <DatePickerField
-              label="LWD From"
+              label="From LWD"
               value={filterFromDate}
               onChange={setFilterFromDate}
               className="w-[10.5rem] shrink-0"
             />
             <DatePickerField
-              label="LWD To"
+              label="To LWD"
               value={filterToDate}
               onChange={setFilterToDate}
               className="w-[10.5rem] shrink-0"
@@ -643,9 +660,9 @@ export function OffboardingPanel() {
           </div>
         ) : null}
 
-        {loadingList && !listLoadedRef.current ? (
+        {loadingList && !listCache.loaded ? (
           <TableRowsSkeleton rows={8} columns={10} />
-        ) : !loadingList && !offboardedRows.length && listLoadedRef.current ? (
+        ) : !loadingList && !offboardedRows.length && listCache.loaded ? (
           <EmptyState
             title="No Offboarded Employees Found"
             description="Try adjusting your search or filters."
@@ -766,7 +783,7 @@ export function OffboardingPanel() {
             <ListPagination
               page={listPage}
               totalPages={totalPages}
-              totalItems={listTotal}
+              totalItems={displayTotal}
               rangeStart={rangeStart}
               rangeEnd={rangeEnd}
               pageSize={OFFBOARDING_LIST_PAGE_SIZE}

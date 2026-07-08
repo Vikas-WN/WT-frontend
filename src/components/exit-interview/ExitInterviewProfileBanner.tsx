@@ -30,7 +30,7 @@ export function ExitInterviewProfileBanner() {
           {days != null ? ` (${days} day${days === 1 ? "" : "s"} remaining)` : ""}.
         </p>
         <Link
-          href={DASHBOARD_ROUTES["exit-interview"]}
+          href={DASHBOARD_ROUTES.profile}
           className="mt-2 inline-block text-sm font-medium text-indigo-700 hover:underline"
         >
           Open Exit Survey →

@@ -48,6 +48,7 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
   const canView = hasHrAccess || userRoles.includes("ROLE_ADMIN");
   const { actionLoading, runAction } = useDashboardAction();
   const [requestingResubmit, setRequestingResubmit] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const detailQ = useExitInterviewSubmissionDetail(lookupId, { enabled: canView });
   const formDefQ = useExitInterviewFormDefinition({ enabled: canView && Boolean(detailQ.data) });
@@ -93,6 +94,34 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
     });
   };
 
+  const deleteSubmission = () => {
+    const token = lookupId.trim();
+    if (!token || deleting) return;
+    const employeeName = detail?.employee_name?.trim();
+    if (
+      !window.confirm(
+        `Delete this exit survey submission${employeeName ? ` for ${employeeName}` : ""}? This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    void runAction("Delete submission", async () => {
+      setDeleting(true);
+      try {
+        await exitInterviewService.deleteSubmission(token);
+        showSuccessToast("Exit survey submission deleted.");
+        await queryClient.invalidateQueries({ queryKey: EXIT_SURVEY_FOLLOW_UP_QUERY_KEY });
+        router.replace(DASHBOARD_ROUTES.offboarding);
+      } catch (error) {
+        showErrorToast(
+          error instanceof Error ? error.message : "Could not delete exit survey submission."
+        );
+      } finally {
+        setDeleting(false);
+      }
+    });
+  };
+
   const requestResubmission = () => {
     const empId = detail?.emp_id?.trim();
     if (!empId || requestingResubmit) return;
@@ -102,7 +131,7 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
         await exitInterviewService.requestResubmission(empId);
         showSuccessToast("Exit survey reopened. The employee can resubmit once.");
         await queryClient.invalidateQueries({ queryKey: EXIT_SURVEY_FOLLOW_UP_QUERY_KEY });
-        router.replace(DASHBOARD_ROUTES["exit-interview-submissions"]);
+        router.replace(DASHBOARD_ROUTES.offboarding);
       } catch (error) {
         showErrorToast(
           error instanceof Error ? error.message : "Could not reopen exit survey for resubmission."
@@ -113,13 +142,13 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
     });
   };
 
-  const momSaving = actionLoading || updateMomMutation.isPending || requestingResubmit;
+  const momSaving = actionLoading || updateMomMutation.isPending || requestingResubmit || deleting;
 
   return (
     <DashboardPageShell>
       <div className="mx-auto max-w-4xl space-y-4">
         <Link
-          href={DASHBOARD_ROUTES["exit-interview-submissions"]}
+          href={DASHBOARD_ROUTES.offboarding}
           className="text-xs font-medium text-indigo-600 hover:underline"
         >
           ← Back to Exit Survey
@@ -146,6 +175,16 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
                   <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">
                     Completed
                   </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    className="px-3 py-1.5 text-sm text-destructive hover:text-destructive"
+                    disabled={momSaving}
+                    onClick={deleteSubmission}
+                  >
+                    {deleting ? "Deleting…" : "Delete Submission"}
+                  </Button>
                   {detail.emp_id ? (
                     <Button
                       variant="outline"

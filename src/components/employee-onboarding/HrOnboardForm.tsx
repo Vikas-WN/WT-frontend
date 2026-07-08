@@ -195,13 +195,10 @@ export function HrOnboardForm({
 
   const reportingManagerOptions = useMemo(
     () =>
-      options.reporting_managers.map((rm) => {
-        const label = rm.label.replace(/\s*\([^)]*\)\s*$/, "").trim();
-        return {
-          ...rm,
-          label: label.length > 50 ? `${label.slice(0, 50)}…` : label,
-        };
-      }),
+      options.reporting_managers.map((rm) => ({
+        ...rm,
+        label: rm.label.length > 72 ? `${rm.label.slice(0, 72)}…` : rm.label,
+      })),
     [options.reporting_managers]
   );
 

@@ -19,6 +19,16 @@ export function pickManagerEmailList(row: Record<string, unknown>, kind: "primar
   return raw.map((value) => String(value ?? "").trim()).filter(Boolean);
 }
 
+export function formatManagerLabelList(labels: string[]): { display: string; title?: string } {
+  const list = labels.map((value) => value.trim()).filter(Boolean);
+  if (!list.length) return { display: "—" };
+  if (list.length === 1) return { display: list[0] };
+  return {
+    display: `${list[0]} +${list.length - 1} more`,
+    title: list.join("\n"),
+  };
+}
+
 export function formatManagerEmailList(emails: string[]): { display: string; title?: string } {
   const list = emails.map((email) => email.trim()).filter(Boolean);
   if (!list.length) return { display: "—" };

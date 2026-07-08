@@ -1,6 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
+import Link from "next/link";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -12,7 +14,6 @@ import {
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
 import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
-import Link from "next/link";
 import { type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
@@ -195,16 +196,17 @@ function AllocateButton({
 }) {
   const label = displayName || item.employee_email;
   return (
-    <Button
-      variant="brand"
-      size="icon-sm"
-      className="inline-flex items-center justify-center p-2"
-      render={<Link href={buildAllocateHref(item)} />}
+    <Link
+      href={buildAllocateHref(item)}
+      className={cn(
+        buttonVariants({ variant: "brand", size: "icon-sm" }),
+        "inline-flex items-center justify-center p-2"
+      )}
       title={`Allocate ${label}`}
       aria-label={`Allocate ${label}`}
     >
       <AllocateIcon />
-    </Button>
+    </Link>
   );
 }
 

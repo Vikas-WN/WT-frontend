@@ -225,6 +225,11 @@ export const endpoints = {
     exportAssignmentsCsv: `${api}/holiday-calendars/employee-assignments/export-csv`,
   },
 
+  holidayCalendarStorage: {
+    byYear: (year: string | number) =>
+      `${api}/holiday-calendar-storage/${encodeURIComponent(String(year))}`,
+  },
+
   exitInterview: {
     formDefinition: `${api}/exit-interview/form-definition`,
     submit: `${api}/exit-interview`,
@@ -239,6 +244,8 @@ export const endpoints = {
       `${api}/exit-interview/resend/${encodeURIComponent(empId)}`,
     resubmit: (empId: string) =>
       `${api}/exit-interview/resubmit/${encodeURIComponent(empId)}`,
+    deleteSubmission: (lookupId: string) =>
+      `${api}/exit-interview/submissions/${encodeURIComponent(lookupId)}`,
   },
 
   hrReports: {

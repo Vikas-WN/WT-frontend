@@ -3,7 +3,6 @@ import { parseApiDate } from "@/utils/apiDate";
 import { compareSortValues, type ListSortOption } from "@/utils/listSort";
 import type { OffboardListItem } from "@/types/offboard";
 import { isServingNoticeUserStatus } from "@/utils/userStatus";
-import { exitInterviewSubmissionDetailPath } from "@/constants/routes";
 
 export type ExitSurveyFollowUpRow = OffboardListItem & {
   is_serving_notice?: boolean;
@@ -49,8 +48,6 @@ export function sortExitSurveyFollowUpRows(
     return a.employee_name.localeCompare(b.employee_name);
   });
 }
-
-export { exitInterviewSubmissionDetailPath };
 
 const FOLLOW_UP_DAYS = 60;
 
@@ -162,8 +159,7 @@ export function filterExitSurveyFollowUpByStatus(
 export function isResendableFollowUpRow(row: ExitSurveyFollowUpRow): boolean {
   if (!Boolean(String(row.emp_id ?? "").trim())) return false;
   if (isExitSurveyCompleted(row)) return false;
-  if (row.can_resend_exit_survey === false) return false;
-  return true;
+  return row.can_resend_exit_survey === true;
 }
 
 export function resendableEmpIdFromRow(row: ExitSurveyFollowUpRow): string {
@@ -183,10 +179,9 @@ export function isResendableOffboardListRow(row: {
   can_resend_exit_survey?: boolean;
 }): boolean {
   if (!Boolean(String(row.emp_id ?? "").trim())) return false;
-  if (row.can_resend_exit_survey === false) return false;
   if (row.exit_survey_submitted === true) return false;
   if (row.submission_status === "SUBMITTED") return false;
-  return true;
+  return row.can_resend_exit_survey === true;
 }
 
 export function resendableOffboardEmpIds(

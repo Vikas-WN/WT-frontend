@@ -6,11 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FieldLabel } from "@/components/ui/field";
 import { useEmployeeManagers } from "@/hooks/leave/useEmployeeManagers";
+import { formatEmployeePickerLabel } from "@/utils/employeePickerLabel";
 import { ChevronsUpDown, X, Check, Search, Loader2 } from "lucide-react";
 
 function optionLabel(option: LeaveManagerOption): string {
-  const name = option.name?.trim() || option.email;
-  return `${name} (${option.email})`;
+  return formatEmployeePickerLabel({
+    employeeName: option.name?.trim() || option.email,
+    employeeEmail: option.email,
+    empId: option.employee_id?.trim() || undefined,
+  });
 }
 
 function matchesQuery(option: LeaveManagerOption, query: string): boolean {
@@ -18,7 +22,8 @@ function matchesQuery(option: LeaveManagerOption, query: string): boolean {
   if (!q) return true;
   return (
     option.email.toLowerCase().includes(q) ||
-    (option.name ?? "").toLowerCase().includes(q)
+    (option.name ?? "").toLowerCase().includes(q) ||
+    (option.employee_id ?? "").toLowerCase().includes(q)
   );
 }
 
