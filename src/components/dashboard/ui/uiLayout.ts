@@ -16,6 +16,9 @@ export const CONTENT_CARD_CLASS =
 export const INNER_PANEL_CLASS =
   "rounded-xl border border-wt-border bg-wt-surface-2/35 p-4 sm:p-5";
 
+/** Selected table row — visible in light and dark mode. */
+export const TABLE_ROW_SELECTED_CLASS = "bg-indigo-500/10 dark:bg-indigo-400/15";
+
 /** Info / notice banner — works in light and dark mode. */
 export const INFO_BANNER_CLASS =
   "rounded-xl border border-sky-500/25 bg-sky-500/10 px-4 py-3 text-sm text-wt-text";

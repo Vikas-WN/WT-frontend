@@ -110,6 +110,7 @@ export interface ActiveNonBenchAllocationsPage {
 export interface LeaveManagerOption {
   email: string;
   name: string;
+  employee_id?: string | null;
   project_code?: string | null;
   project_name?: string | null;
 }

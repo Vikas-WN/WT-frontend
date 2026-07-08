@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { hrmsService, type LeaveManagerOption } from "@/services/hrms.service";
-import { unwrapApiDataArray } from "@/utils/leaveApiOptions";
+import { unwrapLeaveOptionItems } from "@/utils/leaveApiOptions";
 
 export const EMPLOYEE_MANAGERS_QUERY_KEY = ["leave", "employee-managers"] as const;
 
@@ -25,7 +25,23 @@ export function useEmployeeManagers(search?: string, enabled = true) {
       const res = await hrmsService.getLeaveManagerOptions(
         normalizedSearch ? { search: normalizedSearch } : undefined
       );
-      return unwrapApiDataArray<LeaveManagerOption>(res);
+      const items = unwrapLeaveOptionItems<{
+        email: string;
+        name: string;
+        employee_id?: string | null;
+        employeeId?: string | null;
+        emp_id?: string | null;
+        empId?: string | null;
+        project_code?: string | null;
+        project_name?: string | null;
+      }>(res);
+      return items.map((item) => ({
+        email: item.email,
+        name: item.name,
+        employee_id: item.employee_id ?? item.employeeId ?? item.emp_id ?? item.empId ?? null,
+        project_code: item.project_code ?? null,
+        project_name: item.project_name ?? null,
+      }));
     },
   });
 }

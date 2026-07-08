@@ -1,11 +1,11 @@
-import {
-  DeleteObjectCommand,
-  GetObjectCommand,
-  PutObjectCommand,
-  type GetObjectCommandOutput,
-} from "@aws-sdk/client-s3";
+import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { NextRequest, NextResponse } from "next/server";
 import { getLinodeObjectStorageConfig, getLinodeS3Client } from "@/lib/linodeObjectStorage";
+import {
+  getConfiguredObjectStorageBucket,
+  getStoredObject,
+  resolveStoredObjectFilename,
+} from "@/lib/linodeStoredObject";
 import { objectKeyCandidates } from "@/lib/objectStorageKeys";
 import { requireSession } from "@/lib/requireSession";
 import { formatS3Error, isMissingObjectError } from "@/lib/s3Errors";
@@ -19,35 +19,12 @@ function objectKeyFromPath(path: string[]): string {
   return path.map((segment) => decodeURIComponent(segment)).join("/");
 }
 
-function basenameFromKey(key: string): string {
-  const parts = key.split("/");
-  return parts[parts.length - 1] || key;
-}
-
-async function getStoredObject(
-  bucket: string,
-  objectKey: string
-): Promise<GetObjectCommandOutput> {
-  const client = getLinodeS3Client();
-  const candidates = objectKeyCandidates(objectKey, bucket);
-  let lastError: unknown;
-
-  for (const candidateKey of candidates) {
-    try {
-      return await client.send(
-        new GetObjectCommand({
-          Bucket: bucket,
-          Key: candidateKey,
-        })
-      );
-    } catch (error) {
-      lastError = error;
-      if (isMissingObjectError(error)) continue;
-      throw error;
-    }
+function configurationErrorMessage(error: unknown): string | null {
+  if (!(error instanceof Error)) return null;
+  if (/Missing required environment variable|Missing LINODE_OBJECT_STORAGE_REGION/i.test(error.message)) {
+    return `${error.message} Holiday calendar files are stored in Linode Object Storage.`;
   }
-
-  throw lastError ?? new Error("File not found.");
+  return null;
 }
 
 export async function GET(request: NextRequest, context: RouteContext) {
@@ -58,7 +35,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const key = objectKeyFromPath(path);
 
   try {
-    const { bucket } = getLinodeObjectStorageConfig();
+    const bucket = getConfiguredObjectStorageBucket();
     const response = await getStoredObject(bucket, key);
 
     if (!response.Body) {
@@ -66,8 +43,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     const bytes = await response.Body.transformToByteArray();
-    const originalFilename =
-      response.Metadata?.["original-filename"]?.trim() || basenameFromKey(key);
+    const originalFilename = resolveStoredObjectFilename(key, response);
 
     const headers = new Headers({
       "Content-Type": response.ContentType || "application/octet-stream",
@@ -81,6 +57,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     return new NextResponse(Buffer.from(bytes), { headers });
   } catch (error) {
+    const configMessage = configurationErrorMessage(error);
+    if (configMessage) {
+      return NextResponse.json({ error: configMessage }, { status: 503 });
+    }
     if (isMissingObjectError(error)) {
       return NextResponse.json({ error: "File not found." }, { status: 404 });
     }
@@ -105,13 +85,13 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const contentType =
       request.headers.get("content-type")?.trim() || "application/octet-stream";
     const originalFilename =
-      request.headers.get("x-original-filename")?.trim() || basenameFromKey(key);
+      request.headers.get("x-original-filename")?.trim() || key.split("/").pop() || key;
 
     const { bucket } = getLinodeObjectStorageConfig();
     await getLinodeS3Client().send(
       new PutObjectCommand({
         Bucket: bucket,
-        Key: key,
+        Key: key.replace(/^\/+/, ""),
         Body: new Uint8Array(body),
         ContentType: contentType,
         Metadata: {
@@ -122,11 +102,15 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json({
       data: {
-        key,
+        key: key.replace(/^\/+/, ""),
         fileName: originalFilename,
       },
     });
   } catch (error) {
+    const configMessage = configurationErrorMessage(error);
+    if (configMessage) {
+      return NextResponse.json({ error: configMessage }, { status: 503 });
+    }
     return NextResponse.json({ error: formatS3Error(error) }, { status: 500 });
   }
 }
@@ -157,6 +141,10 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       },
     });
   } catch (error) {
+    const configMessage = configurationErrorMessage(error);
+    if (configMessage) {
+      return NextResponse.json({ error: configMessage }, { status: 503 });
+    }
     return NextResponse.json({ error: formatS3Error(error) }, { status: 500 });
   }
 }

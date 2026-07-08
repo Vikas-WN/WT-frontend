@@ -21,9 +21,13 @@ import { isValidAllocationPercentForDesignation } from "@/utils/allocationPercen
 import { parseEmployeeAllocationsResponse } from "@/utils/allocationList";
 import {
   ALLOCATION_STATUS_OPTIONS,
-  ALLOCATION_TYPE_OPTIONS,
   type AllocationBillingStatus,
 } from "@/constants/allocationOptions";
+import {
+  ALLOCATION_STATUS_SELECT_OPTIONS,
+  ALLOCATION_TYPE_SELECT_OPTIONS,
+  allocationTypeForBillingStatus,
+} from "@/utils/allocationDefaults";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { UI_COPY } from "@/constants/uiCopy";
 
@@ -90,7 +94,8 @@ export function AllocateEmployeeDialog({
   const staffing = isStaffingProject(form.project_code);
   const allocationTypeOptions = staffing
     ? [{ value: "STAFFING", label: "Staffing" }]
-    : ALLOCATION_TYPE_OPTIONS;
+    : ALLOCATION_TYPE_SELECT_OPTIONS;
+  const showLockedInDate = !staffing && form.allocation_type === "LOCKED";
 
   async function handleSubmit() {
     const employeeEmail = form.employee_email.trim();
@@ -133,11 +138,16 @@ export function AllocateEmployeeDialog({
     const nextPercent = Number(form.allocated_percent);
     try {
       const res = await hrmsService.getEmployeeAllocations({ userEmail: employeeEmail });
-      const current = parseEmployeeAllocationsResponse(res.data ?? res)?.totalAllocatedPercent ?? 0;
-      const baseline = editingAllocationId ? current : current;
-      if (baseline + nextPercent > 100) {
+      let current = parseEmployeeAllocationsResponse(res.data ?? res)?.totalAllocatedPercent ?? 0;
+      if (editingAllocationId && initialForm?.allocated_percent) {
+        const previous = Number(initialForm.allocated_percent);
+        if (Number.isFinite(previous)) {
+          current = Math.max(0, current - previous);
+        }
+      }
+      if (current + nextPercent > 100) {
         showErrorToast(
-          `Total allocation cannot exceed 100% (current ${baseline}%, adding ${nextPercent}%).`
+          `Total allocation cannot exceed 100% (current ${current}%, adding ${nextPercent}%).`
         );
         return;
       }
@@ -147,6 +157,16 @@ export function AllocateEmployeeDialog({
 
     setLoading(true);
     try {
+      const allocationType = staffing ? "STAFFING" : form.allocation_type;
+      const lockedInDate =
+        allocationType === "LOCKED"
+          ? normalizeToApiDate(form.locked_in_date || form.start_date)
+          : null;
+      if (allocationType === "LOCKED" && !lockedInDate) {
+        showErrorToast("Locked-in date is required for locked allocations.");
+        setLoading(false);
+        return;
+      }
       const payload = {
         employeeEmail,
         projectCode,
@@ -154,8 +174,9 @@ export function AllocateEmployeeDialog({
         allocatedPercent: nextPercent,
         startDate,
         endDate,
-        allocationType: staffing ? "STAFFING" : form.allocation_type,
+        allocationType,
         billingStatus: form.billing_status,
+        lockedInDate,
       };
 
       if (editingAllocationId) {
@@ -260,31 +281,49 @@ export function AllocateEmployeeDialog({
             placeholder={staffing ? "Staffing (required for staffing projects)" : "Select allocation type"}
             required
             value={staffing ? "STAFFING" : form.allocation_type}
-            options={allocationTypeOptions.map((o) => o.value)}
+            options={allocationTypeOptions}
             disabled={staffing}
-            onChange={(value) => setForm((prev) => ({ ...prev, allocation_type: value }))}
+            onChange={(value) =>
+              setForm((prev) => ({
+                ...prev,
+                allocation_type: value,
+                locked_in_date: value === "LOCKED" ? prev.locked_in_date || prev.start_date : "",
+              }))
+            }
           />
           <SelectField
             label="Status"
             placeholder="Select status"
             required
             value={form.billing_status}
-            options={ALLOCATION_STATUS_OPTIONS.map((o) => o.value)}
+            options={ALLOCATION_STATUS_SELECT_OPTIONS}
             onChange={(value) =>
               setForm((prev) => ({
                 ...prev,
                 billing_status: ALLOCATION_STATUS_OPTIONS.some((o) => o.value === value)
                   ? (value as AllocationBillingStatus)
                   : "",
+                allocation_type: staffing
+                  ? "STAFFING"
+                  : allocationTypeForBillingStatus(value as AllocationBillingStatus, prev.allocation_type),
               }))
             }
           />
+          {showLockedInDate ? (
+            <InputField
+              label="Locked-In Date"
+              required
+              type="date"
+              value={form.locked_in_date}
+              onChange={(value) => setForm((prev) => ({ ...prev, locked_in_date: value }))}
+            />
+          ) : null}
           <InputField
             label="Start Date"
             required
             type="date"
             value={form.start_date}
-            onChange={(value) => setForm((prev) => ({ ...prev, start_date: value }))}
+            onChange={(value) => setForm((prev) => ({ ...prev, start_date: value, locked_in_date: prev.allocation_type === "LOCKED" && !prev.locked_in_date ? value : prev.locked_in_date }))}
           />
           <InputField
             label="End Date"

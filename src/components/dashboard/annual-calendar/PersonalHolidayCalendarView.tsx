@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
+import { ToolbarFilterSelect } from "@/components/dashboard/ui/ToolbarFilterSelect";
 import {
   TableBody,
   TableCell,
@@ -26,9 +27,15 @@ import { showErrorToast } from "@/lib/toast";
 import {
   filterHolidayRowsByYear,
   holidayRowsTomorrow,
-  upcomingHolidayRowsInYear,
+  parseHolidayCalendarDate,
   type HolidayCalendarRow,
 } from "@/utils/holidayCalendarTable";
+
+const YEAR_LOOKBACK = 15;
+
+function yearSelectOptions(anchorYear: number): string[] {
+  return Array.from({ length: YEAR_LOOKBACK + 1 }, (_, index) => String(anchorYear - index));
+}
 
 function formatTomorrowReminder(holidays: HolidayCalendarRow[]): string {
   if (holidays.length === 1) {
@@ -41,9 +48,22 @@ function formatTomorrowReminder(holidays: HolidayCalendarRow[]): string {
   return `${names.join(", ")} fall tomorrow.`;
 }
 
+function sortHolidayRowsByDate(rows: HolidayCalendarRow[], year: number): HolidayCalendarRow[] {
+  return [...rows].sort((left, right) => {
+    const leftDate = parseHolidayCalendarDate(left.date, year);
+    const rightDate = parseHolidayCalendarDate(right.date, year);
+    if (!leftDate && !rightDate) return 0;
+    if (!leftDate) return 1;
+    if (!rightDate) return -1;
+    return leftDate.getTime() - rightDate.getTime();
+  });
+}
+
 export function PersonalHolidayCalendarView() {
   const currentYear = new Date().getFullYear();
-  const storageQuery = useHolidayCalendarStorage(currentYear);
+  const [selectedYear, setSelectedYear] = useState(String(currentYear));
+  const yearNumber = Number(selectedYear);
+  const storageQuery = useHolidayCalendarStorage(selectedYear);
 
   useEffect(() => {
     if (!storageQuery.isError) return;
@@ -54,18 +74,24 @@ export function PersonalHolidayCalendarView() {
   }, [storageQuery.isError, storageQuery.error]);
 
   const rowsInYear = useMemo(() => {
-    if (storageQuery.data?.year !== currentYear) return [];
-    return filterHolidayRowsByYear(storageQuery.data.rows, currentYear, currentYear);
-  }, [storageQuery.data, currentYear]);
+    if (storageQuery.data?.year !== yearNumber) return [];
+    return filterHolidayRowsByYear(storageQuery.data.rows, yearNumber, yearNumber);
+  }, [storageQuery.data, yearNumber]);
 
-  const upcomingRows = useMemo(
-    () => upcomingHolidayRowsInYear(rowsInYear, currentYear),
-    [rowsInYear, currentYear]
+  const displayRows = useMemo(
+    () => sortHolidayRowsByDate(rowsInYear, yearNumber),
+    [rowsInYear, yearNumber]
   );
 
-  const tomorrowHolidays = useMemo(
-    () => holidayRowsTomorrow(rowsInYear, currentYear),
-    [rowsInYear, currentYear]
+  const tomorrowHolidays = useMemo(() => {
+    if (yearNumber !== currentYear) return [];
+    return holidayRowsTomorrow(rowsInYear, yearNumber);
+  }, [rowsInYear, yearNumber, currentYear]);
+
+  const yearOptions = useMemo(() => yearSelectOptions(currentYear), [currentYear]);
+  const yearSelectItems = useMemo(
+    () => yearOptions.map((year) => ({ value: year, label: year })),
+    [yearOptions]
   );
 
   const isLoading = storageQuery.isFetching;
@@ -75,8 +101,18 @@ export function PersonalHolidayCalendarView() {
     <ContentCard>
       <div className={CARD_CONTENT_CLASS}>
         <PageSectionHeader
-          title="Upcoming Holidays"
-          description={`Holidays remaining in ${currentYear}. Past dates and previous years are not shown.`}
+          title="Holiday Calendar"
+          description={`View organization holidays for ${selectedYear}.`}
+          action={
+            <ToolbarFilterSelect
+              id="personal-holiday-calendar-year"
+              value={selectedYear}
+              onChange={setSelectedYear}
+              options={yearSelectItems}
+              aria-label="Year"
+              className="w-32 min-w-32"
+            />
+          }
         />
 
         {tomorrowHolidays.length > 0 ? (
@@ -92,12 +128,12 @@ export function PersonalHolidayCalendarView() {
           ) : !hasCalendarFile ? (
             <EmptyState
               title="No Holiday Calendar"
-              description={`The ${currentYear} holiday calendar has not been published yet.`}
+              description={`The ${selectedYear} holiday calendar has not been published yet.`}
             />
-          ) : upcomingRows.length === 0 ? (
+          ) : displayRows.length === 0 ? (
             <EmptyState
-              title="No Upcoming Holidays"
-              description={`There are no remaining holidays in ${currentYear}.`}
+              title="No Holidays"
+              description={`No holidays are listed for ${selectedYear}.`}
             />
           ) : (
             <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
@@ -111,7 +147,7 @@ export function PersonalHolidayCalendarView() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {upcomingRows.map((row) => (
+                  {displayRows.map((row) => (
                     <TableRow key={`${row.date}|${row.holiday}|${row.sl_no}`}>
                       <TableCell className="px-3 py-2 whitespace-nowrap">{row.date}</TableCell>
                       <TableCell className="px-3 py-2 whitespace-nowrap">{row.day}</TableCell>

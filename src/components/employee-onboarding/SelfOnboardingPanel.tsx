@@ -131,12 +131,12 @@ export function SelfOnboardingPanel({
       }
       for (const [key, file] of selectedFiles) {
         if (file.size > MAX_ONBOARD_FILE_BYTES) {
-          throw new Error(`${key.replaceAll("_", " ")} exceeds 2 MB. Please upload a smaller file.`);
+          throw new Error(`${key.replaceAll("_", " ")} exceeds 10 MB. Please upload a smaller file.`);
         }
       }
       const totalBytes = selectedFiles.reduce((sum, [, file]) => sum + file.size, 0);
       if (totalBytes > MAX_ONBOARD_TOTAL_BYTES) {
-        throw new Error("Total upload size exceeds 6 MB. Compress files and retry.");
+        throw new Error("Total upload size exceeds 40 MB. Compress files and retry.");
       }
 
       const primarySkills = form.primary_skills

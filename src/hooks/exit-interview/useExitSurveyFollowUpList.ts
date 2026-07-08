@@ -44,7 +44,7 @@ function mapFollowUpItem(item: OffboardListItem): ExitSurveyFollowUpRow {
     submitted_at: item.submitted_at ?? null,
     lookup_id: item.lookup_id,
     exit_survey_submitted: Boolean(item.exit_survey_submitted),
-    can_resend_exit_survey: item.can_resend_exit_survey !== false,
+    can_resend_exit_survey: Boolean(item.can_resend_exit_survey),
     can_view_submission: item.can_view_submission,
   };
 }

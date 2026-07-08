@@ -34,6 +34,7 @@ import {
   prepareTableForDisplay,
   resolveEmployeeNameFromRow,
 } from "@/utils/tableDisplay";
+import { TABLE_ROW_SELECTED_CLASS } from "@/components/dashboard/ui/uiLayout";
 
 const DATA_COLUMNS = [
   "emp_id",
@@ -272,7 +273,7 @@ export function InvitedEmployeesTable({
               return (
                 <TableRow
                   key={rowKey}
-                  className={isSelected ? "bg-indigo-50/70" : undefined}
+                  className={isSelected ? TABLE_ROW_SELECTED_CLASS : undefined}
                 >
                   <TableCell className="px-3 py-2">
                     {canResend ? (
