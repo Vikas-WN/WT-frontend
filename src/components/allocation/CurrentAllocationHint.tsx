@@ -22,7 +22,7 @@ export function CurrentAllocationHint({ email }: { email: string }) {
       .then((res) => {
         if (cancelled) return;
         const parsed = parseEmployeeAllocationsResponse(res.data ?? res);
-        setPercent(parsed.totalAllocatedPercent);
+        setPercent(parsed?.totalAllocatedPercent ?? null);
       })
       .catch(() => {
         if (!cancelled) setPercent(null);

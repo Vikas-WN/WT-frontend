@@ -133,7 +133,7 @@ export function AllocateEmployeeDialog({
     const nextPercent = Number(form.allocated_percent);
     try {
       const res = await hrmsService.getEmployeeAllocations({ userEmail: employeeEmail });
-      const current = parseEmployeeAllocationsResponse(res.data ?? res).totalAllocatedPercent;
+      const current = parseEmployeeAllocationsResponse(res.data ?? res)?.totalAllocatedPercent ?? 0;
       const baseline = editingAllocationId ? current : current;
       if (baseline + nextPercent > 100) {
         showErrorToast(
