@@ -104,11 +104,11 @@ export function HolidayCalendarsPageClient() {
         );
       }
 
-      const uploadYear = holidayCalendarStorageService.resolveUploadYear(
-        file.name,
-        normalizedRows,
-        currentYear
-      );
+      const uploadYear = Number(selectedYear);
+      if (!Number.isFinite(uploadYear)) {
+        throw new Error("Select a valid year before uploading.");
+      }
+
       await holidayCalendarStorageService.uploadFile(file, uploadYear, normalizedRows);
 
       setSelectedYear(String(uploadYear));

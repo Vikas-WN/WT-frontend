@@ -12,8 +12,6 @@ export const DASHBOARD_ROUTES: Record<string, string> = {
   "talent-pool": "/dashboard/allocation/talent-pool",
   "allocation-extension": "/dashboard/allocation-extension",
   offboarding: "/dashboard/offboarding",
-  "exit-interview": "/dashboard/exit-interview",
-  "exit-interview-submissions": "/dashboard/exit-interview/submissions",
   "background-verification": "/dashboard/background-verification",
   timelog: "/dashboard/timelog",
   "timelog-team": "/dashboard/timelog/projects",
@@ -56,8 +54,6 @@ const PATH_TO_NAV_ID: Array<{ prefix: string; id: string }> = [
   { prefix: "/dashboard/allocation/talent-pool", id: "talent-pool" },
   { prefix: "/dashboard/allocation-extension", id: "allocation-extension" },
   { prefix: "/dashboard/allocation", id: "allocation" },
-  { prefix: "/dashboard/exit-interview/submissions", id: "exit-interview-submissions" },
-  { prefix: "/dashboard/exit-interview", id: "exit-interview" },
   { prefix: "/dashboard/offboarding", id: "offboarding" },
   { prefix: "/dashboard/background-verification", id: "background-verification" },
   { prefix: "/dashboard/timelog/projects", id: "timelog-team" },
@@ -125,9 +121,4 @@ export function defaultDashboardPathForRoles(roles: string[]): string {
     return DASHBOARD_ROUTES.profile;
   }
   return DASHBOARD_ROUTES["employee-directory"];
-}
-
-export function exitInterviewSubmissionDetailPath(lookupId: string): string {
-  const token = lookupId.trim();
-  return `${DASHBOARD_ROUTES["exit-interview-submissions"]}/${encodeURIComponent(token)}`;
 }

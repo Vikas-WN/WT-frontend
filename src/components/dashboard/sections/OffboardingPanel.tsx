@@ -34,6 +34,7 @@ import {
   CARD_FORM_ACTIONS_CLASS,
   CARD_FORM_GRID_CLASS,
   CARD_STACK_CLASS,
+  TABLE_ROW_SELECTED_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -130,6 +131,8 @@ export function OffboardingPanel() {
   const selectedUserType = selectedCandidate?.user_type ?? "";
   const isInternOffboarding = selectedUserType.toUpperCase() === "INTERN";
   const isConsultantOffboarding = selectedUserType.toUpperCase() === "CONSULTANT";
+  const isInvitedOffboarding =
+    normalizeEmployeeStatusKey(selectedCandidate?.status) === "INVITED";
 
   const canSubmit = isOffboardingFormValid(offboardingForm, selectedUserType);
 
@@ -218,7 +221,9 @@ export function OffboardingPanel() {
           data?.failed_count ? `, ${data.failed_count} failed` : ""
         }.`;
       resultSummary = summary;
-      resultIsError = (data?.failed_count ?? 0) > 0;
+      resultIsError =
+        (data?.failed_count ?? 0) > 0 ||
+        (data?.sent_count ?? 0) === 0;
       setSelectedEmpIds([]);
       setBulkResendResults(data?.results ?? []);
     } catch (error) {
@@ -414,6 +419,8 @@ export function OffboardingPanel() {
           <CardTitle>Employee Offboarding</CardTitle>
           <CardDescription>
             Record resignation details and submit offboarding for an active or invited employee.
+            Active employees enter serving notice and receive the exit survey; invited employees are
+            offboarded directly without an exit survey.
           </CardDescription>
         </CardHeader>
         <Separator />
@@ -534,6 +541,12 @@ export function OffboardingPanel() {
             {offboardingNoticeLabel ? (
               <p className="text-sm text-wt-text-muted">{offboardingNoticeLabel}</p>
             ) : null}
+            {isInvitedOffboarding ? (
+              <p className="text-sm text-wt-text-muted">
+                This employee has not joined yet. They will be marked inactive immediately and will
+                not receive an exit survey.
+              </p>
+            ) : null}
             <div className={CARD_FORM_ACTIONS_CLASS}>
               <Button
                 variant="brand"
@@ -571,13 +584,13 @@ export function OffboardingPanel() {
         filters={
           <>
             <DatePickerField
-              label="LWD From"
+              label="From LWD"
               value={filterFromDate}
               onChange={setFilterFromDate}
               className="w-[10.5rem] shrink-0"
             />
             <DatePickerField
-              label="LWD To"
+              label="To LWD"
               value={filterToDate}
               onChange={setFilterToDate}
               className="w-[10.5rem] shrink-0"
@@ -690,12 +703,11 @@ export function OffboardingPanel() {
                     const isSelected = Boolean(empId && selectedEmpIds.includes(empId));
                     const surveySubmitted =
                       row.exit_survey_submitted === true || row.submission_status === "SUBMITTED";
-
                     return (
                     <TableRow
                       key={row.emp_id}
                       className={`hover:bg-wt-page-bg/50 ${
-                        isSelected ? "bg-indigo-50/70" : ""
+                        isSelected ? TABLE_ROW_SELECTED_CLASS : ""
                       }`}
                     >
                       <TableCell className="px-3 py-2">
@@ -735,12 +747,20 @@ export function OffboardingPanel() {
                       <TableCell className="px-3 py-2 whitespace-nowrap">{formatBool(row.is_regretted)}</TableCell>
                       <TableCell className="px-3 py-2 whitespace-nowrap">
                         {canResend ? (
-                          <Button variant="brand" size="xs" type="button" className="px-2.5 py-1 text-xs" disabled={loadingList || isResending || bulkResending} onClick={() => void handleResendExitSurvey(empId, row.email)}
+                          <Button
+                            variant="brand"
+                            size="xs"
+                            type="button"
+                            className="px-2.5 py-1 text-xs"
+                            disabled={loadingList || isResending || bulkResending}
+                            onClick={() => void handleResendExitSurvey(empId, row.email)}
                           >
                             {isResending ? "Sending…" : "Resend Exit Survey"}
                           </Button>
                         ) : surveySubmitted ? (
-                          <span className="text-xs font-medium text-emerald-700">Submitted</span>
+                          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                            Submitted
+                          </span>
                         ) : (
                           <span className="text-xs text-wt-text-muted">—</span>
                         )}

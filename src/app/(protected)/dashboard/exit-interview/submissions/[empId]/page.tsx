@@ -1,10 +1,6 @@
-import { ExitInterviewSubmissionDetailPageClient } from "@/components/exit-interview/ExitInterviewSubmissionDetailPageClient";
+import { redirect } from "next/navigation";
+import { DASHBOARD_ROUTES } from "@/constants/routes";
 
-export default async function ExitInterviewSubmissionDetailPage({
-  params,
-}: {
-  params: Promise<{ empId: string }>;
-}) {
-  const { empId } = await params;
-  return <ExitInterviewSubmissionDetailPageClient lookupId={empId} />;
+export default async function ExitInterviewSubmissionDetailPage() {
+  redirect(DASHBOARD_ROUTES.offboarding);
 }

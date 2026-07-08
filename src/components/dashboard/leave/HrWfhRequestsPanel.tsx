@@ -184,6 +184,9 @@ export function HrWfhRequestsPanel({
                   ).trim();
                   const finalStatus = requestFinalStatus(rowRecord);
                   const primaryManagers = pickManagerEmailList(rowRecord, "primary");
+                  const primaryManagerLabels = Array.isArray(rowRecord.primary_manager_labels)
+                    ? rowRecord.primary_manager_labels.map((value) => String(value ?? ""))
+                    : undefined;
                   const fromDate = String(
                     rowRecord.request_from_date ?? rowRecord.requestFromDate ?? ""
                   );
@@ -201,7 +204,10 @@ export function HrWfhRequestsPanel({
                         <LeaveRequestStatusBadge status={finalStatus} />
                       </TableCell>
                       <TableCell className="px-3 py-2.5 whitespace-nowrap">
-                        <LeaveManagerEmailsCell emails={primaryManagers} />
+                        <LeaveManagerEmailsCell
+                          emails={primaryManagers}
+                          labels={primaryManagerLabels}
+                        />
                       </TableCell>
                       <TableCell className="px-3 py-2.5 whitespace-nowrap tabular-nums">
                         {formatLeaveDaysCount(fromDate, toDate, isHalfDay)}

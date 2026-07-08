@@ -325,44 +325,31 @@ export function isManagerApprovedForHr(row: Record<string, unknown>): boolean {
 
 
 
-/** HR may act only after manager approved and final status is still pending. */
-
+/** HR may approve/reject pending leave (override manager routing when needed). */
 export function canHrReviewUserRequest(
-
   row: Record<string, unknown>,
-
   options: { hasHrAccess: boolean }
-
 ): boolean {
-
   if (!options.hasHrAccess) return false;
-
+  if (requestFinalStatus(row) !== "PENDING") return false;
+  const requestType = pickRowField(row, "request_type", "requestType");
+  if (isLeaveRequestType(requestType)) return true;
   if (!isManagerApprovedForHr(row)) return false;
-
-  return requestFinalStatus(row) === "PENDING";
-
+  return true;
 }
 
-
-
 export function canHrToggleLeaveWfh(
-
   row: Record<string, unknown>,
-
   options: { hasHrAccess: boolean }
-
 ): boolean {
-
   if (!options.hasHrAccess) return false;
-
   const requestType = pickRowField(row, "request_type", "requestType");
-
+  if (isLeaveRequestType(requestType)) {
+    return requestFinalStatus(row) === "PENDING";
+  }
   if (isLeaveOrWfhRequestType(requestType)) return false;
-
   if (isLeaveEmailOnlyWorkflow(row)) return false;
-
   return canHrReviewUserRequest(row, options);
-
 }
 
 

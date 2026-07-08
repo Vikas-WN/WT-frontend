@@ -53,14 +53,12 @@ async function allocateManagerOnProject({
   projectCode,
   projectStart,
   projectEnd,
-  billingStatus,
 }: {
   email: string;
   fields: ManagerAllocationFieldsState;
   projectCode: string;
   projectStart: string;
   projectEnd: string;
-  billingStatus: "BILLED" | "BUFFER" | "INVESTMENT" | "TALENT_POOL";
 }) {
   const normalized = normalizePickerEmail(email);
   if (!normalized) return;
@@ -70,6 +68,15 @@ async function allocateManagerOnProject({
   const startDate = normalizeToApiDate(fields.start_date || projectStart);
   if (!startDate) return;
   const endDate = normalizeToApiDate(fields.end_date || projectEnd) || null;
+  const allocationType = fields.allocation_type || "DEPLOYABLE";
+  const lockedInDate =
+    allocationType === "LOCKED"
+      ? normalizeToApiDate(fields.locked_in_date || fields.start_date || projectStart)
+      : null;
+  if (allocationType === "LOCKED" && !lockedInDate) {
+    throw new Error("Locked-in date is required for locked allocations.");
+  }
+  const billingStatus = fields.billing_status || "BILLED";
   await hrmsService.createAllocation({
     employeeEmail: normalized,
     projectCode,
@@ -77,8 +84,9 @@ async function allocateManagerOnProject({
     allocatedPercent: percent,
     startDate,
     endDate,
-    allocationType: fields.allocation_type || "DEPLOYABLE",
+    allocationType,
     billingStatus,
+    lockedInDate,
   });
 }
 
@@ -174,19 +182,7 @@ export function CreateProjectDialog({
         end_date: prev.end_date || form.end_date,
       }));
 
-      const dmEmail = dmFields.email.trim() || form.delivery_manager_email.trim();
       const pmEmail = pmFields.email.trim();
-
-      if (dmEmail) {
-        await allocateManagerOnProject({
-          email: dmEmail,
-          fields: { ...dmFields, email: dmEmail },
-          projectCode,
-          projectStart: startDate,
-          projectEnd: endDate,
-          billingStatus: "BILLED",
-        });
-      }
 
       if (pmEmail) {
         await allocateManagerOnProject({
@@ -195,7 +191,6 @@ export function CreateProjectDialog({
           projectCode,
           projectStart: startDate,
           projectEnd: endDate,
-          billingStatus: "BILLED",
         });
         try {
           await hrmsService.assignProjectManager({
@@ -241,15 +236,23 @@ export function CreateProjectDialog({
               required
               value={form.client_id}
               onChange={(value) => setForm((prev) => ({ ...prev, client_id: value }))}
-              onClientSelected={(client) =>
+              onClientSelected={(client) => {
+                const dmEmail = client.deliveryManagerEmail?.trim() || "";
+                const pmEmail = client.projectManagerEmail?.trim() || "";
                 setForm((prev) => ({
                   ...prev,
                   client_id: String(client.id),
                   client_name: client.name,
                   account_manager_email: client.accountManagerEmail || prev.account_manager_email,
-                  delivery_manager_email: client.deliveryManagerEmail || prev.delivery_manager_email,
-                }))
-              }
+                  delivery_manager_email: dmEmail || prev.delivery_manager_email,
+                }));
+                if (dmEmail) {
+                  setDmFields((prev) => ({ ...prev, email: dmEmail }));
+                }
+                if (pmEmail) {
+                  setPmFields((prev) => ({ ...prev, email: pmEmail }));
+                }
+              }}
             />
             <InputField
               label="Start Date"
@@ -295,6 +298,7 @@ export function CreateProjectDialog({
           allocationPercentOptions={allocationPercentOptions}
           enabled={enabled}
           percentDesignation="Delivery Manager"
+          managerContactOnly
         />
 
         <ManagerAllocationFields

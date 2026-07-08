@@ -19,6 +19,8 @@ export interface HrOffboardListItem {
   exit_survey_submitted?: boolean;
   can_resend_exit_survey?: boolean;
   submission_status?: "SUBMITTED" | "PENDING";
+  lookup_id?: string;
+  can_view_submission?: boolean;
 }
 
 /** GET /api/v1/exit-interview/follow-up — exit survey follow-up list (`data.items[]`). */

@@ -37,9 +37,8 @@ export function useDashboardAccess() {
   const isPortalLocked = isPortalLockedProfile(profileQ.data ?? null);
   const requiresSelfOnboarding =
     restrictForPendingOnboarding && !isSelfOnboarded && !isOffboarded && !isServingNotice;
-  /** Limited self-serve portal for inactive employees completing a late exit survey only. */
-  const isExitSurveyOnlyAccess =
-    restrictForPendingOnboarding && isOffboarded && !isServingNotice;
+  /** @deprecated Exit survey module removed from the frontend. */
+  const isExitSurveyOnlyAccess = false;
   const employeeSelfServeProfile = isEmployee && !hasHrAccess;
   const canAccessProfile = Boolean(user);
   const canAccessOverview = useMemo(

@@ -75,6 +75,13 @@ export const exitInterviewService = {
     );
   },
 
+  /** DELETE /exit-interview/submissions/{lookupId} — HR removes a submitted survey. */
+  deleteSubmission(lookupId: string) {
+    return apiClient.delete<ApiEnvelope<unknown>>(
+      endpoints.exitInterview.deleteSubmission(lookupId)
+    );
+  },
+
   /** POST /exit-interview/resend — bulk exit survey reminders. */
   resendSurveyBulk(empIds: string[]) {
     return apiClient.post<ApiEnvelope<ExitSurveyBulkResendData>>(

@@ -7,6 +7,7 @@ export type ClientProjectSummary = {
 export type ClientRecord = {
   id: number;
   name: string;
+  address: string | null;
   spocExternalName: string | null;
   spocExternalEmail: string | null;
   spocExternalPhone: string | null;
@@ -19,6 +20,9 @@ export type ClientRecord = {
   deliveryManagerUserId: number | null;
   deliveryManagerEmail: string | null;
   deliveryManagerName: string | null;
+  projectManagerUserId: number | null;
+  projectManagerEmail: string | null;
+  projectManagerName: string | null;
   isActive: boolean;
   projectCount: number;
   projects?: ClientProjectSummary[];
@@ -26,24 +30,28 @@ export type ClientRecord = {
 
 export type ClientFormState = {
   name: string;
+  address: string;
   spoc_external_name: string;
   spoc_external_email: string;
   spoc_external_phone: string;
   poc_internal_email: string;
   account_manager_email: string;
   delivery_manager_email: string;
+  project_manager_email: string;
   is_active: boolean;
 };
 
 export function createEmptyClientForm(): ClientFormState {
   return {
     name: "",
+    address: "",
     spoc_external_name: "",
     spoc_external_email: "",
     spoc_external_phone: "",
     poc_internal_email: "",
     account_manager_email: "",
     delivery_manager_email: "",
+    project_manager_email: "",
     is_active: true,
   };
 }

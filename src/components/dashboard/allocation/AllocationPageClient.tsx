@@ -127,7 +127,7 @@ import {
   ALLOCATION_LIST_SORT_OPTIONS,
   toggleColumnSort,
 } from "@/utils/listSort";
-import { IconUser, IconPencil, IconTrash } from "@/components/dashboard/ui/icons";
+import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
@@ -3439,7 +3439,22 @@ export function AllocationPageClient() {
                                   </div>
                                 </div>
                                 <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-3">
-                                  <p className="text-sm font-medium">All Projects</p>
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <p className="text-sm font-medium">All Projects</p>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      type="button"
+                                      className="px-3 py-2 text-sm"
+                                      disabled={hrProjectsQ.isFetching}
+                                      onClick={() => refreshHrProjects()}
+                                    >
+                                      <IconRefresh
+                                        className={`mr-1.5 inline size-4 ${hrProjectsQ.isFetching ? "animate-spin" : ""}`}
+                                      />
+                                      Refresh
+                                    </Button>
+                                  </div>
                                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                     <InputField
                                       label="Search by name"
@@ -3794,18 +3809,34 @@ export function AllocationPageClient() {
                                                               return "STAFFING";
                                                             }
                                                             const upper = allocationType.toUpperCase();
-                                                            return ["DEPLOYABLE", "STAFFING", "LOCKED"].includes(
-                                                              upper
-                                                            )
-                                                              ? upper
-                                                              : "DEPLOYABLE";
+                                                            const allowed = [
+                                                              "DEPLOYABLE",
+                                                              "STAFFING",
+                                                              "LOCKED",
+                                                              "NONBILLABLE",
+                                                              "NONDEPLOYABLE",
+                                                              "OFFBOARDED",
+                                                            ];
+                                                            return allowed.includes(upper) ? upper : "DEPLOYABLE";
                                                           })(),
-                                                          billing_status:
-                                                            ["BILLED", "BUFFER", "INVESTMENT"].includes(
-                                                              billingStatus.toUpperCase()
-                                                            )
-                                                              ? (billingStatus.toUpperCase() as "BILLED" | "BUFFER" | "INVESTMENT")
-                                                              : "BILLED",
+                                                          billing_status: (() => {
+                                                            const upper = billingStatus.toUpperCase();
+                                                            if (
+                                                              ["BILLED", "BUFFER", "INVESTMENT", "TALENT_POOL"].includes(
+                                                                upper
+                                                              )
+                                                            ) {
+                                                              return upper as
+                                                                | "BILLED"
+                                                                | "BUFFER"
+                                                                | "INVESTMENT"
+                                                                | "TALENT_POOL";
+                                                            }
+                                                            return "BILLED";
+                                                          })(),
+                                                          locked_in_date: String(
+                                                            row.locked_in_date ?? row.lockedInDate ?? ""
+                                                          ),
                                                         }));
                                                         setEditingAllocationId(allocationId);
                                                         setAllocationHrSubTab("allocate");

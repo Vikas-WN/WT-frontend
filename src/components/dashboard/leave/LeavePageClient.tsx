@@ -22,7 +22,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/api/httpClient";
 import { endpoints } from "@/api/endpoints";
-import { hrmsService, type LeaveManagerOption } from "@/services/hrms.service";
+import { hrmsService } from "@/services/hrms.service";
 import { useMyLeaveRequests, defaultMyLeaveRequestRange } from "@/hooks/leave/useMyLeaveRequests";
 import { ApiError } from "@/api/error";
 import { toRows, toPagedRows } from "@/utils/apiRows";
@@ -391,8 +391,6 @@ export function LeavePageClient() {
   const [leaveRequestForm, setLeaveRequestForm] = useState(createDefaultLeaveRequestForm);
   const [selectedLeaveManagerEmails, setSelectedLeaveManagerEmails] = useState<string[]>([]);
   const [selectedWfhManagerEmails, setSelectedWfhManagerEmails] = useState<string[]>([]);
-  const [wfhManagerOptions, setWfhManagerOptions] = useState<LeaveManagerOption[]>([]);
-  const [wfhManagerOptionsLoading, setWfhManagerOptionsLoading] = useState(false);
   const [selectedAdditionalRecipientEmails, setSelectedAdditionalRecipientEmails] = useState<string[]>([]);
   const [editingLeaveRequestId, setEditingLeaveRequestId] = useState<string>("");
   const [requestViewTab, setRequestViewTab] = useState<"request" | "view">("request");
@@ -624,30 +622,6 @@ export function LeavePageClient() {
       setLeaveSubTab("my");
     }
   }, [canViewTeamLeave, leaveSubTab]);
-
-  useEffect(() => {
-    if (leaveSubTab !== "wfh") return;
-    let cancelled = false;
-    setWfhManagerOptionsLoading(true);
-    (async () => {
-      try {
-        const res = await hrmsService.getWfhManagerOptions();
-        const items: LeaveManagerOption[] = [];
-        const data = res?.data as { items?: LeaveManagerOption[] } | undefined;
-        if (data?.items) items.push(...data.items);
-        if (!cancelled) {
-          setWfhManagerOptions(items);
-          setWfhManagerOptionsLoading(false);
-        }
-      } catch {
-        if (!cancelled) {
-          setWfhManagerOptions([]);
-          setWfhManagerOptionsLoading(false);
-        }
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [leaveSubTab]);
 
   const loadManagerData = useCallback(
     async (force = false) => {
@@ -1036,12 +1010,21 @@ export function LeavePageClient() {
     if (!reason) {
       throw new Error("Reason is required when rejecting a request.");
     }
-    await updateEmployeeRequestStatus(pendingReject.requestId, "REJECTED", {
-      reason,
-      requireReasonOnReject: true,
-    });
-    closeRejectDialog();
-    await loadEmployeeRequestsForApprover(leaveSubTab === "org" ? "org" : "team");
+    const requestId = pendingReject.requestId;
+    setTeamStatusUpdatingId(requestId);
+    try {
+      await updateEmployeeRequestStatus(requestId, "REJECTED", {
+        reason,
+        requireReasonOnReject: true,
+      });
+      closeRejectDialog();
+      const scope = leaveSubTab === "org" ? "org" : "team";
+      invalidateTeamCache();
+      invalidateLeaveBalance();
+      await loadEmployeeRequestsForApprover(scope, teamPage, teamPageSize, true);
+    } finally {
+      setTeamStatusUpdatingId(null);
+    }
   }
   const filteredMyLeaveRequests = useMemo(
     () =>
@@ -1283,8 +1266,6 @@ export function LeavePageClient() {
                                         selectedEmails={selectedWfhManagerEmails}
                                         onChange={setSelectedWfhManagerEmails}
                                         disabled={actionLoading}
-                                        options={wfhManagerOptions}
-                                        loading={wfhManagerOptionsLoading}
                                       />
                                       <TextAreaField label="Comments" required value={leaveRequestForm.comments} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, comments: v }))} />
                                       <div className="flex justify-end pt-4 border-t border-border/40 mt-6">
@@ -1902,27 +1883,9 @@ export function LeavePageClient() {
                                                 size="xs"
                                                 disabled={actionLoading || !requestId || isRowUpdating}
                                                 onClick={() =>
-                                                  runAction(
-                                                    userRequestActionLabel(
-                                                      row.request_type ?? row.requestType,
-                                                      "reject"
-                                                    ),
-                                                    async () => {
-                                                      setTeamStatusUpdatingId(requestId);
-                                                      try {
-                                                        await updateEmployeeRequestStatus(
-                                                          requestId,
-                                                          "REJECTED",
-                                                          { requireReasonOnReject: false }
-                                                        );
-                                                        const scope = leaveSubTab === "org" ? "org" : "team";
-                                                        invalidateTeamCache();
-                                                        invalidateLeaveBalance();
-                                                        await loadEmployeeRequestsForApprover(scope, teamPage, teamPageSize, true);
-                                                      } finally {
-                                                        setTeamStatusUpdatingId(null);
-                                                      }
-                                                    }
+                                                  openRejectDialog(
+                                                    requestId,
+                                                    row.request_type ?? row.requestType
                                                   )
                                                 }
                                               >
@@ -2031,7 +1994,7 @@ export function LeavePageClient() {
                   ? userRequestActionLabel(pendingReject.requestType, "reject")
                   : "Reject request"
               }
-              description="A reason is required when a manager rejects. HR reject does not use this dialog."
+              description="A reason is required when rejecting a leave or work-from-home request."
               reasonPlaceholder="Enter rejection reason"
               confirmLabel="Reject"
               confirmingLabel="Rejecting…"
