@@ -32,7 +32,7 @@ async function readCurrentAllocationPercent(email: string): Promise<number> {
   if (!normalized) return 0;
   try {
     const res = await hrmsService.getEmployeeAllocations({ userEmail: normalized });
-    return parseEmployeeAllocationsResponse(res.data ?? res).totalAllocatedPercent;
+    return parseEmployeeAllocationsResponse(res.data ?? res)?.totalAllocatedPercent ?? 0;
   } catch {
     return 0;
   }
