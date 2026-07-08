@@ -5,6 +5,7 @@ export const ALLOCATION_TYPE_OPTIONS = [
   { value: "STAFFING", label: "Staffing" },
   { value: "NONBILLABLE", label: "NB" },
   { value: "NONDEPLOYABLE", label: "Not Active" },
+  { value: "OFFBOARDED", label: "Offboarded" },
 ] as const;
 
 /** Billing / workforce status codes (`billing_status` on allocations). */

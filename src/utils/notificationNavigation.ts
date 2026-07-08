@@ -76,6 +76,7 @@ export function notificationCategoryLabel(
     case "TRAINING_MARKS_PUBLISHED":
       return "Training Scores";
     case "EXIT_INTERVIEW_REMINDER":
+    case "EXIT_INTERVIEW_SUBMITTED":
       return "Exit Survey";
     case "ONBOARDING_INVITE":
     case "ONBOARDING_PROFILE_PENDING":
@@ -161,7 +162,10 @@ export function resolveNotificationHref(
       return DASHBOARD_ROUTES.learning;
 
     case "EXIT_INTERVIEW_REMINDER":
-      return DASHBOARD_ROUTES["exit-interview"];
+      return DASHBOARD_ROUTES.profile;
+
+    case "EXIT_INTERVIEW_SUBMITTED":
+      return isHrOrAdmin(roles) ? DASHBOARD_ROUTES.offboarding : DASHBOARD_ROUTES.profile;
 
     case "ONBOARDING_INVITE":
     case "ONBOARDING_PROFILE_PENDING":

@@ -22,15 +22,12 @@ import {
 } from "@/utils/notificationNavigation";
 import {
   dashboardNavigation,
-  filterNavigationForOffboardedUser,
   filterVisibleNavigation,
   dashboardPageTitle,
   getDashboardSectionLabel,
 } from "@/constants/dashboardNavigation";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { cleanEmployeeName } from "@/utils/employeeDirectory";
-import { useExitInterviewProfile } from "@/hooks/exit-interview/useExitInterviewProfile";
-import { shouldShowExitSurveyInNav } from "@/utils/exitInterview";
 import { shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
 import { selfProfileQueryKey } from "@/hooks/useSelfProfile";
 import { dashboardHref, DASHBOARD_ROUTES, isDashboardNavChildActive } from "@/constants/routes";
@@ -159,20 +156,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const isHrPortalUser =
     (userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN")) &&
     !userRoles.includes("ROLE_EMPLOYEE");
-  const { isOffboarded, isServingNotice, isExitSurveyOnlyAccess, profile } = useDashboardAccess();
-  const shouldLoadExitInterviewProfile = useMemo(() => {
-    if (!user) return false;
-    if (pathname.startsWith(DASHBOARD_ROUTES["exit-interview"])) return true;
-    if (isHrPortalUser) return false;
-    return userRoles.includes("ROLE_EMPLOYEE") || isServingNotice || isOffboarded;
-  }, [user, pathname, isHrPortalUser, userRoles, isServingNotice, isOffboarded]);
-  const exitProfileQ = useExitInterviewProfile({ enabled: shouldLoadExitInterviewProfile });
-  const showExitSurveyNav = useMemo(() => {
-    if (isExitSurveyOnlyAccess) return true;
-    const flags = exitProfileQ.data?.flags;
-    if (!flags) return false;
-    return shouldShowExitSurveyInNav(flags);
-  }, [exitProfileQ.data?.flags, isExitSurveyOnlyAccess]);
+  const { isOffboarded, isServingNotice, profile } = useDashboardAccess();
 
   const navChildActiveOptions = useMemo(
     () => ({ hasHrAccess, hasManagerAccess, hasDmAccess }),
@@ -186,18 +170,11 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   );
 
   const visibleNavigation = useMemo(() => {
-    const base = filterVisibleNavigation(dashboardNavigation, userRoles, {
+    return filterVisibleNavigation(dashboardNavigation, userRoles, {
       hasHrAccess,
       hasAccountManagerAccess,
-      showExitSurvey: showExitSurveyNav,
     });
-    if (isExitSurveyOnlyAccess) {
-      return filterNavigationForOffboardedUser(base, { showExitSurvey: showExitSurveyNav });
-    }
-    return base;
-  }, [userRoles, hasHrAccess, hasAccountManagerAccess, isExitSurveyOnlyAccess, showExitSurveyNav]);
-
-  const isExitSurveyRoute = pathname.startsWith(DASHBOARD_ROUTES["exit-interview"]);
+  }, [userRoles, hasHrAccess, hasAccountManagerAccess]);
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
@@ -219,12 +196,6 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       return next;
     });
   }, []);
-
-  useEffect(() => {
-    if (!user || isHrPortalUser || !isExitSurveyOnlyAccess) return;
-    if (isExitSurveyRoute) return;
-    router.replace(DASHBOARD_ROUTES["exit-interview"]);
-  }, [user, isHrPortalUser, isExitSurveyOnlyAccess, isExitSurveyRoute, router]);
 
   useEffect(() => {
     setSidebarCollapsed(readSidebarCollapsed());
@@ -254,7 +225,6 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   }, [theme]);
 
   const loadNotifications = useCallback(async () => {
-    if (isExitSurveyOnlyAccess) return;
     setNotificationsLoading(true);
     setNotificationsError(null);
     try {
@@ -269,7 +239,6 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         )
       ) {
         void queryClient.invalidateQueries({ queryKey: selfProfileQueryKey(user?.email) });
-        void queryClient.invalidateQueries({ queryKey: ["profile", "exit-interview"] });
       }
     } catch (error) {
       setNotifications([]);
@@ -279,7 +248,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     } finally {
       setNotificationsLoading(false);
     }
-  }, [isExitSurveyOnlyAccess, queryClient, user?.email]);
+  }, [queryClient, user?.email]);
 
   const handleNotificationClick = useCallback(
     async (row: NotificationItem) => {
@@ -309,7 +278,6 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    if (isExitSurveyOnlyAccess) return;
     void loadNotifications();
     const intervalId = window.setInterval(() => {
       void loadNotifications();
@@ -322,7 +290,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       window.clearInterval(intervalId);
       window.removeEventListener("focus", onFocus);
     };
-  }, [isExitSurveyOnlyAccess, loadNotifications]);
+  }, [loadNotifications]);
 
   const runAction = useCallback(async (label: string, fn: () => Promise<unknown>) => {
     setActionLoading(true);
@@ -341,10 +309,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const isLearningRoute = pathname.startsWith("/dashboard/learning-development");
 
   const pageTitle = useMemo(() => {
-    if (isExitSurveyOnlyAccess && !isExitSurveyRoute) {
-      return "Exit Survey";
-    }
-    if (isOffboarded && !isExitSurveyRoute && !isLearningRoute) {
+    if (isOffboarded && !isLearningRoute) {
       return "You Are Offboarded";
     }
     if (isLearningRoute) {
@@ -359,8 +324,6 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     hasDmAccess,
     hasHrAccess,
     hasManagerAccess,
-    isExitSurveyOnlyAccess,
-    isExitSurveyRoute,
     isLearningRoute,
     isNavChildActive,
     isOffboarded,
@@ -416,7 +379,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         profile={profile}
         sidebarDisplayName={sidebarDisplayName}
         canAccessProfile={canAccessProfile}
-        isOffboarded={isOffboarded || isExitSurveyOnlyAccess}
+        isOffboarded={isOffboarded}
         onLogout={logout}
       />
 
@@ -466,7 +429,6 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            {!isExitSurveyOnlyAccess ? (
             <details
               ref={notificationsPanelRef}
               className="group relative"
@@ -583,7 +545,6 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 </div>
               </div>
             </details>
-            ) : null}
             <button
               type="button"
               className={HEADER_ICON_BUTTON_CLASS}

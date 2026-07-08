@@ -35,7 +35,6 @@ import {
   canViewExitSurveySubmission,
   DEFAULT_EXIT_SURVEY_LWD_SORT_ID,
   DEFAULT_EXIT_SURVEY_STATUS_FILTER,
-  exitInterviewSubmissionDetailPath,
   EXIT_SURVEY_LWD_SORT_OPTIONS,
   filterExitSurveyFollowUpByStatus,
   filterServingNoticeFollowUpRows,
@@ -48,6 +47,8 @@ import {
   sortExitSurveyFollowUpRows,
   type ExitSurveyStatusFilter,
 } from "@/utils/exitSurveyFollowUp";
+import { DASHBOARD_ROUTES } from "@/constants/routes";
+import { TABLE_ROW_SELECTED_CLASS } from "@/components/dashboard/ui/uiLayout";
 
 const DEFAULT_PAGE_SIZE = 10;
 const USER_TYPE_FILTER_OPTIONS = [
@@ -247,7 +248,9 @@ export function ExitSurveyFollowUpPanel() {
           data?.failed_count ? `, ${data.failed_count} failed` : ""
         }.`;
       resultSummary = summary;
-      resultIsError = (data?.failed_count ?? 0) > 0;
+      resultIsError =
+        (data?.failed_count ?? 0) > 0 ||
+        (data?.sent_count ?? 0) === 0;
       setSelectedEmpIds([]);
       setBulkResendResults(data?.results ?? []);
     } catch (error) {
@@ -458,7 +461,7 @@ export function ExitSurveyFollowUpPanel() {
                     empId && selectedEmpIds.includes(empId),
                   );
                   const detailHref = lookupId
-                    ? exitInterviewSubmissionDetailPath(lookupId)
+                    ? `${DASHBOARD_ROUTES.offboarding}`
                     : null;
                   const submitted =
                     row.submission_status === "SUBMITTED" ||
@@ -468,7 +471,7 @@ export function ExitSurveyFollowUpPanel() {
                     <TableRow
                       key={lookupId || empId || row.email}
                       className={`hover:bg-wt-page-bg/50 ${
-                        isSelected ? "bg-indigo-50/70" : ""
+                        isSelected ? TABLE_ROW_SELECTED_CLASS : ""
                       } ${canView && detailHref ? "cursor-pointer" : ""}`}
                       onClick={(event) => {
                         if (!canView || !detailHref) return;

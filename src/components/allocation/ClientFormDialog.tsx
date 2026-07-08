@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { InputField } from "@/components/dashboard/ui/forms";
+import { InputField, TextAreaField } from "@/components/dashboard/ui/forms";
 import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
+import { InternalEmployeeSelect } from "@/components/allocation/InternalEmployeeSelect";
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
+import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { UI_COPY } from "@/constants/uiCopy";
 import { hrmsService } from "@/services/hrms.service";
 import {
@@ -13,6 +15,21 @@ import {
 } from "@/types/client";
 import { clientToFormState } from "@/utils/client";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
+
+function buildClientPayload(form: ClientFormState) {
+  return {
+    name: form.name.trim(),
+    address: form.address.trim() || null,
+    spoc_external_name: form.spoc_external_name.trim() || null,
+    spoc_external_email: form.spoc_external_email.trim() || null,
+    spoc_external_phone: form.spoc_external_phone.trim() || null,
+    poc_internal_email: form.poc_internal_email.trim() || null,
+    account_manager_email: form.account_manager_email.trim() || null,
+    delivery_manager_email: form.delivery_manager_email.trim() || null,
+    project_manager_email: form.project_manager_email.trim() || null,
+    is_active: form.is_active,
+  };
+}
 
 export function ClientFormDialog({
   open,
@@ -46,16 +63,7 @@ export function ClientFormDialog({
 
     setLoading(true);
     try {
-      const payload = {
-        name,
-        spoc_external_name: form.spoc_external_name.trim() || null,
-        spoc_external_email: null,
-        spoc_external_phone: null,
-        poc_internal_email: null,
-        account_manager_email: form.account_manager_email.trim() || null,
-        delivery_manager_email: null,
-        is_active: form.is_active,
-      };
+      const payload = buildClientPayload(form);
 
       if (editingClient) {
         await hrmsService.updateClient(editingClient.id, payload);
@@ -77,29 +85,96 @@ export function ClientFormDialog({
     <WtFormDialog
       open={open}
       title={editingClient ? "Edit Client" : "Create Client"}
-      description="Client name, secondary point of contact, and account manager."
+      description="Capture client details, external SPOC, internal POC, and assigned managers."
       onClose={onClose}
       onSubmit={() => void handleSubmit()}
       submitLabel={editingClient ? UI_COPY.saveChanges : "Create Client"}
       loading={loading}
-      maxWidthClass="max-w-xl"
+      maxWidthClass="max-w-3xl"
     >
-      <div className="grid gap-4">
-        <InputField
-          label="Name"
-          required
-          value={form.name}
-          onChange={(value) => setForm((prev) => ({ ...prev, name: value }))}
-        />
-        <InputField
-          label="S. POC"
-          value={form.spoc_external_name}
-          onChange={(value) => setForm((prev) => ({ ...prev, spoc_external_name: value }))}
-        />
-        <AccountManagerSelect
-          value={form.account_manager_email}
-          onChange={(value) => setForm((prev) => ({ ...prev, account_manager_email: value }))}
-        />
+      <div className="space-y-5">
+        <FormSection
+          title="Client Details"
+          description="Primary identity used when creating projects."
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <InputField
+              label="Name"
+              required
+              value={form.name}
+              onChange={(value) => setForm((prev) => ({ ...prev, name: value }))}
+            />
+            <div className="sm:col-span-2">
+              <TextAreaField
+                label="Address"
+                value={form.address}
+                onChange={(value) => setForm((prev) => ({ ...prev, address: value }))}
+                placeholder="Street, city, state, postal code, country"
+                rows={3}
+              />
+            </div>
+          </div>
+        </FormSection>
+
+        <FormSection
+          title="External SPOC"
+          description="Client-side point of contact outside your organization."
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <InputField
+              label="SPOC Name"
+              value={form.spoc_external_name}
+              onChange={(value) => setForm((prev) => ({ ...prev, spoc_external_name: value }))}
+            />
+            <InputField
+              label="SPOC Email"
+              type="email"
+              value={form.spoc_external_email}
+              onChange={(value) => setForm((prev) => ({ ...prev, spoc_external_email: value }))}
+            />
+            <InputField
+              label="SPOC Phone Number"
+              type="tel"
+              value={form.spoc_external_phone}
+              onChange={(value) => setForm((prev) => ({ ...prev, spoc_external_phone: value }))}
+            />
+          </div>
+        </FormSection>
+
+        <FormSection
+          title="Internal POC"
+          description="Your company employee mapped as the internal point of contact."
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <InternalEmployeeSelect
+              label="POC"
+              value={form.poc_internal_email}
+              onChange={(value) => setForm((prev) => ({ ...prev, poc_internal_email: value }))}
+            />
+          </div>
+        </FormSection>
+
+        <FormSection
+          title="Account Leadership"
+          description="Account manager, delivery manager, and default project manager for this client."
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <AccountManagerSelect
+              value={form.account_manager_email}
+              onChange={(value) => setForm((prev) => ({ ...prev, account_manager_email: value }))}
+            />
+            <InternalEmployeeSelect
+              label="Delivery Manager"
+              value={form.delivery_manager_email}
+              onChange={(value) => setForm((prev) => ({ ...prev, delivery_manager_email: value }))}
+            />
+            <InternalEmployeeSelect
+              label="Project Manager"
+              value={form.project_manager_email}
+              onChange={(value) => setForm((prev) => ({ ...prev, project_manager_email: value }))}
+            />
+          </div>
+        </FormSection>
       </div>
     </WtFormDialog>
   );

@@ -6,6 +6,7 @@ import { showErrorToast } from "@/lib/toast";
 import { hrmsService } from "@/services/hrms.service";
 import type { HrOffboardListItem } from "@/types/offboard";
 import { toPagedRows } from "@/utils/apiRows";
+import { formatApiDate } from "@/utils/apiDate";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   isEligibleOffboardCandidateStatus,
@@ -22,6 +23,17 @@ export type OffboardCandidate = {
 };
 
 export const OFFBOARDING_LIST_PAGE_SIZE = 10;
+
+const OFFBOARDING_LWD_WINDOW_DAYS = 60;
+
+export function defaultOffboardingLwdWindow(): { from: string; to: string } {
+  const today = new Date();
+  const from = new Date(today);
+  from.setDate(from.getDate() - OFFBOARDING_LWD_WINDOW_DAYS);
+  const to = new Date(today);
+  to.setDate(to.getDate() + OFFBOARDING_LWD_WINDOW_DAYS);
+  return { from: formatApiDate(from), to: formatApiDate(to) };
+}
 
 const OFFBOARDING_STALE_MS = 5 * 60_000;
 const OFFBOARDING_LIST_STALE_MS = 30_000;
@@ -87,8 +99,9 @@ export function useOffboardingPanelQueries() {
   const [listPage, setListPage] = useState(0);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
-  const [filterFromDate, setFilterFromDate] = useState("");
-  const [filterToDate, setFilterToDate] = useState("");
+  const defaultLwdWindow = useMemo(() => defaultOffboardingLwdWindow(), []);
+  const [filterFromDate, setFilterFromDate] = useState(defaultLwdWindow.from);
+  const [filterToDate, setFilterToDate] = useState(defaultLwdWindow.to);
   const [filterType, setFilterType] = useState("");
   const [fyStartYear, setFyStartYear] = useState(defaultFinancialYearStart);
 

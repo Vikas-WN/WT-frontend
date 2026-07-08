@@ -1,5 +1,6 @@
-import { ExitInterviewSubmissionsPageClient } from "@/components/exit-interview/ExitInterviewSubmissionsPageClient";
+import { redirect } from "next/navigation";
+import { DASHBOARD_ROUTES } from "@/constants/routes";
 
 export default function ExitInterviewSubmissionsPage() {
-  return <ExitInterviewSubmissionsPageClient />;
+  redirect(DASHBOARD_ROUTES.offboarding);
 }

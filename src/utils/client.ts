@@ -48,6 +48,7 @@ export function parseClientRow(row: Record<string, unknown>): ClientRecord | nul
   return {
     id,
     name,
+    address: readNullableString(row, "address"),
     spocExternalName: readNullableString(row, "spoc_external_name", "spocExternalName"),
     spocExternalEmail: readNullableString(row, "spoc_external_email", "spocExternalEmail"),
     spocExternalPhone: readNullableString(row, "spoc_external_phone", "spocExternalPhone"),
@@ -60,6 +61,9 @@ export function parseClientRow(row: Record<string, unknown>): ClientRecord | nul
     deliveryManagerUserId: readNumber(row, "delivery_manager_user_id", "deliveryManagerUserId"),
     deliveryManagerEmail: readNullableString(row, "delivery_manager_email", "deliveryManagerEmail"),
     deliveryManagerName: readNullableString(row, "delivery_manager_name", "deliveryManagerName"),
+    projectManagerUserId: readNumber(row, "project_manager_user_id", "projectManagerUserId"),
+    projectManagerEmail: readNullableString(row, "project_manager_email", "projectManagerEmail"),
+    projectManagerName: readNullableString(row, "project_manager_name", "projectManagerName"),
     isActive: Boolean(row.is_active ?? row.isActive ?? true),
     projectCount: readNumber(row, "project_count", "projectCount") ?? projects?.length ?? 0,
     ...(projects ? { projects } : {}),
@@ -100,12 +104,14 @@ export function parseClientList(data: unknown): ClientRecord[] {
 export function clientToFormState(client: ClientRecord) {
   return {
     name: client.name,
+    address: client.address ?? "",
     spoc_external_name: client.spocExternalName ?? "",
     spoc_external_email: client.spocExternalEmail ?? "",
     spoc_external_phone: client.spocExternalPhone ?? "",
     poc_internal_email: client.pocInternalEmail ?? "",
     account_manager_email: client.accountManagerEmail ?? "",
     delivery_manager_email: client.deliveryManagerEmail ?? "",
+    project_manager_email: client.projectManagerEmail ?? "",
     is_active: client.isActive,
   };
 }

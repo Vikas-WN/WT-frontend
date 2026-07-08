@@ -22,6 +22,7 @@ export type AllocationFormState = {
   end_date: string;
   allocation_type: string;
   billing_status: "" | "BILLED" | "BUFFER" | "INVESTMENT" | "TALENT_POOL";
+  locked_in_date: string;
 };
 
 export function createEmptyProjectForm(): ProjectFormState {
@@ -49,6 +50,7 @@ export function createEmptyAllocationForm(): AllocationFormState {
     end_date: "",
     allocation_type: "",
     billing_status: "",
+    locked_in_date: "",
   };
 }
 

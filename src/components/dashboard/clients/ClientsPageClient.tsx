@@ -127,10 +127,12 @@ export function ClientsPageClient() {
                   <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
                     <TableRow className="hover:bg-transparent">
                       <TableHead>Client Name</TableHead>
+                      <TableHead>Address</TableHead>
                       <TableHead>SPOC (External)</TableHead>
                       <TableHead>POC (Internal)</TableHead>
                       <TableHead>Account Manager</TableHead>
                       <TableHead>Delivery Manager</TableHead>
+                      <TableHead>Project Manager</TableHead>
                       <TableHead>Projects</TableHead>
                       <TableHead>Status</TableHead>
                       {canEdit ? <TableHead className="text-right">Actions</TableHead> : null}
@@ -141,6 +143,9 @@ export function ClientsPageClient() {
                       clients.map((client) => (
                         <TableRow key={client.id}>
                           <TableCell className="font-medium">{client.name}</TableCell>
+                          <TableCell className="max-w-[180px] truncate" title={client.address ?? undefined}>
+                            {client.address || "—"}
+                          </TableCell>
                           <TableCell>
                             {displayPerson(client.spocExternalName, client.spocExternalEmail)}
                           </TableCell>
@@ -152,6 +157,9 @@ export function ClientsPageClient() {
                           </TableCell>
                           <TableCell>
                             {displayPerson(client.deliveryManagerName, client.deliveryManagerEmail)}
+                          </TableCell>
+                          <TableCell>
+                            {displayPerson(client.projectManagerName, client.projectManagerEmail)}
                           </TableCell>
                           <TableCell>{client.projectCount}</TableCell>
                           <TableCell>{client.isActive ? "Active" : "Inactive"}</TableCell>
@@ -171,7 +179,7 @@ export function ClientsPageClient() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={canEdit ? 8 : 7} className="text-center text-sm text-wt-text-muted">
+                        <TableCell colSpan={canEdit ? 10 : 9} className="text-center text-sm text-wt-text-muted">
                           {UI_COPY.noRecordsFound}
                         </TableCell>
                       </TableRow>

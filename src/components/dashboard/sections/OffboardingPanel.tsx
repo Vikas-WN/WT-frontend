@@ -35,6 +35,7 @@ import {
   CARD_FORM_ACTIONS_CLASS,
   CARD_FORM_GRID_CLASS,
   CARD_STACK_CLASS,
+  TABLE_ROW_SELECTED_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -137,6 +138,8 @@ export function OffboardingPanel() {
   const selectedUserType = selectedCandidate?.user_type ?? "";
   const isInternOffboarding = selectedUserType.toUpperCase() === "INTERN";
   const isConsultantOffboarding = selectedUserType.toUpperCase() === "CONSULTANT";
+  const isInvitedOffboarding =
+    normalizeEmployeeStatusKey(selectedCandidate?.status) === "INVITED";
 
   const canSubmit = isOffboardingFormValid(offboardingForm, selectedUserType);
 
@@ -225,7 +228,9 @@ export function OffboardingPanel() {
           data?.failed_count ? `, ${data.failed_count} failed` : ""
         }.`;
       resultSummary = summary;
-      resultIsError = (data?.failed_count ?? 0) > 0;
+      resultIsError =
+        (data?.failed_count ?? 0) > 0 ||
+        (data?.sent_count ?? 0) === 0;
       setSelectedEmpIds([]);
       setBulkResendResults(data?.results ?? []);
     } catch (error) {
@@ -418,6 +423,8 @@ export function OffboardingPanel() {
           <CardTitle>Employee Offboarding</CardTitle>
           <CardDescription>
             Record resignation details and submit offboarding for an active or invited employee.
+            Active employees enter serving notice and receive the exit survey; invited employees are
+            offboarded directly without an exit survey.
           </CardDescription>
         </CardHeader>
         <Separator />
@@ -538,6 +545,12 @@ export function OffboardingPanel() {
             {offboardingNoticeLabel ? (
               <p className="text-sm text-wt-text-muted">{offboardingNoticeLabel}</p>
             ) : null}
+            {isInvitedOffboarding ? (
+              <p className="text-sm text-wt-text-muted">
+                This employee has not joined yet. They will be marked inactive immediately and will
+                not receive an exit survey.
+              </p>
+            ) : null}
             <div className={CARD_FORM_ACTIONS_CLASS}>
               <Button
                 variant="brand"
@@ -575,13 +588,13 @@ export function OffboardingPanel() {
         filters={
           <>
             <DatePickerField
-              label="LWD From"
+              label="From LWD"
               value={filterFromDate}
               onChange={setFilterFromDate}
               className="w-[10.5rem] shrink-0"
             />
             <DatePickerField
-              label="LWD To"
+              label="To LWD"
               value={filterToDate}
               onChange={setFilterToDate}
               className="w-[10.5rem] shrink-0"

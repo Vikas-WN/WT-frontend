@@ -19,6 +19,7 @@ export function ClientSelect({
     name: string;
     accountManagerEmail: string | null;
     deliveryManagerEmail: string | null;
+    projectManagerEmail: string | null;
   }) => void;
   required?: boolean;
   activeOnly?: boolean;
@@ -55,6 +56,7 @@ export function ClientSelect({
               name: client.name,
               accountManagerEmail: client.accountManagerEmail,
               deliveryManagerEmail: client.deliveryManagerEmail,
+              projectManagerEmail: client.projectManagerEmail,
             });
           }
         }}
