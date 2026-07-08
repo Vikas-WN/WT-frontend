@@ -41,6 +41,7 @@ export function DropdownSelect({
   disabled = false,
   loading = false,
   loadingLabel = "Loading…",
+  placeholder = "Select",
   required = false,
   className = "",
   selectClassName,
@@ -54,6 +55,7 @@ export function DropdownSelect({
   disabled?: boolean;
   loading?: boolean;
   loadingLabel?: string;
+  placeholder?: string;
   required?: boolean;
   className?: string;
   selectClassName?: string;
@@ -84,7 +86,7 @@ export function DropdownSelect({
           loading ? "text-wt-text-muted" : undefined
         )}
       >
-        <SelectValue placeholder={loading ? loadingLabel : "Select"} />
+        <SelectValue placeholder={loading ? loadingLabel : placeholder} />
       </SelectTrigger>
       <SelectContent>
         {loading ? (

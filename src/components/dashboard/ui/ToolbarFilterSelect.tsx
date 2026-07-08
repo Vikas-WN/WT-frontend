@@ -13,6 +13,7 @@ type ToolbarFilterSelectProps = {
   value: string;
   onChange: (value: string) => void;
   options: ToolbarFilterSelectOption[];
+  placeholder?: string;
   "aria-label": string;
   className?: string;
   disabled?: boolean;
@@ -25,6 +26,7 @@ export function ToolbarFilterSelect({
   value,
   onChange,
   options,
+  placeholder,
   "aria-label": ariaLabel,
   className,
   disabled = false,
@@ -37,6 +39,7 @@ export function ToolbarFilterSelect({
       value={value}
       onChange={onChange}
       options={options}
+      placeholder={placeholder}
       disabled={disabled}
       loading={loading}
       aria-label={ariaLabel}

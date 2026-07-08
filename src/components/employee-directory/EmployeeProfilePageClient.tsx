@@ -222,8 +222,10 @@ export function EmployeeProfilePageClient() {
             required: false,
           });
           if (personalError) throw new Error(personalError);
+          const phoneCountry = editForm.phone_country?.trim();
+          if (!phoneCountry) throw new Error("Please select a country code.");
           const phoneError = validatePhoneNumber(
-            editForm.phone_country ?? defaultPhoneCountryIso(),
+            phoneCountry,
             editForm.phone_number
           );
           if (phoneError) throw new Error(phoneError);
@@ -315,6 +317,10 @@ export function EmployeeProfilePageClient() {
                   editModeLabel="Edit Mode"
                 />
 
+                {(() => {
+                  const saving = actionLoading || updateMutation.isPending;
+                  return (
+                <>
                 {statusOnlyEdit ? (
                   <FormSection
                     title="Employee Status"
@@ -326,6 +332,7 @@ export function EmployeeProfilePageClient() {
                         value={editForm.user_status}
                         options={USER_STATUSES}
                         onChange={(v) => setEditForm({ ...editForm, user_status: v })}
+                        disabled={saving}
                       />
                     </div>
                   </FormSection>
@@ -339,6 +346,7 @@ export function EmployeeProfilePageClient() {
                         label="Name"
                         value={editForm.name}
                         onChange={(v) => setEditForm({ ...editForm, name: v })}
+                        disabled={saving}
                       />
                       <InputField
                         label="Work Email"
@@ -346,6 +354,7 @@ export function EmployeeProfilePageClient() {
                         required
                         value={editForm.email}
                         onChange={(v) => setEditForm({ ...editForm, email: v })}
+                        disabled={saving}
                       />
                       <AdaptiveSelectField
                         label="Country Code"
@@ -354,12 +363,14 @@ export function EmployeeProfilePageClient() {
                         searchPlaceholder="Search Country Code…"
                         options={PHONE_COUNTRY_OPTIONS}
                         onChange={(v) => setEditForm({ ...editForm, phone_country: v })}
+                        disabled={saving}
                       />
                       <InputField
                         label="Phone Number"
                         type="tel"
                         value={editForm.phone_number}
                         onChange={(v) => setEditForm({ ...editForm, phone_number: digitsOnly(v) })}
+                        disabled={saving}
                       />
                       <AdaptiveSelectField
                         label="Department"
@@ -368,24 +379,28 @@ export function EmployeeProfilePageClient() {
                         searchPlaceholder="Search Departments…"
                         options={departmentSelectOptions}
                         onChange={(v) => setEditForm({ ...editForm, department: v })}
+                        disabled={saving}
                       />
                       <AdaptiveSelectField
                         label="Status"
                         value={editForm.user_status}
                         options={USER_STATUSES}
                         onChange={(v) => setEditForm({ ...editForm, user_status: v })}
+                        disabled={saving}
                       />
                       <AdaptiveSelectField
                         label="Work Mode"
                         value={editForm.work_mode}
                         options={workModeOptions}
                         onChange={(v) => setEditForm({ ...editForm, work_mode: v })}
+                        disabled={saving}
                       />
                       <AdaptiveSelectField
                         label="Work Location"
                         value={editForm.work_location_type}
                         options={WORK_LOCATIONS}
                         onChange={(v) => setEditForm({ ...editForm, work_location_type: v })}
+                        disabled={saving}
                       />
                       <AdaptiveSelectField
                         label="Band"
@@ -397,6 +412,7 @@ export function EmployeeProfilePageClient() {
                           label: band.label,
                         }))}
                         onChange={(id) => setEditForm({ ...editForm, band_id: id })}
+                        disabled={saving}
                       />
                     </div>
 
@@ -406,11 +422,13 @@ export function EmployeeProfilePageClient() {
                           label="Primary Skills"
                           value={editForm.primary_skills}
                           onChange={(v) => setEditForm({ ...editForm, primary_skills: v })}
+                          disabled={saving}
                         />
                         <InputField
                           label="Secondary Skill"
                           value={editForm.secondary_skill}
                           onChange={(v) => setEditForm({ ...editForm, secondary_skill: v })}
+                          disabled={saving}
                         />
                         <AdaptiveSelectField
                           label="Secondary Skill Rating"
@@ -418,6 +436,7 @@ export function EmployeeProfilePageClient() {
                           placeholder="Select Rating"
                           options={SKILL_RATINGS}
                           onChange={(v) => setEditForm({ ...editForm, secondary_rating: v })}
+                          disabled={saving}
                         />
                       </div>
                     </FormSubsection>
@@ -430,10 +449,14 @@ export function EmployeeProfilePageClient() {
                       ? "Only the employee status will be updated."
                       : "Review your updates, then save to apply changes to this profile."
                   }
-                  saving={actionLoading || updateMutation.isPending}
+                  saving={saving}
                   onCancel={cancelEditor}
                   onSave={saveProfile}
                 />
+                </>
+                );
+              })()
+            }
               </div>
             ) : (
               <>
