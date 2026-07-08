@@ -237,6 +237,8 @@ export const endpoints = {
     resendBulk: `${api}/exit-interview/resend`,
     resend: (empId: string) =>
       `${api}/exit-interview/resend/${encodeURIComponent(empId)}`,
+    resubmit: (empId: string) =>
+      `${api}/exit-interview/resubmit/${encodeURIComponent(empId)}`,
   },
 
   hrReports: {

@@ -38,7 +38,6 @@ export function TalentPoolPageClient() {
     setSearch,
     loading,
     error,
-    loadDashboard,
     loadUnallocatedPage,
   } = useTalentPoolTables(queriesEnabled);
 
@@ -77,10 +76,6 @@ export function TalentPoolPageClient() {
               placeholder="Search"
               aria-label="Search"
             />
-            <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={loading} onClick={() => void loadDashboard()}
-            >
-              Refresh
-            </Button>
           </div>
         </div>
 

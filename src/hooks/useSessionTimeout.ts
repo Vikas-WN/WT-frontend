@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import {
   SESSION_ACTIVITY_PING_MS,
+  SESSION_IDLE_WARNING_MS,
   SESSION_INACTIVITY_MS,
   SESSION_MAX_MS,
   SESSION_REFRESH_INTERVAL_MS,
@@ -40,6 +41,10 @@ function touchLocalActivity() {
   return now;
 }
 
+export function recordLocalSessionActivity(): number {
+  return touchLocalActivity();
+}
+
 export function persistSessionTiming(sessionStartedAt?: string | null) {
   if (!isBrowser()) return;
   const started = sessionStartedAt ? Date.parse(sessionStartedAt) : Date.now();
@@ -59,19 +64,27 @@ export function clearSessionTiming() {
  */
 export function useSessionTimeout(
   enabled: boolean,
-  onTimeout: (reason: SessionLogoutReason) => void
-) {
+  onTimeout: (reason: SessionLogoutReason) => void,
+  onIdleWarning?: (minutesRemaining: number) => void
+): { extendSession: () => void } {
   const pathname = usePathname();
   const onTimeoutRef = useRef(onTimeout);
+  const onIdleWarningRef = useRef(onIdleWarning);
   const lastActivityRef = useRef(Date.now());
   const lastPingRef = useRef(Date.now());
   const lastRefreshRef = useRef(Date.now());
+  const idleWarningShownRef = useRef(false);
 
   useEffect(() => {
     onTimeoutRef.current = onTimeout;
   }, [onTimeout]);
 
+  useEffect(() => {
+    onIdleWarningRef.current = onIdleWarning;
+  }, [onIdleWarning]);
+
   const bumpActivity = useCallback(() => {
+    idleWarningShownRef.current = false;
     lastActivityRef.current = touchLocalActivity();
   }, []);
 
@@ -105,19 +118,30 @@ export function useSessionTimeout(
       const idleFor = now - lastActivityRef.current;
 
       if (now - sessionStart >= SESSION_MAX_MS) {
+        idleWarningShownRef.current = false;
         onTimeoutRef.current("expired");
         return;
       }
       if (idleFor >= SESSION_INACTIVITY_MS) {
+        idleWarningShownRef.current = false;
         onTimeoutRef.current("idle");
         return;
       }
 
+      const warningThreshold = SESSION_INACTIVITY_MS - SESSION_IDLE_WARNING_MS;
+      if (
+        idleFor >= warningThreshold &&
+        !idleWarningShownRef.current &&
+        onIdleWarningRef.current
+      ) {
+        idleWarningShownRef.current = true;
+        const minutesLeft = Math.max(1, Math.ceil((SESSION_INACTIVITY_MS - idleFor) / 60_000));
+        onIdleWarningRef.current(minutesLeft);
+      }
+
       if (idleFor < SESSION_INACTIVITY_MS && now - lastPingRef.current >= SESSION_ACTIVITY_PING_MS) {
         lastPingRef.current = now;
-        void recordSessionActivity().catch(() => {
-          onTimeoutRef.current("server");
-        });
+        void recordSessionActivity().catch(() => undefined);
       }
 
       if (
@@ -125,11 +149,7 @@ export function useSessionTimeout(
         now - lastRefreshRef.current >= SESSION_REFRESH_INTERVAL_MS
       ) {
         lastRefreshRef.current = now;
-        void refreshSession()
-          .then((user) => {
-            if (!user) onTimeoutRef.current("server");
-          })
-          .catch(() => undefined);
+        void refreshSession().catch(() => undefined);
       }
     }, 30_000);
 
@@ -144,4 +164,6 @@ export function useSessionTimeout(
   useEffect(() => {
     if (enabled) bumpActivity();
   }, [pathname, enabled, bumpActivity]);
+
+  return { extendSession: bumpActivity };
 }

@@ -68,6 +68,13 @@ export const exitInterviewService = {
     );
   },
 
+  /** POST /exit-interview/resubmit/{empId} — HR reopens a submitted survey for one-time resubmit. */
+  requestResubmission(empId: string) {
+    return apiClient.post<ApiEnvelope<ExitInterviewResendResult>>(
+      endpoints.exitInterview.resubmit(empId)
+    );
+  },
+
   /** POST /exit-interview/resend — bulk exit survey reminders. */
   resendSurveyBulk(empIds: string[]) {
     return apiClient.post<ApiEnvelope<ExitSurveyBulkResendData>>(

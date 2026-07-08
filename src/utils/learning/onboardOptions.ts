@@ -141,9 +141,34 @@ export function onboardRowsToEmployeeOptions(
   );
 }
 
+export function isNonTechOnboardRow(row: OnboardItem | Record<string, unknown>): boolean {
+  const r = onboardRowRecord(row);
+  const blob = [
+    r.stream,
+    r.department,
+    r.designation,
+    r.role,
+    r.job_title,
+    r.title,
+    r.user_type,
+    r.userType,
+  ]
+    .map((v) => String(v ?? "").trim().toLowerCase())
+    .filter(Boolean)
+    .join(" ");
+  if (!blob) return true;
+  return !/(engineer|developer|devops|qa\b|quality assurance|tester|testing|technical|tech\b|ui\/ux|android|ios|backend|frontend|fullstack|data engineer|ml engineer|architect)/i.test(
+    blob
+  );
+}
+
 export function accountManagerOptionsFromOnboard(
   rows: Array<OnboardItem | Record<string, unknown>>
 ): OnboardEmployeeOption[] {
-  const managers = onboardRowsToEmployeeOptions(rows.filter(isAccountManagerOnboardRow));
-  return managers.length ? managers : onboardRowsToEmployeeOptions(rows);
+  const nonTechRows = rows.filter(isNonTechOnboardRow);
+  const managers = onboardRowsToEmployeeOptions(
+    nonTechRows.filter(isAccountManagerOnboardRow)
+  );
+  if (managers.length) return managers;
+  return onboardRowsToEmployeeOptions(nonTechRows);
 }

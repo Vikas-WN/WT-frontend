@@ -61,6 +61,7 @@ export function ListPagination({
   onPageSizeChange,
   className = "",
   showPageNumbers = true,
+  nextOnly = false,
   loading = false,
 }: {
   page: number;
@@ -74,6 +75,7 @@ export function ListPagination({
   onPageSizeChange?: (size: number) => void;
   className?: string;
   showPageNumbers?: boolean;
+  nextOnly?: boolean;
   loading?: boolean;
 }) {
   if (totalItems <= 0) return null;
@@ -82,11 +84,11 @@ export function ListPagination({
   const isFirstPage = page <= 0;
   const isLastPage = page + 1 >= safeTotalPages;
   const pageTokens =
-    showPageNumbers && safeTotalPages > 1
+    !nextOnly && showPageNumbers && safeTotalPages > 1
       ? buildPaginationTokens(page, safeTotalPages)
       : [];
   const hasRange = rangeStart != null && rangeEnd != null;
-  const showPageSize = Boolean(onPageSizeChange) && pageSizeOptions.length > 1;
+  const showPageSize = !nextOnly && Boolean(onPageSizeChange) && pageSizeOptions.length > 1;
   const pageSizeSelectOptions = pageSizeOptions.map((size) => ({
     value: String(size),
     label: String(size),
@@ -139,17 +141,19 @@ export function ListPagination({
           className="flex flex-wrap items-center gap-1.5"
           aria-label="Pagination"
         >
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            className="rounded-lg border-wt-border bg-wt-surface-1 shadow-sm transition-colors duration-150"
-            disabled={isFirstPage || loading}
-            aria-label={UI_COPY.previous}
-            onClick={() => onPageChange(Math.max(0, page - 1))}
-          >
-            <ChevronLeftIcon />
-          </Button>
+          {!nextOnly ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              className="rounded-lg border-wt-border bg-wt-surface-1 shadow-sm transition-colors duration-150"
+              disabled={isFirstPage || loading}
+              aria-label={UI_COPY.previous}
+              onClick={() => onPageChange(Math.max(0, page - 1))}
+            >
+              <ChevronLeftIcon />
+            </Button>
+          ) : null}
 
           {pageTokens.length > 0 ? (
             <div
@@ -191,14 +195,18 @@ export function ListPagination({
 
           <Button
             type="button"
-            variant="outline"
-            size="icon-sm"
-            className="rounded-lg border-wt-border bg-wt-surface-1 shadow-sm transition-colors duration-150"
+            variant={nextOnly ? "brand" : "outline"}
+            size={nextOnly ? "sm" : "icon-sm"}
+            className={
+              nextOnly
+                ? "rounded-lg px-4 shadow-sm"
+                : "rounded-lg border-wt-border bg-wt-surface-1 shadow-sm transition-colors duration-150"
+            }
             disabled={isLastPage || loading}
             aria-label={UI_COPY.next}
             onClick={() => onPageChange(Math.min(safeTotalPages - 1, page + 1))}
           >
-            <ChevronRightIcon />
+            {nextOnly ? UI_COPY.next : <ChevronRightIcon />}
           </Button>
         </nav>
       ) : null}

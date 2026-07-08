@@ -83,7 +83,7 @@ export function ExitInterviewSurveyPanel({
     if (profileQ.isLoading) return null;
     if (!flags?.exit_interview_applicable) return null;
     if (flags.exit_interview_submitted) {
-      return "Thank you — your exit survey has been submitted.";
+      return "Thank you — your exit survey has been submitted. HR will review your responses.";
     }
     if (!flags.can_fill_exit_interview) {
       return "Your exit survey will be available during your notice period.";
@@ -214,7 +214,8 @@ export function ExitInterviewSurveyPanel({
 
         {!profileQ.isLoading && flags?.exit_interview_submitted ? (
           <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-            Your responses have been recorded. No further action is needed.
+            Your responses have been recorded and marked as completed. If HR needs changes, you will
+            receive a notification to resubmit.
           </div>
         ) : null}
       </div>

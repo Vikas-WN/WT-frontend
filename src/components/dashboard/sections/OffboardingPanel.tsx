@@ -59,6 +59,10 @@ import {
   mergeEmpIdSelection,
   resendableOffboardEmpIds,
 } from "@/utils/exitSurveyFollowUp";
+import {
+  formatEmployeeStatusLabel,
+  normalizeEmployeeStatusKey,
+} from "@/utils/userStatus";
 
 const USER_TYPE_FILTER_OPTIONS = ["", "FULLTIME", "INTERN", "CONSULTANT"] as const;
 
@@ -109,7 +113,6 @@ export function OffboardingPanel() {
     involuntaryPercent,
     attritionExitCount,
     refreshOffboardingData,
-    refetchList,
   } = useOffboardingPanelQueries();
 
   const [submitting, setSubmitting] = useState(false);
@@ -243,10 +246,16 @@ export function OffboardingPanel() {
 
   const candidateOptions = useMemo(
     () =>
-      offboardCandidates.map((emp) => ({
-        value: emp.emp_id,
-        label: `${emp.emp_id} — ${emp.name} (${emp.email})`,
-      })),
+      offboardCandidates.map((emp) => {
+        const statusLabel =
+          normalizeEmployeeStatusKey(emp.status) === "INVITED"
+            ? ` · ${formatEmployeeStatusLabel(emp.status)}`
+            : "";
+        return {
+          value: emp.emp_id,
+          label: `${emp.emp_id} — ${emp.name} (${emp.email})${statusLabel}`,
+        };
+      }),
     [offboardCandidates]
   );
 
@@ -404,7 +413,7 @@ export function OffboardingPanel() {
         <CardHeader>
           <CardTitle>Employee Offboarding</CardTitle>
           <CardDescription>
-            Record resignation details and submit offboarding for an active employee.
+            Record resignation details and submit offboarding for an active or invited employee.
           </CardDescription>
         </CardHeader>
         <Separator />
@@ -419,7 +428,7 @@ export function OffboardingPanel() {
                 required
                 disabled={loadingCandidates || submitting}
                 placeholder={
-                  candidateOptions.length ? "Select Employee" : "No Active Employees Available"
+                  candidateOptions.length ? "Select Employee" : "No Eligible Employees Available"
                 }
                 value={offboardingForm.emp_id}
                 onChange={handleEmployeeChange}
@@ -460,6 +469,7 @@ export function OffboardingPanel() {
                   />
                   <DatePickerField
                     label="Last Working Day"
+                    required
                     value={offboardingForm.last_working_day}
                     onChange={handleLastWorkingDayChange}
                     disabled={submitting}
@@ -494,6 +504,7 @@ export function OffboardingPanel() {
               )}
               <TextAreaField
                 label="Details"
+                required
                 className="md:col-span-2"
                 rows={5}
                 value={offboardingForm.reason}
@@ -502,6 +513,7 @@ export function OffboardingPanel() {
               />
               <TextAreaField
                 label="Critical Skill"
+                required
                 className="md:col-span-2"
                 rows={5}
                 value={offboardingForm.critical_skill}
@@ -584,16 +596,6 @@ export function OffboardingPanel() {
                 })),
               ]}
             />
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              className="h-10 px-3 py-2 text-sm"
-              onClick={() => void refetchList()}
-              disabled={loadingList}
-            >
-              Refresh
-            </Button>
             {selectedResendableCount > 0 ? (
               <Button
                 variant="brand"

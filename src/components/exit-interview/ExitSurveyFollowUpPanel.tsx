@@ -531,7 +531,7 @@ export function ExitSurveyFollowUpPanel() {
                             </Link>
                           ) : (
                             <span className="text-xs font-medium text-emerald-700">
-                              Submitted
+                              Completed
                             </span>
                           )
                         ) : (

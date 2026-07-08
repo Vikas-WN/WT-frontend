@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
@@ -13,6 +14,10 @@ import { ProfileDetailsSkeleton } from "@/components/dashboard/ui/SectionSkeleto
 import { useExitInterviewFormDefinition } from "@/hooks/exit-interview/useExitInterviewFormDefinition";
 import { useUpdateExitInterviewMinutesOfMeeting } from "@/hooks/exit-interview/useExitInterviewMinutesOfMeeting";
 import { useExitInterviewSubmissionDetail } from "@/hooks/exit-interview/useExitInterviewSubmissionDetail";
+import { exitInterviewService } from "@/services/exitInterview.service";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { EXIT_SURVEY_FOLLOW_UP_QUERY_KEY } from "@/hooks/exit-interview/useExitSurveyFollowUpList";
+import { useQueryClient } from "@tanstack/react-query";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import {
   exitInterviewFieldsWithResponses,
@@ -37,9 +42,12 @@ function formatDateTime(value: string | null): string {
 }
 
 export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId: string }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const { hasHrAccess, userRoles } = useDashboardAccess();
   const canView = hasHrAccess || userRoles.includes("ROLE_ADMIN");
   const { actionLoading, runAction } = useDashboardAction();
+  const [requestingResubmit, setRequestingResubmit] = useState(false);
 
   const detailQ = useExitInterviewSubmissionDetail(lookupId, { enabled: canView });
   const formDefQ = useExitInterviewFormDefinition({ enabled: canView && Boolean(detailQ.data) });
@@ -85,7 +93,27 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
     });
   };
 
-  const momSaving = actionLoading || updateMomMutation.isPending;
+  const requestResubmission = () => {
+    const empId = detail?.emp_id?.trim();
+    if (!empId || requestingResubmit) return;
+    void runAction("Request resubmission", async () => {
+      setRequestingResubmit(true);
+      try {
+        await exitInterviewService.requestResubmission(empId);
+        showSuccessToast("Exit survey reopened. The employee can resubmit once.");
+        await queryClient.invalidateQueries({ queryKey: EXIT_SURVEY_FOLLOW_UP_QUERY_KEY });
+        router.replace(DASHBOARD_ROUTES["exit-interview-submissions"]);
+      } catch (error) {
+        showErrorToast(
+          error instanceof Error ? error.message : "Could not reopen exit survey for resubmission."
+        );
+      } finally {
+        setRequestingResubmit(false);
+      }
+    });
+  };
+
+  const momSaving = actionLoading || updateMomMutation.isPending || requestingResubmit;
 
   return (
     <DashboardPageShell>
@@ -109,8 +137,29 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
 
           {detail ? (
             <>
-              <h3 className="text-lg font-semibold">{detail.employee_name}</h3>
-              <p className="mt-1 text-sm text-wt-text-muted">{detail.email}</p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold">{detail.employee_name}</h3>
+                  <p className="mt-1 text-sm text-wt-text-muted">{detail.email}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">
+                    Completed
+                  </span>
+                  {detail.emp_id ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      className="px-3 py-1.5 text-sm"
+                      disabled={momSaving}
+                      onClick={requestResubmission}
+                    >
+                      {requestingResubmit ? "Reopening…" : "Request Resubmission"}
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
 
               <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                 <div>

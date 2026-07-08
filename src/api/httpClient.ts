@@ -1,5 +1,9 @@
 import { ApiError, parseApiErrorMessage } from "@/api/error";
 import { attachApiLoadingTelemetry } from "@/api/apiLoading";
+import {
+  dispatchSessionLogout,
+  sessionLogoutReasonFromApiDetail,
+} from "@/lib/sessionLogoutBridge";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 type ResponseType = "json" | "text" | "blob" | "raw";
@@ -138,11 +142,18 @@ export class HttpClient {
       }
 
       if (!response.ok) {
+        const payload = await this.tryReadBody(response);
+
         if (response.status === 401 && !skipAuth) {
-          this.onUnauthorized?.();
+          const detail =
+            typeof payload === "object" && payload && "detail" in payload
+              ? String((payload as { detail?: unknown }).detail ?? "")
+              : typeof payload === "string"
+                ? payload
+                : "";
+          dispatchSessionLogout(sessionLogoutReasonFromApiDetail(detail) ?? "server");
         }
 
-        const payload = await this.tryReadBody(response);
         const serverUnavailable =
           response.status === 500 ||
           response.status === 502 ||
@@ -261,10 +272,3 @@ export const apiClient = new HttpClient({ baseUrl: DEFAULT_BASE_URL });
 if (typeof window !== "undefined") {
   attachApiLoadingTelemetry(apiClient);
 }
-
-apiClient.setUnauthorizedHandler(() => {
-  if (typeof window === "undefined") return;
-  if (window.location.pathname !== "/login") {
-    window.location.href = "/login";
-  }
-});
