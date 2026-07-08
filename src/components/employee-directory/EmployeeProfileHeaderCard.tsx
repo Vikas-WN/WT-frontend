@@ -149,7 +149,7 @@ export function EmployeeProfileHeaderCard({
                   </span>
                 ) : null}
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-xl font-bold tracking-tight text-wt-text sm:text-2xl">
+                  <h1 className="truncate text-xl font-bold tracking-tight text-wt-text sm:text-2xl" title={displayName}>
                     {displayName}
                   </h1>
                   {status ? <EmployeeStatusBadge status={status} /> : null}

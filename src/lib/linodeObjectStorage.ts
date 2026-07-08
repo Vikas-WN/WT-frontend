@@ -44,7 +44,7 @@ export function toRegionalObjectStorageEndpoint(
     // Keep unrelated hostnames like `cluster.{region}.linodeobjects.com`.
     const bucketName = bucket?.trim().toLowerCase();
     const looksLikeBucketHost =
-      Boolean(bucketName) && labelsBeforeRegion[0] === bucketName;
+      Boolean(bucket) && labelsBeforeRegion[0] === bucket!.trim().toLowerCase();
     if (looksLikeBucketHost) {
       return `https://${region}.linodeobjects.com`;
     }

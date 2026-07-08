@@ -237,6 +237,7 @@ export function EmployeeDirectoryPageClient() {
             value={userTypeFilter}
             onChange={setUserTypeFilter}
             options={userTypeSelectOptions}
+            placeholder="User Types"
             aria-label="User Type"
             compact
           />

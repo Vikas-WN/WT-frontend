@@ -26,9 +26,10 @@ import {
 } from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
-import { ManagementListCard, ManagementListContent } from "@/components/dashboard/ui/ManagementListCard";
+import { ManagementListCard } from "@/components/dashboard/ui/ManagementListCard";
 import { SearchInput } from "@/components/dashboard/ui/SearchInput";
-import { FormGridSkeleton, MetricCardsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
+import { FormGridSkeleton, MetricCardsSkeleton, TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
+import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import {
   CARD_CONTENT_STACK_CLASS,
   CARD_FORM_ACTIONS_CLASS,
@@ -60,10 +61,7 @@ import {
   mergeEmpIdSelection,
   resendableOffboardEmpIds,
 } from "@/utils/exitSurveyFollowUp";
-import {
-  formatEmployeeStatusLabel,
-  normalizeEmployeeStatusKey,
-} from "@/utils/userStatus";
+import { normalizeEmployeeStatusKey } from "@/utils/userStatus";
 
 const USER_TYPE_FILTER_OPTIONS = ["", "FULLTIME", "INTERN", "CONSULTANT"] as const;
 
@@ -115,6 +113,20 @@ export function OffboardingPanel() {
     attritionExitCount,
     refreshOffboardingData,
   } = useOffboardingPanelQueries();
+  const [listCache, setListCache] = useState<{
+    loaded: boolean;
+    rows: typeof offboardedRows;
+    total: number;
+  }>({ loaded: false, rows: [], total: 0 });
+
+  useEffect(() => {
+    if (offboardedRows.length > 0) {
+      setListCache({ loaded: true, rows: offboardedRows, total: listTotal });
+    }
+  }, [offboardedRows, listTotal]);
+
+  const displayRows = loadingList && !offboardedRows.length ? listCache.rows : offboardedRows;
+  const displayTotal = loadingList && !offboardedRows.length ? listCache.total : listTotal;
 
   const [submitting, setSubmitting] = useState(false);
   const [resendingEmpId, setResendingEmpId] = useState<string | null>(null);
@@ -245,20 +257,17 @@ export function OffboardingPanel() {
   }
 
 
-  const totalPages = Math.max(1, Math.ceil(listTotal / OFFBOARDING_LIST_PAGE_SIZE) || 1);
-  const rangeStart = listTotal === 0 ? 0 : listPage * OFFBOARDING_LIST_PAGE_SIZE + 1;
-  const rangeEnd = Math.min(listTotal, (listPage + 1) * OFFBOARDING_LIST_PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(displayTotal / OFFBOARDING_LIST_PAGE_SIZE) || 1);
+  const rangeStart = displayTotal === 0 ? 0 : listPage * OFFBOARDING_LIST_PAGE_SIZE + 1;
+  const rangeEnd = Math.min(displayTotal, (listPage + 1) * OFFBOARDING_LIST_PAGE_SIZE);
 
   const candidateOptions = useMemo(
     () =>
       offboardCandidates.map((emp) => {
-        const statusLabel =
-          normalizeEmployeeStatusKey(emp.status) === "INVITED"
-            ? ` · ${formatEmployeeStatusLabel(emp.status)}`
-            : "";
+        const label = `${emp.emp_id} — ${emp.name}`;
         return {
           value: emp.emp_id,
-          label: `${emp.emp_id} — ${emp.name} (${emp.email})${statusLabel}`,
+          label: label.length > 50 ? `${label.slice(0, 50)}…` : label,
         };
       }),
     [offboardCandidates]
@@ -652,135 +661,137 @@ export function OffboardingPanel() {
           </div>
         ) : null}
 
-        <ManagementListContent
-          isLoading={loadingList}
-          isEmpty={!loadingList && !offboardedRows.length}
-          emptyTitle="No Offboarded Employees Found"
-          emptyDescription="Try adjusting your search or filters."
-          skeletonRows={8}
-          skeletonColumns={10}
-        >
-          <div className={INNER_SCROLL_CLASS}>
-              <WtTable className="min-w-full border-separate border-spacing-0">
-                <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-10">
-                      <span className="sr-only">Select</span>
-                      <TableCheckbox
-                        checked={allResendableOnPageSelected}
-                        indeterminate={
-                          someResendableOnPageSelected && !allResendableOnPageSelected
-                        }
-                        disabled={
-                          !resendableEmpIdsOnPage.length ||
-                          loadingList ||
-                          bulkResending ||
-                          Boolean(resendingEmpId)
-                        }
-                        onCheckedChange={(checked) => toggleSelectAllOnPage(checked)}
-                        aria-label="Select all resendable employees on this page"
-                      />
-                    </TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Exit Type</TableHead>
-                    <TableHead>Resignation</TableHead>
-                    <TableHead>Last Working Day</TableHead>
-                    <TableHead className="text-right">
-                      Notice (days)
-                    </TableHead>
-                    <TableHead>Designation</TableHead>
-                    <TableHead>Band</TableHead>
-                    <TableHead>Regretted</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {offboardedRows.map((row) => {
-                    const empId = String(row.emp_id ?? "").trim();
-                    const canResend = isResendableOffboardListRow(row);
-                    const isResending = Boolean(empId && resendingEmpId === empId);
-                    const isSelected = Boolean(empId && selectedEmpIds.includes(empId));
-                    const surveySubmitted =
-                      row.exit_survey_submitted === true || row.submission_status === "SUBMITTED";
-                    return (
-                    <TableRow
-                      key={row.emp_id}
-                      className={`hover:bg-wt-page-bg/50 ${
-                        isSelected ? TABLE_ROW_SELECTED_CLASS : ""
-                      }`}
-                    >
-                      <TableCell className="px-3 py-2">
-                        {canResend ? (
-                          <TableCheckbox
-                            checked={isSelected}
-                            disabled={loadingList || bulkResending || isResending}
-                            onCheckedChange={(checked) =>
-                              toggleRowSelection(empId, checked)
-                            }
-                            aria-label={`Select ${row.employee_name || empId}`}
-                          />
-                        ) : null}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap">{row.employee_name || "—"}</TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap">
-                        <EmployeeStatusBadge status={row.status} />
-                      </TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap">
-                        {formatExitTypeLabel(row.exit_type)}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap tabular-nums">
-                        {formatApiDateDisplay(row.resignation_date) || "—"}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap tabular-nums">
-                        {formatApiDateDisplay(row.last_working_day) || "—"}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-right whitespace-nowrap tabular-nums">
-                        {row.notice_period_days ?? "—"}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap max-w-[200px] truncate">
-                        {row.designation ?? "—"}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap max-w-[160px] truncate">
-                        {row.band_name ?? "—"}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap">{formatBool(row.is_regretted)}</TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap">
-                        {canResend ? (
-                          <Button
-                            variant="brand"
-                            size="xs"
-                            type="button"
-                            className="px-2.5 py-1 text-xs"
-                            disabled={loadingList || isResending || bulkResending}
-                            onClick={() => void handleResendExitSurvey(empId, row.email)}
-                          >
-                            {isResending ? "Sending…" : "Resend Exit Survey"}
-                          </Button>
-                        ) : surveySubmitted ? (
-                          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                            Submitted
-                          </span>
-                        ) : (
-                          <span className="text-xs text-wt-text-muted">—</span>
-                        )}
-                      </TableCell>
+        {loadingList && !listCache.loaded ? (
+          <TableRowsSkeleton rows={8} columns={10} />
+        ) : !loadingList && !offboardedRows.length && listCache.loaded ? (
+          <EmptyState
+            title="No Offboarded Employees Found"
+            description="Try adjusting your search or filters."
+          />
+        ) : (
+          <>
+            <div className="relative">
+              {loadingList ? (
+                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/60">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-wt-brand border-t-transparent" />
+                </div>
+              ) : null}
+              <div className={INNER_SCROLL_CLASS}>
+                <WtTable className="min-w-full border-separate border-spacing-0">
+                  <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-10">
+                        <span className="sr-only">Select</span>
+                        <TableCheckbox
+                          checked={allResendableOnPageSelected}
+                          indeterminate={
+                            someResendableOnPageSelected && !allResendableOnPageSelected
+                          }
+                          disabled={
+                            !resendableEmpIdsOnPage.length ||
+                            loadingList ||
+                            bulkResending ||
+                            Boolean(resendingEmpId)
+                          }
+                          onCheckedChange={(checked) => toggleSelectAllOnPage(checked)}
+                          aria-label="Select all resendable employees on this page"
+                        />
+                      </TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Exit Type</TableHead>
+                      <TableHead>Resignation</TableHead>
+                      <TableHead>Last Working Day</TableHead>
+                      <TableHead className="text-right">
+                        Notice (days)
+                      </TableHead>
+                      <TableHead>Designation</TableHead>
+                      <TableHead>Band</TableHead>
+                      <TableHead>Regretted</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </WtTable>
+                  </TableHeader>
+                  <TableBody>
+                    {displayRows.map((row) => {
+                      const empId = String(row.emp_id ?? "").trim();
+                      const canResend = isResendableOffboardListRow(row);
+                      const isResending = Boolean(empId && resendingEmpId === empId);
+                      const isSelected = Boolean(empId && selectedEmpIds.includes(empId));
+                      const surveySubmitted =
+                        row.exit_survey_submitted === true || row.submission_status === "SUBMITTED";
+
+                      return (
+                      <TableRow
+                        key={row.emp_id}
+                        className={`hover:bg-wt-page-bg/50 ${
+                          isSelected ? "bg-indigo-50/70" : ""
+                        }`}
+                      >
+                        <TableCell className="px-3 py-2">
+                          {canResend ? (
+                            <TableCheckbox
+                              checked={isSelected}
+                              disabled={loadingList || bulkResending || isResending}
+                              onCheckedChange={(checked) =>
+                                toggleRowSelection(empId, checked)
+                              }
+                              aria-label={`Select ${row.employee_name || empId}`}
+                            />
+                          ) : null}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 whitespace-nowrap">{row.employee_name || "—"}</TableCell>
+                        <TableCell className="px-3 py-2 whitespace-nowrap">
+                          <EmployeeStatusBadge status={row.status} />
+                        </TableCell>
+                        <TableCell className="px-3 py-2 whitespace-nowrap">
+                          {formatExitTypeLabel(row.exit_type)}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 whitespace-nowrap tabular-nums">
+                          {formatApiDateDisplay(row.resignation_date) || "—"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 whitespace-nowrap tabular-nums">
+                          {formatApiDateDisplay(row.last_working_day) || "—"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-right whitespace-nowrap tabular-nums">
+                          {row.notice_period_days ?? "—"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 whitespace-nowrap max-w-[200px] truncate">
+                          {row.designation ?? "—"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 whitespace-nowrap max-w-[160px] truncate">
+                          {row.band_name ?? "—"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 whitespace-nowrap">{formatBool(row.is_regretted)}</TableCell>
+                        <TableCell className="px-3 py-2 whitespace-nowrap">
+                          {canResend ? (
+                            <Button variant="brand" size="xs" type="button" className="px-2.5 py-1 text-xs" disabled={loadingList || isResending || bulkResending} onClick={() => void handleResendExitSurvey(empId, row.email)}
+                            >
+                              {isResending ? "Sending…" : "Resend Exit Survey"}
+                            </Button>
+                          ) : surveySubmitted ? (
+                            <span className="text-xs font-medium text-emerald-700">Submitted</span>
+                          ) : (
+                            <span className="text-xs text-wt-text-muted">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </WtTable>
+              </div>
             </div>
             <ListPagination
               page={listPage}
               totalPages={totalPages}
-              totalItems={listTotal}
+              totalItems={displayTotal}
               rangeStart={rangeStart}
               rangeEnd={rangeEnd}
               pageSize={OFFBOARDING_LIST_PAGE_SIZE}
               onPageChange={setListPage}
             />
-        </ManagementListContent>
+          </>
+        )}
       </ManagementListCard>
     </section>
   );

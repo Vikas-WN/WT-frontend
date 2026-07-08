@@ -23,10 +23,10 @@ function BalanceStatCard({
 }) {
   return (
     <div
-      className={`rounded-xl border border-border/40 bg-white p-6 shadow-sm ${className}`}
+      className={`rounded-xl border border-wt-border/40 dark:border-white/20 bg-wt-surface-1 p-6 shadow-sm ${className}`}
     >
       <div className="flex items-center gap-3 mb-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/70 shadow-sm ring-1 ring-black/5">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-wt-surface-1/70 shadow-sm ring-1 ring-wt-border/20">
           <Icon className="size-[18px]" aria-hidden />
         </div>
         <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">{label}</p>

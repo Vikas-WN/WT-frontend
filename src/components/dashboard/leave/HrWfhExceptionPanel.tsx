@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
@@ -66,6 +66,16 @@ export function HrWfhExceptionPanel({
   const { rows, loading, filters, setFilters, load } = useHrWfhExceptionRequests();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [pendingFromDate, setPendingFromDate] = useState(filters.fromDate);
+  const [pendingToDate, setPendingToDate] = useState(filters.toDate);
+  const mountedRef = useRef(false);
+
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      void load();
+    }
+  }, [load]);
 
   const [rejectDialog, setRejectDialog] = useState<{
     open: boolean;
@@ -105,7 +115,7 @@ export function HrWfhExceptionPanel({
           user_request_status: "APPROVED",
         }),
       });
-      showSuccessToast("Custom WFH request approved.");
+      showSuccessToast("Work From Home Request Updated");
       await load();
     } catch {
       showErrorToast("Failed to approve request.");
@@ -158,21 +168,24 @@ export function HrWfhExceptionPanel({
         />
         <ApiDateField
           label="From Date"
-          value={filters.fromDate}
-          onChange={(v) => setFilters((prev) => ({ ...prev, fromDate: v }))}
+          value={pendingFromDate}
+          onChange={(v) => setPendingFromDate(v)}
           className="min-w-0 flex-1"
         />
         <ApiDateField
           label="To Date"
-          value={filters.toDate}
-          onChange={(v) => setFilters((prev) => ({ ...prev, toDate: v }))}
+          value={pendingToDate}
+          onChange={(v) => setPendingToDate(v)}
           className="min-w-0 flex-1"
         />
         <Button
           variant="brand"
           type="button"
           className="h-10 shrink-0 px-3 py-2"
-          onClick={() => runAction("Refresh WFH exceptions", () => load())}
+          onClick={() => {
+            setFilters({ fromDate: pendingFromDate, toDate: pendingToDate });
+            void runAction("Refresh WFH exceptions", () => load());
+          }}
           disabled={actionLoading || loading}
         >
           Fetch Requests
