@@ -416,7 +416,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         profile={profile}
         sidebarDisplayName={sidebarDisplayName}
         canAccessProfile={canAccessProfile}
-        isOffboarded={isExitSurveyOnlyAccess}
+        isOffboarded={isOffboarded || isExitSurveyOnlyAccess}
         onLogout={logout}
       />
 

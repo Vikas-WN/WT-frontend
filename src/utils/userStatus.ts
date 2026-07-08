@@ -80,6 +80,12 @@ export function isServingNoticeUserStatus(status: unknown): boolean {
   return normalizeEmployeeStatusKey(status) === "SERVING_NOTICE";
 }
 
+/** Active or invited employees eligible for HR offboarding. */
+export function isEligibleOffboardCandidateStatus(status: unknown): boolean {
+  const key = normalizeEmployeeStatusKey(status);
+  return key === "ACTIVE" || key === "INVITED";
+}
+
 /** @deprecated Use isServingNoticeUserStatus */
 export function isInNoticeUserStatus(status: unknown): boolean {
   return isServingNoticeUserStatus(status);

@@ -121,6 +121,7 @@ export function isOffboardingFormValid(
 ): boolean {
   const normalizedType = userType.trim().toUpperCase();
   if (!form.emp_id.trim()) return false;
+  if (!form.reason.trim() || !form.critical_skill.trim()) return false;
   if (normalizedType === "INTERN") {
     const lwd = form.last_working_day.trim();
     return Boolean(lwd && form.resignation_date.trim() === lwd);

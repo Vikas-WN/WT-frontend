@@ -127,7 +127,7 @@ import {
   ALLOCATION_LIST_SORT_OPTIONS,
   toggleColumnSort,
 } from "@/utils/listSort";
-import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
+import { IconUser, IconPencil, IconTrash } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
@@ -2485,7 +2485,12 @@ export function AllocationPageClient() {
     }
     if (talentPoolPrefillHandled.current === email) return;
     talentPoolPrefillHandled.current = email;
-    setAllocationForm((prev) => ({ ...prev, employee_email: email }));
+    setAllocationForm((prev) => ({
+      ...prev,
+      employee_email: email,
+      allocation_type: "DEPLOYABLE",
+      billing_status: "TALENT_POOL",
+    }));
     setEditingAllocationId("");
     setAllocationHrSubTab("allocate");
     setAllocateDialogOpen(true);
@@ -2508,6 +2513,8 @@ export function AllocationPageClient() {
     return applyListSort(filtered, projectSortId, PROJECT_SORT_OPTIONS);
   }, [hrProjectRawRows, projectFilters, projectSortId]);
   const projectPagination = useClientPagination(filteredProjects, {
+    pageSize: 10,
+    pageSizeOptions: [10],
     resetKeys: [projectFilters.search, projectFilters.project_type, projectSortId],
   });
   const filteredAllocations = useMemo(
@@ -3429,23 +3436,6 @@ export function AllocationPageClient() {
                                     >
                                       Create Project
                                     </Button>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon-sm"
-                                      className="text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
-                                      onClick={() =>
-                                        runAction("Load projects", async () => {
-                                          refreshHrProjects();
-                                          setProjectFilters({ search: "", project_type: "ALL" });
-                                        })
-                                      }
-                                      disabled={actionLoading}
-                                      aria-label="Refresh projects"
-                                      title="Refresh projects"
-                                    >
-                                      <IconRefresh />
-                                    </Button>
                                   </div>
                                 </div>
                                 <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-3">
@@ -3558,9 +3548,9 @@ export function AllocationPageClient() {
                                       rangeStart={projectPagination.rangeStart}
                                       rangeEnd={projectPagination.rangeEnd}
                                       pageSize={projectPagination.pageSize}
-                                      pageSizeOptions={projectPagination.pageSizeOptions}
                                       onPageChange={projectPagination.setPage}
-                                      onPageSizeChange={projectPagination.setPageSize}
+                                      nextOnly
+                                      showPageNumbers={false}
                                     />
                                     </>
                                   ) : (
@@ -3616,15 +3606,6 @@ export function AllocationPageClient() {
                                         onChange={(e) => setAllocationListSearch(e.target.value)}
                                         aria-label="Search allocations"
                                       />
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="xs"
-                                        disabled={allocationsLoading || actionLoading}
-                                        onClick={() => void loadAllocationsForHr()}
-                                      >
-                                        Refresh
-                                      </Button>
                                     </div>
                                   </div>
                                   {allocationsLoadError ? (
@@ -4005,7 +3986,7 @@ export function AllocationPageClient() {
                                     <p className="text-sm text-wt-text-muted">
                                       {allocationsLoadError
                                         ? "Allocation list could not be loaded."
-                                        : "No allocations found. Create one under Project allocation, then refresh."}
+                                        : "No allocations found. Create one under Project Allocation."}
                                     </p>
                                   )}
                                 </div>
@@ -4066,6 +4047,7 @@ export function AllocationPageClient() {
                                 onCreated={() => refreshHrProjects()}
                                 activeProjectTypes={activeProjectTypes}
                                 enabled={hasAllocationAccess}
+                                allocationPercentOptions={allocationPercentOptions}
                               />
                               <AllocateEmployeeDialog
                                 open={allocateDialogOpen}

@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   getGoogleSignInUrl,
   oauthErrorMessages,
@@ -11,6 +11,11 @@ import { useAuth } from "@/context/AuthContext";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 import { applyResolvedTheme } from "@/utils/dashboard/theme";
+import { SessionLogoutDialog } from "@/components/auth/SessionLogoutDialog";
+import {
+  sessionLogoutReasonFromErrorCode,
+  type SessionLogoutReason,
+} from "@/constants/sessionPolicy";
 
 const TAGLINE =
   "Workforce visibility and project allocation—aligned in one secure workspace.";
@@ -108,9 +113,11 @@ function LoginShell({ children }: { children: React.ReactNode }) {
 }
 
 function LoginPageInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { status, refresh } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [sessionLogoutReason, setSessionLogoutReason] = useState<SessionLogoutReason | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
   const didRedirect = useRef(false);
   const didPostLoginRefresh = useRef(false);
@@ -121,9 +128,19 @@ function LoginPageInner() {
 
   useEffect(() => {
     const rawError = searchParams.get("error");
-    if (rawError) {
-      setError(oauthErrorMessages[rawError] ?? "An unknown error occurred.");
+    if (!rawError) {
+      setError(null);
+      setSessionLogoutReason(null);
+      return;
     }
+    const sessionReason = sessionLogoutReasonFromErrorCode(rawError);
+    if (sessionReason) {
+      setSessionLogoutReason(sessionReason);
+      setError(null);
+      return;
+    }
+    setSessionLogoutReason(null);
+    setError(oauthErrorMessages[rawError] ?? "An unknown error occurred.");
   }, [searchParams]);
 
   useEffect(() => {
@@ -151,6 +168,11 @@ function LoginPageInner() {
     window.location.href = getGoogleSignInUrl();
   }
 
+  function dismissSessionLogoutDialog() {
+    setSessionLogoutReason(null);
+    router.replace("/login");
+  }
+
   if (status === "loading") {
     return (
       <LoginShell>
@@ -161,6 +183,11 @@ function LoginPageInner() {
 
   return (
     <LoginShell>
+      <SessionLogoutDialog
+        open={sessionLogoutReason != null}
+        reason={sessionLogoutReason ?? "server"}
+        onConfirm={dismissSessionLogoutDialog}
+      />
       <div className="fade-up space-y-8">
         <div className="space-y-6 lg:hidden">
           <WebTrakBrand variant="login" />

@@ -108,7 +108,7 @@ function validateWorkStep(form: OnboardFormState, internBandId: number, defaultC
   if (!form.user_type) throw new Error("User Type is required.");
   if (!department) throw new Error("Department is required.");
   if (!role) {
-    throw new Error("Designation is required. Please select a valid designation for the chosen band.");
+    throw new Error(" No designation configured for the selected band");
   }
   if (!form.work_mode) throw new Error("Work Mode is required.");
   if (!form.work_location_type) throw new Error("Work Location is required.");
@@ -192,6 +192,18 @@ export function HrOnboardForm({
     if (form.user_type === "INTERN") return internBandId;
     return Number(form.band_id);
   }, [defaultConsultantBandId, form.band_id, form.user_type, internBandId]);
+
+  const reportingManagerOptions = useMemo(
+    () =>
+      options.reporting_managers.map((rm) => {
+        const label = rm.label.replace(/\s*\([^)]*\)\s*$/, "").trim();
+        return {
+          ...rm,
+          label: label.length > 50 ? `${label.slice(0, 50)}…` : label,
+        };
+      }),
+    [options.reporting_managers]
+  );
 
   const department = form.department.trim();
   const designationsQ = useQuery({
@@ -476,11 +488,11 @@ export function HrOnboardForm({
           label="Reporting Manager"
           required
           placeholder={
-            options.reporting_managers.length ? "Select" : "No Employees Available"
+            reportingManagerOptions.length ? "Select" : "No Employees Available"
           }
           value={form.reporting_manager_id}
-          disabled={!options.reporting_managers.length}
-          options={options.reporting_managers}
+          disabled={!reportingManagerOptions.length}
+          options={reportingManagerOptions}
           className="[&_[data-slot=select-content]]:max-w-[min(calc(100vw-2rem),28rem)] [&_[data-slot=select-item]]:max-w-full [&_[data-slot=select-item]_span]:truncate"
           onChange={(v) => setForm((p) => ({ ...p, reporting_manager_id: v }))}
         />

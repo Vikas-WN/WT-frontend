@@ -9,17 +9,20 @@ import React, {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import { type AuthUser, refreshSession, logout as authLogout } from "@/lib/auth";
+import { type AuthUser, refreshSession, logout as authLogout, recordSessionActivity } from "@/lib/auth";
 import { normalizeRoles } from "@/utils/roles";
 import {
   clearSessionTiming,
   persistSessionTiming,
   useSessionTimeout,
 } from "@/hooks/useSessionTimeout";
+import { type SessionLogoutReason } from "@/constants/sessionPolicy";
+import { SessionLogoutDialog } from "@/components/auth/SessionLogoutDialog";
+import { SessionIdleWarningDialog } from "@/components/auth/SessionIdleWarningDialog";
 import {
-  sessionLogoutMessages,
-  type SessionLogoutReason,
-} from "@/constants/sessionPolicy";
+  SESSION_LOGOUT_EVENT,
+  type SessionLogoutEventDetail,
+} from "@/lib/sessionLogoutBridge";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                                 */
@@ -56,9 +59,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
+  const [sessionLogoutReason, setSessionLogoutReason] = useState<SessionLogoutReason | null>(null);
+  const [idleWarningMinutes, setIdleWarningMinutes] = useState<number | null>(null);
   const didInitialRefresh = useRef(false);
   const timeoutHandled = useRef(false);
   const userRef = useRef<AuthUser | null>(null);
+  const extendSessionRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     userRef.current = user;
@@ -98,6 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearSessionTiming();
       setUser(null);
       setStatus("unauthenticated");
+      setIdleWarningMinutes(null);
       router.push("/login");
     }
   }, [router]);
@@ -105,7 +112,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const handleSessionTimeout = useCallback(
     async (reason: SessionLogoutReason) => {
       if (timeoutHandled.current) return;
+
+      const wasSignedIn = userRef.current != null || status === "authenticated";
       timeoutHandled.current = true;
+      setIdleWarningMinutes(null);
       try {
         await authLogout();
       } catch {
@@ -114,19 +124,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         clearSessionTiming();
         setUser(null);
         setStatus("unauthenticated");
-        const query =
-          reason === "idle"
-            ? "session_idle_timeout"
-            : reason === "expired"
-              ? "session_expired"
-              : "oauth_login_failed";
-        router.replace(`/login?error=${query}`);
+        if (wasSignedIn) {
+          setSessionLogoutReason(reason);
+        }
       }
     },
-    [router]
+    [status]
   );
 
-  useSessionTimeout(status === "authenticated", handleSessionTimeout);
+  const handleIdleWarning = useCallback((minutesRemaining: number) => {
+    setIdleWarningMinutes(minutesRemaining);
+  }, []);
+
+  const dismissIdleWarning = useCallback(() => {
+    setIdleWarningMinutes(null);
+    extendSessionRef.current();
+    timeoutHandled.current = false;
+    void recordSessionActivity().catch(() => undefined);
+  }, []);
+
+  const confirmSessionLogout = useCallback(() => {
+    setSessionLogoutReason(null);
+    timeoutHandled.current = false;
+    router.replace("/login");
+  }, [router]);
+
+  const { extendSession } = useSessionTimeout(
+    status === "authenticated",
+    handleSessionTimeout,
+    handleIdleWarning
+  );
+
+  useEffect(() => {
+    extendSessionRef.current = extendSession;
+  }, [extendSession]);
+
+  useEffect(() => {
+    const onSessionLogout = (event: Event) => {
+      const detail = (event as CustomEvent<SessionLogoutEventDetail>).detail;
+      if (!detail?.reason) return;
+      void handleSessionTimeout(detail.reason);
+    };
+    window.addEventListener(SESSION_LOGOUT_EVENT, onSessionLogout);
+    return () => window.removeEventListener(SESSION_LOGOUT_EVENT, onSessionLogout);
+  }, [handleSessionTimeout]);
 
   /* Validate session on first mount */
   useEffect(() => {
@@ -144,6 +185,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{ user, status, refresh, logout }}>
       {children}
+      <SessionIdleWarningDialog
+        open={idleWarningMinutes != null}
+        minutesRemaining={idleWarningMinutes ?? 5}
+        onStaySignedIn={dismissIdleWarning}
+      />
+      <SessionLogoutDialog
+        open={sessionLogoutReason != null}
+        reason={sessionLogoutReason ?? "server"}
+        onConfirm={confirmSessionLogout}
+      />
     </AuthContext.Provider>
   );
 }
@@ -159,5 +210,3 @@ export function useAuth(): AuthContextValue {
   }
   return ctx;
 }
-
-export { sessionLogoutMessages };

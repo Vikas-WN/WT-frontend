@@ -5,6 +5,22 @@
 import { endpoints } from "@/api/endpoints";
 import { ApiError } from "@/api/error";
 import { apiClient } from "@/api/httpClient";
+import type { SessionLogoutReason } from "@/constants/sessionPolicy";
+import {
+  dispatchSessionLogout,
+  sessionLogoutReasonFromApiDetail,
+} from "@/lib/sessionLogoutBridge";
+
+function sessionLogoutReasonFromApiError(error: ApiError): SessionLogoutReason {
+  const payload = error.payload;
+  const detail =
+    typeof payload === "object" && payload && "detail" in payload
+      ? String((payload as { detail?: unknown }).detail ?? "")
+      : typeof payload === "string"
+        ? payload
+        : "";
+  return sessionLogoutReasonFromApiDetail(detail) ?? "server";
+}
 
 export interface AuthUser {
   message: string;
@@ -44,7 +60,10 @@ export async function refreshSession(): Promise<AuthUser | null> {
     });
     return body.data;
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) return null;
+    if (error instanceof ApiError && error.status === 401) {
+      dispatchSessionLogout(sessionLogoutReasonFromApiError(error));
+      return null;
+    }
     throw error;
   }
 }
@@ -53,9 +72,17 @@ export async function refreshSession(): Promise<AuthUser | null> {
  * Records user activity server-side to reset the inactivity timer.
  */
 export async function recordSessionActivity(): Promise<void> {
-  await apiClient.post<ApiResponse<null>>(endpoints.auth.activity, {
-    skipAuth: true,
-  });
+  try {
+    await apiClient.post<ApiResponse<null>>(endpoints.auth.activity, {
+      skipAuth: true,
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      dispatchSessionLogout(sessionLogoutReasonFromApiError(error));
+      return;
+    }
+    throw error;
+  }
 }
 
 /**

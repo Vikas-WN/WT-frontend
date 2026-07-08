@@ -7,7 +7,10 @@ import { hrmsService } from "@/services/hrms.service";
 import type { HrOffboardListItem } from "@/types/offboard";
 import { toPagedRows } from "@/utils/apiRows";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { isServingNoticeUserStatus, normalizeEmployeeStatusKey } from "@/utils/userStatus";
+import {
+  isEligibleOffboardCandidateStatus,
+  isServingNoticeUserStatus,
+} from "@/utils/userStatus";
 
 export type OffboardCandidate = {
   emp_id: string;
@@ -15,6 +18,7 @@ export type OffboardCandidate = {
   email: string;
   user_type: string;
   band: string;
+  status: string;
 };
 
 export const OFFBOARDING_LIST_PAGE_SIZE = 10;
@@ -58,10 +62,7 @@ function buildOffboardCandidates(
           const emp_id = String(row.emp_id ?? row.empId ?? "").trim();
           if (!emp_id || offboardedIds.has(emp_id.toLowerCase())) return null;
           const status = String(row.status ?? "").trim().toUpperCase();
-          if (
-            normalizeEmployeeStatusKey(status) === "INACTIVE" ||
-            isServingNoticeUserStatus(status)
-          ) {
+          if (!isEligibleOffboardCandidateStatus(status) || isServingNoticeUserStatus(status)) {
             return null;
           }
           const name = String(row.name ?? "—").trim() || "—";
@@ -70,7 +71,10 @@ function buildOffboardCandidates(
           const band =
             String(row.band ?? row.band_name ?? row.bandName ?? row.band_id ?? row.bandId ?? "")
               .trim() || "—";
-          return [emp_id.toLowerCase(), { emp_id, name, email, user_type, band }] as const;
+          return [
+            emp_id.toLowerCase(),
+            { emp_id, name, email, user_type, band, status },
+          ] as const;
         })
         .filter((entry): entry is readonly [string, OffboardCandidate] => Boolean(entry))
     ).values()
@@ -144,7 +148,7 @@ export function useOffboardingPanelQueries() {
     queryKey: ["offboarding", "candidates"],
     queryFn: async () => {
       const [onboardRes, offboardRes] = await Promise.all([
-        hrmsService.getOnboardList({ page: "0", size: "500", onboardingStatus: "ACTIVE" }),
+        hrmsService.getOnboardList({ page: "0", size: "500" }),
         hrmsService.getOffboardList({ page: 0, size: 200 }),
       ]);
       const onboardRows = toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes);
@@ -213,7 +217,7 @@ export function useOffboardingPanelQueries() {
 
   useEffect(() => {
     if (!candidatesQ.isError) return;
-    showErrorToast("Failed to load active employees for offboarding.");
+    showErrorToast("Failed to load employees for offboarding.");
   }, [candidatesQ.isError]);
 
   return {
