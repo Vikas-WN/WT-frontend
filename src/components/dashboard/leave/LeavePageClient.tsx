@@ -99,6 +99,7 @@ import {
 import { DataTable } from "@/components/dashboard/ui/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
+import { bannerInlineClass } from "@/components/dashboard/ui/bannerTones";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { useClientPagination } from "@/hooks/useClientPagination";
@@ -1242,7 +1243,7 @@ export function LeavePageClient() {
                                       </div>
                                       {requiresClientApproval ? (
                                         <div className="mt-5">
-                                          <Label className="text-sm flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 font-normal text-amber-900 cursor-pointer">
+                                          <Label className={bannerInlineClass("warning", "flex cursor-pointer items-start gap-2 text-sm font-normal")}>
                                             <Checkbox
                                               className="mt-0.5 cursor-pointer"
                                               checked={leaveRequestForm.client_approval}

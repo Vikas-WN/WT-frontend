@@ -6,6 +6,7 @@ import {
   hasHrRole,
   hasManagerRole,
 } from "@/utils/roles";
+import { isActiveUserStatus } from "@/utils/userStatus";
 
 /** DM-only portal users cannot call GET /profile. */
 export function shouldSkipSelfProfileFetch(roles: string[]): boolean {
@@ -62,9 +63,9 @@ export async function loadSelfProfileState(
   isSelfOnboarded: boolean;
 }> {
   const profile = await fetchSelfProfile(roles);
-  const status = String(profile?.status ?? user?.status ?? "").toUpperCase();
+  const status = profile?.status ?? profile?.user_status ?? user?.status;
   return {
     profile,
-    isSelfOnboarded: status === "ACTIVE",
+    isSelfOnboarded: isActiveUserStatus(status),
   };
 }

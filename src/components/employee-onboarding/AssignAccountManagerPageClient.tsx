@@ -12,6 +12,7 @@ import { SelectField } from "@/components/dashboard/ui/forms";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { EmployeeOnboardingSubNav } from "@/components/employee-onboarding/EmployeeOnboardingSubNav";
 import { PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
+import { bannerPanelClass } from "@/components/dashboard/ui/bannerTones";
 import {
   cleanEmployeeName,
   rowEmail,
@@ -80,7 +81,7 @@ export function AssignAccountManagerPageClient() {
           <h3 className="text-lg font-semibold">Assign Account Manager</h3>
 
           {isError ? (
-            <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            <div className={bannerPanelClass("danger", "mt-6")}>
               Could not load employees.{error instanceof Error ? ` ${error.message}` : ""}
               <Button variant="ghost" size="xs" type="button" className="mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
                 Retry

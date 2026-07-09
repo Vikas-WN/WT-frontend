@@ -14,6 +14,7 @@ import { LeaveApprovalsPanel } from "@/components/dashboard/leave/LeaveApprovals
 import { MyPreviousLeaveRequestsCard } from "@/components/dashboard/leave/MyPreviousLeaveRequestsCard";
 import { HrReviewNoticeBanner } from "@/components/hr-review/HrReviewNoticeBanner";
 import { SECTION_STACK_CLASS } from "@/components/dashboard/ui/uiLayout";
+import { bannerInlineClass } from "@/components/dashboard/ui/bannerTones";
 import { UI_COPY } from "@/constants/uiCopy";
 import { formatUserRequestTypeLabel, normalizeUserRequestType } from "@/utils/actionToast";
 import { formatLeaveDateRange } from "@/utils/leaveRequestDisplay";
@@ -215,7 +216,7 @@ export function EmployeeLeaveRequestsPanel({
               </div>
 
               {requiresClientApproval && (isLeave ? showLeaveFields : true) ? (
-                <Label className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-normal text-amber-900">
+                <Label className={bannerInlineClass("warning", "flex cursor-pointer items-start gap-2 rounded-xl px-3 py-2.5 font-normal")}>
                   <Checkbox
                     className="mt-0.5"
                     checked={leaveRequestForm.client_approval}

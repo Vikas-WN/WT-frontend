@@ -23,6 +23,7 @@ import { compareApiDates, formatApiDateDisplay } from "@/utils/apiDate";
 import { createEmptyOnboardForm } from "@/utils/onboardFormState";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { bannerInlineClass } from "@/components/dashboard/ui/bannerTones";
 import { CARD_STACK_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { HrOnboardForm } from "@/components/employee-onboarding/HrOnboardForm";
 import { InvitedEmployeesTable } from "@/components/employee-onboarding/InvitedEmployeesTable";
@@ -401,7 +402,7 @@ export function EmployeePageClient() {
               >
                 {invitedApiServerRange ? (
                   <p
-                    className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"
+                    className={bannerInlineClass("warning", "text-xs")}
                     role="status"
                   >
                     The server returned data for {invitedApiServerRange.from} —{" "}

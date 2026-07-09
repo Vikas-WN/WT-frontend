@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { OffboardedBanner } from "@/components/dashboard/shared/OffboardedBanner";
 import { OnboardingPendingBanner } from "@/components/dashboard/shared/OnboardingPendingBanner";
 import { PortalLockedBanner } from "@/components/dashboard/shared/PortalLockedBanner";
+import { SECTION_STACK_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 
 export function OnboardingGate({
@@ -37,7 +38,7 @@ export function OnboardingGate({
   const hideChildren = requiresSelfOnboarding && !allowContentWhenOnboarding;
 
   return (
-    <>
+    <div className={SECTION_STACK_CLASS}>
       {isPortalLocked ? <PortalLockedBanner /> : null}
       {requiresSelfOnboarding ? <OnboardingPendingBanner /> : null}
       {hideChildren ? null : (
@@ -48,6 +49,6 @@ export function OnboardingGate({
           {children}
         </fieldset>
       )}
-    </>
+    </div>
   );
 }

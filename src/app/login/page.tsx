@@ -8,6 +8,7 @@ import {
   oauthErrorMessages,
 } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
+import { safeDashboardRedirectPath } from "@/constants/routes";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 import { applyResolvedTheme } from "@/utils/dashboard/theme";
@@ -146,9 +147,10 @@ function LoginPageInner() {
   useEffect(() => {
     if (status === "authenticated" && !didRedirect.current) {
       didRedirect.current = true;
-      window.location.replace("/dashboard");
+      const next = safeDashboardRedirectPath(searchParams.get("next"));
+      window.location.replace(next ?? "/dashboard");
     }
-  }, [status]);
+  }, [status, searchParams]);
 
   useEffect(() => {
     if (status !== "unauthenticated" || didPostLoginRefresh.current) return;
@@ -157,10 +159,11 @@ function LoginPageInner() {
       const fresh = await refresh();
       if (fresh && !didRedirect.current) {
         didRedirect.current = true;
-        window.location.replace("/dashboard");
+        const next = safeDashboardRedirectPath(searchParams.get("next"));
+        window.location.replace(next ?? "/dashboard");
       }
     })();
-  }, [status, refresh]);
+  }, [status, refresh, searchParams]);
 
   function handleGoogleSignIn() {
     setGoogleLoading(true);

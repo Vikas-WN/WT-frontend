@@ -41,6 +41,7 @@ import {
 } from "@/utils/employeeResume";
 import { canFetchEmployeeResumeApi, pickPortalRoles } from "@/utils/roles";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { bannerPanelClass } from "@/components/dashboard/ui/bannerTones";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { AdaptiveSelectField, InputField } from "@/components/dashboard/ui/forms";
 import { FormActionBar } from "@/components/dashboard/ui/FormActionBar";
@@ -287,7 +288,7 @@ export function EmployeeProfilePageClient() {
         ) : null}
 
         {isError ? (
-          <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+          <div className={bannerPanelClass("danger", "mt-6")}>
             <p>Could not load profile.{error instanceof Error ? ` ${error.message}` : ""}</p>
             <Button
               variant="ghost"

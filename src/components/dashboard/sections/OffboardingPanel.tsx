@@ -18,6 +18,7 @@ import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { ApiError } from "@/api/error";
 import { hrmsService } from "@/services/hrms.service";
 import { exitInterviewService } from "@/services/exitInterview.service";
+import { bulkResultClass } from "@/components/dashboard/ui/bannerTones";
 import type { ExitSurveyBulkResendItemResult } from "@/types/exit-interview";
 import {
   DatePickerField,
@@ -81,9 +82,7 @@ function formatBool(value: boolean): string {
 function bulkResendResultClassName(
   status: ExitSurveyBulkResendItemResult["status"]
 ): string {
-  if (status === "SENT") return "border-emerald-200 bg-emerald-50 text-emerald-900";
-  if (status === "FAILED") return "border-red-200 bg-red-50 text-red-900";
-  return "border-amber-200 bg-amber-50 text-amber-900";
+  return bulkResultClass(status);
 }
 
 export function OffboardingPanel() {

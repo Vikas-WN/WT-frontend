@@ -32,12 +32,19 @@ import { shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
 import { selfProfileQueryKey } from "@/hooks/useSelfProfile";
 import { dashboardHref, DASHBOARD_ROUTES, isDashboardNavChildActive } from "@/constants/routes";
 import { learningSubNav } from "@/constants/learningNav";
+import {
+  parseExitInterviewProfileFlags,
+  shouldShowExitSurveyInNav,
+  withExitSurveyNavItem,
+} from "@/utils/exitInterview";
+import { resolveEffectiveEmployeeStatus, resolveProfileStatus } from "@/utils/userStatus";
 import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
 import { Badge } from "@/components/ui/badge";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { applyResolvedTheme, readStoredTheme } from "@/utils/dashboard/theme";
 import { readSidebarCollapsed, writeSidebarCollapsed } from "@/utils/dashboard/sidebarPrefs";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { ExitInterviewProfileBanner } from "@/components/exit-interview/ExitInterviewProfileBanner";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
 import {
   DASHBOARD_HEADER_CLASS,
@@ -132,7 +139,7 @@ function extractRoleFromNotificationMessage(message: string): string {
 }
 
 export function DashboardChrome({ children }: { children: ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, logout, refresh: refreshSession } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -170,11 +177,18 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   );
 
   const visibleNavigation = useMemo(() => {
-    return filterVisibleNavigation(dashboardNavigation, userRoles, {
+    const base = filterVisibleNavigation(dashboardNavigation, userRoles, {
       hasHrAccess,
       hasAccountManagerAccess,
     });
-  }, [userRoles, hasHrAccess, hasAccountManagerAccess]);
+    const flags = parseExitInterviewProfileFlags(profile);
+    const status = resolveEffectiveEmployeeStatus(
+      user?.status,
+      resolveProfileStatus(profile, user)
+    );
+    if (!shouldShowExitSurveyInNav(flags)) return base;
+    return withExitSurveyNavItem(base, flags, status);
+  }, [userRoles, hasHrAccess, hasAccountManagerAccess, profile, user]);
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
@@ -239,6 +253,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         )
       ) {
         void queryClient.invalidateQueries({ queryKey: selfProfileQueryKey(user?.email) });
+        void refreshSession();
       }
     } catch (error) {
       setNotifications([]);
@@ -248,7 +263,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     } finally {
       setNotificationsLoading(false);
     }
-  }, [queryClient, user?.email]);
+  }, [queryClient, refreshSession, user?.email]);
 
   const handleNotificationClick = useCallback(
     async (row: NotificationItem) => {
@@ -272,9 +287,16 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       if (notificationsPanelRef.current) {
         notificationsPanelRef.current.open = false;
       }
+
+      const type = String(row.type ?? row.notification_type ?? "").toUpperCase();
+      if (type === "EXIT_INTERVIEW_REMINDER") {
+        void queryClient.invalidateQueries({ queryKey: selfProfileQueryKey(user?.email) });
+        void refreshSession();
+      }
+
       router.push(href);
     },
-    [router, userRoles]
+    [queryClient, refreshSession, router, user?.email, userRoles]
   );
 
   useEffect(() => {
@@ -312,6 +334,9 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     if (isOffboarded && !isLearningRoute) {
       return "You Are Offboarded";
     }
+    if (isServingNotice && !isLearningRoute && activeSection !== "exit-interview") {
+      return "Serving Notice";
+    }
     if (isLearningRoute) {
       return "Learning & Development";
     }
@@ -327,6 +352,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     isLearningRoute,
     isNavChildActive,
     isOffboarded,
+    isServingNotice,
     pathname,
   ]);
 
@@ -561,6 +587,11 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         </header>
 
         <div className="wt-page-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain bg-wt-page-bg">
+          {pathname !== DASHBOARD_ROUTES["exit-interview"] ? (
+            <div className="mx-auto w-full max-w-7xl px-4 pt-4 md:px-6">
+              <ExitInterviewProfileBanner />
+            </div>
+          ) : null}
           {children}
         </div>
       </div>

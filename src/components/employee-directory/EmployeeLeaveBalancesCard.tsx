@@ -10,6 +10,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useEmployeeLeaveBalances } from "@/hooks/employee-directory/useEmployeeLeaveBalances";
+import { bannerPanelClass } from "@/components/dashboard/ui/bannerTones";
 
 function BalanceStat({
   label,
@@ -47,7 +48,7 @@ export function EmployeeLeaveBalancesCard({
         {isLoading ? <SectionLoading label="Loading balances…" /> : null}
 
         {isError ? (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+          <div className={bannerPanelClass("danger", "p-3")}>
             Could not load balances.{error instanceof Error ? ` ${error.message}` : ""}
             <Button
               variant="ghost"

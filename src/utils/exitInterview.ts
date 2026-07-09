@@ -5,6 +5,8 @@ import type {
   ExitInterviewSubmitBody,
   FormField,
 } from "@/types/exit-interview";
+import type { NavItem } from "@/constants/dashboardNavigation";
+import { isPreActiveEmployeeStatus } from "@/utils/userStatus";
 
 const READONLY_WIDGETS = new Set(["readonly_text", "readonly_date"]);
 
@@ -22,6 +24,43 @@ export const EXIT_INTERVIEW_READONLY_KEYS = new Set([
 export function shouldShowExitSurveyInNav(flags: ExitInterviewProfileFlags): boolean {
   if (!flags.exit_interview_applicable) return false;
   return flags.can_fill_exit_interview || flags.exit_interview_submitted;
+}
+
+/** Invited / onboarding employees never see the exit survey. */
+export function canEmployeeAccessExitSurvey(
+  flags: ExitInterviewProfileFlags,
+  employeeStatus: unknown
+): boolean {
+  if (isPreActiveEmployeeStatus(employeeStatus)) return false;
+  return flags.exit_interview_applicable;
+}
+
+/** Inject Exit Survey into the Personal nav group when the employee is eligible. */
+export function withExitSurveyNavItem(
+  items: NavItem[],
+  flags: ExitInterviewProfileFlags | null | undefined,
+  employeeStatus: unknown
+): NavItem[] {
+  if (!flags || !shouldShowExitSurveyInNav(flags) || isPreActiveEmployeeStatus(employeeStatus)) {
+    return items;
+  }
+
+  return items.map((item) => {
+    if (item.kind !== "group" || item.id !== "personal") return item;
+    if (item.children.some((child) => child.id === "exit-interview")) return item;
+    return {
+      ...item,
+      children: [
+        {
+          id: "exit-interview",
+          label: "Exit Survey",
+          roles: [],
+          icon: "fileText",
+        },
+        ...item.children,
+      ],
+    };
+  });
 }
 
 export function parseExitInterviewProfileFlags(

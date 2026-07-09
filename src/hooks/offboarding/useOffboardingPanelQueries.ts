@@ -169,9 +169,10 @@ export function useOffboardingPanelQueries() {
       return buildOffboardCandidates(onboardRows, offboardedItems);
     },
     staleTime: OFFBOARDING_STALE_MS,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: 30_000,
   });
 
   const listQ = useQuery({
@@ -188,9 +189,10 @@ export function useOffboardingPanelQueries() {
       };
     },
     staleTime: OFFBOARDING_LIST_STALE_MS,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: 30_000,
   });
 
   const refreshOffboardingData = useCallback(async () => {

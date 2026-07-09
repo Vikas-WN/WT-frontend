@@ -23,6 +23,7 @@ import { ScoresPageClient } from "@/components/learning-development/ScoresPageCl
 import { TrainingStatusControl } from "@/components/learning-development/TrainingStatusControl";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { AssignedTrainersList } from "@/components/learning-development/AssignedTrainersList";
+import { bannerPanelClass } from "@/components/dashboard/ui/bannerTones";
 import { MaterialVisibilityBadge } from "@/components/learning-development/MaterialVisibilityBadge";
 import { TrainingParticipantsList } from "@/components/learning-development/TrainingParticipantsList";
 import { DataTable, FileField, InputField } from "@/components/learning-development/ui/forms";
@@ -311,7 +312,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
       </div>
 
       {detailQ.isError ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <div className={bannerPanelClass("warning")}>
           {detailQ.error instanceof Error
             ? detailQ.error.message
             : "This training is not available in the open catalog."}

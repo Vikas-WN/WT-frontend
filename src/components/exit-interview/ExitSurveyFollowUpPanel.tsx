@@ -20,6 +20,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/api/error";
 import { exitInterviewService } from "@/services/exitInterview.service";
+import { bulkResultClass } from "@/components/dashboard/ui/bannerTones";
 import type { ExitSurveyBulkResendItemResult } from "@/types/exit-interview";
 import { DatePickerField, SelectField } from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
@@ -61,10 +62,7 @@ const USER_TYPE_FILTER_OPTIONS = [
 function bulkResendResultClassName(
   status: ExitSurveyBulkResendItemResult["status"],
 ): string {
-  if (status === "SENT")
-    return "border-emerald-200 bg-emerald-50 text-emerald-900";
-  if (status === "FAILED") return "border-red-200 bg-red-50 text-red-900";
-  return "border-amber-200 bg-amber-50 text-amber-900";
+  return bulkResultClass(status);
 }
 
 export function ExitSurveyFollowUpPanel() {

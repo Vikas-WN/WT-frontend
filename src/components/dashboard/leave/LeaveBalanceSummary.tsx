@@ -7,6 +7,7 @@ import { formatBalanceDays } from "@/utils/leaveRequestDisplay";
 import { CalendarDays, RotateCcw, User, Users, Clock, Info } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { surfaceTintClass } from "@/components/dashboard/ui/bannerTones";
 
 function BalanceStatCard({
   label,
@@ -94,7 +95,7 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
           }
           {...formatBalanceDays(total)}
           icon={CalendarDays}
-          className="bg-sky-50 text-sky-700"
+          className={surfaceTintClass("info")}
         />
       ) : null}
       {showAll ? (
@@ -102,7 +103,7 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
           label="Primary"
           {...formatBalanceDays(primary)}
           icon={User}
-          className="bg-emerald-50 text-emerald-700"
+          className={surfaceTintClass("success")}
         />
       ) : null}
       {showAll ? (
@@ -110,7 +111,7 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
           label="Secondary"
           {...formatBalanceDays(secondary)}
           icon={Users}
-          className="bg-violet-50 text-violet-700"
+          className={surfaceTintClass("violet")}
         />
       ) : null}
       {showAll ? (
@@ -118,7 +119,7 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
           label="Carry Forward"
           {...formatBalanceDays(carry_forward)}
           icon={RotateCcw}
-          className="bg-amber-50 text-amber-800"
+          className={surfaceTintClass("warning")}
         />
       ) : null}
       {(showAll || isCompOffOnly) ? (

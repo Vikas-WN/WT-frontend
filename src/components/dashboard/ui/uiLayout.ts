@@ -21,7 +21,7 @@ export const TABLE_ROW_SELECTED_CLASS = "bg-indigo-500/10 dark:bg-indigo-400/15"
 
 /** Info / notice banner — works in light and dark mode. */
 export const INFO_BANNER_CLASS =
-  "rounded-xl border border-sky-500/25 bg-sky-500/10 px-4 py-3 text-sm text-wt-text";
+  "rounded-xl border border-sky-500/25 bg-sky-500/10 px-4 py-3 text-sm text-sky-900 dark:border-sky-500/30 dark:bg-sky-500/15 dark:text-sky-200";
 
 export const INFO_BANNER_TITLE_CLASS = "font-medium text-wt-text";
 export const INFO_BANNER_BODY_CLASS = "mt-1 leading-relaxed text-wt-text-muted";

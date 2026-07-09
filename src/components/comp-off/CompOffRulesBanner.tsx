@@ -1,10 +1,17 @@
 "use client";
 
+import {
+  BANNER_BODY_CLASS,
+  BANNER_LIST_CLASS,
+  BANNER_TITLE_CLASS,
+  bannerClass,
+} from "@/components/dashboard/ui/bannerTones";
+
 export function CompOffRulesBanner() {
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-      <p className="font-medium mb-1">Comp-off rules</p>
-      <ul className="list-disc pl-5 space-y-0.5 text-amber-900/90">
+    <div className={bannerClass("warning")}>
+      <p className={BANNER_TITLE_CLASS}>Comp-off rules</p>
+      <ul className={BANNER_LIST_CLASS}>
         <li>1 unit = 1 full calendar day (usage has no half-days).</li>
         <li>Earn Credits expire 60 days after the worked date.</li>
         <li>Usage consumes grants FIFO (oldest expiry first).</li>

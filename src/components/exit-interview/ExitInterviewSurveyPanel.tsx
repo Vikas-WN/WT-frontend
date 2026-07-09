@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/context/AuthContext";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { FormFieldsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { ExitInterviewFormFields } from "@/components/exit-interview/ExitInterviewFormFields";
@@ -12,11 +13,14 @@ import { useExitInterviewProfile } from "@/hooks/exit-interview/useExitInterview
 import { exitInterviewService } from "@/services/exitInterview.service";
 import {
   buildExitInterviewSubmitBody,
+  canEmployeeAccessExitSurvey,
   initialFormAnswers,
   validateExitInterviewAnswers,
 } from "@/utils/exitInterview";
+import { isPreActiveEmployeeStatus, resolveEffectiveEmployeeStatus, resolveProfileStatus } from "@/utils/userStatus";
 
 import { formatApiDateDisplay } from "@/utils/apiDate";
+import { bannerClass } from "@/components/dashboard/ui/bannerTones";
 
 function ExitSurveyDetailsSkeleton() {
   return (
@@ -43,21 +47,29 @@ export function ExitInterviewSurveyPanel({
   className?: string;
 }) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { actionLoading, runAction } = useDashboardAction();
 
   const profileQ = useExitInterviewProfile();
   const flags = profileQ.data?.flags;
   const autofill = profileQ.data?.autofill ?? {};
+  const employeeStatus = resolveEffectiveEmployeeStatus(
+    user?.status,
+    resolveProfileStatus(profileQ.data?.profile, user)
+  );
 
   const showForm = Boolean(
-    flags?.exit_interview_applicable &&
+    flags &&
+    canEmployeeAccessExitSurvey(flags, employeeStatus) &&
     flags.can_fill_exit_interview &&
     !flags.exit_interview_submitted,
   );
 
   const formDefQ = useExitInterviewFormDefinition({
     enabled: Boolean(
-      flags?.exit_interview_applicable && !flags?.exit_interview_submitted,
+      flags &&
+      canEmployeeAccessExitSurvey(flags, employeeStatus) &&
+      !flags.exit_interview_submitted,
     ),
   });
   const fields = formDefQ.data?.fields ?? [];
@@ -81,7 +93,8 @@ export function ExitInterviewSurveyPanel({
 
   const statusMessage = useMemo(() => {
     if (profileQ.isLoading) return null;
-    if (!flags?.exit_interview_applicable) return null;
+    if (isPreActiveEmployeeStatus(employeeStatus)) return null;
+    if (!flags || !canEmployeeAccessExitSurvey(flags, employeeStatus)) return null;
     if (flags.exit_interview_submitted) {
       return "Thank you — your exit survey has been submitted. HR will review your responses.";
     }
@@ -89,7 +102,7 @@ export function ExitInterviewSurveyPanel({
       return "Your exit survey will be available during your notice period.";
     }
     return null;
-  }, [profileQ.isLoading, flags]);
+  }, [profileQ.isLoading, flags, employeeStatus]);
 
   const onChange = (key: string, value: unknown) => {
     setAnswers((prev) => ({ ...prev, [key]: value }));
@@ -117,7 +130,13 @@ export function ExitInterviewSurveyPanel({
     });
   };
 
-  if (!profileQ.isLoading && flags && !flags.exit_interview_applicable) {
+  if (
+    !profileQ.isLoading &&
+    flags &&
+    !flags.exit_interview_applicable &&
+    (!canEmployeeAccessExitSurvey(flags, employeeStatus) ||
+      isPreActiveEmployeeStatus(employeeStatus))
+  ) {
     return null;
   }
 
@@ -213,7 +232,7 @@ export function ExitInterviewSurveyPanel({
         ) : null}
 
         {!profileQ.isLoading && flags?.exit_interview_submitted ? (
-          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <div className={bannerClass("success", "mt-4")}>
             Your responses have been recorded and marked as completed. If HR needs changes, you will
             receive a notification to resubmit.
           </div>

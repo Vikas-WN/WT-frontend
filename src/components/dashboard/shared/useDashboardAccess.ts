@@ -3,14 +3,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
-import { useSelfProfile, selfProfileQueryKey } from "@/hooks/useSelfProfile";
+import {
+  SELF_PROFILE_QUERY_KEY,
+  useSelfProfile,
+  selfProfileQueryKey,
+} from "@/hooks/useSelfProfile";
 import { hasDmRole, hasManagerRole } from "@/utils/roles";
 import {
   isActiveUserStatus,
   isOffboardedUserStatus,
   isServingNoticeUserStatus,
   normalizeUserStatus,
+  requiresSelfOnboardingForEmployee,
+  resolveEffectiveEmployeeStatus,
   resolveProfileStatus,
+  shouldRefreshSessionForProfileStatus,
 } from "@/utils/userStatus";
 import { isPortalLockedProfile } from "@/utils/portalLock";
 
@@ -35,8 +42,11 @@ export function useDashboardAccess() {
   const isOffboarded = isOffboardedUserStatus(profileStatus);
   const isServingNotice = isServingNoticeUserStatus(profileStatus);
   const isPortalLocked = isPortalLockedProfile(profileQ.data ?? null);
-  const requiresSelfOnboarding =
-    restrictForPendingOnboarding && !isSelfOnboarded && !isOffboarded && !isServingNotice;
+  const requiresSelfOnboarding = requiresSelfOnboardingForEmployee({
+    restrictForPendingOnboarding,
+    profile: profileQ.data ?? null,
+    user,
+  });
   /** @deprecated Exit survey module removed from the frontend. */
   const isExitSurveyOnlyAccess = false;
   const employeeSelfServeProfile = isEmployee && !hasHrAccess;
@@ -54,20 +64,33 @@ export function useDashboardAccess() {
     if (profileQ.isLoading) return;
 
     const profile = profileQ.data ?? null;
+    const sessionStatus = normalizeUserStatus(user.status);
     if (!profile) {
-      const status = normalizeUserStatus(user?.status);
-      setProfileStatus(status);
-      setIsSelfOnboarded(isActiveUserStatus(status));
+      setProfileStatus(sessionStatus);
+      setIsSelfOnboarded(isActiveUserStatus(sessionStatus));
       return;
     }
 
-    const status = resolveProfileStatus(profile, user);
-    setProfileStatus(status);
-    setIsSelfOnboarded(isActiveUserStatus(status));
-    if (normalizeUserStatus(user.status) !== status) {
+    const profileStatusValue = resolveProfileStatus(profile, user);
+    const effectiveStatus = resolveEffectiveEmployeeStatus(sessionStatus, profileStatusValue);
+    setProfileStatus(effectiveStatus);
+    setIsSelfOnboarded(isActiveUserStatus(effectiveStatus));
+    if (shouldRefreshSessionForProfileStatus(sessionStatus, profileStatusValue)) {
       void refreshSession();
     }
   }, [user, profileQ.data, profileQ.isLoading, refreshSession]);
+
+  const completeSelfOnboarding = useCallback(async () => {
+    setIsSelfOnboarded(true);
+    setProfileStatus("ACTIVE");
+    await queryClient.invalidateQueries({ queryKey: SELF_PROFILE_QUERY_KEY });
+    const refreshed = await refreshSession();
+    await profileQ.refetch();
+    if (refreshed && isActiveUserStatus(refreshed.status)) {
+      setIsSelfOnboarded(true);
+      setProfileStatus(normalizeUserStatus(refreshed.status));
+    }
+  }, [profileQ, queryClient, refreshSession]);
 
   const loadMyProfile = useCallback(async () => {
     const result = await profileQ.refetch();
@@ -78,10 +101,13 @@ export function useDashboardAccess() {
       setIsSelfOnboarded(isActiveUserStatus(status));
       return null;
     }
-    const status = resolveProfileStatus(profile, user);
+    const status = resolveEffectiveEmployeeStatus(
+      normalizeUserStatus(user?.status),
+      resolveProfileStatus(profile, user)
+    );
     setProfileStatus(status);
     setIsSelfOnboarded(isActiveUserStatus(status));
-    if (user && normalizeUserStatus(user.status) !== status) {
+    if (user && shouldRefreshSessionForProfileStatus(user.status, resolveProfileStatus(profile, user))) {
       void refreshSession();
     }
     void queryClient.invalidateQueries({ queryKey: ["profile", "exit-interview"] });
@@ -110,6 +136,7 @@ export function useDashboardAccess() {
     setIsSelfOnboarded,
     loadMyProfile,
     invalidateSelfProfile,
+    completeSelfOnboarding,
     profileStatus,
     isOffboarded,
     isServingNotice,

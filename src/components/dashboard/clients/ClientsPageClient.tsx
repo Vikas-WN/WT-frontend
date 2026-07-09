@@ -21,6 +21,7 @@ import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { UI_COPY } from "@/constants/uiCopy";
 import { useClients, useInvalidateClients } from "@/hooks/clients/useClients";
 import type { ClientRecord } from "@/types/client";
+import { bannerPanelClass } from "@/components/dashboard/ui/bannerTones";
 
 function displayPerson(name: string | null | undefined, email: string | null | undefined) {
   if (name && email) return `${name} (${email})`;
@@ -114,7 +115,7 @@ export function ClientsPageClient() {
 
           <div className="space-y-6 p-5 md:p-7">
             {isError ? (
-              <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+              <div className={bannerPanelClass("danger")}>
                 Could not load clients.
               </div>
             ) : null}

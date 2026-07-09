@@ -20,6 +20,7 @@ import {
   type MonthRef,
 } from "@/utils/timelog/monthWeeks";
 import type { HrMonthlyTimelogRow } from "@/hooks/timelog/useHrMonthlyTimelogSummary";
+import { bannerClass } from "@/components/dashboard/ui/bannerTones";
 
 type HrMonthlyTimelogSummaryProps = {
   month: MonthRef;
@@ -69,7 +70,7 @@ export function HrMonthlyTimelogSummary({
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        <div className={bannerClass("danger")}>
           {error}
         </div>
       ) : null}
