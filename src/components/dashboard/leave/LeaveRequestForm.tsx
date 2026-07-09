@@ -17,6 +17,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { normalizeUserRequestType } from "@/utils/actionToast";
 import { useMemo } from "react";
 import { Eye, Info } from "lucide-react";
+import { bannerClass } from "@/components/dashboard/ui/bannerTones";
 
 interface LeaveRequestFormValues {
   request_from_date: string;
@@ -164,7 +165,7 @@ export function LeaveRequestForm({
         ) : null}
 
         {requiresClientApproval && isLeaveType ? (
-          <div className="flex items-start gap-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/20 px-4 py-3 mt-5">
+          <div className={bannerClass("warning", "mt-5 flex items-start gap-2.5")}>
             <Checkbox
               id="client-approval"
               className="mt-0.5 cursor-pointer"

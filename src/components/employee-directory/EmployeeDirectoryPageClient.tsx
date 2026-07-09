@@ -23,6 +23,7 @@ import { useEmployeeDirectoryAccess } from "@/hooks/employee-directory/useEmploy
 import { useEmployeeDirectoryList } from "@/hooks/employee-directory/useEmployeeDirectoryList";
 import { useOnboardOptions } from "@/hooks/useOnboardOptions";
 import { EmployeePortalRoleSelect } from "@/components/employee-directory/EmployeePortalRoleSelect";
+import { bannerClass } from "@/components/dashboard/ui/bannerTones";
 import { EmployeeUserTypeSelect } from "@/components/employee-directory/EmployeeUserTypeSelect";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { ManagementListCard, ManagementListContent } from "@/components/dashboard/ui/ManagementListCard";
@@ -244,7 +245,7 @@ export function EmployeeDirectoryPageClient() {
         }
       >
         {isError ? (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-800">
+          <div className={bannerClass("danger", "p-6")}>
             <p>Could not load employees.{error instanceof Error ? ` ${error.message}` : ""}</p>
             <Button variant="ghost" size="xs" type="button" className="mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
               Retry

@@ -2,8 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
 import { ApiError } from "@/api/error";
@@ -19,6 +20,7 @@ import {
   validatePhoneNumber,
 } from "@/utils/phoneCountries";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { SECTION_STACK_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { SelfOnboardingPanel } from "@/components/employee-onboarding/SelfOnboardingPanel";
 import { InputField, SelectField, FileField } from "@/components/dashboard/ui/forms";
 import {
@@ -36,8 +38,16 @@ import { fetchSelfProfile, shouldSkipSelfProfileFetch } from "@/utils/selfProfil
 import {
   isActiveUserStatus,
   isOffboardedUserStatus,
+  isServingNoticeUserStatus,
+  normalizeUserStatus,
+  requiresSelfOnboardingForEmployee,
+  resolveEffectiveEmployeeStatus,
   resolveProfileStatus,
+  shouldRefreshSessionForProfileStatus,
 } from "@/utils/userStatus";
+import { parseExitInterviewProfileFlags } from "@/utils/exitInterview";
+import { EXIT_SURVEY_PROFILE_POLL_MS, selfProfileQueryKey } from "@/hooks/useSelfProfile";
+import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { buildProfileAssignedProjects } from "@/utils/dashboard/projects";
 import { OffboardedBanner } from "@/components/dashboard/shared/OffboardedBanner";
 import { OnboardingPendingBanner } from "@/components/dashboard/shared/OnboardingPendingBanner";
@@ -49,6 +59,8 @@ import { pickEmployeeRole } from "@/utils/employeeDirectory";
 export function ProfilePageLeanClient() {
   const { user, refresh: refreshSession } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { completeSelfOnboarding } = useDashboardAccess();
   const userRoles = useMemo(() => user?.roles ?? [], [user?.roles]);
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
@@ -65,8 +77,11 @@ export function ProfilePageLeanClient() {
   const [isOffboarded, setIsOffboarded] = useState<boolean>(() =>
     isOffboardedUserStatus(user?.status)
   );
-  const requiresSelfOnboarding =
-    restrictForPendingOnboarding && !isSelfOnboarded && !isOffboarded;
+  const requiresSelfOnboarding = requiresSelfOnboardingForEmployee({
+    restrictForPendingOnboarding,
+    profile: employeeProfile,
+    user,
+  });
 
   const [profileAssignedProjects, setProfileAssignedProjects] = useState<
     Array<Record<string, unknown>>
@@ -90,13 +105,18 @@ export function ProfilePageLeanClient() {
     try {
       const profile = await fetchSelfProfile(userRoles);
       setEmployeeProfile(profile);
-      const status = resolveProfileStatus(profile, user);
-      setIsSelfOnboarded(isActiveUserStatus(status));
-      setIsOffboarded(isOffboardedUserStatus(status));
+      const sessionStatus = normalizeUserStatus(user?.status);
+      const profileStatusValue = resolveProfileStatus(profile, user);
+      const effectiveStatus = resolveEffectiveEmployeeStatus(sessionStatus, profileStatusValue);
+      setIsSelfOnboarded(isActiveUserStatus(effectiveStatus));
+      setIsOffboarded(isOffboardedUserStatus(effectiveStatus));
+      if (shouldRefreshSessionForProfileStatus(sessionStatus, profileStatusValue)) {
+        void refreshSession();
+      }
     } finally {
       setIsProfileLoading(false);
     }
-  }, [user, userRoles]);
+  }, [user, userRoles, refreshSession]);
 
   useEffect(() => {
     if (!user) return;
@@ -109,6 +129,41 @@ export function ProfilePageLeanClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [user, userRoles, loadMyProfile, router]);
+
+  useEffect(() => {
+    if (!user || isProfileLoading) return;
+    const status = resolveEffectiveEmployeeStatus(
+      user.status,
+      resolveProfileStatus(employeeProfile, user)
+    );
+    const flags = parseExitInterviewProfileFlags(employeeProfile);
+    const shouldPoll =
+      isServingNoticeUserStatus(status) ||
+      (flags.exit_interview_applicable && flags.can_fill_exit_interview);
+    if (!shouldPoll) return;
+
+    const pollId = window.setInterval(() => {
+      void loadMyProfile().then(() => refreshSession());
+    }, EXIT_SURVEY_PROFILE_POLL_MS);
+    return () => window.clearInterval(pollId);
+  }, [user, isProfileLoading, employeeProfile, loadMyProfile, refreshSession]);
+
+  useEffect(() => {
+    if (!user || isProfileLoading || !employeeProfile) return;
+    const flags = parseExitInterviewProfileFlags(employeeProfile);
+    const status = resolveEffectiveEmployeeStatus(
+      user.status,
+      resolveProfileStatus(employeeProfile, user)
+    );
+    if (
+      isServingNoticeUserStatus(status) &&
+      flags.exit_interview_applicable &&
+      flags.can_fill_exit_interview &&
+      !flags.exit_interview_submitted
+    ) {
+      router.replace(DASHBOARD_ROUTES["exit-interview"], { scroll: false });
+    }
+  }, [user, isProfileLoading, employeeProfile, router]);
 
   useEffect(() => {
     if (!user || isProfileLoading || requiresSelfOnboarding) return;
@@ -162,10 +217,12 @@ export function ProfilePageLeanClient() {
   }
 
   const handleOnboardingSuccess = useCallback(async () => {
-    await refreshSession();
+    setIsSelfOnboarded(true);
+    await completeSelfOnboarding();
+    await queryClient.invalidateQueries({ queryKey: selfProfileQueryKey(user?.email) });
     await loadMyProfile();
     router.replace("/dashboard/overview", { scroll: false });
-  }, [refreshSession, loadMyProfile, router]);
+  }, [completeSelfOnboarding, loadMyProfile, queryClient, router, user?.email]);
 
   const openOwnProfileEditor = () => {
     const profile = employeeProfile ?? {};
@@ -337,7 +394,7 @@ export function ProfilePageLeanClient() {
   return (
     <>
       <DashboardPageShell>
-        <section className="w-full">
+        <section className={SECTION_STACK_CLASS}>
           {isOffboarded ? <OffboardedBanner /> : null}
           {!isProfileLoading && !isOffboarded && requiresSelfOnboarding ? <OnboardingPendingBanner /> : null}
           {!isProfileLoading && !isOffboarded && employeeSelfServeProfile && requiresSelfOnboarding ? (

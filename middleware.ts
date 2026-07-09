@@ -27,6 +27,8 @@ export function middleware(request: NextRequest) {
 
   if (!hasToken) {
     const loginUrl = new URL("/login", request.url);
+    const returnPath = `${pathname}${request.nextUrl.search}`;
+    loginUrl.searchParams.set("next", returnPath);
     return NextResponse.redirect(loginUrl);
   }
 

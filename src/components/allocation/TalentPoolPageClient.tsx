@@ -18,6 +18,7 @@ import { type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { bannerPanelClass } from "@/components/dashboard/ui/bannerTones";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { useTalentPoolTables } from "@/hooks/allocation/useTalentPool";
 import {
@@ -82,7 +83,7 @@ export function TalentPoolPageClient() {
 
         <div className="space-y-8 p-5 md:p-7">
           {error ? (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            <div className={bannerPanelClass("danger")}>
               {error}
             </div>
           ) : null}

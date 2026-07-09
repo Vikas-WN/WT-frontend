@@ -17,6 +17,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { bannerPanelClass } from "@/components/dashboard/ui/bannerTones";
 import { Input } from "@/components/ui/input";
 import { useEmployeeResumes } from "@/hooks/resumes/useEmployeeResumes";
 import { canViewEmployeeResumes } from "@/utils/roles";
@@ -126,7 +127,7 @@ export function ResumesPageClient() {
           {isLoading ? <TableRowsSkeleton rows={6} columns={5} /> : null}
 
           {isError ? (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            <div className={bannerPanelClass("danger")}>
               <p>Could not load resumes.{error instanceof Error ? ` ${error.message}` : ""}</p>
               <Button variant="ghost" size="xs" type="button" className="mt-3 px-3 py-1.5 text-xs" onClick={() => void refetch()}>
                 Retry

@@ -162,10 +162,10 @@ export function resolveNotificationHref(
       return DASHBOARD_ROUTES.learning;
 
     case "EXIT_INTERVIEW_REMINDER":
-      return DASHBOARD_ROUTES.profile;
+      return DASHBOARD_ROUTES["exit-interview"];
 
     case "EXIT_INTERVIEW_SUBMITTED":
-      return isHrOrAdmin(roles) ? DASHBOARD_ROUTES.offboarding : DASHBOARD_ROUTES.profile;
+      return isHrOrAdmin(roles) ? DASHBOARD_ROUTES.offboarding : DASHBOARD_ROUTES["exit-interview"];
 
     case "ONBOARDING_INVITE":
     case "ONBOARDING_PROFILE_PENDING":

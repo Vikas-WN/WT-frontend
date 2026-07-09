@@ -18,6 +18,7 @@ import { exitInterviewService } from "@/services/exitInterview.service";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { EXIT_SURVEY_FOLLOW_UP_QUERY_KEY } from "@/hooks/exit-interview/useExitSurveyFollowUpList";
 import { useQueryClient } from "@tanstack/react-query";
+import { bannerPanelClass, statusChipClass } from "@/components/dashboard/ui/bannerTones";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import {
   exitInterviewFieldsWithResponses,
@@ -158,7 +159,7 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
           {detailQ.isLoading ? <ProfileDetailsSkeleton rows={6} /> : null}
 
           {detailQ.isError ? (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            <div className={bannerPanelClass("danger")}>
               Could not load this submission.
               {detailQ.error instanceof Error ? ` ${detailQ.error.message}` : ""}
             </div>
@@ -172,7 +173,7 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
                   <p className="mt-1 text-sm text-wt-text-muted">{detail.email}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">
+                  <span className={statusChipClass("success")}>
                     Completed
                   </span>
                   <Button

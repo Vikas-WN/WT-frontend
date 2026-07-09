@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { BANNER_TONE } from "@/components/dashboard/ui/bannerTones";
 
 export type HrToggleStatus = "REJECTED" | "PENDING" | "APPROVED";
 
@@ -16,9 +17,9 @@ const TWO_WAY: { value: HrToggleStatus; label: string }[] = [
 ];
 
 function activeClasses(value: HrToggleStatus): string {
-  if (value === "APPROVED") return "bg-emerald-100 text-emerald-800 border border-emerald-200/80";
-  if (value === "REJECTED") return "bg-rose-100 text-rose-800 border border-rose-200/80";
-  return "bg-amber-100 text-amber-900 border border-amber-200/80";
+  if (value === "APPROVED") return `border ${BANNER_TONE.success}`;
+  if (value === "REJECTED") return `border ${BANNER_TONE.danger}`;
+  return `border ${BANNER_TONE.warning}`;
 }
 
 type HrLeaveStatusToggleProps = {

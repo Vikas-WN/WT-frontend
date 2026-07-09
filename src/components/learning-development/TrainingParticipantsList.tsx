@@ -7,6 +7,8 @@ import {
   participantRowUserId,
   traineeTableRowsFromParticipants,
 } from "@/utils/learning/participants";
+import { BANNER_TONE } from "@/components/dashboard/ui/bannerTones";
+import { cn } from "@/lib/utils";
 
 export function TrainingParticipantsList({
   rows,
@@ -64,7 +66,7 @@ export function TrainingParticipantsList({
                     type="button"
                     variant="outline"
                     size="xs"
-                    className="border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                    className={cn("border hover:opacity-90", BANNER_TONE.success)}
                     disabled={isUpdating}
                     onClick={() => onMarkCompleted(participant.userId)}
                   >
@@ -76,7 +78,7 @@ export function TrainingParticipantsList({
                     type="button"
                     variant="outline"
                     size="xs"
-                    className="border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                    className={cn("border hover:opacity-90", BANNER_TONE.warning)}
                     disabled={isUpdating}
                     onClick={() => onMarkWithdrawn(participant.userId)}
                   >

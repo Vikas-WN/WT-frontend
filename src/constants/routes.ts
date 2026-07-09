@@ -1,4 +1,10 @@
+import { parseExitInterviewProfileFlags } from "@/utils/exitInterview";
 import { normalizeRoles } from "@/utils/roles";
+import {
+  isServingNoticeUserStatus,
+  resolveEffectiveEmployeeStatus,
+  resolveProfileStatus,
+} from "@/utils/userStatus";
 
 /** Path for each dashboard nav id (route-based; no ?tab=). */
 export const DASHBOARD_ROUTES: Record<string, string> = {
@@ -31,6 +37,7 @@ export const DASHBOARD_ROUTES: Record<string, string> = {
   uploads: "/dashboard/uploads",
   masters: "/dashboard/masters",
   profile: "/dashboard/profile",
+  "exit-interview": "/dashboard/exit-interview",
 };
 
 export const DASHBOARD_DEFAULT_PATH = DASHBOARD_ROUTES["employee-directory"];
@@ -64,6 +71,7 @@ const PATH_TO_NAV_ID: Array<{ prefix: string; id: string }> = [
   { prefix: "/dashboard/holiday-calendars", id: "holiday-calendars" },
   { prefix: "/dashboard/uploads", id: "uploads" },
   { prefix: "/dashboard/masters", id: "masters" },
+  { prefix: "/dashboard/exit-interview", id: "exit-interview" },
   { prefix: "/dashboard/profile", id: "profile" },
 ];
 
@@ -100,6 +108,43 @@ export function dashboardHref(navId: string): string {
 export function employeeDirectoryProfilePath(empId: string): string {
   const id = encodeURIComponent(String(empId).trim());
   return `/dashboard/employee-directory/${id}`;
+}
+
+/** Safe post-login redirect target (dashboard paths only). */
+export function safeDashboardRedirectPath(path: string | null | undefined): string | null {
+  if (!path) return null;
+  const trimmed = path.trim();
+  if (!trimmed.startsWith("/dashboard") || trimmed.startsWith("//")) return null;
+  return trimmed;
+}
+
+/** Employee landing path — exit survey when notice-period survey is pending. */
+export function resolveEmployeeDashboardLanding(
+  roles: string[],
+  profile: Record<string, unknown> | null | undefined,
+  user?: { status?: string } | null
+): string {
+  const base = defaultDashboardPathForRoles(roles);
+  const r = normalizeRoles(roles ?? []);
+  if (!r.includes("ROLE_EMPLOYEE") || r.includes("ROLE_HR") || r.includes("ROLE_ADMIN")) {
+    return base;
+  }
+
+  const effectiveStatus = resolveEffectiveEmployeeStatus(
+    user?.status,
+    resolveProfileStatus(profile, user)
+  );
+  const flags = parseExitInterviewProfileFlags(profile);
+  if (
+    isServingNoticeUserStatus(effectiveStatus) &&
+    flags.exit_interview_applicable &&
+    flags.can_fill_exit_interview &&
+    !flags.exit_interview_submitted
+  ) {
+    return DASHBOARD_ROUTES["exit-interview"];
+  }
+
+  return base;
 }
 
 /** Landing route after login based on the user's roles. */
