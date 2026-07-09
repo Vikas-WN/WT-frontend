@@ -7,8 +7,14 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
 import { ApiError } from "@/api/error";
-import { formatActionErrorMessage, formatActionSuccessMessage } from "@/utils/actionToast";
-import { MAX_ONBOARD_FILE_BYTES, MAX_ONBOARD_TOTAL_BYTES } from "@/constants/dashboard";
+import {
+  formatActionErrorMessage,
+  formatActionSuccessMessage,
+} from "@/utils/actionToast";
+import {
+  MAX_ONBOARD_FILE_BYTES,
+  MAX_ONBOARD_TOTAL_BYTES,
+} from "@/constants/dashboard";
 import { createEmptySelfProfileForm } from "@/utils/profileFormState";
 import {
   PHONE_COUNTRY_OPTIONS,
@@ -20,10 +26,14 @@ import {
 } from "@/utils/phoneCountries";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { SelfOnboardingPanel } from "@/components/employee-onboarding/SelfOnboardingPanel";
-import { InputField, SelectField, FileField, DatePickerField } from "@/components/dashboard/ui/forms";
+import { ExitInterviewSurveyPanel } from "@/components/exit-interview/ExitInterviewSurveyPanel";
 import {
-  readProfileField,
-} from "@/components/dashboard/ui/profile";
+  InputField,
+  SelectField,
+  FileField,
+  DatePickerField,
+} from "@/components/dashboard/ui/forms";
+import { readProfileField } from "@/components/dashboard/ui/profile";
 import { pickProfileField } from "@/utils/employeeDirectory";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { ProfileEmployeeTrainingsSection } from "@/components/dashboard/profile/ProfileEmployeeTrainingsSection";
@@ -33,48 +43,40 @@ import {
   ProfileHeaderSkeleton,
   TableRowsSkeleton,
 } from "@/components/dashboard/ui/SectionSkeleton";
-import { fetchSelfProfile, shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
-import {
-  isActiveUserStatus,
-  isOffboardedUserStatus,
-  resolveProfileStatus,
-} from "@/utils/userStatus";
+import { shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
 import { buildProfileAssignedProjects } from "@/utils/dashboard/projects";
 import { OffboardedBanner } from "@/components/dashboard/shared/OffboardedBanner";
 import { OnboardingPendingBanner } from "@/components/dashboard/shared/OnboardingPendingBanner";
+import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { EmployeeProfileHeaderCard } from "@/components/employee-directory/EmployeeProfileHeaderCard";
 import { ProfileSectionsView } from "@/components/employee-directory/ProfileSectionsView";
 import { pickEmployeeRole } from "@/utils/employeeDirectory";
-
 
 export function ProfilePageLeanClient() {
   const { user, refresh: refreshSession } = useAuth();
   const router = useRouter();
   const userRoles = useMemo(() => user?.roles ?? [], [user?.roles]);
-  const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
-  const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
-  const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
-  const restrictForPendingOnboarding = isEmployee && !hasHrAccess && !hasManagerAccess;
-  const employeeSelfServeProfile = isEmployee && !hasHrAccess;
+  const {
+    requiresSelfOnboarding,
+    requiresExitSurvey,
+    isOffboarded,
+    employeeSelfServeProfile,
+    profile: employeeProfile,
+    profileLoading: isProfileLoading,
+    loadMyProfile,
+  } = useDashboardAccess();
 
-    const [actionLoading, setActionLoading] = useState(false);
-  const [isProfileLoading, setIsProfileLoading] = useState(true);
-  const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
-  const [isSelfOnboarded, setIsSelfOnboarded] = useState<boolean>(() =>
-    isActiveUserStatus(user?.status)
-  );
-  const [isOffboarded, setIsOffboarded] = useState<boolean>(() =>
-    isOffboardedUserStatus(user?.status)
-  );
-  const requiresSelfOnboarding =
-    restrictForPendingOnboarding && !isSelfOnboarded && !isOffboarded;
+  const [actionLoading, setActionLoading] = useState(false);
 
   const [profileAssignedProjects, setProfileAssignedProjects] = useState<
     Array<Record<string, unknown>>
   >([]);
-  const [profileAssignedProjectsLoading, setProfileAssignedProjectsLoading] = useState(false);
+  const [profileAssignedProjectsLoading, setProfileAssignedProjectsLoading] =
+    useState(false);
 
-  const [selfProfileForm, setSelfProfileForm] = useState(createEmptySelfProfileForm);
+  const [selfProfileForm, setSelfProfileForm] = useState(
+    createEmptySelfProfileForm,
+  );
   const [selfProfileEmploymentFiles, setSelfProfileEmploymentFiles] = useState<{
     reliving_letter: File | null;
     salary_slips: File | null;
@@ -84,20 +86,6 @@ export function ProfilePageLeanClient() {
   });
   const [selfProfilePic, setSelfProfilePic] = useState<File | null>(null);
   const [isEditingOwnProfile, setIsEditingOwnProfile] = useState(false);
-
-
-  const loadMyProfile = useCallback(async () => {
-    setIsProfileLoading(true);
-    try {
-      const profile = await fetchSelfProfile(userRoles);
-      setEmployeeProfile(profile);
-      const status = resolveProfileStatus(profile, user);
-      setIsSelfOnboarded(isActiveUserStatus(status));
-      setIsOffboarded(isOffboardedUserStatus(status));
-    } finally {
-      setIsProfileLoading(false);
-    }
-  }, [user, userRoles]);
 
   useEffect(() => {
     if (!user) return;
@@ -112,7 +100,13 @@ export function ProfilePageLeanClient() {
   }, [user, userRoles, loadMyProfile, router]);
 
   useEffect(() => {
-    if (!user || isProfileLoading || requiresSelfOnboarding) return;
+    if (
+      !user ||
+      isProfileLoading ||
+      requiresSelfOnboarding ||
+      requiresExitSurvey
+    )
+      return;
     const load = async () => {
       setProfileAssignedProjectsLoading(true);
       try {
@@ -126,23 +120,25 @@ export function ProfilePageLeanClient() {
         }
         const allocationInput =
           myAllocationsRes.status === "fulfilled"
-            ? myAllocationsRes.value.data ?? myAllocationsRes.value
+            ? (myAllocationsRes.value.data ?? myAllocationsRes.value)
             : undefined;
         setProfileAssignedProjects(
           buildProfileAssignedProjects(
             assignedRes.value.data ?? assignedRes.value,
-            allocationInput
-          )
+            allocationInput,
+          ),
         );
       } finally {
         setProfileAssignedProjectsLoading(false);
       }
     };
     void load();
-  }, [user, isProfileLoading, requiresSelfOnboarding]);
+  }, [user, isProfileLoading, requiresSelfOnboarding, requiresExitSurvey]);
 
   const priorEmploymentDocsForProfile = useMemo(() => {
-    const raw = String(selfProfileForm.yoe ?? "").trim().replace(",", ".");
+    const raw = String(selfProfileForm.yoe ?? "")
+      .trim()
+      .replace(",", ".");
     if (!raw) return false;
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) && n > 0;
@@ -155,7 +151,11 @@ export function ProfilePageLeanClient() {
       showSuccessToast(formatActionSuccessMessage(label));
     } catch (error) {
       const backendMessage =
-        error instanceof ApiError ? error.message : error instanceof Error ? error.message : "";
+        error instanceof ApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "";
       showErrorToast(formatActionErrorMessage(label, backendMessage));
     } finally {
       setActionLoading(false);
@@ -170,20 +170,30 @@ export function ProfilePageLeanClient() {
 
   const openOwnProfileEditor = () => {
     const profile = employeeProfile ?? {};
-    const primarySkillsRaw = profile.primary_skills ?? profile.primarySkills ?? [];
+    const primarySkillsRaw =
+      profile.primary_skills ?? profile.primarySkills ?? [];
     const primarySkills = Array.isArray(primarySkillsRaw)
-      ? primarySkillsRaw.map((item) => String(item).trim()).filter(Boolean).join(", ")
+      ? primarySkillsRaw
+          .map((item) => String(item).trim())
+          .filter(Boolean)
+          .join(", ")
       : String(primarySkillsRaw ?? "").trim();
     const secondarySkillsRaw =
-      (profile.secondary_skills as Array<Record<string, unknown>> | undefined) ??
+      (profile.secondary_skills as
+        | Array<Record<string, unknown>>
+        | undefined) ??
       (profile.secondarySkills as Array<Record<string, unknown>> | undefined) ??
       [];
-    const firstSecondary = Array.isArray(secondarySkillsRaw) ? secondarySkillsRaw[0] : undefined;
+    const firstSecondary = Array.isArray(secondarySkillsRaw)
+      ? secondarySkillsRaw[0]
+      : undefined;
 
-    const phoneParts = splitPhoneNumber(String(profile.phone_number ?? profile.phoneNumber ?? "").trim());
+    const phoneParts = splitPhoneNumber(
+      String(profile.phone_number ?? profile.phoneNumber ?? "").trim(),
+    );
 
     const profileDob = String(
-      pickProfileField(profile, ["date_of_birth", "dob", "dateOfBirth"]) ?? ""
+      pickProfileField(profile, ["date_of_birth", "dob", "dateOfBirth"]) ?? "",
     ).trim();
     setSelfProfileForm({
       phone_country: phoneParts.countryIso,
@@ -194,7 +204,10 @@ export function ProfilePageLeanClient() {
       yoe: String(profile.yoe ?? "").trim(),
       date_of_birth: profileDob,
     });
-    setSelfProfileEmploymentFiles({ reliving_letter: null, salary_slips: null });
+    setSelfProfileEmploymentFiles({
+      reliving_letter: null,
+      salary_slips: null,
+    });
     setSelfProfilePic(null);
     setIsEditingOwnProfile(true);
   };
@@ -205,55 +218,113 @@ export function ProfilePageLeanClient() {
   const renderEditPanel = () => (
     <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-10 md:p-12">
       <h3 className="mb-1 font-semibold">Edit Profile</h3>
-      <p className="mb-4 text-sm text-wt-text-muted">You are onboarded. Update your profile details anytime.</p>
+      <p className="mb-4 text-sm text-wt-text-muted">
+        You are onboarded. Update your profile details anytime.
+      </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <SelectField
           label="Country Code"
           value={selfProfileForm.phone_country ?? defaultPhoneCountryIso()}
           options={PHONE_COUNTRY_OPTIONS}
-          onChange={(v) => setSelfProfileForm((p) => ({ ...p, phone_country: v }))}
+          onChange={(v) =>
+            setSelfProfileForm((p) => ({ ...p, phone_country: v }))
+          }
           placeholder="Search Country Code"
         />
         <InputField
           label="Phone Number"
           type="tel"
           value={selfProfileForm.phone_number}
-          onChange={(v) => setSelfProfileForm((p) => ({ ...p, phone_number: digitsOnly(v) }))}
+          onChange={(v) =>
+            setSelfProfileForm((p) => ({ ...p, phone_number: digitsOnly(v) }))
+          }
           placeholder="Enter phone number"
         />
-        <InputField label="Primary Skills (comma separated)" value={selfProfileForm.primary_skills} onChange={(v) => setSelfProfileForm((p) => ({ ...p, primary_skills: v }))} />
-        <InputField label="Secondary Skill" value={selfProfileForm.secondary_skill} onChange={(v) => setSelfProfileForm((p) => ({ ...p, secondary_skill: v }))} />
+        <InputField
+          label="Primary Skills (comma separated)"
+          value={selfProfileForm.primary_skills}
+          onChange={(v) =>
+            setSelfProfileForm((p) => ({ ...p, primary_skills: v }))
+          }
+        />
+        <InputField
+          label="Secondary Skill"
+          value={selfProfileForm.secondary_skill}
+          onChange={(v) =>
+            setSelfProfileForm((p) => ({ ...p, secondary_skill: v }))
+          }
+        />
         <SelectField
           label="Secondary Skill Rating"
           placeholder="Select rating"
           value={selfProfileForm.secondary_rating}
           options={["1", "2", "3", "4", "5"]}
-          onChange={(v) => setSelfProfileForm((p) => ({ ...p, secondary_rating: v }))}
+          onChange={(v) =>
+            setSelfProfileForm((p) => ({ ...p, secondary_rating: v }))
+          }
         />
-        <InputField label="Years of Experience" value={selfProfileForm.yoe} onChange={(v) => setSelfProfileForm((p) => ({ ...p, yoe: v }))} />
+        <InputField
+          label="Years of Experience"
+          value={selfProfileForm.yoe}
+          onChange={(v) => setSelfProfileForm((p) => ({ ...p, yoe: v }))}
+        />
         <DatePickerField
           label="Date of Birth"
           value={selfProfileForm.date_of_birth}
-          onChange={(v) => setSelfProfileForm((p) => ({ ...p, date_of_birth: v }))}
+          onChange={(v) =>
+            setSelfProfileForm((p) => ({ ...p, date_of_birth: v }))
+          }
         />
       </div>
       {priorEmploymentDocsForProfile ? (
         <div className="mt-4 rounded-xl border border-wt-border bg-wt-surface-2 p-4">
-          <p className="mb-2 text-sm font-medium text-wt-text">Prior employment (YoE &gt; 0)</p>
+          <p className="mb-2 text-sm font-medium text-wt-text">
+            Prior employment (YoE &gt; 0)
+          </p>
           <p className="mb-3 text-xs text-wt-text-muted">
-            Relieving letter and a payslip are required when years of experience is greater than zero.
+            Relieving letter and a payslip are required when years of experience
+            is greater than zero.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
-            <FileField label="Relieving letter (previous company)" required accept=".pdf,image/*" onPick={(file) => setSelfProfileEmploymentFiles((p) => ({ ...p, reliving_letter: file }))} />
-            <FileField label="Upload last 3 months's payslip" required accept=".pdf,image/*" onPick={(file) => setSelfProfileEmploymentFiles((p) => ({ ...p, salary_slips: file }))} />
+            <FileField
+              label="Relieving letter (previous company)"
+              required
+              accept=".pdf,image/*"
+              onPick={(file) =>
+                setSelfProfileEmploymentFiles((p) => ({
+                  ...p,
+                  reliving_letter: file,
+                }))
+              }
+            />
+            <FileField
+              label="Upload last 3 months's payslip"
+              required
+              accept=".pdf,image/*"
+              onPick={(file) =>
+                setSelfProfileEmploymentFiles((p) => ({
+                  ...p,
+                  salary_slips: file,
+                }))
+              }
+            />
           </div>
         </div>
       ) : null}
       <div className="mt-3">
-        <FileField label="Profile Picture (required)" required accept="image/*" onPick={setSelfProfilePic} />
+        <FileField
+          label="Profile Picture (required)"
+          required
+          accept="image/*"
+          onPick={setSelfProfilePic}
+        />
       </div>
       <div className="mt-4">
-        <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
+        <Button
+          variant="brand"
+          type="button"
+          className="px-3 py-2"
+          onClick={() =>
             runAction("Update my profile", async () => {
               const primarySkills = selfProfileForm.primary_skills
                 .split(",")
@@ -263,24 +334,30 @@ export function ProfilePageLeanClient() {
                 selfProfileForm.phone_country ?? defaultPhoneCountryIso();
               const phoneValidationError = validatePhoneNumber(
                 selectedPhoneCountry,
-                selfProfileForm.phone_number
+                selfProfileForm.phone_number,
               );
               if (phoneValidationError) {
                 throw new Error(phoneValidationError);
               }
               const formattedPhoneNumber = formatPhoneNumberForApi(
                 selectedPhoneCountry,
-                selfProfileForm.phone_number
+                selfProfileForm.phone_number,
               );
               if (!selfProfilePic) {
-                throw new Error("Profile picture is mandatory. Please upload your profile picture.");
+                throw new Error(
+                  "Profile picture is mandatory. Please upload your profile picture.",
+                );
               }
               if (priorEmploymentDocsForProfile) {
                 if (!selfProfileEmploymentFiles.reliving_letter) {
-                  throw new Error("Please upload your relieving letter from the previous company.");
+                  throw new Error(
+                    "Please upload your relieving letter from the previous company.",
+                  );
                 }
                 if (!selfProfileEmploymentFiles.salary_slips) {
-                  throw new Error("Please upload a payslip file in the payslip field.");
+                  throw new Error(
+                    "Please upload a payslip file in the payslip field.",
+                  );
                 }
               }
               const files = [
@@ -290,15 +367,21 @@ export function ProfilePageLeanClient() {
               ].filter((f): f is File => Boolean(f));
               for (const file of files) {
                 if (file.size > MAX_ONBOARD_FILE_BYTES) {
-                  throw new Error("A selected file exceeds 2 MB. Please upload a smaller file.");
+                  throw new Error(
+                    "A selected file exceeds 2 MB. Please upload a smaller file.",
+                  );
                 }
               }
               const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
               if (totalBytes > MAX_ONBOARD_TOTAL_BYTES) {
-                throw new Error("Total upload size exceeds 6 MB. Compress files and retry.");
+                throw new Error(
+                  "Total upload size exceeds 6 MB. Compress files and retry.",
+                );
               }
               const fd = new FormData();
-              const yoeValue = selfProfileForm.yoe ? Number(selfProfileForm.yoe) : null;
+              const yoeValue = selfProfileForm.yoe
+                ? Number(selfProfileForm.yoe)
+                : null;
               const profilePayload: Record<string, unknown> = {
                 phone_number: formattedPhoneNumber,
                 primary_skills: primarySkills.length ? primarySkills : null,
@@ -310,23 +393,34 @@ export function ProfilePageLeanClient() {
                       },
                     ]
                   : [],
-                experience: yoeValue && yoeValue > 0 ? `${yoeValue} years` : null,
+                experience:
+                  yoeValue && yoeValue > 0 ? `${yoeValue} years` : null,
                 yoe: yoeValue,
               };
               if (selfProfileForm.date_of_birth.trim()) {
-                profilePayload.date_of_birth = selfProfileForm.date_of_birth.trim();
+                profilePayload.date_of_birth =
+                  selfProfileForm.date_of_birth.trim();
               }
               fd.append("body", JSON.stringify(profilePayload));
               if (selfProfilePic) fd.append("profilePic", selfProfilePic);
               if (selfProfileEmploymentFiles.reliving_letter) {
-                fd.append("reliving_letter", selfProfileEmploymentFiles.reliving_letter);
+                fd.append(
+                  "reliving_letter",
+                  selfProfileEmploymentFiles.reliving_letter,
+                );
               }
               if (selfProfileEmploymentFiles.salary_slips) {
-                fd.append("salary_slips[]", selfProfileEmploymentFiles.salary_slips);
+                fd.append(
+                  "salary_slips[]",
+                  selfProfileEmploymentFiles.salary_slips,
+                );
               }
               await hrmsService.updateMyProfile(fd);
               setSelfProfileForm(createEmptySelfProfileForm());
-              setSelfProfileEmploymentFiles({ reliving_letter: null, salary_slips: null });
+              setSelfProfileEmploymentFiles({
+                reliving_letter: null,
+                salary_slips: null,
+              });
               setSelfProfilePic(null);
               setIsEditingOwnProfile(false);
               await loadMyProfile();
@@ -336,7 +430,11 @@ export function ProfilePageLeanClient() {
         >
           Save Profile Changes
         </Button>
-        <Button variant="ghost" type="button" className="ml-2 px-3 py-2" onClick={() => setIsEditingOwnProfile(false)}
+        <Button
+          variant="ghost"
+          type="button"
+          className="ml-2 px-3 py-2"
+          onClick={() => setIsEditingOwnProfile(false)}
           disabled={actionLoading}
         >
           Cancel
@@ -350,18 +448,42 @@ export function ProfilePageLeanClient() {
       <DashboardPageShell>
         <section className="w-full">
           {isOffboarded ? <OffboardedBanner /> : null}
-          {!isProfileLoading && !isOffboarded && requiresSelfOnboarding ? <OnboardingPendingBanner /> : null}
-          {!isProfileLoading && !isOffboarded && employeeSelfServeProfile && requiresSelfOnboarding ? (
+          {!isProfileLoading &&
+          requiresExitSurvey &&
+          employeeSelfServeProfile ? (
+            <div className="w-full">
+              <ExitInterviewSurveyPanel enabledByStatus className="w-full" />
+            </div>
+          ) : null}
+          {!isProfileLoading &&
+          !isOffboarded &&
+          !requiresExitSurvey &&
+          requiresSelfOnboarding ? (
+            <OnboardingPendingBanner />
+          ) : null}
+          {!isProfileLoading &&
+          !isOffboarded &&
+          !requiresExitSurvey &&
+          employeeSelfServeProfile &&
+          requiresSelfOnboarding ? (
             <SelfOnboardingPanel
               key={[
                 String(employeeProfile?.emp_id ?? user?.email ?? "onboard"),
                 String(employeeProfile?.personal_email ?? "").trim(),
-                String(employeeProfile?.resume_share_link ?? employeeProfile?.resumeShareLink ?? "").trim(),
+                String(
+                  employeeProfile?.resume_share_link ??
+                    employeeProfile?.resumeShareLink ??
+                    "",
+                ).trim(),
               ].join("|")}
               workEmail={user?.email ?? ""}
-              initialPersonalEmail={String(employeeProfile?.personal_email ?? "").trim()}
+              initialPersonalEmail={String(
+                employeeProfile?.personal_email ?? "",
+              ).trim()}
               initialResumeShareLink={String(
-                employeeProfile?.resume_share_link ?? employeeProfile?.resumeShareLink ?? ""
+                employeeProfile?.resume_share_link ??
+                  employeeProfile?.resumeShareLink ??
+                  "",
               ).trim()}
               actionLoading={actionLoading}
               runAction={(label, fn) => {
@@ -371,7 +493,11 @@ export function ProfilePageLeanClient() {
             />
           ) : null}
 
-          {!isOffboarded && (!employeeSelfServeProfile || !requiresSelfOnboarding || isProfileLoading) ? (
+          {!isOffboarded &&
+          !requiresExitSurvey &&
+          (!employeeSelfServeProfile ||
+            !requiresSelfOnboarding ||
+            isProfileLoading) ? (
             isEditingOwnProfile && !isProfileLoading ? (
               renderEditPanel()
             ) : (
@@ -383,7 +509,9 @@ export function ProfilePageLeanClient() {
                       <ProfileDetailsSkeleton />
                     </div>
                     <div className="mt-8 border-t border-wt-border pt-6">
-                      <h4 className="mb-3 text-sm font-semibold text-wt-text">Project Details</h4>
+                      <h4 className="mb-3 text-sm font-semibold text-wt-text">
+                        Project Details
+                      </h4>
                       <TableRowsSkeleton rows={3} columns={5} />
                     </div>
                   </>
@@ -393,14 +521,39 @@ export function ProfilePageLeanClient() {
                       profile={employeeProfile ?? {}}
                       displayName={profileDisplayName}
                       designation={pickEmployeeRole(employeeProfile ?? {})}
-                      department={String(readProfileField(employeeProfile, "department") ?? "")}
-                      empId={String(readProfileField(employeeProfile, "emp_id", "empId") ?? "")}
-                      email={String(employeeProfile?.email ?? user?.email ?? "")}
-                      phone={String(readProfileField(employeeProfile, "phone_number", "phoneNumber") ?? "")}
-                      resumeShareHref={readProfileField(employeeProfile, "resume_share_link", "resumeShareLink") || null}
+                      department={String(
+                        readProfileField(employeeProfile, "department") ?? "",
+                      )}
+                      empId={String(
+                        readProfileField(employeeProfile, "emp_id", "empId") ??
+                          "",
+                      )}
+                      email={String(
+                        employeeProfile?.email ?? user?.email ?? "",
+                      )}
+                      phone={String(
+                        readProfileField(
+                          employeeProfile,
+                          "phone_number",
+                          "phoneNumber",
+                        ) ?? "",
+                      )}
+                      resumeShareHref={
+                        readProfileField(
+                          employeeProfile,
+                          "resume_share_link",
+                          "resumeShareLink",
+                        ) || null
+                      }
                       headerAction={
                         employeeSelfServeProfile ? (
-                          <Button variant="brand" type="button" className="px-4 py-2.5" onClick={openOwnProfileEditor} disabled={actionLoading}>
+                          <Button
+                            variant="brand"
+                            type="button"
+                            className="px-4 py-2.5"
+                            onClick={openOwnProfileEditor}
+                            disabled={actionLoading}
+                          >
                             Edit Profile
                           </Button>
                         ) : undefined
@@ -408,7 +561,13 @@ export function ProfilePageLeanClient() {
                     />
                     <ProfileSectionsView
                       profile={employeeProfile ?? {}}
-                      resumeShareHref={readProfileField(employeeProfile, "resume_share_link", "resumeShareLink") || null}
+                      resumeShareHref={
+                        readProfileField(
+                          employeeProfile,
+                          "resume_share_link",
+                          "resumeShareLink",
+                        ) || null
+                      }
                     />
                     {!requiresSelfOnboarding ? (
                       <ProfileAssignedProjectsSection
@@ -416,7 +575,9 @@ export function ProfilePageLeanClient() {
                         loading={profileAssignedProjectsLoading}
                       />
                     ) : null}
-                    {!requiresSelfOnboarding ? <ProfileEmployeeTrainingsSection enabled /> : null}
+                    {!requiresSelfOnboarding ? (
+                      <ProfileEmployeeTrainingsSection enabled />
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -424,7 +585,6 @@ export function ProfilePageLeanClient() {
           ) : null}
         </section>
       </DashboardPageShell>
-
     </>
   );
 }

@@ -31,6 +31,7 @@ export const DASHBOARD_ROUTES: Record<string, string> = {
   uploads: "/dashboard/uploads",
   masters: "/dashboard/masters",
   profile: "/dashboard/profile",
+  "exit-interview": "/dashboard/exit-interview",
 };
 
 export const DASHBOARD_DEFAULT_PATH = DASHBOARD_ROUTES["employee-directory"];
@@ -65,6 +66,7 @@ const PATH_TO_NAV_ID: Array<{ prefix: string; id: string }> = [
   { prefix: "/dashboard/uploads", id: "uploads" },
   { prefix: "/dashboard/masters", id: "masters" },
   { prefix: "/dashboard/profile", id: "profile" },
+  { prefix: "/dashboard/exit-interview", id: "exit-interview" },
 ];
 
 export function dashboardNavIdFromPathname(pathname: string): string {

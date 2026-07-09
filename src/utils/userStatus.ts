@@ -80,6 +80,39 @@ export function isServingNoticeUserStatus(status: unknown): boolean {
   return normalizeEmployeeStatusKey(status) === "SERVING_NOTICE";
 }
 
+/** Employee self-service onboarding — INVITED only; not ACTIVE, offboarded, or serving notice. */
+export function shouldRequireSelfOnboarding(
+  status: unknown,
+  roles: string[] | undefined
+): boolean {
+  const userRoles = roles ?? [];
+  const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
+  const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
+  const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
+  const restrictForPendingOnboarding = isEmployee && !hasHrAccess && !hasManagerAccess;
+
+  if (!restrictForPendingOnboarding) return false;
+
+  const statusKey = normalizeEmployeeStatusKey(status);
+  if (statusKey === "INACTIVE" || statusKey === "SERVING_NOTICE") return false;
+
+  return statusKey !== "ACTIVE";
+}
+
+/** Exit survey form — employee self-serve while serving notice only. */
+export function shouldShowExitSurveyForStatus(
+  status: unknown,
+  roles: string[] | undefined
+): boolean {
+  const userRoles = roles ?? [];
+  const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
+  const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
+  const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
+  const employeeSelfServe = isEmployee && !hasHrAccess && !hasManagerAccess;
+
+  return employeeSelfServe && isServingNoticeUserStatus(status);
+}
+
 /** Active or invited employees eligible for HR offboarding. */
 export function isEligibleOffboardCandidateStatus(status: unknown): boolean {
   const key = normalizeEmployeeStatusKey(status);

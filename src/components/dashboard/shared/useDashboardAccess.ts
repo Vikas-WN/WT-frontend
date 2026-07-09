@@ -11,6 +11,8 @@ import {
   isServingNoticeUserStatus,
   normalizeUserStatus,
   resolveProfileStatus,
+  shouldRequireSelfOnboarding,
+  shouldShowExitSurveyForStatus,
 } from "@/utils/userStatus";
 import { isPortalLockedProfile } from "@/utils/portalLock";
 
@@ -35,10 +37,9 @@ export function useDashboardAccess() {
   const isOffboarded = isOffboardedUserStatus(profileStatus);
   const isServingNotice = isServingNoticeUserStatus(profileStatus);
   const isPortalLocked = isPortalLockedProfile(profileQ.data ?? null);
-  const requiresSelfOnboarding =
-    restrictForPendingOnboarding && !isSelfOnboarded && !isOffboarded && !isServingNotice;
-  /** @deprecated Exit survey module removed from the frontend. */
-  const isExitSurveyOnlyAccess = false;
+  const requiresSelfOnboarding = shouldRequireSelfOnboarding(profileStatus, userRoles);
+  const requiresExitSurvey = shouldShowExitSurveyForStatus(profileStatus, userRoles);
+  const isExitSurveyOnlyAccess = requiresExitSurvey;
   const employeeSelfServeProfile = isEmployee && !hasHrAccess;
   const canAccessProfile = Boolean(user);
   const canAccessOverview = useMemo(
@@ -103,6 +104,7 @@ export function useDashboardAccess() {
     isAccountManagerOnly,
     isEmployee,
     requiresSelfOnboarding,
+    requiresExitSurvey,
     employeeSelfServeProfile,
     canAccessProfile,
     canAccessOverview,

@@ -39,8 +39,11 @@ function ExitSurveyDetailsSkeleton() {
 /** Exit survey (employee self-serve, including offboarded users serving notice). */
 export function ExitInterviewSurveyPanel({
   className = "",
+  enabledByStatus = false,
 }: {
   className?: string;
+  /** When true, keep the panel visible for SERVING_NOTICE even before API flags load. */
+  enabledByStatus?: boolean;
 }) {
   const queryClient = useQueryClient();
   const { actionLoading, runAction } = useDashboardAction();
@@ -57,7 +60,8 @@ export function ExitInterviewSurveyPanel({
 
   const formDefQ = useExitInterviewFormDefinition({
     enabled: Boolean(
-      flags?.exit_interview_applicable && !flags?.exit_interview_submitted,
+      enabledByStatus ||
+        (flags?.exit_interview_applicable && !flags?.exit_interview_submitted),
     ),
   });
   const fields = formDefQ.data?.fields ?? [];
@@ -81,7 +85,12 @@ export function ExitInterviewSurveyPanel({
 
   const statusMessage = useMemo(() => {
     if (profileQ.isLoading) return null;
-    if (!flags?.exit_interview_applicable) return null;
+    if (!flags?.exit_interview_applicable) {
+      if (enabledByStatus) {
+        return "Your exit survey will be available during your notice period.";
+      }
+      return null;
+    }
     if (flags.exit_interview_submitted) {
       return "Thank you — your exit survey has been submitted. HR will review your responses.";
     }
@@ -89,7 +98,7 @@ export function ExitInterviewSurveyPanel({
       return "Your exit survey will be available during your notice period.";
     }
     return null;
-  }, [profileQ.isLoading, flags]);
+  }, [profileQ.isLoading, flags, enabledByStatus]);
 
   const onChange = (key: string, value: unknown) => {
     setAnswers((prev) => ({ ...prev, [key]: value }));
@@ -117,13 +126,13 @@ export function ExitInterviewSurveyPanel({
     });
   };
 
-  if (!profileQ.isLoading && flags && !flags.exit_interview_applicable) {
+  if (!profileQ.isLoading && flags && !flags.exit_interview_applicable && !enabledByStatus) {
     return null;
   }
 
   return (
     <div className={className}>
-      <div className="rounded-2xl border border-wt-border bg-wt-surface-1 px-5 py-6 md:px-7">
+      <div className="w-full rounded-2xl border border-wt-border bg-wt-surface-1 px-5 py-6 md:px-7">
         <h3 className="text-lg font-semibold">Exit Survey</h3>
 
         {profileQ.isLoading ? (

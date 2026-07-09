@@ -143,6 +143,12 @@ export const dashboardNavigation: NavItem[] = [
         ],
         icon: "calendarDays",
       },
+      {
+        id: "exit-interview",
+        label: "Exit Survey",
+        roles: ["ROLE_EMPLOYEE"],
+        icon: "fileText",
+      },
     ],
   },
   { kind: "link", id: "resumes", label: "Resumes", roles: ["ROLE_AM"], icon: "fileText" },
@@ -185,16 +191,17 @@ export const dashboardNavigation: NavItem[] = [
 function childVisible(
   child: NavChild,
   userRoles: string[],
-  options: { hasHrAccess: boolean }
+  options: { hasHrAccess: boolean; showExitSurveyNav?: boolean }
 ): boolean {
   if (child.id === "employee" && !options.hasHrAccess) return false;
+  if (child.id === "exit-interview" && !options.showExitSurveyNav) return false;
   return child.roles.length === 0 ? true : child.roles.some((r) => userRoles.includes(r));
 }
 
 export function filterVisibleNavigation(
   items: NavItem[],
   userRoles: string[],
-  options: { hasHrAccess: boolean; hasAccountManagerAccess?: boolean }
+  options: { hasHrAccess: boolean; hasAccountManagerAccess?: boolean; showExitSurveyNav?: boolean }
 ): NavItem[] {
   const result: NavItem[] = [];
   for (const item of items) {
@@ -260,6 +267,7 @@ const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   offboarding: "Offboarding",
   leave: "Personal Leave Requests",
   "leave-team": "Leave Requests",
+  "exit-interview": "Exit Survey",
 };
 
 function groupChildPageTitle(groupLabel: string, childLabel: string): string {
