@@ -213,6 +213,7 @@ export type EmployeeProfileEditForm = {
   primary_skills: string;
   secondary_skill: string;
   secondary_rating: string;
+  date_of_birth: string;
   holiday_calendar_id: string;
 };
 
@@ -251,6 +252,9 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
     primary_skills: primarySkills,
     secondary_skill: String(firstSecondary?.skill ?? "").trim(),
     secondary_rating: String(firstSecondary?.rating ?? "3").trim() || "3",
+    date_of_birth: String(
+      pickProfileField(profile, ["date_of_birth", "dob", "dateOfBirth"]) ?? ""
+    ).trim(),
     holiday_calendar_id: String(
       pickProfileField(profile, ["holiday_calendar_id", "holidayCalendarId"]) ?? ""
     ).trim(),
@@ -298,6 +302,9 @@ export function editFormToUpdatePayload(
 
   const personalEmail = form.personal_email.trim();
   if (personalEmail) payload.personal_email = personalEmail;
+
+  const dob = form.date_of_birth.trim();
+  if (dob) payload.date_of_birth = dob;
 
   const holidayCalendarId = form.holiday_calendar_id.trim();
   if (holidayCalendarId) {
