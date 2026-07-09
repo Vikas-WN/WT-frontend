@@ -42,7 +42,7 @@ import {
 import { canFetchEmployeeResumeApi, pickPortalRoles } from "@/utils/roles";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { AdaptiveSelectField, InputField } from "@/components/dashboard/ui/forms";
+import { AdaptiveSelectField, InputField, DatePickerField } from "@/components/dashboard/ui/forms";
 import { FormActionBar } from "@/components/dashboard/ui/FormActionBar";
 import { FormSection, FormSubsection } from "@/components/dashboard/ui/FormSection";
 import { EmployeeProfileHeaderCard } from "@/components/employee-directory/EmployeeProfileHeaderCard";
@@ -412,6 +412,12 @@ export function EmployeeProfilePageClient() {
                           label: band.label,
                         }))}
                         onChange={(id) => setEditForm({ ...editForm, band_id: id })}
+                        disabled={saving}
+                      />
+                      <DatePickerField
+                        label="Date of Birth"
+                        value={editForm.date_of_birth}
+                        onChange={(v) => setEditForm({ ...editForm, date_of_birth: v })}
                         disabled={saving}
                       />
                     </div>
