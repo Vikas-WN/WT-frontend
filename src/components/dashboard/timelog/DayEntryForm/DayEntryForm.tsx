@@ -77,10 +77,12 @@ export function DayEntryForm({
     }
     const cats = taskCategoriesForProject(form.project_code);
     if (cats.length && !cats.includes(form.task_category)) {
+      const firstCat = cats[0];
+      const subs = subCategoriesFor(form.project_code, firstCat);
       setForm((prev) => ({
         ...prev,
-        task_category: cats[0],
-        sub_category: "",
+        task_category: firstCat,
+        sub_category: subs.length ? subs[0] : "",
       }));
     }
   }, [form.project_code, form.task_category]);
@@ -89,6 +91,7 @@ export function DayEntryForm({
     if (!form.project_code) return "Select a project.";
     if (!form.task_category) return "Select a task category.";
     if (isSubRequired && !form.sub_category) return "Select a sub category.";
+    if (!form.description?.trim()) return "Description is required.";
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     if (selectedDate > todayStr) return "Cannot log time for future dates.";
@@ -232,7 +235,7 @@ export function DayEntryForm({
 
           {form.project_code && form.task_category ? (
             <label className="day-entry-form-field">
-              <span className="day-entry-form-label">Description</span>
+              <span className="day-entry-form-label">Description <span className="day-entry-form-required">*</span></span>
               <textarea
                 className="day-entry-form-textarea"
                 value={form.description}

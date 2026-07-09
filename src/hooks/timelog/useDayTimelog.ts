@@ -287,14 +287,25 @@ export function useDayTimelog() {
         const hours = Number(form.hours);
         if (!Number.isFinite(hours) || hours <= 0)
           throw new Error("Enter valid hours");
-        await hrmsService.createTimelogDraft({
-          project_code: form.project_code,
-          log_date: selectedDate,
-          hours,
-          task_category: form.task_category || undefined,
-          sub_category: form.sub_category || null,
-          description: form.description || null,
-        });
+        if (editingEntry) {
+          await hrmsService.updateTimelogEntry(editingEntry.id, {
+            project_code: form.project_code,
+            log_date: selectedDate,
+            hours,
+            task_category: form.task_category,
+            sub_category: form.sub_category || null,
+            description: form.description || null,
+          });
+        } else {
+          await hrmsService.createTimelogDraft({
+            project_code: form.project_code,
+            log_date: selectedDate,
+            hours,
+            task_category: form.task_category || undefined,
+            sub_category: form.sub_category || null,
+            description: form.description || null,
+          });
+        }
         await hrmsService.submitTimelogDate({ log_date: selectedDate });
         await queryClient.invalidateQueries({
           queryKey: ["day-timelog-logs"],
@@ -305,7 +316,7 @@ export function useDayTimelog() {
         setShowEntryForm(false);
         setEditingEntry(null);
       }),
-    [selectedDate, handleAction, queryClient],
+    [selectedDate, handleAction, queryClient, editingEntry],
   );
 
   const addEntry = useCallback(

@@ -5,6 +5,7 @@ export type SelfProfileFormState = {
   secondary_skill: string;
   secondary_rating: string;
   yoe: string;
+  date_of_birth: string;
 };
 
 export function createEmptySelfProfileForm(): SelfProfileFormState {
@@ -15,5 +16,6 @@ export function createEmptySelfProfileForm(): SelfProfileFormState {
     secondary_skill: "",
     secondary_rating: "",
     yoe: "",
+    date_of_birth: "",
   };
 }

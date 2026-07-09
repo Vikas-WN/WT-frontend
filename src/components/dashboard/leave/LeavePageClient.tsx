@@ -155,7 +155,6 @@ import { compOffService } from "@/services/compOff.service";
 import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
 import { CompOffCreditsDialog } from "@/components/dashboard/leave/CompOffCreditsDialog";
 import { WfhExceptionModal } from "@/components/dashboard/leave/WfhExceptionModal";
-import { HrWfhExceptionPanel } from "@/components/dashboard/leave/HrWfhExceptionPanel";
 import { CompOffPageClient } from "@/components/comp-off/CompOffPageClient";
 import { LeaveRequestForm } from "@/components/dashboard/leave/LeaveRequestForm";
 import { MyLeaveRequestsView } from "@/components/dashboard/leave/MyLeaveRequestsView";
@@ -1638,11 +1637,6 @@ export function LeavePageClient() {
                             </>
                           )}
                         </div>
-                          {leaveSubTab === "org" && hasHrAccess ? (
-                            <div className="mb-8">
-                              <HrWfhExceptionPanel actionLoading={actionLoading} runAction={runAction} />
-                            </div>
-                          ) : null}
                           <div hidden={!((leaveSubTab === "team" || leaveSubTab === "org") && canViewTeamLeave)}>
                         <div className="bg-white dark:bg-zinc-950 rounded-xl border border-border/40 shadow-sm p-6 space-y-5">
                           <div className="flex flex-col gap-3">

@@ -56,10 +56,10 @@ function EmployeeIdField({
   return (
     <Field className={FORM_FIELD_CLASS}>
       <FieldLabel label="Employee ID" required htmlFor={fieldId} />
-      <div className="space-y-2 rounded-lg border border-wt-border bg-wt-surface-2/60 p-3">
         <Input
           id={fieldId}
           value={value}
+          placeholder="Only letters and numbers are allowed (no spaces or special characters)."
           autoComplete="off"
           aria-describedby={invalidAttempt ? `${hintId} ${errorId}` : hintId}
           aria-invalid={invalidAttempt || undefined}
@@ -71,9 +71,6 @@ function EmployeeIdField({
             onChange(cleaned);
           }}
         />
-        <p id={hintId} className="text-xs leading-relaxed text-wt-text-muted">
-          {EMPLOYEE_ID_HINT}
-        </p>
         {invalidAttempt ? (
           <p
             id={errorId}
@@ -83,7 +80,6 @@ function EmployeeIdField({
             Special characters and spaces are not allowed in Employee ID.
           </p>
         ) : null}
-      </div>
     </Field>
   );
 }
@@ -299,6 +295,9 @@ export function HrOnboardForm({
         work_location_type: form.work_location_type,
         category: form.category,
         reporting_manager_id: reportingManagerId,
+        ...(form.date_of_birth.trim()
+          ? { date_of_birth: form.date_of_birth.trim() }
+          : {}),
         ...(form.holiday_calendar_id.trim()
           ? { holiday_calendar_id: Number(form.holiday_calendar_id) }
           : {}),
@@ -516,6 +515,11 @@ export function HrOnboardForm({
             onChange={(v) => setForm((p) => ({ ...p, doj: v }))}
           />
         )}
+        <DatePickerField
+          label="Date of Birth"
+          value={form.date_of_birth}
+          onChange={(v) => setForm((p) => ({ ...p, date_of_birth: v }))}
+        />
             </div>
 
             <div className={CARD_FORM_ACTIONS_CLASS}>

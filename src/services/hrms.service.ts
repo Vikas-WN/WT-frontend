@@ -3,7 +3,6 @@ import { apiClient, type ApiEnvelope } from "@/api/httpClient";
 import { parseAllocationExtensionListResponse } from "@/utils/allocationExtension";
 import type { OnboardListData, OnboardListItem, OnboardUserResponse } from "@/types/onboard";
 import type { OffboardListData, OffboardListQuery } from "@/types/offboard";
-import { toPagedRows } from "@/utils/apiRows";
 import { parseAllocationListRows } from "@/utils/allocationList";
 import {
   ONBOARD_DATE_FIELDS,
@@ -712,6 +711,20 @@ export const hrmsService = {
     });
   },
 
+  submitTimelog(payload: {
+    project_code: string;
+    log_date: string;
+    hours: number;
+    task_category?: string;
+    sub_category?: string | null;
+    description?: string | null;
+  }) {
+    return apiClient.post<ApiEnvelope<unknown>>(endpoints.timelog.root, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
   createTimelogDraft(payload: {
     project_code: string;
     log_date: string;
@@ -817,7 +830,7 @@ export const hrmsService = {
     const query: Record<string, string> = {};
     if (params?.search?.trim()) query.search = params.search.trim();
     return apiClient.get<ApiEnvelope<{ items: LeaveManagerOption[] }>>(
-      endpoints.employees.managers,
+      endpoints.userRequest.leaveManagerOptions,
       { query }
     );
   },
