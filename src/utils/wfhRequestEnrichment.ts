@@ -144,11 +144,14 @@ export async function enrichWfhRequestRows(
       email ||
       "—";
 
+    const employee_name = person?.name || nameFromRow || email || "—";
+    const employee_emp_id = person?.empId || String(row.emp_id ?? row.empId ?? "").trim() || "";
+
     const primaryManagers = pickManagerEmailList(row, "primary");
     const primary_manager_labels = primaryManagers.map((managerEmail) =>
       labelForDirectoryEmail(managerEmail, personByEmail)
     );
 
-    return { ...row, employee_display, primary_manager_labels };
+    return { ...row, employee_display, employee_name, employee_emp_id, primary_manager_labels };
   });
 }

@@ -897,7 +897,7 @@ export function CompOffPageClient({
           <Tabs value={compOffSubTab} onValueChange={(v) => setCompOffSubTab(v as "apply" | "view")} orientation="horizontal">
             <TabsList variant="line" className="h-9 gap-1">
               <TabsTrigger value="apply" className="px-3 text-xs font-medium cursor-pointer">Apply for Compensation Off</TabsTrigger>
-              <TabsTrigger value="view" className="px-3 text-xs font-medium cursor-pointer">View Applications</TabsTrigger>
+              <TabsTrigger value="view" className="px-3 text-xs font-medium cursor-pointer">History</TabsTrigger>
             </TabsList>
 
             <TabsContent value="apply" className="pt-6">

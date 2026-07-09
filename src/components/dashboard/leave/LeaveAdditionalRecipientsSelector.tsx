@@ -139,7 +139,7 @@ export function LeaveAdditionalRecipientsSelector({
 
   return (
     <div className="space-y-2" ref={rootRef}>
-      <FieldLabel>Leave Notification Recipients</FieldLabel>
+      <FieldLabel>Secondary Managers</FieldLabel>
 
       <div className="relative">
         <Button

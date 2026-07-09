@@ -35,8 +35,9 @@ function exceptionRowMatchesSearch(row: Record<string, unknown>, query: string):
   const q = query.trim().toLowerCase();
   if (!q) return true;
   const haystack = [
-    row.employee_display,
     row.employee_name,
+    row.employee_emp_id,
+    row.employee_display,
     row.name,
     row.email,
     row.emp_email,
@@ -236,8 +237,8 @@ export function HrWfhExceptionPanel({
                   );
                   const toDate = String(rowRecord.request_to_date ?? rowRecord.requestToDate ?? "");
                   const isPending = finalStatus === "PENDING";
-                  const employee = String(rowRecord.employee_display ?? rowRecord.employee_name ?? rowRecord.name ?? "—").trim();
-                  const empId = String(rowRecord.emp_id ?? rowRecord.empId ?? "—").trim();
+                  const employee = String(rowRecord.employee_name ?? rowRecord.employee_display ?? rowRecord.name ?? "—").trim();
+                  const empId = String(rowRecord.employee_emp_id ?? rowRecord.emp_id ?? rowRecord.empId ?? "—").trim();
                   const comments = String(rowRecord.comments ?? "—");
                   const createdAt = String(rowRecord.created_at ?? rowRecord.createdAt ?? "—");
 

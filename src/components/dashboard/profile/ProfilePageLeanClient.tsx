@@ -20,10 +20,11 @@ import {
 } from "@/utils/phoneCountries";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { SelfOnboardingPanel } from "@/components/employee-onboarding/SelfOnboardingPanel";
-import { InputField, SelectField, FileField } from "@/components/dashboard/ui/forms";
+import { InputField, SelectField, FileField, DatePickerField } from "@/components/dashboard/ui/forms";
 import {
   readProfileField,
 } from "@/components/dashboard/ui/profile";
+import { pickProfileField } from "@/utils/employeeDirectory";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { ProfileEmployeeTrainingsSection } from "@/components/dashboard/profile/ProfileEmployeeTrainingsSection";
 import { ProfileAssignedProjectsSection } from "@/components/dashboard/profile/ProfileAssignedProjectsSection";
@@ -181,6 +182,9 @@ export function ProfilePageLeanClient() {
 
     const phoneParts = splitPhoneNumber(String(profile.phone_number ?? profile.phoneNumber ?? "").trim());
 
+    const profileDob = String(
+      pickProfileField(profile, ["date_of_birth", "dob", "dateOfBirth"]) ?? ""
+    ).trim();
     setSelfProfileForm({
       phone_country: phoneParts.countryIso,
       phone_number: phoneParts.nationalNumber,
@@ -188,6 +192,7 @@ export function ProfilePageLeanClient() {
       secondary_skill: String(firstSecondary?.skill ?? "").trim(),
       secondary_rating: String(firstSecondary?.rating ?? "").trim(),
       yoe: String(profile.yoe ?? "").trim(),
+      date_of_birth: profileDob,
     });
     setSelfProfileEmploymentFiles({ reliving_letter: null, salary_slips: null });
     setSelfProfilePic(null);
@@ -226,6 +231,11 @@ export function ProfilePageLeanClient() {
           onChange={(v) => setSelfProfileForm((p) => ({ ...p, secondary_rating: v }))}
         />
         <InputField label="Years of Experience" value={selfProfileForm.yoe} onChange={(v) => setSelfProfileForm((p) => ({ ...p, yoe: v }))} />
+        <DatePickerField
+          label="Date of Birth"
+          value={selfProfileForm.date_of_birth}
+          onChange={(v) => setSelfProfileForm((p) => ({ ...p, date_of_birth: v }))}
+        />
       </div>
       {priorEmploymentDocsForProfile ? (
         <div className="mt-4 rounded-xl border border-wt-border bg-wt-surface-2 p-4">
@@ -289,23 +299,24 @@ export function ProfilePageLeanClient() {
               }
               const fd = new FormData();
               const yoeValue = selfProfileForm.yoe ? Number(selfProfileForm.yoe) : null;
-              fd.append(
-                "body",
-                JSON.stringify({
-                  phone_number: formattedPhoneNumber,
-                  primary_skills: primarySkills.length ? primarySkills : null,
-                  secondary_skills: selfProfileForm.secondary_skill
-                    ? [
-                        {
-                          skill: selfProfileForm.secondary_skill.trim(),
-                          rating: Number(selfProfileForm.secondary_rating),
-                        },
-                      ]
-                    : [],
-                  experience: yoeValue && yoeValue > 0 ? `${yoeValue} years` : null,
-                  yoe: yoeValue,
-                })
-              );
+              const profilePayload: Record<string, unknown> = {
+                phone_number: formattedPhoneNumber,
+                primary_skills: primarySkills.length ? primarySkills : null,
+                secondary_skills: selfProfileForm.secondary_skill
+                  ? [
+                      {
+                        skill: selfProfileForm.secondary_skill.trim(),
+                        rating: Number(selfProfileForm.secondary_rating),
+                      },
+                    ]
+                  : [],
+                experience: yoeValue && yoeValue > 0 ? `${yoeValue} years` : null,
+                yoe: yoeValue,
+              };
+              if (selfProfileForm.date_of_birth.trim()) {
+                profilePayload.date_of_birth = selfProfileForm.date_of_birth.trim();
+              }
+              fd.append("body", JSON.stringify(profilePayload));
               if (selfProfilePic) fd.append("profilePic", selfProfilePic);
               if (selfProfileEmploymentFiles.reliving_letter) {
                 fd.append("reliving_letter", selfProfileEmploymentFiles.reliving_letter);
