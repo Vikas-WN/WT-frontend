@@ -30,6 +30,7 @@ import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAc
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 
 import { DatePicker } from "@/components/ui/date-picker";
+import { LeaveManagerSelector } from "@/components/dashboard/leave/LeaveManagerSelector";
 import { useAccountManagerEmails } from "@/hooks/useAccountManagerEmails";
 import { useManagerPortfolioEmails } from "@/hooks/comp-off/useManagerPortfolioEmails";
 import { requestRowEmail } from "@/utils/learning/onboardOptions";
@@ -171,9 +172,7 @@ export function CompOffPageClient({
   const [projectCatalog, setProjectCatalog] = useState<CompOffProjectCatalog | null>(null);
   const [managerEmailResolving, setManagerEmailResolving] = useState(false);
 
-  const [managerOptions, setManagerOptions] = useState<Array<{ email: string; name: string; project_code?: string; project_name?: string }>>([]);
   const [selectedManagerEmails, setSelectedManagerEmails] = useState<string[]>([]);
-  const [managerOptionsLoading, setManagerOptionsLoading] = useState(false);
 
   const [earnForm, setEarnForm] = useState({
     worked_date: "",
@@ -773,15 +772,6 @@ export function CompOffPageClient({
     if (!showMyCompOff) return;
     void loadMyRequests();
     void loadBalanceAndGrants();
-    setManagerOptionsLoading(true);
-    compOffService.getManagerOptions().then((res) => {
-      const data = res.data as { items?: Array<{ email: string; name: string; project_code?: string; project_name?: string }> } | undefined;
-      setManagerOptions(data?.items ?? []);
-    }).catch(() => {
-      setManagerOptions([]);
-    }).finally(() => {
-      setManagerOptionsLoading(false);
-    });
   }, [showMyCompOff, loadMyRequests, loadBalanceAndGrants]);
 
   useEffect(() => {
@@ -944,45 +934,19 @@ export function CompOffPageClient({
                   </div>
                 </div>
 
-                {/* Primary managers + Comments */}
+                {/* Primary Managers + Comments */}
                 <div className="bg-muted/40 rounded-xl p-6 space-y-4 shadow-sm">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-foreground">Primary manager(s)</label>
-                    {managerOptionsLoading ? (
-                      <p className="text-xs text-muted-foreground">Loading managers...</p>
-                    ) : managerOptions.length ? (
-                      <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto border rounded-lg p-2">
-                        {managerOptions.map((mgr) => {
-                          const isSelected = selectedManagerEmails.includes(mgr.email);
-                          return (
-                            <label key={mgr.email} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent px-2 py-1 rounded">
-                              <input
-                                type="checkbox"
-                                className="accent-wt-brand size-4 cursor-pointer"
-                                checked={isSelected}
-                                onChange={() => {
-                                  setSelectedManagerEmails((prev) =>
-                                    isSelected ? prev.filter((e) => e !== mgr.email) : [...prev, mgr.email]
-                                  );
-                                }}
-                              />
-                              <span>{mgr.name}</span>
-                              {mgr.project_code ? (
-                                <span className="text-xs text-muted-foreground">({mgr.project_code})</span>
-                              ) : null}
-                            </label>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">No managers available for your projects.</p>
-                    )}
-                    {!selectedManagerEmails.length ? (
-                      <p className="text-xs text-destructive">Select at least one manager.</p>
-                    ) : null}
-                  </div>
+                  <LeaveManagerSelector
+                    label="Primary Managers"
+                    selectedEmails={selectedManagerEmails}
+                    onChange={setSelectedManagerEmails}
+                    disabled={actionLoading}
+                  />
+                  {!selectedManagerEmails.length ? (
+                    <p className="text-xs text-destructive">Select at least one manager.</p>
+                  ) : null}
                   <TextAreaField
-                    label="Comments / Work description"
+                    label="Comments / Work Description"
                     required
                     value={earnForm.comments}
                     onChange={(v) => setEarnForm((p) => ({ ...p, comments: v }))}
@@ -991,7 +955,7 @@ export function CompOffPageClient({
                       runAction(compOffEarnActionLabel(editingRequestId ? "update" : "submit"), submitEarn)
                     }
                   >
-                    {editingRequestId ? "Save earn request" : "Submit earn request"}
+                    {editingRequestId ? "Save Earn Request" : "Submit Earn Request"}
                   </Button>
                 </div>
 

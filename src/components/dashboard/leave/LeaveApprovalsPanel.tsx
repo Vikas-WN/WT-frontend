@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
@@ -17,12 +18,21 @@ import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { LeaveRequestStatusBadge } from "@/components/dashboard/leave/LeaveRequestStatusBadge";
 import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
-import { usePrimaryManagerLeaveInbox } from "@/hooks/leave/usePrimaryManagerLeaveInbox";
+import {
+  primaryManagerInboxQueryKey,
+  usePrimaryManagerLeaveInbox,
+} from "@/hooks/leave/usePrimaryManagerLeaveInbox";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import { formatUserRequestTypeLabel, userRequestActionLabel } from "@/utils/actionToast";
 import { formatLeaveDateRange, formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
 import { canPrimaryManagerActOnLeave } from "@/utils/leaveManagerDisplay";
-import { requestFinalStatus, updateUserRequestStatus } from "@/utils/userRequest";
+import {
+  applyLeaveTeamRequestDecisions,
+  patchLeaveTeamRequestStatus,
+  requestFinalStatus,
+  updateUserRequestStatus,
+  type UserRequestStatusValue,
+} from "@/utils/userRequest";
 
 function employeeDisplayName(row: Record<string, unknown>): string {
   return (
@@ -59,6 +69,7 @@ export function LeaveApprovalsPanel({
   actionLoading: boolean;
   runAction: (label: string, fn: () => Promise<unknown>) => Promise<void>;
 }) {
+  const queryClient = useQueryClient();
   const inboxQ = usePrimaryManagerLeaveInbox(actorEmail, Boolean(actorEmail));
   const [search, setSearch] = useState("");
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
@@ -67,11 +78,20 @@ export function LeaveApprovalsPanel({
     requestType: unknown;
   } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [decisionsVersion, setDecisionsVersion] = useState(0);
+  const decisionsRef = useRef<
+    Map<string, { status: UserRequestStatusValue; reason?: string }>
+  >(new Map());
+
+  const displayRows = useMemo(
+    () => applyLeaveTeamRequestDecisions(inboxQ.rows, decisionsRef.current),
+    [inboxQ.rows, decisionsVersion, inboxQ.dataUpdatedAt]
+  );
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return inboxQ.rows;
-    return inboxQ.rows.filter((row) => {
+    if (!q) return displayRows;
+    return displayRows.filter((row) => {
       const haystack = [
         employeeDisplayName(row),
         row.request_from_date,
@@ -87,16 +107,37 @@ export function LeaveApprovalsPanel({
         .join(" ");
       return haystack.includes(q);
     });
-  }, [inboxQ.rows, search]);
+  }, [displayRows, search]);
 
   const pagination = useClientPagination(filteredRows, {
-    resetKeys: [search, inboxQ.dataUpdatedAt],
+    resetKeys: [search, inboxQ.dataUpdatedAt, decisionsVersion],
   });
 
   const pendingCount = useMemo(
-    () => inboxQ.rows.filter((row) => requestFinalStatus(row) === "PENDING").length,
-    [inboxQ.rows]
+    () => displayRows.filter((row) => requestFinalStatus(row) === "PENDING").length,
+    [displayRows]
   );
+
+  function applyLocalDecision(
+    requestId: string,
+    status: UserRequestStatusValue,
+    reason?: string
+  ) {
+    decisionsRef.current.set(requestId, { status, reason });
+    setDecisionsVersion((version) => version + 1);
+    queryClient.setQueryData(
+      primaryManagerInboxQueryKey(actorEmail.trim()),
+      (prev: Array<Record<string, unknown>> | undefined) => {
+        if (!prev) return prev;
+        return prev.map((row) => {
+          const rowId = requestIdFromRow(row);
+          return rowId === requestId
+            ? patchLeaveTeamRequestStatus(row, status, { reason })
+            : row;
+        });
+      }
+    );
+  }
 
   async function refreshInbox() {
     await inboxQ.refetch();
@@ -118,22 +159,24 @@ export function LeaveApprovalsPanel({
     if (!reason) {
       throw new Error("Reason is required when rejecting a request.");
     }
-    await updateUserRequestStatus(Number(pendingReject.requestId), "REJECTED", {
+    const requestId = pendingReject.requestId;
+    await updateUserRequestStatus(Number(requestId), "REJECTED", {
       reason,
       requireReasonOnReject: true,
     });
+    applyLocalDecision(requestId, "REJECTED", reason);
     closeRejectDialog();
-    await refreshInbox();
+    void refreshInbox();
   }
 
   return (
     <>
       <div className="space-y-4">
-        <FormSection title="Leave Approvals" className="rounded-2xl shadow-sm">
+        <FormSection title="Leave & WFH Approvals" className="rounded-2xl shadow-sm">
           <div className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-wt-text-muted">
-                Requests where you are listed as a primary approver.
+                Leave and WFH requests where you are listed as a primary approver.
                 {pendingCount > 0 ? (
                   <span className="ml-1 font-medium text-amber-800">
                     {pendingCount} pending
@@ -147,14 +190,14 @@ export function LeaveApprovalsPanel({
                   placeholder="Search by employee, date, status..."
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  aria-label="Search leave approvals"
+                  aria-label="Search leave and WFH approvals"
                 />
                 <Button
                   type="button"
                   variant="outline"
                   className="h-10 shrink-0"
                   disabled={actionLoading || inboxQ.isFetching}
-                  onClick={() => void runAction("Refresh leave approvals", refreshInbox)}
+                  onClick={() => void runAction("Refresh leave and WFH approvals", refreshInbox)}
                 >
                   Refresh
                 </Button>
@@ -167,7 +210,7 @@ export function LeaveApprovalsPanel({
                   <TableRow className="hover:bg-transparent">
                     <TableHead>Employee</TableHead>
                     <TableHead>Date Range</TableHead>
-                    <TableHead>Leave Type</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Days</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -240,7 +283,8 @@ export function LeaveApprovalsPanel({
                                         await updateUserRequestStatus(Number(requestId), "APPROVED", {
                                           requireReasonOnReject: false,
                                         });
-                                        await refreshInbox();
+                                        applyLocalDecision(requestId, "APPROVED");
+                                        void refreshInbox();
                                       } finally {
                                         setStatusUpdatingId(null);
                                       }

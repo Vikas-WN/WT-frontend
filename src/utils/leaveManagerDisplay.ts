@@ -43,8 +43,16 @@ export function isLeaveRequestRow(row: Record<string, unknown>): boolean {
   return String(pickRowField(row, "request_type", "requestType") ?? "").trim().toUpperCase() === "LEAVE";
 }
 
+/** Leave or WFH rows that use the primary-manager approval workflow. */
+export function isLeaveOrWfhRequestRow(row: Record<string, unknown>): boolean {
+  const type = String(pickRowField(row, "request_type", "requestType") ?? "")
+    .trim()
+    .toUpperCase();
+  return type === "LEAVE" || type === "WFH";
+}
+
 export function hasPrimaryLeaveManagers(row: Record<string, unknown>): boolean {
-  return isLeaveRequestRow(row) && pickManagerEmailList(row, "primary").length > 0;
+  return isLeaveOrWfhRequestRow(row) && pickManagerEmailList(row, "primary").length > 0;
 }
 
 export function isOwnUserRequest(
@@ -66,13 +74,13 @@ export function isAssignedPrimaryLeaveManager(
   actorEmail: string | null | undefined
 ): boolean {
   const email = String(actorEmail ?? "").trim().toLowerCase();
-  if (!email || !isLeaveRequestRow(row)) return false;
+  if (!email || !isLeaveOrWfhRequestRow(row)) return false;
   return pickManagerEmailList(row, "primary").some(
     (managerEmail) => managerEmail.trim().toLowerCase() === email
   );
 }
 
-/** Primary-manager leave workflow: assigned approver who is not the request owner and request is pending. */
+/** Primary-manager leave/WFH workflow: assigned approver who is not the request owner and request is pending. */
 export function canPrimaryManagerActOnLeave(
   row: Record<string, unknown>,
   actorEmail: string | null | undefined

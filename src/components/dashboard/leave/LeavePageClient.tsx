@@ -131,6 +131,8 @@ import {
   listScopedUserRequests,
   fetchPaginatedScopedUserRequests,
   mergeStatusUpdateIntoRow,
+  applyLeaveTeamRequestDecisions,
+  patchLeaveTeamRequestStatus,
   requestFinalStatus,
   requestHrStatus,
   requestManagerStatus,
@@ -312,6 +314,9 @@ export function LeavePageClient() {
     totalPages: number;
     totalElements: number;
   }>>(new Map());
+  const teamDecisionsRef = useRef<
+    Map<string, { status: UserRequestStatusValue; reason?: string }>
+  >(new Map());
   const [kpis, setKpis] = useState<Array<Record<string, unknown>>>([]);
   const [headcountBreakdown, setHeadcountBreakdown] = useState<Array<Record<string, unknown>>>([]);
   const [roleBillingRows, setRoleBillingRows] = useState<Array<Record<string, unknown>>>([]);
@@ -864,7 +869,16 @@ export function LeavePageClient() {
 
     if (scope === "team") {
       const normalizedType = String(requestType || "ALL").trim().toUpperCase();
-      const wantsLeaveInbox = normalizedType === "ALL" || normalizedType === "LEAVE";
+      const wantsManagerInbox =
+        normalizedType === "ALL" ||
+        normalizedType === "LEAVE" ||
+        normalizedType === "WFH";
+      const managerInboxTypes =
+        normalizedType === "ALL"
+          ? (["LEAVE", "WFH"] as const)
+          : normalizedType === "LEAVE" || normalizedType === "WFH"
+            ? ([normalizedType] as const)
+            : ([] as const);
       const canLoadManagerInbox =
         hasManagerAccess || hasDmAccess || hasHrAccess || hasPrimaryLeaveInbox;
 
@@ -874,8 +888,8 @@ export function LeavePageClient() {
             toDate: to,
             requestType,
             empEmails: emailCsv,
-            page: wantsLeaveInbox && canLoadManagerInbox ? 0 : page,
-            size: wantsLeaveInbox && canLoadManagerInbox ? 200 : size,
+            page: wantsManagerInbox && canLoadManagerInbox ? 0 : page,
+            size: wantsManagerInbox && canLoadManagerInbox ? 200 : size,
           })
         : Promise.resolve({
             rows: [] as Array<Record<string, unknown>>,
@@ -883,33 +897,49 @@ export function LeavePageClient() {
             totalElements: 0,
           });
 
-      // Primary-manager leave inbox (no empEmails) — selected managers see routed leave under Team Requests.
-      const leaveInboxPromise =
-        wantsLeaveInbox && canLoadManagerInbox
-          ? fetchPaginatedScopedUserRequests({
-              fromDate: from,
-              toDate: to,
-              requestType: "LEAVE",
-              page: 0,
-              size: 200,
-            })
+      // Primary-manager leave/WFH inbox (no empEmails) — selected managers see routed requests under Team Requests.
+      const managerInboxPromise =
+        wantsManagerInbox && canLoadManagerInbox && managerInboxTypes.length
+          ? Promise.all(
+              managerInboxTypes.map((type) =>
+                fetchPaginatedScopedUserRequests({
+                  fromDate: from,
+                  toDate: to,
+                  requestType: type,
+                  page: 0,
+                  size: 200,
+                })
+              )
+            ).then((results) => ({
+              rows: results.flatMap((result) => result.rows),
+              totalPages: 1,
+              totalElements: results.reduce((sum, result) => sum + result.totalElements, 0),
+            }))
           : Promise.resolve({
               rows: [] as Array<Record<string, unknown>>,
               totalPages: 0,
               totalElements: 0,
             });
 
-      // Bench / HR-department leave for HR Team Requests.
+      // Bench / HR-department leave & WFH for HR Team Requests.
       const hrTeamScopePromise =
-        wantsLeaveInbox && hasHrAccess
-          ? fetchPaginatedScopedUserRequests({
-              fromDate: from,
-              toDate: to,
-              requestType: "LEAVE",
-              page: 0,
-              size: 200,
-              hrTeamScope: true,
-            })
+        wantsManagerInbox && hasHrAccess && managerInboxTypes.length
+          ? Promise.all(
+              managerInboxTypes.map((type) =>
+                fetchPaginatedScopedUserRequests({
+                  fromDate: from,
+                  toDate: to,
+                  requestType: type,
+                  page: 0,
+                  size: 200,
+                  hrTeamScope: true,
+                })
+              )
+            ).then((results) => ({
+              rows: results.flatMap((result) => result.rows),
+              totalPages: 1,
+              totalElements: results.reduce((sum, result) => sum + result.totalElements, 0),
+            }))
           : Promise.resolve({
               rows: [] as Array<Record<string, unknown>>,
               totalPages: 0,
@@ -918,10 +948,10 @@ export function LeavePageClient() {
 
       const [portfolioRes, leaveInboxRes, hrTeamRes] = await Promise.all([
         portfolioPromise,
-        leaveInboxPromise,
+        managerInboxPromise,
         hrTeamScopePromise,
       ]);
-      if (wantsLeaveInbox && (canLoadManagerInbox || hasHrAccess)) {
+      if (wantsManagerInbox && (canLoadManagerInbox || hasHrAccess)) {
         const merged = [...portfolioRes.rows, ...leaveInboxRes.rows, ...hrTeamRes.rows];
         rows = Array.from(
           new Map(
@@ -1032,10 +1062,17 @@ export function LeavePageClient() {
         (uid ? `User #${uid}` : "—");
       return { ...row, employee_display };
     });
-    setEmployeeRequests(enriched);
+    const withDecisions = applyLeaveTeamRequestDecisions(enriched, teamDecisionsRef.current);
+    setEmployeeRequests(withDecisions);
     setTeamPage(page);
     setTeamTotalPages(totalPages);
     setTeamTotalElements(totalElements);
+    const cacheKey = `${scope}:${employeeRequestFilters.fromDate}:${employeeRequestFilters.toDate}:${employeeRequestFilters.requestType}:${page}:${size}`;
+    teamCacheRef.current.set(cacheKey, {
+      rows: withDecisions,
+      totalPages,
+      totalElements,
+    });
   },
     [employeeRequestFilters, hasHrAccess, hasManagerAccess, hasDmAccess, hasPrimaryLeaveInbox, loadScopeEmployees]
   );
@@ -1051,7 +1088,11 @@ export function LeavePageClient() {
         const cacheKey = `${scope}:${employeeRequestFilters.fromDate}:${employeeRequestFilters.toDate}:${employeeRequestFilters.requestType}:${page}:${size}`;
         const cached = teamCacheRef.current.get(cacheKey);
         if (cached) {
-          setEmployeeRequests(cached.rows);
+          const withDecisions = applyLeaveTeamRequestDecisions(
+            cached.rows,
+            teamDecisionsRef.current
+          );
+          setEmployeeRequests(withDecisions);
           setTeamPage(page);
           setTeamTotalPages(cached.totalPages);
           setTeamTotalElements(cached.totalElements);
@@ -1071,6 +1112,32 @@ export function LeavePageClient() {
     teamCacheRef.current.clear();
   }, []);
 
+  function applyLocalTeamRequestStatus(
+    requestId: string,
+    status: UserRequestStatusValue,
+    reason?: string
+  ) {
+    teamDecisionsRef.current.set(requestId, { status, reason });
+    setEmployeeRequests((prev) =>
+      applyLeaveTeamRequestDecisions(
+        prev.map((row) => {
+          const rowId = String(
+            row.user_request_id ??
+              row.userRequestId ??
+              row.request_id ??
+              row.requestId ??
+              row.id ??
+              ""
+          ).trim();
+          return rowId === requestId
+            ? patchLeaveTeamRequestStatus(row, status, { reason })
+            : row;
+        }),
+        teamDecisionsRef.current
+      )
+    );
+  }
+
   async function updateEmployeeRequestStatus(
     requestId: string,
     status: UserRequestStatusValue,
@@ -1078,6 +1145,8 @@ export function LeavePageClient() {
   ) {
     const res = await updateUserRequestStatus(Number(requestId), status, options);
     const updated = extractStatusUpdateData(res);
+    const reason = options?.reason?.trim();
+    applyLocalTeamRequestStatus(requestId, status, reason);
     if (updated) {
       setEmployeeRequests((prev) =>
         prev.map((row) => {
@@ -1089,7 +1158,11 @@ export function LeavePageClient() {
               row.id ??
               ""
           ).trim();
-          return rowId === requestId ? mergeStatusUpdateIntoRow(row, updated) : row;
+          if (rowId !== requestId) return row;
+          return mergeStatusUpdateIntoRow(
+            patchLeaveTeamRequestStatus(row, status, { reason }),
+            updated
+          );
         })
       );
     }
@@ -1198,7 +1271,9 @@ export function LeavePageClient() {
     const cacheKey = `${currentScope}:${employeeRequestFilters.fromDate}:${employeeRequestFilters.toDate}:${employeeRequestFilters.requestType}:${teamPage}:${teamPageSize}`;
     const cached = teamCacheRef.current.get(cacheKey);
     if (cached) {
-      setEmployeeRequests(cached.rows);
+      setEmployeeRequests(
+        applyLeaveTeamRequestDecisions(cached.rows, teamDecisionsRef.current)
+      );
       setTeamTotalPages(cached.totalPages);
       setTeamTotalElements(cached.totalElements);
     } else {
@@ -1885,10 +1960,9 @@ export function LeavePageClient() {
                                         hasDmAccess,
                                         actorEmail: userEmail,
                                       });
-                                    const blockedHint =
-                                      leaveSubTab === "org"
-                                        ? null
-                                        : hrTeamActionBlockedHint(rowRecord, { hasHrAccess });
+                                    const blockedHint = showTeamActionsColumn
+                                        ? hrTeamActionBlockedHint(rowRecord, { hasHrAccess })
+                                        : null;
                                     const isRowUpdating = teamStatusUpdatingId === requestId;
                                     const rowEmail = requestRowEmail(row as Record<string, unknown>);
                                     const isAm = rowEmail ? accountManagerEmails.has(rowEmail) : false;
@@ -1988,10 +2062,9 @@ export function LeavePageClient() {
                                                             "APPROVED",
                                                             { requireReasonOnReject: false }
                                                           );
-                                                          const scope = leaveSubTab === "org" ? "org" : "team";
                                                           invalidateTeamCache();
                                                           invalidateLeaveBalance();
-                                                          await loadEmployeeRequestsForApprover(scope, teamPage, teamPageSize, true);
+                                                          await loadEmployeeRequestsForApprover(currentScope, teamPage, teamPageSize, true);
                                                         } finally {
                                                           setTeamStatusUpdatingId(null);
                                                         }
@@ -2034,10 +2107,9 @@ export function LeavePageClient() {
                                                         await updateEmployeeRequestStatus(requestId, "APPROVED", {
                                                           requireReasonOnReject: false,
                                                         });
-                                                        const scope = leaveSubTab === "org" ? "org" : "team";
                                                         invalidateTeamCache();
                                                         invalidateLeaveBalance();
-                                                        await loadEmployeeRequestsForApprover(scope, teamPage, teamPageSize, true);
+                                                        await loadEmployeeRequestsForApprover(currentScope, teamPage, teamPageSize, true);
                                                       }
                                                     )
                                                   }
