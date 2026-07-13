@@ -111,6 +111,7 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
         await exitInterviewService.deleteSubmission(token);
         showSuccessToast("Exit survey submission deleted.");
         await queryClient.invalidateQueries({ queryKey: EXIT_SURVEY_FOLLOW_UP_QUERY_KEY });
+        await queryClient.invalidateQueries({ queryKey: ["offboarding"] });
         router.replace(DASHBOARD_ROUTES.offboarding);
       } catch (error) {
         showErrorToast(
@@ -131,6 +132,7 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
         await exitInterviewService.requestResubmission(empId);
         showSuccessToast("Exit survey reopened. The employee can resubmit once.");
         await queryClient.invalidateQueries({ queryKey: EXIT_SURVEY_FOLLOW_UP_QUERY_KEY });
+        await queryClient.invalidateQueries({ queryKey: ["offboarding"] });
         router.replace(DASHBOARD_ROUTES.offboarding);
       } catch (error) {
         showErrorToast(
@@ -151,7 +153,7 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
           href={DASHBOARD_ROUTES.offboarding}
           className="text-xs font-medium text-indigo-600 hover:underline"
         >
-          ← Back to Exit Survey
+          ← Back to Offboarding
         </Link>
 
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 px-5 py-6 md:px-7">

@@ -26,7 +26,6 @@ import {
 } from "@/utils/phoneCountries";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { SelfOnboardingPanel } from "@/components/employee-onboarding/SelfOnboardingPanel";
-import { ExitInterviewSurveyPanel } from "@/components/exit-interview/ExitInterviewSurveyPanel";
 import {
   InputField,
   SelectField,
@@ -58,7 +57,6 @@ export function ProfilePageLeanClient() {
   const userRoles = useMemo(() => user?.roles ?? [], [user?.roles]);
   const {
     requiresSelfOnboarding,
-    requiresExitSurvey,
     isOffboarded,
     employeeSelfServeProfile,
     profile: employeeProfile,
@@ -100,13 +98,7 @@ export function ProfilePageLeanClient() {
   }, [user, userRoles, loadMyProfile, router]);
 
   useEffect(() => {
-    if (
-      !user ||
-      isProfileLoading ||
-      requiresSelfOnboarding ||
-      requiresExitSurvey
-    )
-      return;
+    if (!user || isProfileLoading || requiresSelfOnboarding) return;
     const load = async () => {
       setProfileAssignedProjectsLoading(true);
       try {
@@ -133,7 +125,7 @@ export function ProfilePageLeanClient() {
       }
     };
     void load();
-  }, [user, isProfileLoading, requiresSelfOnboarding, requiresExitSurvey]);
+  }, [user, isProfileLoading, requiresSelfOnboarding]);
 
   const priorEmploymentDocsForProfile = useMemo(() => {
     const raw = String(selfProfileForm.yoe ?? "")
@@ -448,22 +440,11 @@ export function ProfilePageLeanClient() {
       <DashboardPageShell>
         <section className="w-full">
           {isOffboarded ? <OffboardedBanner /> : null}
-          {!isProfileLoading &&
-          requiresExitSurvey &&
-          employeeSelfServeProfile ? (
-            <div className="w-full">
-              <ExitInterviewSurveyPanel enabledByStatus className="w-full" />
-            </div>
-          ) : null}
-          {!isProfileLoading &&
-          !isOffboarded &&
-          !requiresExitSurvey &&
-          requiresSelfOnboarding ? (
+          {!isProfileLoading && !isOffboarded && requiresSelfOnboarding ? (
             <OnboardingPendingBanner />
           ) : null}
           {!isProfileLoading &&
           !isOffboarded &&
-          !requiresExitSurvey &&
           employeeSelfServeProfile &&
           requiresSelfOnboarding ? (
             <SelfOnboardingPanel
@@ -494,7 +475,6 @@ export function ProfilePageLeanClient() {
           ) : null}
 
           {!isOffboarded &&
-          !requiresExitSurvey &&
           (!employeeSelfServeProfile ||
             !requiresSelfOnboarding ||
             isProfileLoading) ? (

@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ExitInterviewSurveyPanel } from "@/components/exit-interview/ExitInterviewSurveyPanel";
 import { OffboardedBanner } from "@/components/dashboard/shared/OffboardedBanner";
 import { OnboardingPendingBanner } from "@/components/dashboard/shared/OnboardingPendingBanner";
 import { PortalLockedBanner } from "@/components/dashboard/shared/PortalLockedBanner";
@@ -24,23 +23,14 @@ export function OnboardingGate({
 }) {
   const access = useDashboardAccess();
   const isOffboarded = isOffboardedProp ?? access.isOffboarded;
-  const requiresExitSurvey = access.requiresExitSurvey;
   const isPortalLocked = isPortalLockedProp ?? access.isPortalLocked;
-  const requiresSelfOnboarding =
-    isOffboarded || requiresExitSurvey
-      ? false
-      : (requiresSelfOnboardingProp ?? access.requiresSelfOnboarding);
+  // Exit survey has its own Personal nav page — do not replace Leave/Time Logs/etc.
+  const requiresSelfOnboarding = isOffboarded
+    ? false
+    : (requiresSelfOnboardingProp ?? access.requiresSelfOnboarding);
 
   if (isOffboarded) {
     return <OffboardedBanner />;
-  }
-
-  if (requiresExitSurvey) {
-    return (
-      <div className="w-full">
-        <ExitInterviewSurveyPanel enabledByStatus className="w-full" />
-      </div>
-    );
   }
 
   const hideChildren = requiresSelfOnboarding && !allowContentWhenOnboarding;

@@ -127,14 +127,30 @@ export function LeaveAdditionalRecipientsSelector({
   if (loading) {
     return (
       <div className="space-y-2">
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-10 w-full" />
+        <FieldLabel>Secondary Managers</FieldLabel>
+        <div className="flex h-10 w-full items-center gap-2 rounded-lg border border-input px-3 text-sm text-muted-foreground">
+          <Loader2 className="size-3.5 animate-spin" />
+          Loading employees…
+        </div>
       </div>
     );
   }
 
   if (error && !options.length) {
-    return <p className="text-sm text-destructive">{error}</p>;
+    return (
+      <div className="space-y-2">
+        <FieldLabel>Secondary Managers</FieldLabel>
+        <p className="text-sm text-destructive">{error}</p>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => void loadOptions()}
+          className="text-xs text-primary underline underline-offset-2 hover:text-primary/80 cursor-pointer"
+        >
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (

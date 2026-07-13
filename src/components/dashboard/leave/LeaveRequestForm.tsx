@@ -60,6 +60,8 @@ export function LeaveRequestForm({
   const isLeaveType = normalizedType === "LEAVE";
   const isLeaveOrOptional = normalizedType === "LEAVE" || normalizedType === "OPTIONAL";
   const isCompOff = normalizedType === "COMP_OFF";
+  // Primary + secondary manager pickers are required for leave/optional routing.
+  const showManagerSelectors = isLeaveOrOptional;
 
   const selectItems = useMemo(() => {
     return leaveRequestTypeOptions.map((opt) =>
@@ -69,10 +71,10 @@ export function LeaveRequestForm({
     );
   }, [leaveRequestTypeOptions]);
 
-  const selectedItem = useMemo(
-    () => selectItems.find((item) => item.value === values.request_type) ?? null,
-    [selectItems, values.request_type]
-  );
+  const requestTypeValue = useMemo(() => {
+    const match = selectItems.find((item) => item.value === values.request_type);
+    return match?.value ?? (isLeaveOrOptional || isCompOff ? values.request_type : "LEAVE");
+  }, [selectItems, values.request_type, isLeaveOrOptional, isCompOff]);
 
   return (
     <div className="space-y-6">
@@ -85,23 +87,27 @@ export function LeaveRequestForm({
           <Field>
             <FieldLabel>
               Request Type *
-              <span title="Leave — Deducts from your primary/secondary leave balance.&#10;Optional Leave — Deducts from your primary/secondary leave balance (mutually exclusive with paired holiday).&#10;Comp Off — Deducts from your approved Comp Off credit balance." className="inline-flex align-middle ml-1 cursor-help">
+              <span
+                title="Leave — Deducts from your primary/secondary leave balance.&#10;Optional Leave — Deducts from your primary/secondary leave balance (mutually exclusive with paired holiday).&#10;Comp Off — Deducts from your approved Comp Off credit balance."
+                className="inline-flex align-middle ml-1 cursor-help"
+              >
                 <Info className="size-3.5 text-muted-foreground/60" />
               </span>
             </FieldLabel>
             <Select
-              value={selectedItem}
-              onValueChange={(item) => onChange({ ...values, request_type: item?.value ?? "" })}
+              value={requestTypeValue}
+              onValueChange={(next) => {
+                const value = typeof next === "string" ? next : String(next ?? "LEAVE");
+                onChange({ ...values, request_type: value || "LEAVE" });
+              }}
               disabled={actionLoading}
-              items={selectItems}
-              isItemEqualToValue={(a, b) => a.value === b.value}
             >
               <SelectTrigger className="cursor-pointer">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
                 {selectItems.map((item) => (
-                  <SelectItem key={item.value} value={item}>
+                  <SelectItem key={item.value} value={item.value}>
                     {item.label}
                   </SelectItem>
                 ))}
@@ -124,9 +130,7 @@ export function LeaveRequestForm({
 
           <DatePicker
             label="To Date *"
-            value={
-              values.is_half_day ? values.request_from_date : values.request_to_date
-            }
+            value={values.is_half_day ? values.request_from_date : values.request_to_date}
             disabled={actionLoading || values.is_half_day}
             onChange={(v) => {
               if (values.is_half_day) return;
@@ -149,14 +153,23 @@ export function LeaveRequestForm({
                 })
               }
             />
-            <label htmlFor="half-day" className="text-sm text-muted-foreground cursor-pointer select-none">
+            <label
+              htmlFor="half-day"
+              className="text-sm text-muted-foreground cursor-pointer select-none"
+            >
               Half-day leave (single day only)
             </label>
           </div>
         ) : null}
         {isCompOff ? (
           <div className="mt-5">
-            <Button type="button" variant="outline" size="sm" className="gap-2 cursor-pointer" onClick={onViewCompOffCredits}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2 cursor-pointer"
+              onClick={onViewCompOffCredits}
+            >
               <Eye className="size-4" />
               View my Comp Off credits
             </Button>
@@ -173,7 +186,10 @@ export function LeaveRequestForm({
                 onChange({ ...values, client_approval: !!checked })
               }
             />
-            <label htmlFor="client-approval" className="text-sm text-amber-800 dark:text-amber-200 cursor-pointer select-none leading-relaxed">
+            <label
+              htmlFor="client-approval"
+              className="text-sm text-amber-800 dark:text-amber-200 cursor-pointer select-none leading-relaxed"
+            >
               I confirm client approval for this request (required on active client/staffing
               projects).
             </label>
@@ -182,16 +198,17 @@ export function LeaveRequestForm({
       </div>
 
       <div className="rounded-xl bg-muted/40 p-5 space-y-5 shadow-sm border border-border/40">
-        {isLeaveOrOptional ? (
+        {showManagerSelectors ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 min-w-0">
               <LeaveManagerSelector
+                label="Primary managers"
                 selectedEmails={selectedManagerEmails}
                 onChange={onManagerEmailsChange}
                 disabled={actionLoading}
               />
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 min-w-0">
               <LeaveAdditionalRecipientsSelector
                 selectedEmails={selectedAdditionalEmails}
                 onChange={onAdditionalEmailsChange}

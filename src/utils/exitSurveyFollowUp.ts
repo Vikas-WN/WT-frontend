@@ -133,7 +133,22 @@ export function followUpRowLookupId(row: ExitSurveyFollowUpRow): string {
 }
 
 export function canViewExitSurveySubmission(row: ExitSurveyFollowUpRow): boolean {
-  return row.can_view_submission === true;
+  if (row.can_view_submission === true) return true;
+  if (row.exit_survey_submitted === true) return true;
+  return row.submission_status === "SUBMITTED";
+}
+
+/** HR detail page for a submitted exit survey (`lookup_id` = emp_id or email). */
+export function exitSurveySubmissionDetailHref(
+  row: Pick<
+    ExitSurveyFollowUpRow,
+    "lookup_id" | "emp_id" | "email" | "can_view_submission" | "exit_survey_submitted" | "submission_status"
+  >
+): string | null {
+  if (!canViewExitSurveySubmission(row)) return null;
+  const lookupId = followUpRowLookupId(row);
+  if (!lookupId || lookupId === "—") return null;
+  return `/dashboard/exit-interview/submissions/${encodeURIComponent(lookupId)}`;
 }
 
 export type ExitSurveyStatusFilter = "PENDING" | "COMPLETED";

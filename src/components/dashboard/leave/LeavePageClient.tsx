@@ -108,7 +108,7 @@ import {
   LEAVE_REQUEST_SORT_OPTIONS,
   toggleColumnSort,
 } from "@/utils/listSort";
-import { Calendar, Clock, Home, Users, Building2, Wallet, Info } from "lucide-react";
+import { Calendar, Clock, Home, Users, Building2, Wallet } from "lucide-react";
 import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
@@ -487,7 +487,6 @@ export function LeavePageClient() {
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) && n > 0;
   }, [selfProfileForm.yoe]);
-  const [isSelfOnboarded, setIsSelfOnboarded] = useState<boolean>(user?.status === "ACTIVE");
   const [projectForm, setProjectForm] = useState({
     project_name: "",
     project_type: "IN_HOUSE" as "IN_HOUSE" | "STAFFING" | "PRODUCT",
@@ -552,7 +551,43 @@ export function LeavePageClient() {
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
   const hasDmAccess = hasDmRole(userRoles);
 
-  const canViewTeamLeave = hasManagerAccess || hasHrAccess || hasDmAccess;
+  const [hasPrimaryLeaveInbox, setHasPrimaryLeaveInbox] = useState(false);
+
+  useEffect(() => {
+    if (hasManagerAccess || hasHrAccess || hasDmAccess || !userEmail) {
+      setHasPrimaryLeaveInbox(false);
+      return;
+    }
+    let cancelled = false;
+    const selfEmail = userEmail.trim().toLowerCase();
+    void (async () => {
+      try {
+        const now = new Date();
+        const from = formatApiDate(new Date(now.getFullYear() - 1, 0, 1));
+        const to = formatApiDate(new Date(now.getFullYear() + 1, 11, 31));
+        const rows = await listScopedUserRequests({
+          fromDate: from,
+          toDate: to,
+          requestType: "LEAVE",
+          size: 5,
+        });
+        // Without manager role, /userRequest may fall back to the actor's own leave —
+        // only treat other employees' leave as a primary-manager inbox.
+        const inboxRows = rows.filter((row) => {
+          const email = requestRowEmail(row).trim().toLowerCase();
+          return Boolean(email) && email !== selfEmail;
+        });
+        if (!cancelled) setHasPrimaryLeaveInbox(inboxRows.length > 0);
+      } catch {
+        if (!cancelled) setHasPrimaryLeaveInbox(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userEmail, hasManagerAccess, hasHrAccess, hasDmAccess]);
+
+  const canViewTeamLeave = hasManagerAccess || hasHrAccess || hasDmAccess || hasPrimaryLeaveInbox;
   const firstLineStatusColumnLabel = hasHrAccess
     ? "Manager/DM status"
     : hasDmAccess && !hasManagerAccess
@@ -565,9 +600,7 @@ export function LeavePageClient() {
     userRoles.includes("ROLE_HR") && !hasManagerAccess;
   const canExportTimelog = hasHrAccess || hasManagerAccess;
   const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
-  const restrictForPendingOnboarding =
-    isEmployee && !hasHrAccess && !hasManagerAccess;
-  const requiresSelfOnboarding = restrictForPendingOnboarding && !isSelfOnboarded;
+  const { requiresSelfOnboarding } = useDashboardAccess();
   /** Self-service profile + onboarding (non-HR employees only) */
   const employeeSelfServeProfile = isEmployee && !hasHrAccess;
   const canApplyCompOff = !hasHrAccess && !hasManagerAccess;
@@ -599,9 +632,13 @@ export function LeavePageClient() {
         prev.request_type === "WFH" ? prev : { ...prev, request_type: "WFH" }
       );
     } else if (leaveSubTab === "my") {
-      setLeaveRequestForm((prev) =>
-        prev.request_type === "WFH" ? { ...prev, request_type: "LEAVE" } : prev
-      );
+      setLeaveRequestForm((prev) => {
+        const type = normalizeUserRequestType(prev.request_type);
+        if (type === "LEAVE" || type === "OPTIONAL" || type === "COMP_OFF") {
+          return prev;
+        }
+        return { ...prev, request_type: "LEAVE" };
+      });
     }
   }, [leaveSubTab]);
   const canAccessProfile = Boolean(user);
@@ -656,9 +693,13 @@ export function LeavePageClient() {
   );
 
   const loadMyProfile = useCallback(async () => {
-    const { profile, isSelfOnboarded: onboarded } = await loadSelfProfileState(userRoles, user);
-    setEmployeeProfile(profile);
-    setIsSelfOnboarded(onboarded);
+    try {
+      const { profile } = await loadSelfProfileState(userRoles, user);
+      setEmployeeProfile(profile);
+    } catch {
+      // Keep session-derived onboarding state if profile is temporarily unavailable.
+      setEmployeeProfile(null);
+    }
   }, [user, userRoles]);
   useEffect(() => {
     if (!user) return;
@@ -822,34 +863,93 @@ export function LeavePageClient() {
     let totalElements = 0;
 
     if (scope === "team") {
-      const hasDmAlso = hasDmAccess && !hasHrAccess;
-      if (hasDmAlso) {
-        const [teamRes, dmRes] = await Promise.all([
-          emailCsv
-            ? fetchPaginatedScopedUserRequests({ fromDate: from, toDate: to, requestType, empEmails: emailCsv, page: 0, size: 200 })
-            : { rows: [] as Array<Record<string, unknown>>, totalPages: 0, totalElements: 0 },
-          fetchPaginatedScopedUserRequests({ fromDate: from, toDate: to, requestType, page: 0, size: 200 }),
-        ]);
-        const merged = [...teamRes.rows, ...dmRes.rows];
-        rows = Array.from(new Map(
-          merged.map((row) => {
-            const key = String(
-              row.user_request_id ?? row.userRequestId ?? row.request_id ?? row.requestId ?? row.id ?? Math.random()
-            );
-            return [key, row] as const;
+      const normalizedType = String(requestType || "ALL").trim().toUpperCase();
+      const wantsLeaveInbox = normalizedType === "ALL" || normalizedType === "LEAVE";
+      const canLoadManagerInbox =
+        hasManagerAccess || hasDmAccess || hasHrAccess || hasPrimaryLeaveInbox;
+
+      const portfolioPromise = emailCsv
+        ? fetchPaginatedScopedUserRequests({
+            fromDate: from,
+            toDate: to,
+            requestType,
+            empEmails: emailCsv,
+            page: wantsLeaveInbox && canLoadManagerInbox ? 0 : page,
+            size: wantsLeaveInbox && canLoadManagerInbox ? 200 : size,
           })
-        ).values());
+        : Promise.resolve({
+            rows: [] as Array<Record<string, unknown>>,
+            totalPages: 0,
+            totalElements: 0,
+          });
+
+      // Primary-manager leave inbox (no empEmails) — selected managers see routed leave under Team Requests.
+      const leaveInboxPromise =
+        wantsLeaveInbox && canLoadManagerInbox
+          ? fetchPaginatedScopedUserRequests({
+              fromDate: from,
+              toDate: to,
+              requestType: "LEAVE",
+              page: 0,
+              size: 200,
+            })
+          : Promise.resolve({
+              rows: [] as Array<Record<string, unknown>>,
+              totalPages: 0,
+              totalElements: 0,
+            });
+
+      // Bench / HR-department leave for HR Team Requests.
+      const hrTeamScopePromise =
+        wantsLeaveInbox && hasHrAccess
+          ? fetchPaginatedScopedUserRequests({
+              fromDate: from,
+              toDate: to,
+              requestType: "LEAVE",
+              page: 0,
+              size: 200,
+              hrTeamScope: true,
+            })
+          : Promise.resolve({
+              rows: [] as Array<Record<string, unknown>>,
+              totalPages: 0,
+              totalElements: 0,
+            });
+
+      const [portfolioRes, leaveInboxRes, hrTeamRes] = await Promise.all([
+        portfolioPromise,
+        leaveInboxPromise,
+        hrTeamScopePromise,
+      ]);
+      if (wantsLeaveInbox && (canLoadManagerInbox || hasHrAccess)) {
+        const merged = [...portfolioRes.rows, ...leaveInboxRes.rows, ...hrTeamRes.rows];
+        rows = Array.from(
+          new Map(
+            merged.map((row) => {
+              const key = String(
+                row.user_request_id ??
+                  row.userRequestId ??
+                  row.request_id ??
+                  row.requestId ??
+                  row.id ??
+                  Math.random()
+              );
+              return [key, row] as const;
+            })
+          ).values()
+        );
+        // Newest submissions first for Team Requests.
+        rows = applyListSort(rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
         totalPages = 1;
         totalElements = rows.length;
-      } else if (emailCsv) {
-        const result = await fetchPaginatedScopedUserRequests({ fromDate: from, toDate: to, requestType, empEmails: emailCsv, page, size });
-        rows = result.rows;
-        totalPages = result.totalPages;
-        totalElements = result.totalElements;
+      } else {
+        rows = applyListSort(portfolioRes.rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
+        totalPages = portfolioRes.totalPages;
+        totalElements = portfolioRes.totalElements;
       }
     } else if (hasHrAccess) {
       const result = await fetchPaginatedScopedUserRequests({ fromDate: from, toDate: to, requestType, page, size });
-      rows = result.rows;
+      rows = applyListSort(result.rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
       totalPages = result.totalPages;
       totalElements = result.totalElements;
     }
@@ -937,10 +1037,12 @@ export function LeavePageClient() {
     setTeamTotalPages(totalPages);
     setTeamTotalElements(totalElements);
   },
-    [employeeRequestFilters, hasHrAccess, hasManagerAccess, hasDmAccess, loadScopeEmployees]
+    [employeeRequestFilters, hasHrAccess, hasManagerAccess, hasDmAccess, hasPrimaryLeaveInbox, loadScopeEmployees]
   );
 
-  const teamTableColCount = 5;
+  /** All Employee Requests (HR org view) is read-only — no Actions column. */
+  const showTeamActionsColumn = leaveSubTab !== "org";
+  const teamTableColCount = showTeamActionsColumn ? 5 : 4;
 
   const fetchTeamRequests = useCallback(
     async (scope: "team" | "org", page: number = 0, size: number = teamPageSize) => {
@@ -1038,9 +1140,11 @@ export function LeavePageClient() {
 
   const filteredLeaveTabRequests = useMemo(
     () =>
-      filteredMyLeaveRequests.filter(
-        (row) => normalizeUserRequestType(row.request_type ?? row.requestType) !== "WFH"
-      ),
+      filteredMyLeaveRequests.filter((row) => {
+        const t = normalizeUserRequestType(row.request_type ?? row.requestType);
+        // Leave Request page: leave / optional / comp-off only (WFH has its own tab).
+        return t === "LEAVE" || t === "OPTIONAL" || t === "COMP_OFF";
+      }),
     [filteredMyLeaveRequests]
   );
 
@@ -1725,7 +1829,9 @@ export function LeavePageClient() {
                                   </TableHead>
                                   <TableHead className="font-semibold px-4">Manager status</TableHead>
                                   <TableHead className="font-semibold px-4">Details</TableHead>
-                                  <TableHead className="font-semibold px-4 text-right">Actions</TableHead>
+                                  {showTeamActionsColumn ? (
+                                    <TableHead className="font-semibold px-4 text-right">Actions</TableHead>
+                                  ) : null}
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -1759,17 +1865,30 @@ export function LeavePageClient() {
                                       ) ?? ""
                                     ).trim();
                                     const rowRecord = row as Record<string, unknown>;
-                                    const hrCanActOnRow = canHrShowTeamRequestActions(rowRecord, {
-                                      hasHrAccess,
-                                    });
+                                    const hrCanActOnRow =
+                                      leaveSubTab !== "org" &&
+                                      canHrShowTeamRequestActions(rowRecord, {
+                                        hasHrAccess,
+                                      });
+                                    // Assigned primary managers can act even without ROLE_MANAGER.
                                     const showManagerActions =
-                                      (hasManagerAccess || hasDmAccess) &&
                                       !hrCanActOnRow &&
-                                      canManagerActOnRequest(rowRecord, { hasManagerAccess, hasDmAccess, actorEmail: userEmail });
+                                      canManagerActOnRequest(rowRecord, {
+                                        hasManagerAccess: hasManagerAccess || hasDmAccess,
+                                        hasDmAccess,
+                                        actorEmail: userEmail,
+                                      });
                                     const showManagerReject =
                                       showManagerActions &&
-                                      canManagerRejectRequest(rowRecord, { hasManagerAccess, hasDmAccess, actorEmail: userEmail });
-                                    const blockedHint = hrTeamActionBlockedHint(rowRecord, { hasHrAccess });
+                                      canManagerRejectRequest(rowRecord, {
+                                        hasManagerAccess: hasManagerAccess || hasDmAccess,
+                                        hasDmAccess,
+                                        actorEmail: userEmail,
+                                      });
+                                    const blockedHint =
+                                      leaveSubTab === "org"
+                                        ? null
+                                        : hrTeamActionBlockedHint(rowRecord, { hasHrAccess });
                                     const isRowUpdating = teamStatusUpdatingId === requestId;
                                     const rowEmail = requestRowEmail(row as Record<string, unknown>);
                                     const isAm = rowEmail ? accountManagerEmails.has(rowEmail) : false;
@@ -1786,7 +1905,12 @@ export function LeavePageClient() {
                                     const toDate = String(row.request_to_date ?? row.requestToDate ?? "").trim();
                                     const duration = fromDate && toDate ? `${fromDate} – ${toDate}` : "—";
                                     const comments = String(row.comments ?? "").trim();
-                                    const hasDetails = managerReason || comments;
+                                    const requestTypeLabel = String(
+                                      row.request_type ?? row.requestType ?? ""
+                                    )
+                                      .trim()
+                                      .toUpperCase();
+                                    const hasDetails = managerReason || comments || requestTypeLabel;
                                     const statusBadgeClass =
                                       status === "APPROVED"
                                         ? filledBadgeClass("success")
@@ -1822,104 +1946,66 @@ export function LeavePageClient() {
                                         </TableCell>
                                         <TableCell className="px-4 py-3">
                                           {hasDetails ? (
-                                            <span
-                                              className="inline-flex items-center gap-1 text-xs text-muted-foreground cursor-help"
-                                              title={`${managerReason ? `Reason: ${managerReason}` : ""}${managerReason && comments ? " | " : ""}${comments ? `Comments: ${comments}` : ""}`}
+                                            <div
+                                              className="text-xs text-muted-foreground space-y-0.5 max-w-[220px]"
+                                              title={`${requestTypeLabel ? `Type: ${requestTypeLabel}` : ""}${requestTypeLabel && (managerReason || comments) ? " | " : ""}${managerReason ? `Reason: ${managerReason}` : ""}${managerReason && comments ? " | " : ""}${comments ? `Comments: ${comments}` : ""}`}
                                             >
-                                              <Info className="size-3.5 shrink-0" />
-                                              <span className="truncate max-w-[120px]">
-                                                {managerReason || comments}
-                                              </span>
-                                            </span>
+                                              {requestTypeLabel ? (
+                                                <p className="font-medium text-foreground/80">{requestTypeLabel}</p>
+                                              ) : null}
+                                              {comments ? (
+                                                <p className="truncate">{comments}</p>
+                                              ) : null}
+                                              {managerReason ? (
+                                                <p className="truncate text-rose-700/80">{managerReason}</p>
+                                              ) : null}
+                                            </div>
                                           ) : (
                                             <span className="text-xs text-muted-foreground/50">—</span>
                                           )}
                                         </TableCell>
-                                        <TableCell className="px-4 py-3 text-right">
-                                          {hrCanActOnRow ? (
-                                            <div className="inline-flex items-center justify-end gap-1">
-                                              <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="xs"
-                                                className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
-                                                disabled={actionLoading || !requestId || isRowUpdating}
-                                                onClick={() =>
-                                                  runAction(
-                                                    userRequestActionLabel(
-                                                      row.request_type ?? row.requestType,
-                                                      "approve"
-                                                    ),
-                                                    async () => {
-                                                      setTeamStatusUpdatingId(requestId);
-                                                      try {
-                                                        await updateEmployeeRequestStatus(
-                                                          requestId,
-                                                          "APPROVED",
-                                                          { requireReasonOnReject: false }
-                                                        );
-                                                        const scope = leaveSubTab === "org" ? "org" : "team";
-                                                        invalidateTeamCache();
-                                                        invalidateLeaveBalance();
-                                                        await loadEmployeeRequestsForApprover(scope, teamPage, teamPageSize, true);
-                                                      } finally {
-                                                        setTeamStatusUpdatingId(null);
+                                        {showTeamActionsColumn ? (
+                                          <TableCell className="px-4 py-3 text-right">
+                                            {hrCanActOnRow ? (
+                                              <div className="inline-flex items-center justify-end gap-1">
+                                                <Button
+                                                  type="button"
+                                                  variant="outline"
+                                                  size="xs"
+                                                  className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
+                                                  disabled={actionLoading || !requestId || isRowUpdating}
+                                                  onClick={() =>
+                                                    runAction(
+                                                      userRequestActionLabel(
+                                                        row.request_type ?? row.requestType,
+                                                        "approve"
+                                                      ),
+                                                      async () => {
+                                                        setTeamStatusUpdatingId(requestId);
+                                                        try {
+                                                          await updateEmployeeRequestStatus(
+                                                            requestId,
+                                                            "APPROVED",
+                                                            { requireReasonOnReject: false }
+                                                          );
+                                                          const scope = leaveSubTab === "org" ? "org" : "team";
+                                                          invalidateTeamCache();
+                                                          invalidateLeaveBalance();
+                                                          await loadEmployeeRequestsForApprover(scope, teamPage, teamPageSize, true);
+                                                        } finally {
+                                                          setTeamStatusUpdatingId(null);
+                                                        }
                                                       }
-                                                    }
-                                                  )
-                                                }
-                                              >
-                                                {isRowUpdating ? "…" : "Approve"}
-                                              </Button>
-                                              <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="xs"
-                                                disabled={actionLoading || !requestId || isRowUpdating}
-                                                onClick={() =>
-                                                  openRejectDialog(
-                                                    requestId,
-                                                    row.request_type ?? row.requestType
-                                                  )
-                                                }
-                                              >
-                                                Reject
-                                              </Button>
-                                            </div>
-                                          ) : showManagerActions ? (
-                                            <div className="inline-flex items-center justify-end gap-1">
-                                              <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="xs"
-                                                className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
-                                                disabled={actionLoading || !requestId}
-                                                onClick={() =>
-                                                  runAction(
-                                                    userRequestActionLabel(
-                                                      row.request_type ?? row.requestType,
-                                                      "approve"
-                                                    ),
-                                                    async () => {
-                                                      await updateEmployeeRequestStatus(requestId, "APPROVED", {
-                                                        requireReasonOnReject: false,
-                                                      });
-                                                      const scope = leaveSubTab === "org" ? "org" : "team";
-                                                      invalidateTeamCache();
-                                                      invalidateLeaveBalance();
-                                                      await loadEmployeeRequestsForApprover(scope, teamPage, teamPageSize, true);
-                                                    }
-                                                  )
-                                                }
-                                              >
-                                                Approve
-                                              </Button>
-                                              {showManagerReject ? (
+                                                    )
+                                                  }
+                                                >
+                                                  {isRowUpdating ? "…" : "Approve"}
+                                                </Button>
                                                 <Button
                                                   type="button"
                                                   variant="destructive"
                                                   size="xs"
-                                                  disabled={actionLoading || !requestId}
+                                                  disabled={actionLoading || !requestId || isRowUpdating}
                                                   onClick={() =>
                                                     openRejectDialog(
                                                       requestId,
@@ -1929,14 +2015,59 @@ export function LeavePageClient() {
                                                 >
                                                   Reject
                                                 </Button>
-                                              ) : null}
-                                            </div>
-                                          ) : blockedHint ? (
-                                            <span className="text-xs text-muted-foreground">{blockedHint}</span>
-                                          ) : (
-                                            <span className="text-muted-foreground/50">—</span>
-                                          )}
-                                        </TableCell>
+                                              </div>
+                                            ) : showManagerActions ? (
+                                              <div className="inline-flex items-center justify-end gap-1">
+                                                <Button
+                                                  type="button"
+                                                  variant="outline"
+                                                  size="xs"
+                                                  className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
+                                                  disabled={actionLoading || !requestId}
+                                                  onClick={() =>
+                                                    runAction(
+                                                      userRequestActionLabel(
+                                                        row.request_type ?? row.requestType,
+                                                        "approve"
+                                                      ),
+                                                      async () => {
+                                                        await updateEmployeeRequestStatus(requestId, "APPROVED", {
+                                                          requireReasonOnReject: false,
+                                                        });
+                                                        const scope = leaveSubTab === "org" ? "org" : "team";
+                                                        invalidateTeamCache();
+                                                        invalidateLeaveBalance();
+                                                        await loadEmployeeRequestsForApprover(scope, teamPage, teamPageSize, true);
+                                                      }
+                                                    )
+                                                  }
+                                                >
+                                                  Approve
+                                                </Button>
+                                                {showManagerReject ? (
+                                                  <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="xs"
+                                                    disabled={actionLoading || !requestId}
+                                                    onClick={() =>
+                                                      openRejectDialog(
+                                                        requestId,
+                                                        row.request_type ?? row.requestType
+                                                      )
+                                                    }
+                                                  >
+                                                    Reject
+                                                  </Button>
+                                                ) : null}
+                                              </div>
+                                            ) : blockedHint ? (
+                                              <span className="text-xs text-muted-foreground">{blockedHint}</span>
+                                            ) : (
+                                              <span className="text-muted-foreground/50">—</span>
+                                            )}
+                                          </TableCell>
+                                        ) : null}
                                       </TableRow>
                                     );
                                   })

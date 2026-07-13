@@ -77,8 +77,10 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
 
   const { primary, secondary, carry_forward, total } = data.leave;
   const compOff = Number(data.comp_off_balance ?? 0);
-  const isCompOffOnly = selectedType === "COMP_OFF";
-  const showAll = !selectedType || selectedType === "LEAVE" || selectedType === "OPTIONAL";
+  const normalizedType = String(selectedType ?? "").trim().toUpperCase();
+  const isCompOffOnly = normalizedType === "COMP_OFF";
+  // Keep Primary/Secondary balance cards visible for leave/optional (and unknown types).
+  const showAll = !isCompOffOnly;
 
   return (
     <div className={`grid grid-cols-1 gap-4 ${isCompOffOnly ? "" : "sm:grid-cols-2 lg:grid-cols-5"}`}>

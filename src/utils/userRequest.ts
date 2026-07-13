@@ -81,6 +81,7 @@ async function fetchUserRequestsFromRoot(params: {
   size?: number;
   selfOnly?: boolean;
   empEmails?: string;
+  hrTeamScope?: boolean;
 }): Promise<Array<Record<string, unknown>>> {
   const normalizedFrom = toApiDateParam(params.fromDate) ?? params.fromDate.trim();
   const normalizedTo = toApiDateParam(params.toDate) ?? params.toDate.trim();
@@ -93,6 +94,7 @@ async function fetchUserRequestsFromRoot(params: {
   };
   if (params.selfOnly) query.selfOnly = "true";
   if (params.empEmails?.trim()) query.empEmails = params.empEmails.trim();
+  if (params.hrTeamScope) query.hrTeamScope = "true";
 
   try {
     const res = await apiClient.get<ApiEnvelope<unknown>>(endpoints.userRequest.root, {
@@ -118,6 +120,7 @@ export async function listScopedUserRequests(params: {
   requestType?: string;
   empEmails?: string;
   size?: number;
+  hrTeamScope?: boolean;
 }): Promise<Array<Record<string, unknown>>> {
   return fetchUserRequestsFromRoot({
     fromDate: params.fromDate,
@@ -125,6 +128,7 @@ export async function listScopedUserRequests(params: {
     requestType: params.requestType ?? "ALL",
     empEmails: params.empEmails,
     size: params.size,
+    hrTeamScope: params.hrTeamScope,
   });
 }
 
@@ -135,6 +139,7 @@ export async function fetchPaginatedScopedUserRequests(params: {
   empEmails?: string;
   page: number;
   size: number;
+  hrTeamScope?: boolean;
 }): Promise<{
   rows: Array<Record<string, unknown>>;
   totalPages: number;
@@ -150,6 +155,7 @@ export async function fetchPaginatedScopedUserRequests(params: {
     size: String(params.size),
   };
   if (params.empEmails?.trim()) query.empEmails = params.empEmails.trim();
+  if (params.hrTeamScope) query.hrTeamScope = "true";
 
   try {
     const res = await apiClient.get<ApiEnvelope<unknown>>(endpoints.userRequest.root, {

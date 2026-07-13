@@ -140,6 +140,38 @@ function employeeNameValue(row: Record<string, unknown>): unknown {
 
 export const LEAVE_REQUEST_SORT_OPTIONS: ListSortOption<Record<string, unknown>>[] = [
   {
+    id: "created_desc",
+    label: "Submitted",
+    columnKeys: ["created_at", "submitted_at", "created"],
+    direction: "desc",
+    type: "date",
+    getValue: (row) =>
+      pickRowField(row, [
+        "created_at",
+        "createdAt",
+        "submitted_at",
+        "submittedAt",
+        "request_from_date",
+        "requestFromDate",
+      ]),
+  },
+  {
+    id: "created_asc",
+    label: "Submitted",
+    columnKeys: ["created_at", "submitted_at", "created"],
+    direction: "asc",
+    type: "date",
+    getValue: (row) =>
+      pickRowField(row, [
+        "created_at",
+        "createdAt",
+        "submitted_at",
+        "submittedAt",
+        "request_from_date",
+        "requestFromDate",
+      ]),
+  },
+  {
     id: "from_desc",
     label: "From",
     columnKeys: ["from", "request_from_date"],

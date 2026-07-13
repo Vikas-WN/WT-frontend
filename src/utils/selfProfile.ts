@@ -6,6 +6,7 @@ import {
   hasHrRole,
   hasManagerRole,
 } from "@/utils/roles";
+import { shouldRequireSelfOnboarding } from "@/utils/userStatus";
 
 /** DM-only portal users cannot call GET /profile. */
 export function shouldSkipSelfProfileFetch(roles: string[]): boolean {
@@ -27,8 +28,19 @@ export async function fetchSelfProfile(
     const profile = (res.data ?? null) as Record<string, unknown> | null;
     return normalizeSelfProfile(profile);
   } catch (err) {
-    if (err instanceof ApiError && (err.status === 403 || err.status === 404)) {
-      return null;
+    if (err instanceof ApiError) {
+      // Soft-fail: DM skip, missing profile, or transient backend/proxy errors (e.g. reload).
+      if (
+        err.status === 403 ||
+        err.status === 404 ||
+        err.status === 0 ||
+        err.status === 500 ||
+        err.status === 502 ||
+        err.status === 503 ||
+        err.status === 504
+      ) {
+        return null;
+      }
     }
     throw err;
   }
@@ -62,9 +74,10 @@ export async function loadSelfProfileState(
   isSelfOnboarded: boolean;
 }> {
   const profile = await fetchSelfProfile(roles);
-  const status = String(profile?.status ?? user?.status ?? "").toUpperCase();
+  const status = String(profile?.status ?? user?.status ?? "");
   return {
     profile,
-    isSelfOnboarded: status === "ACTIVE",
+    // SERVING_NOTICE employees already completed onboarding — do not gate Leave/Profile.
+    isSelfOnboarded: !shouldRequireSelfOnboarding(status, roles),
   };
 }

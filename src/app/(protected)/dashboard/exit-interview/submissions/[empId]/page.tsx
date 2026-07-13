@@ -1,6 +1,11 @@
-import { redirect } from "next/navigation";
-import { DASHBOARD_ROUTES } from "@/constants/routes";
+"use client";
 
-export default async function ExitInterviewSubmissionDetailPage() {
-  redirect(DASHBOARD_ROUTES.offboarding);
+import { useParams } from "next/navigation";
+import { ExitInterviewSubmissionDetailPageClient } from "@/components/exit-interview/ExitInterviewSubmissionDetailPageClient";
+
+export default function ExitInterviewSubmissionDetailPage() {
+  const params = useParams();
+  const lookupId = decodeURIComponent(String(params?.empId ?? "").trim());
+
+  return <ExitInterviewSubmissionDetailPageClient lookupId={lookupId} />;
 }

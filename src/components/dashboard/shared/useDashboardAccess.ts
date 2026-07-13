@@ -6,7 +6,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useSelfProfile, selfProfileQueryKey } from "@/hooks/useSelfProfile";
 import { hasDmRole, hasManagerRole } from "@/utils/roles";
 import {
-  isActiveUserStatus,
   isOffboardedUserStatus,
   isServingNoticeUserStatus,
   normalizeUserStatus,
@@ -31,7 +30,9 @@ export function useDashboardAccess() {
     isEmployee && !hasHrAccess && !hasManagerAccess;
   const initialStatus = normalizeUserStatus(user?.status);
   const [profileStatus, setProfileStatus] = useState(initialStatus);
-  const [isSelfOnboarded, setIsSelfOnboarded] = useState(() => isActiveUserStatus(initialStatus));
+  const [isSelfOnboarded, setIsSelfOnboarded] = useState(
+    () => !shouldRequireSelfOnboarding(initialStatus, userRoles)
+  );
   const profileQ = useSelfProfile(Boolean(user));
   /** Employment ended — applies regardless of manager/AM roles on the account. */
   const isOffboarded = isOffboardedUserStatus(profileStatus);
@@ -58,17 +59,17 @@ export function useDashboardAccess() {
     if (!profile) {
       const status = normalizeUserStatus(user?.status);
       setProfileStatus(status);
-      setIsSelfOnboarded(isActiveUserStatus(status));
+      setIsSelfOnboarded(!shouldRequireSelfOnboarding(status, userRoles));
       return;
     }
 
     const status = resolveProfileStatus(profile, user);
     setProfileStatus(status);
-    setIsSelfOnboarded(isActiveUserStatus(status));
+    setIsSelfOnboarded(!shouldRequireSelfOnboarding(status, userRoles));
     if (normalizeUserStatus(user.status) !== status) {
       void refreshSession();
     }
-  }, [user, profileQ.data, profileQ.isLoading, refreshSession]);
+  }, [user, profileQ.data, profileQ.isLoading, refreshSession, userRoles]);
 
   const loadMyProfile = useCallback(async () => {
     const result = await profileQ.refetch();
@@ -76,18 +77,18 @@ export function useDashboardAccess() {
     if (!profile) {
       const status = normalizeUserStatus(user?.status);
       setProfileStatus(status);
-      setIsSelfOnboarded(isActiveUserStatus(status));
+      setIsSelfOnboarded(!shouldRequireSelfOnboarding(status, userRoles));
       return null;
     }
     const status = resolveProfileStatus(profile, user);
     setProfileStatus(status);
-    setIsSelfOnboarded(isActiveUserStatus(status));
+    setIsSelfOnboarded(!shouldRequireSelfOnboarding(status, userRoles));
     if (user && normalizeUserStatus(user.status) !== status) {
       void refreshSession();
     }
     void queryClient.invalidateQueries({ queryKey: ["profile", "exit-interview"] });
     return profile;
-  }, [profileQ, queryClient, refreshSession, user]);
+  }, [profileQ, queryClient, refreshSession, user, userRoles]);
 
   const invalidateSelfProfile = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: selfProfileQueryKey(user?.email) });

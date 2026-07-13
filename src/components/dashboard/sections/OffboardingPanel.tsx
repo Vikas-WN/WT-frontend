@@ -14,6 +14,8 @@ import {
   TableCheckbox,
 } from "@/components/dashboard/ui/wtTable";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { ApiError } from "@/api/error";
 import { hrmsService } from "@/services/hrms.service";
@@ -57,6 +59,7 @@ import {
   type ExitType,
 } from "@/utils/offboardingFormState";
 import {
+  exitSurveySubmissionDetailHref,
   isResendableOffboardListRow,
   mergeEmpIdSelection,
   resendableOffboardEmpIds,
@@ -87,6 +90,7 @@ function bulkResendResultClassName(
 }
 
 export function OffboardingPanel() {
+  const router = useRouter();
   const [offboardingForm, setOffboardingForm] = useState(createEmptyOffboardingForm);
   const {
     listPage,
@@ -719,15 +723,34 @@ export function OffboardingPanel() {
                       const isSelected = Boolean(empId && selectedEmpIds.includes(empId));
                       const surveySubmitted =
                         row.exit_survey_submitted === true || row.submission_status === "SUBMITTED";
+                      const detailHref = exitSurveySubmissionDetailHref({
+                        lookup_id: row.lookup_id,
+                        emp_id: row.emp_id,
+                        email: row.email,
+                        can_view_submission: row.can_view_submission,
+                        exit_survey_submitted: row.exit_survey_submitted,
+                        submission_status: row.submission_status,
+                      });
+                      const canView = Boolean(detailHref);
 
                       return (
                       <TableRow
                         key={row.emp_id}
                         className={`hover:bg-wt-page-bg/50 ${
                           isSelected ? "bg-indigo-50/70" : ""
-                        }`}
+                        } ${canView ? "cursor-pointer" : ""}`}
+                        onClick={(event) => {
+                          if (!canView || !detailHref) return;
+                          const target = event.target as HTMLElement;
+                          if (
+                            target.closest("button, a, input, label, [data-no-row-nav]")
+                          ) {
+                            return;
+                          }
+                          router.push(detailHref);
+                        }}
                       >
-                        <TableCell className="px-3 py-2">
+                        <TableCell className="px-3 py-2" data-no-row-nav>
                           {canResend ? (
                             <TableCheckbox
                               checked={isSelected}
@@ -739,7 +762,19 @@ export function OffboardingPanel() {
                             />
                           ) : null}
                         </TableCell>
-                        <TableCell className="px-3 py-2 whitespace-nowrap">{row.employee_name || "—"}</TableCell>
+                        <TableCell className="px-3 py-2 whitespace-nowrap">
+                          {canView && detailHref ? (
+                            <Link
+                              href={detailHref}
+                              className="font-medium text-indigo-600 hover:underline"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {row.employee_name || "—"}
+                            </Link>
+                          ) : (
+                            row.employee_name || "—"
+                          )}
+                        </TableCell>
                         <TableCell className="px-3 py-2 whitespace-nowrap">
                           <EmployeeStatusBadge status={row.status} />
                         </TableCell>
@@ -762,12 +797,20 @@ export function OffboardingPanel() {
                           {row.band_name ?? "—"}
                         </TableCell>
                         <TableCell className="px-3 py-2 whitespace-nowrap">{formatBool(row.is_regretted)}</TableCell>
-                        <TableCell className="px-3 py-2 whitespace-nowrap">
+                        <TableCell className="px-3 py-2 whitespace-nowrap" data-no-row-nav>
                           {canResend ? (
                             <Button variant="brand" size="xs" type="button" className="px-2.5 py-1 text-xs" disabled={loadingList || isResending || bulkResending} onClick={() => void handleResendExitSurvey(empId, row.email)}
                             >
                               {isResending ? "Sending…" : "Resend Exit Survey"}
                             </Button>
+                          ) : surveySubmitted && detailHref ? (
+                            <Link
+                              href={detailHref}
+                              className="text-xs font-medium text-indigo-600 hover:underline"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              View responses
+                            </Link>
                           ) : surveySubmitted ? (
                             <span className="text-xs font-medium text-emerald-700">Submitted</span>
                           ) : (

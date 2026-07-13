@@ -32,10 +32,10 @@ import {
   toggleColumnSort,
 } from "@/utils/listSort";
 import {
-  canViewExitSurveySubmission,
   DEFAULT_EXIT_SURVEY_LWD_SORT_ID,
   DEFAULT_EXIT_SURVEY_STATUS_FILTER,
   EXIT_SURVEY_LWD_SORT_OPTIONS,
+  exitSurveySubmissionDetailHref,
   filterExitSurveyFollowUpByStatus,
   filterServingNoticeFollowUpRows,
   followUpRowLookupId,
@@ -47,7 +47,6 @@ import {
   sortExitSurveyFollowUpRows,
   type ExitSurveyStatusFilter,
 } from "@/utils/exitSurveyFollowUp";
-import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { TABLE_ROW_SELECTED_CLASS } from "@/components/dashboard/ui/uiLayout";
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -452,7 +451,6 @@ export function ExitSurveyFollowUpPanel() {
                 {rows.map((row) => {
                   const empId = resendableEmpIdFromRow(row);
                   const lookupId = followUpRowLookupId(row);
-                  const canView = canViewExitSurveySubmission(row);
                   const canResend = isResendableFollowUpRow(row);
                   const isResending = Boolean(
                     empId && resendingEmpId === empId,
@@ -460,9 +458,8 @@ export function ExitSurveyFollowUpPanel() {
                   const isSelected = Boolean(
                     empId && selectedEmpIds.includes(empId),
                   );
-                  const detailHref = lookupId
-                    ? `${DASHBOARD_ROUTES.offboarding}`
-                    : null;
+                  const detailHref = exitSurveySubmissionDetailHref(row);
+                  const canView = Boolean(detailHref);
                   const submitted =
                     row.submission_status === "SUBMITTED" ||
                     row.exit_survey_submitted === true;

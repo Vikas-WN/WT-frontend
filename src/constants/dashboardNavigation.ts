@@ -185,7 +185,6 @@ export const dashboardNavigation: NavItem[] = [
     ],
   },
   { kind: "link", id: "uploads", label: "Uploads", roles: ["ROLE_HR", "ROLE_ADMIN"], icon: "upload" },
-  { kind: "link", id: "masters", label: "Masters & Admin", roles: ["ROLE_HR", "ROLE_ADMIN"], icon: "settings" },
 ];
 
 function childVisible(
@@ -265,7 +264,8 @@ const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   "employee-directory": "Employee Directory",
   employee: "Onboarding",
   offboarding: "Offboarding",
-  leave: "Personal Leave Requests",
+  timelog: "Time Logs",
+  leave: "Leave Request",
   "leave-team": "Leave Requests",
   "exit-interview": "Exit Survey",
 };
