@@ -128,23 +128,33 @@ function followUpRowKey(row: ExitSurveyFollowUpRow): string {
   return "";
 }
 
-export function followUpRowLookupId(row: ExitSurveyFollowUpRow): string {
+export function followUpRowLookupId(row: {
+  lookup_id?: string | null;
+  emp_id?: string | null;
+  email?: string | null;
+}): string {
   return String(row.lookup_id ?? row.emp_id ?? row.email ?? "").trim();
 }
 
-export function canViewExitSurveySubmission(row: ExitSurveyFollowUpRow): boolean {
+export function canViewExitSurveySubmission(row: {
+  can_view_submission?: boolean;
+  exit_survey_submitted?: boolean;
+  submission_status?: string;
+}): boolean {
   if (row.can_view_submission === true) return true;
   if (row.exit_survey_submitted === true) return true;
   return row.submission_status === "SUBMITTED";
 }
 
 /** HR detail page for a submitted exit survey (`lookup_id` = emp_id or email). */
-export function exitSurveySubmissionDetailHref(
-  row: Pick<
-    ExitSurveyFollowUpRow,
-    "lookup_id" | "emp_id" | "email" | "can_view_submission" | "exit_survey_submitted" | "submission_status"
-  >
-): string | null {
+export function exitSurveySubmissionDetailHref(row: {
+  lookup_id?: string | null;
+  emp_id?: string | null;
+  email?: string | null;
+  can_view_submission?: boolean;
+  exit_survey_submitted?: boolean;
+  submission_status?: string;
+}): string | null {
   if (!canViewExitSurveySubmission(row)) return null;
   const lookupId = followUpRowLookupId(row);
   if (!lookupId || lookupId === "—") return null;
