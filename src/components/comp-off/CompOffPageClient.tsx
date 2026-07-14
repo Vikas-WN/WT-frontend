@@ -17,14 +17,17 @@ import {
 } from "@/components/dashboard/ui/wtTable";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { hrmsService } from "@/services/hrms.service";
 import { compOffService } from "@/services/compOff.service";
 import { InputField, SelectField, TextAreaField } from "@/components/dashboard/ui/forms";
+import { ProjectSelectField } from "@/components/comp-off/ProjectSelectField";
 import { Badge } from "@/components/ui/badge";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { WtLoadingOverlay } from "@/components/dashboard/ui/WtLoader";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
@@ -132,6 +135,7 @@ export function CompOffPageClient({
 }: CompOffPageClientProps = {}) {
   const earnOnly = flowScope === "earn";
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useAuth();
   const { actionLoading, runAction } = useDashboardAction();
   const {
@@ -171,6 +175,7 @@ export function CompOffPageClient({
   const [projectOptions, setProjectOptions] = useState<CompOffProjectOption[]>([]);
   const [projectCatalog, setProjectCatalog] = useState<CompOffProjectCatalog | null>(null);
   const [managerEmailResolving, setManagerEmailResolving] = useState(false);
+  const [redirectingToProjects, setRedirectingToProjects] = useState(false);
 
   const [selectedManagerEmails, setSelectedManagerEmails] = useState<string[]>([]);
 
@@ -395,6 +400,45 @@ export function CompOffPageClient({
       })();
     },
     [projectOptions, projectCatalog]
+  );
+
+  const onAddCustomEarnProject = useCallback((projectName: string) => {
+    const name = projectName.trim();
+    if (!name) return;
+    setProjectOptions((prev) => {
+      const exists = prev.some(
+        (p) =>
+          p.code.toLowerCase() === name.toLowerCase() ||
+          p.label.toLowerCase() === name.toLowerCase() ||
+          p.name.toLowerCase() === name.toLowerCase()
+      );
+      if (exists) return prev;
+      const next: CompOffProjectOption = {
+        code: name,
+        name,
+        label: name,
+        managerEmail: "",
+      };
+      return [...prev, next].sort((a, b) => a.label.localeCompare(b.label));
+    });
+  }, []);
+
+  const onAddEarnProject = useCallback(
+    (projectName: string) => {
+      if (hasHrAccess) {
+        setRedirectingToProjects(true);
+        const params = new URLSearchParams({
+          tab: "project",
+          createProject: "1",
+        });
+        const name = projectName.trim();
+        if (name) params.set("projectName", name);
+        router.push(`${DASHBOARD_ROUTES.allocation}?${params.toString()}`);
+        return;
+      }
+      onAddCustomEarnProject(projectName);
+    },
+    [hasHrAccess, onAddCustomEarnProject, router]
   );
 
   const loadMyRequests = useCallback(async () => {
@@ -917,13 +961,23 @@ export function CompOffPageClient({
                 <div className="bg-muted/40 rounded-xl p-6 space-y-4 shadow-sm">
                   <h3 className="font-semibold tracking-tight text-foreground">Earn Credit</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <SelectField
+                    <ProjectSelectField
                       label="Project"
                       required
                       value={earnForm.project_code}
-                      options={projectOptions.map((p) => ({ value: p.code, label: p.label }))}
+                      options={projectOptions}
                       onChange={onEarnProjectChange}
-                      placeholder="Select"
+                      onAddProject={onAddEarnProject}
+                      addProjectLabel={
+                        hasHrAccess
+                          ? (name) => `Go to Projects to create "${name}"`
+                          : undefined
+                      }
+                      selectOnAdd={!hasHrAccess}
+                      disabled={actionLoading || redirectingToProjects}
+                      placeholder={
+                        hasHrAccess ? "Search projects or create new" : "Search or add project"
+                      }
                     />
                     <DatePicker
                       label="Worked date"
@@ -1392,6 +1446,7 @@ export function CompOffPageClient({
       <>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>{pageBody}</OnboardingGate>
         {rejectDialog}
+        {redirectingToProjects ? <WtLoadingOverlay label="Opening Projects…" /> : null}
       </>
     );
   }
@@ -1402,6 +1457,7 @@ export function CompOffPageClient({
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>{pageBody}</OnboardingGate>
       </DashboardPageShell>
       {rejectDialog}
+      {redirectingToProjects ? <WtLoadingOverlay label="Opening Projects…" /> : null}
     </>
   );
 }
