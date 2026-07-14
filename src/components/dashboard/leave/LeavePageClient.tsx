@@ -1370,7 +1370,7 @@ export function LeavePageClient() {
                               <Tabs value={wfhRequestViewTab} onValueChange={(v) => setWfhRequestViewTab(v as "request" | "view")} orientation="horizontal">
                                 <TabsList variant="line" className="h-9 gap-1">
                                   <TabsTrigger value="request" className="px-3 text-xs font-medium cursor-pointer">Apply for WFH</TabsTrigger>
-                                  <TabsTrigger value="view" className="px-3 text-xs font-medium cursor-pointer">Applications</TabsTrigger>
+                                  <TabsTrigger value="view" className="px-3 text-xs font-medium cursor-pointer">History </TabsTrigger>
                                 </TabsList>
                                   <TabsContent value="request" className="pt-6">
                                   <div className="space-y-6">
@@ -1596,7 +1596,7 @@ export function LeavePageClient() {
                               <Tabs value={requestViewTab} onValueChange={(v) => setRequestViewTab(v as "request" | "view")} orientation="horizontal">
                                 <TabsList variant="line" className="h-9 gap-1">
                                   <TabsTrigger value="request" className="px-3 text-xs font-medium cursor-pointer">Apply for Leave</TabsTrigger>
-                                  <TabsTrigger value="view" className="px-3 text-xs font-medium cursor-pointer">Applications</TabsTrigger>
+                                  <TabsTrigger value="view" className="px-3 text-xs font-medium cursor-pointer">History</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="request" className="pt-6">
                                   <LeaveRequestForm
@@ -2077,8 +2077,9 @@ export function LeavePageClient() {
                                                 </Button>
                                                 <Button
                                                   type="button"
-                                                  variant="destructive"
+                                                  variant="outline"
                                                   size="xs"
+                                                  className="border-rose-600/30 text-rose-700 hover:bg-rose-500/10"
                                                   disabled={actionLoading || !requestId || isRowUpdating}
                                                   onClick={() =>
                                                     openRejectDialog(
@@ -2121,8 +2122,9 @@ export function LeavePageClient() {
                                                 {showManagerReject ? (
                                                   <Button
                                                     type="button"
-                                                    variant="destructive"
+                                                    variant="outline"
                                                     size="xs"
+                                                    className="border-rose-600/30 text-rose-700 hover:bg-rose-500/10"
                                                     disabled={actionLoading || !requestId}
                                                     onClick={() =>
                                                       openRejectDialog(

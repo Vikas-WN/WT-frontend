@@ -1027,7 +1027,7 @@ export function CompOffPageClient({
 
             <TabsContent value="view" className="pt-3">
               <div className="flex items-center justify-between pb-3 border-b border-border/50">
-                <h3 className="text-base font-semibold tracking-tight">Applications</h3>
+                <h3 className="text-base font-semibold tracking-tight">History</h3>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground whitespace-nowrap">From</span>
                   <DatePicker label="" value={myRequestsFrom} onChange={(v) => { setMyRequestsFrom(v); myRequestsCacheRef.current.clear(); }} />

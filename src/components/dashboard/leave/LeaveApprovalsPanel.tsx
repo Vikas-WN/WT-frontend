@@ -296,8 +296,9 @@ export function LeaveApprovalsPanel({
                               </Button>
                               <Button
                                 type="button"
-                                variant="destructive"
+                                variant="outline"
                                 size="xs"
+                                className="border-rose-600/30 text-rose-700 hover:bg-rose-500/10"
                                 disabled={actionLoading || !requestId || isUpdating}
                                 onClick={() =>
                                   openRejectDialog(
