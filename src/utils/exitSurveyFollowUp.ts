@@ -139,7 +139,7 @@ export function followUpRowLookupId(row: {
 export function canViewExitSurveySubmission(row: {
   can_view_submission?: boolean;
   exit_survey_submitted?: boolean;
-  submission_status?: "SUBMITTED" | "PENDING" | string | null;
+  submission_status?: string | null;
 }): boolean {
   if (row.can_view_submission === true) return true;
   if (row.exit_survey_submitted === true) return true;
@@ -153,7 +153,7 @@ export function exitSurveySubmissionDetailHref(row: {
   email?: string | null;
   can_view_submission?: boolean;
   exit_survey_submitted?: boolean;
-  submission_status?: "SUBMITTED" | "PENDING" | string | null;
+  submission_status?: string | null;
 }): string | null {
   if (!canViewExitSurveySubmission(row)) return null;
   const lookupId = followUpRowLookupId(row);

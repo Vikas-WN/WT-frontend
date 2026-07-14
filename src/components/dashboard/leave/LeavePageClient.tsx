@@ -2062,9 +2062,10 @@ export function LeavePageClient() {
                                                             "APPROVED",
                                                             { requireReasonOnReject: false }
                                                           );
+                                                          // Actions column is team-only (hidden on org / All Employee Requests).
                                                           invalidateTeamCache();
                                                           invalidateLeaveBalance();
-                                                          await loadEmployeeRequestsForApprover(currentScope, teamPage, teamPageSize, true);
+                                                          await loadEmployeeRequestsForApprover("team", teamPage, teamPageSize, true);
                                                         } finally {
                                                           setTeamStatusUpdatingId(null);
                                                         }
@@ -2107,9 +2108,10 @@ export function LeavePageClient() {
                                                         await updateEmployeeRequestStatus(requestId, "APPROVED", {
                                                           requireReasonOnReject: false,
                                                         });
+                                                        // Actions column is team-only (hidden on org / All Employee Requests).
                                                         invalidateTeamCache();
                                                         invalidateLeaveBalance();
-                                                        await loadEmployeeRequestsForApprover(currentScope, teamPage, teamPageSize, true);
+                                                        await loadEmployeeRequestsForApprover("team", teamPage, teamPageSize, true);
                                                       }
                                                     )
                                                   }
