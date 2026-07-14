@@ -766,7 +766,7 @@ export function OffboardingPanel() {
                           {canView && detailHref ? (
                             <Link
                               href={detailHref}
-                              className="font-medium text-indigo-600 hover:underline"
+                              className="font-medium text-wt-text hover:text-wt-text"
                               onClick={(e) => e.stopPropagation()}
                             >
                               {row.employee_name || "—"}

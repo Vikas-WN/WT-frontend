@@ -82,10 +82,18 @@ export function DayEntryForm({
       setForm((prev) => ({
         ...prev,
         task_category: firstCat,
-        sub_category: subs.length ? subs[0] : "",
+        sub_category: subs[0] ?? "",
       }));
+      return;
     }
-  }, [form.project_code, form.task_category]);
+    if (!form.task_category) return;
+    const subs = subCategoriesFor(form.project_code, form.task_category);
+    if (subs.length && !subs.includes(form.sub_category)) {
+      setForm((prev) => ({ ...prev, sub_category: subs[0] ?? "" }));
+    } else if (!subs.length && form.sub_category) {
+      setForm((prev) => ({ ...prev, sub_category: "" }));
+    }
+  }, [form.project_code, form.task_category, form.sub_category]);
 
   const validate = useCallback((): string | null => {
     if (!form.project_code) return "Select a project.";
@@ -189,13 +197,15 @@ export function DayEntryForm({
               <select
                 className="day-entry-form-select"
                 value={form.task_category}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const task_category = e.target.value;
+                  const subs = subCategoriesFor(form.project_code, task_category);
                   setForm((prev) => ({
                     ...prev,
-                    task_category: e.target.value,
-                    sub_category: "",
-                  }))
-                }
+                    task_category,
+                    sub_category: subs[0] ?? "",
+                  }));
+                }}
               >
                 {taskOptions.map((t) => (
                   <option key={t.value} value={t.value}>
@@ -245,7 +255,7 @@ export function DayEntryForm({
                     description: e.target.value,
                   }))
                 }
-                placeholder="Optional comment"
+                placeholder="Description"
                 rows={3}
               />
             </label>

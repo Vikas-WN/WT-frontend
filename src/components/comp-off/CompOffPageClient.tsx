@@ -17,19 +17,23 @@ import {
 } from "@/components/dashboard/ui/wtTable";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { hrmsService } from "@/services/hrms.service";
 import { compOffService } from "@/services/compOff.service";
 import { InputField, SelectField, TextAreaField } from "@/components/dashboard/ui/forms";
+import { ProjectSelectField } from "@/components/comp-off/ProjectSelectField";
 import { Badge } from "@/components/ui/badge";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { WtLoadingOverlay } from "@/components/dashboard/ui/WtLoader";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 
 import { DatePicker } from "@/components/ui/date-picker";
+import { LeaveManagerSelector } from "@/components/dashboard/leave/LeaveManagerSelector";
 import { useAccountManagerEmails } from "@/hooks/useAccountManagerEmails";
 import { useManagerPortfolioEmails } from "@/hooks/comp-off/useManagerPortfolioEmails";
 import { requestRowEmail } from "@/utils/learning/onboardOptions";
@@ -131,6 +135,7 @@ export function CompOffPageClient({
 }: CompOffPageClientProps = {}) {
   const earnOnly = flowScope === "earn";
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useAuth();
   const { actionLoading, runAction } = useDashboardAction();
   const {
@@ -170,10 +175,9 @@ export function CompOffPageClient({
   const [projectOptions, setProjectOptions] = useState<CompOffProjectOption[]>([]);
   const [projectCatalog, setProjectCatalog] = useState<CompOffProjectCatalog | null>(null);
   const [managerEmailResolving, setManagerEmailResolving] = useState(false);
+  const [redirectingToProjects, setRedirectingToProjects] = useState(false);
 
-  const [managerOptions, setManagerOptions] = useState<Array<{ email: string; name: string; project_code?: string; project_name?: string }>>([]);
   const [selectedManagerEmails, setSelectedManagerEmails] = useState<string[]>([]);
-  const [managerOptionsLoading, setManagerOptionsLoading] = useState(false);
 
   const [earnForm, setEarnForm] = useState({
     worked_date: "",
@@ -396,6 +400,45 @@ export function CompOffPageClient({
       })();
     },
     [projectOptions, projectCatalog]
+  );
+
+  const onAddCustomEarnProject = useCallback((projectName: string) => {
+    const name = projectName.trim();
+    if (!name) return;
+    setProjectOptions((prev) => {
+      const exists = prev.some(
+        (p) =>
+          p.code.toLowerCase() === name.toLowerCase() ||
+          p.label.toLowerCase() === name.toLowerCase() ||
+          p.name.toLowerCase() === name.toLowerCase()
+      );
+      if (exists) return prev;
+      const next: CompOffProjectOption = {
+        code: name,
+        name,
+        label: name,
+        managerEmail: "",
+      };
+      return [...prev, next].sort((a, b) => a.label.localeCompare(b.label));
+    });
+  }, []);
+
+  const onAddEarnProject = useCallback(
+    (projectName: string) => {
+      if (hasHrAccess) {
+        setRedirectingToProjects(true);
+        const params = new URLSearchParams({
+          tab: "project",
+          createProject: "1",
+        });
+        const name = projectName.trim();
+        if (name) params.set("projectName", name);
+        router.push(`${DASHBOARD_ROUTES.allocation}?${params.toString()}`);
+        return;
+      }
+      onAddCustomEarnProject(projectName);
+    },
+    [hasHrAccess, onAddCustomEarnProject, router]
   );
 
   const loadMyRequests = useCallback(async () => {
@@ -773,15 +816,6 @@ export function CompOffPageClient({
     if (!showMyCompOff) return;
     void loadMyRequests();
     void loadBalanceAndGrants();
-    setManagerOptionsLoading(true);
-    compOffService.getManagerOptions().then((res) => {
-      const data = res.data as { items?: Array<{ email: string; name: string; project_code?: string; project_name?: string }> } | undefined;
-      setManagerOptions(data?.items ?? []);
-    }).catch(() => {
-      setManagerOptions([]);
-    }).finally(() => {
-      setManagerOptionsLoading(false);
-    });
   }, [showMyCompOff, loadMyRequests, loadBalanceAndGrants]);
 
   useEffect(() => {
@@ -927,13 +961,23 @@ export function CompOffPageClient({
                 <div className="bg-muted/40 rounded-xl p-6 space-y-4 shadow-sm">
                   <h3 className="font-semibold tracking-tight text-foreground">Earn Credit</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <SelectField
+                    <ProjectSelectField
                       label="Project"
                       required
                       value={earnForm.project_code}
-                      options={projectOptions.map((p) => ({ value: p.code, label: p.label }))}
+                      options={projectOptions}
                       onChange={onEarnProjectChange}
-                      placeholder="Select"
+                      onAddProject={onAddEarnProject}
+                      addProjectLabel={
+                        hasHrAccess
+                          ? (name) => `Go to Projects to create "${name}"`
+                          : undefined
+                      }
+                      selectOnAdd={!hasHrAccess}
+                      disabled={actionLoading || redirectingToProjects}
+                      placeholder={
+                        hasHrAccess ? "Search projects or create new" : "Search or add project"
+                      }
                     />
                     <DatePicker
                       label="Worked date"
@@ -944,45 +988,19 @@ export function CompOffPageClient({
                   </div>
                 </div>
 
-                {/* Primary managers + Comments */}
+                {/* Primary Managers + Comments */}
                 <div className="bg-muted/40 rounded-xl p-6 space-y-4 shadow-sm">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-foreground">Primary manager(s)</label>
-                    {managerOptionsLoading ? (
-                      <p className="text-xs text-muted-foreground">Loading managers...</p>
-                    ) : managerOptions.length ? (
-                      <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto border rounded-lg p-2">
-                        {managerOptions.map((mgr) => {
-                          const isSelected = selectedManagerEmails.includes(mgr.email);
-                          return (
-                            <label key={mgr.email} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent px-2 py-1 rounded">
-                              <input
-                                type="checkbox"
-                                className="accent-wt-brand size-4 cursor-pointer"
-                                checked={isSelected}
-                                onChange={() => {
-                                  setSelectedManagerEmails((prev) =>
-                                    isSelected ? prev.filter((e) => e !== mgr.email) : [...prev, mgr.email]
-                                  );
-                                }}
-                              />
-                              <span>{mgr.name}</span>
-                              {mgr.project_code ? (
-                                <span className="text-xs text-muted-foreground">({mgr.project_code})</span>
-                              ) : null}
-                            </label>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">No managers available for your projects.</p>
-                    )}
-                    {!selectedManagerEmails.length ? (
-                      <p className="text-xs text-destructive">Select at least one manager.</p>
-                    ) : null}
-                  </div>
+                  <LeaveManagerSelector
+                    label="Primary Managers"
+                    selectedEmails={selectedManagerEmails}
+                    onChange={setSelectedManagerEmails}
+                    disabled={actionLoading}
+                  />
+                  {!selectedManagerEmails.length ? (
+                    <p className="text-xs text-destructive">Select at least one manager.</p>
+                  ) : null}
                   <TextAreaField
-                    label="Comments / Work description"
+                    label="Comments / Work Description"
                     required
                     value={earnForm.comments}
                     onChange={(v) => setEarnForm((p) => ({ ...p, comments: v }))}
@@ -991,7 +1009,7 @@ export function CompOffPageClient({
                       runAction(compOffEarnActionLabel(editingRequestId ? "update" : "submit"), submitEarn)
                     }
                   >
-                    {editingRequestId ? "Save earn request" : "Submit earn request"}
+                    {editingRequestId ? "Save Earn Request" : "Submit Earn Request"}
                   </Button>
                 </div>
 
@@ -1009,7 +1027,7 @@ export function CompOffPageClient({
 
             <TabsContent value="view" className="pt-3">
               <div className="flex items-center justify-between pb-3 border-b border-border/50">
-                <h3 className="text-base font-semibold tracking-tight">Applications</h3>
+                <h3 className="text-base font-semibold tracking-tight">History</h3>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground whitespace-nowrap">From</span>
                   <DatePicker label="" value={myRequestsFrom} onChange={(v) => { setMyRequestsFrom(v); myRequestsCacheRef.current.clear(); }} />
@@ -1428,6 +1446,7 @@ export function CompOffPageClient({
       <>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>{pageBody}</OnboardingGate>
         {rejectDialog}
+        {redirectingToProjects ? <WtLoadingOverlay label="Opening Projects…" /> : null}
       </>
     );
   }
@@ -1438,6 +1457,7 @@ export function CompOffPageClient({
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>{pageBody}</OnboardingGate>
       </DashboardPageShell>
       {rejectDialog}
+      {redirectingToProjects ? <WtLoadingOverlay label="Opening Projects…" /> : null}
     </>
   );
 }

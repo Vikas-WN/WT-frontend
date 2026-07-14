@@ -1,23 +1,15 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { Textarea } from "@/components/ui/textarea";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { ExitInterviewResponsesView } from "@/components/exit-interview/ExitInterviewResponsesView";
 import { ProfileDetailsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { useExitInterviewFormDefinition } from "@/hooks/exit-interview/useExitInterviewFormDefinition";
-import { useUpdateExitInterviewMinutesOfMeeting } from "@/hooks/exit-interview/useExitInterviewMinutesOfMeeting";
 import { useExitInterviewSubmissionDetail } from "@/hooks/exit-interview/useExitInterviewSubmissionDetail";
-import { exitInterviewService } from "@/services/exitInterview.service";
-import { showErrorToast, showSuccessToast } from "@/lib/toast";
-import { EXIT_SURVEY_FOLLOW_UP_QUERY_KEY } from "@/hooks/exit-interview/useExitSurveyFollowUpList";
-import { useQueryClient } from "@tanstack/react-query";
+
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import {
   exitInterviewFieldsWithResponses,
@@ -42,23 +34,12 @@ function formatDateTime(value: string | null): string {
 }
 
 export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId: string }) {
-  const router = useRouter();
-  const queryClient = useQueryClient();
   const { hasHrAccess, userRoles } = useDashboardAccess();
   const canView = hasHrAccess || userRoles.includes("ROLE_ADMIN");
-  const { actionLoading, runAction } = useDashboardAction();
-  const [requestingResubmit, setRequestingResubmit] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   const detailQ = useExitInterviewSubmissionDetail(lookupId, { enabled: canView });
   const formDefQ = useExitInterviewFormDefinition({ enabled: canView && Boolean(detailQ.data) });
-  const updateMomMutation = useUpdateExitInterviewMinutesOfMeeting(lookupId);
-  const [minutesOfMeeting, setMinutesOfMeeting] = useState("");
   const fields = formDefQ.data?.fields ?? [];
-
-  useEffect(() => {
-    setMinutesOfMeeting(detailQ.data?.minutes_of_meeting ?? "");
-  }, [detailQ.data?.minutes_of_meeting]);
 
   const responseFields = useMemo(() => {
     const detail = detailQ.data;
@@ -87,64 +68,6 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
   }
 
   const detail = detailQ.data;
-
-  const saveMinutesOfMeeting = () => {
-    void runAction("Save minutes of meeting", async () => {
-      await updateMomMutation.mutateAsync(minutesOfMeeting);
-    });
-  };
-
-  const deleteSubmission = () => {
-    const token = lookupId.trim();
-    if (!token || deleting) return;
-    const employeeName = detail?.employee_name?.trim();
-    if (
-      !window.confirm(
-        `Delete this exit survey submission${employeeName ? ` for ${employeeName}` : ""}? This cannot be undone.`
-      )
-    ) {
-      return;
-    }
-    void runAction("Delete submission", async () => {
-      setDeleting(true);
-      try {
-        await exitInterviewService.deleteSubmission(token);
-        showSuccessToast("Exit survey submission deleted.");
-        await queryClient.invalidateQueries({ queryKey: EXIT_SURVEY_FOLLOW_UP_QUERY_KEY });
-        await queryClient.invalidateQueries({ queryKey: ["offboarding"] });
-        router.replace(DASHBOARD_ROUTES.offboarding);
-      } catch (error) {
-        showErrorToast(
-          error instanceof Error ? error.message : "Could not delete exit survey submission."
-        );
-      } finally {
-        setDeleting(false);
-      }
-    });
-  };
-
-  const requestResubmission = () => {
-    const empId = detail?.emp_id?.trim();
-    if (!empId || requestingResubmit) return;
-    void runAction("Request resubmission", async () => {
-      setRequestingResubmit(true);
-      try {
-        await exitInterviewService.requestResubmission(empId);
-        showSuccessToast("Exit survey reopened. The employee can resubmit once.");
-        await queryClient.invalidateQueries({ queryKey: EXIT_SURVEY_FOLLOW_UP_QUERY_KEY });
-        await queryClient.invalidateQueries({ queryKey: ["offboarding"] });
-        router.replace(DASHBOARD_ROUTES.offboarding);
-      } catch (error) {
-        showErrorToast(
-          error instanceof Error ? error.message : "Could not reopen exit survey for resubmission."
-        );
-      } finally {
-        setRequestingResubmit(false);
-      }
-    });
-  };
-
-  const momSaving = actionLoading || updateMomMutation.isPending || requestingResubmit || deleting;
 
   return (
     <DashboardPageShell>
@@ -177,28 +100,6 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
                   <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">
                     Completed
                   </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    type="button"
-                    className="px-3 py-1.5 text-sm text-destructive hover:text-destructive"
-                    disabled={momSaving}
-                    onClick={deleteSubmission}
-                  >
-                    {deleting ? "Deleting…" : "Delete Submission"}
-                  </Button>
-                  {detail.emp_id ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      className="px-3 py-1.5 text-sm"
-                      disabled={momSaving}
-                      onClick={requestResubmission}
-                    >
-                      {requestingResubmit ? "Reopening…" : "Request Resubmission"}
-                    </Button>
-                  ) : null}
                 </div>
               </div>
 
@@ -266,28 +167,6 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
                 ) : (
                   <p className="text-sm text-wt-text-muted">No survey responses recorded.</p>
                 )}
-              </div>
-
-              <div className="mt-8 border-t border-wt-border pt-6 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <h4 className="text-base font-semibold">Minutes of Meeting (MOM)</h4>
-                    <p className="mt-1 text-xs text-wt-text-muted">
-                      HR notes from the exit survey discussion. Clear the field and save to remove.
-                    </p>
-                  </div>
-                  <Button variant="brand" size="sm" type="button" className="px-3 py-1.5 text-sm" disabled={momSaving} onClick={saveMinutesOfMeeting} >
-                    {momSaving ? "Saving…" : "Save MOM"}
-                  </Button>
-                </div>
-                <Textarea
-                  className="min-h-[140px]"
-                  value={minutesOfMeeting}
-                  onChange={(e) => setMinutesOfMeeting(e.target.value)}
-                  disabled={momSaving}
-                  placeholder="Add HR notes from the exit survey meeting…"
-                  aria-label="Minutes of meeting"
-                />
               </div>
             </>
           ) : null}

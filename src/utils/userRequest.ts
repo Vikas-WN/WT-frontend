@@ -290,7 +290,7 @@ export function requestFinalStatus(row: Record<string, unknown>): string {
   );
   if (
     raw === "SUBMITTED" &&
-    isLeaveRequestType(pickRowField(row, "request_type", "requestType"))
+    isLeaveOrWfhRequestType(pickRowField(row, "request_type", "requestType"))
   ) {
     return "PENDING";
   }
@@ -331,7 +331,7 @@ export function isManagerApprovedForHr(row: Record<string, unknown>): boolean {
 
 
 
-/** HR may approve/reject pending leave (override manager routing when needed). */
+/** HR may approve/reject pending leave/WFH (override manager routing when needed). */
 export function canHrReviewUserRequest(
   row: Record<string, unknown>,
   options: { hasHrAccess: boolean }
@@ -339,7 +339,7 @@ export function canHrReviewUserRequest(
   if (!options.hasHrAccess) return false;
   if (requestFinalStatus(row) !== "PENDING") return false;
   const requestType = pickRowField(row, "request_type", "requestType");
-  if (isLeaveRequestType(requestType)) return true;
+  if (isLeaveOrWfhRequestType(requestType)) return true;
   if (!isManagerApprovedForHr(row)) return false;
   return true;
 }
@@ -350,10 +350,9 @@ export function canHrToggleLeaveWfh(
 ): boolean {
   if (!options.hasHrAccess) return false;
   const requestType = pickRowField(row, "request_type", "requestType");
-  if (isLeaveRequestType(requestType)) {
+  if (isLeaveOrWfhRequestType(requestType)) {
     return requestFinalStatus(row) === "PENDING";
   }
-  if (isLeaveOrWfhRequestType(requestType)) return false;
   if (isLeaveEmailOnlyWorkflow(row)) return false;
   return canHrReviewUserRequest(row, options);
 }
@@ -634,33 +633,69 @@ export async function updateUserRequestStatus(
 
 
 export function mergeStatusUpdateIntoRow(
-
   row: Record<string, unknown>,
-
   data: Record<string, unknown> | null | undefined
-
 ): Record<string, unknown> {
-
   if (!data || typeof data !== "object") return row;
-
   return { ...row, ...data };
-
 }
 
+/** Optimistic leave/WFH status patch so the table updates before/without a full refetch. */
+export function patchLeaveTeamRequestStatus(
+  row: Record<string, unknown>,
+  status: UserRequestStatusValue,
+  options?: { reason?: string }
+): Record<string, unknown> {
+  const reason = options?.reason?.trim();
+  return {
+    ...row,
+    status,
+    user_request_status: status,
+    userRequestStatus: status,
+    manager_status: status,
+    managerStatus: status,
+    hr_status: status,
+    hrStatus: status,
+    ...(status === "REJECTED" && reason
+      ? {
+          manager_reason: reason,
+          managerReason: reason,
+          reason,
+          message: reason,
+        }
+      : {}),
+  };
+}
 
+export function applyLeaveTeamRequestDecisions(
+  rows: Array<Record<string, unknown>>,
+  decisions: ReadonlyMap<string, { status: UserRequestStatusValue; reason?: string }>
+): Array<Record<string, unknown>> {
+  if (!decisions.size) return rows;
+  return rows.map((row) => {
+    const id = String(
+      row.user_request_id ??
+        row.userRequestId ??
+        row.request_id ??
+        row.requestId ??
+        row.id ??
+        ""
+    ).trim();
+    if (!id) return row;
+    const decision = decisions.get(id);
+    if (!decision) return row;
+    const serverStatus = requestFinalStatus(row);
+    if (serverStatus === "APPROVED" || serverStatus === "REJECTED") return row;
+    return patchLeaveTeamRequestStatus(row, decision.status, { reason: decision.reason });
+  });
+}
 
 export function extractStatusUpdateData(envelope: ApiEnvelope<unknown>): Record<string, unknown> | null {
-
   const data = envelope?.data;
-
   if (data && typeof data === "object" && !Array.isArray(data)) {
-
     return data as Record<string, unknown>;
-
   }
-
   return null;
-
 }
 
 

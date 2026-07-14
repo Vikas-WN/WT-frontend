@@ -337,7 +337,7 @@ export function EmployeeDirectoryPageClient() {
                               {col.key === "status" ? (
                                 <EmployeeStatusBadge status={display.status} />
                               ) : col.key === "name" ? (
-                                <span className="block truncate font-medium text-blue-600">{display[col.key]}</span>
+                                <span className="block truncate font-medium text-wt-text">{display[col.key]}</span>
                               ) : col.key === "email" ? (
                                 <div className="flex w-full min-w-0 items-center gap-1.5">
                                   <span className="block min-w-0 flex-1 truncate text-wt-text">{display.email}</span>

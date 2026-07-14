@@ -173,11 +173,15 @@ export function WeeklyTimelogGrid({
                             const project_code = e.target.value;
                             const opt = projectOptions.find((p) => p.project_code === project_code);
                             const firstTask = opt?.task_categories[0]?.value ?? "";
+                            const subs =
+                              project_code && firstTask
+                                ? subCategoriesFor(project_code, firstTask)
+                                : [];
                             onRowsChange(
                               updateRow(rows, row.clientKey, {
                                 project_code,
                                 task_category: firstTask,
-                                sub_category: "",
+                                sub_category: subs[0] ?? "",
                               })
                             );
                           }}
@@ -195,14 +199,19 @@ export function WeeklyTimelogGrid({
                           className="input-field w-full px-2 py-1.5 text-sm"
                           disabled={!metadataEditable || !row.project_code}
                           value={row.task_category}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const task_category = e.target.value;
+                            const subs =
+                              row.project_code && task_category
+                                ? subCategoriesFor(row.project_code, task_category)
+                                : [];
                             onRowsChange(
                               updateRow(rows, row.clientKey, {
-                                task_category: e.target.value,
-                                sub_category: "",
+                                task_category,
+                                sub_category: subs[0] ?? "",
                               })
-                            )
-                          }
+                            );
+                          }}
                         >
                           <option value="">Select task</option>
                           {taskOptions.map((t) => (
@@ -245,7 +254,7 @@ export function WeeklyTimelogGrid({
                           onChange={(e) =>
                             onRowsChange(updateRow(rows, row.clientKey, { comment: e.target.value }))
                           }
-                          placeholder="Optional"
+                          placeholder="Description"
                           aria-label="Description"
                         />
                       </TableCell>

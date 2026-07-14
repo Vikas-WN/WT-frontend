@@ -35,14 +35,39 @@ async function fetchPrimaryManagerInbox(actorEmail: string): Promise<Array<Recor
   const start = new Date(today.getFullYear() - 1, 0, 1);
   const end = new Date(today);
   end.setFullYear(end.getFullYear() + 2);
+  const fromDate = formatApiDate(start);
+  const toDate = formatApiDate(end);
 
-  const rows = await listScopedUserRequests({
-    fromDate: formatApiDate(start),
-    toDate: formatApiDate(end),
-    requestType: "LEAVE",
-  });
+  const [leaveRows, wfhRows] = await Promise.all([
+    listScopedUserRequests({
+      fromDate,
+      toDate,
+      requestType: "LEAVE",
+    }),
+    listScopedUserRequests({
+      fromDate,
+      toDate,
+      requestType: "WFH",
+    }),
+  ]);
 
-  return filterPrimaryManagerInbox(rows, actorEmail);
+  const merged = Array.from(
+    new Map(
+      [...leaveRows, ...wfhRows].map((row) => {
+        const key = String(
+          row.user_request_id ??
+            row.userRequestId ??
+            row.request_id ??
+            row.requestId ??
+            row.id ??
+            Math.random()
+        );
+        return [key, row] as const;
+      })
+    ).values()
+  );
+
+  return filterPrimaryManagerInbox(merged, actorEmail);
 }
 
 export function usePrimaryManagerLeaveInbox(actorEmail: string, enabled = true) {

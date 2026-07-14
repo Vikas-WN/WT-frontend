@@ -97,6 +97,7 @@ export function CreateProjectDialog({
   activeProjectTypes,
   enabled,
   allocationPercentOptions,
+  initialProjectName,
 }: {
   open: boolean;
   onClose: () => void;
@@ -104,6 +105,7 @@ export function CreateProjectDialog({
   activeProjectTypes: ProjectTypeRow[];
   enabled: boolean;
   allocationPercentOptions: AllocationPercentRow[];
+  initialProjectName?: string;
 }) {
   const [form, setForm] = useState<ProjectFormState>(createEmptyProjectForm());
   const [dmFields, setDmFields] = useState(() =>
@@ -120,8 +122,13 @@ export function CreateProjectDialog({
       setDmFields(createEmptyManagerAllocationFields("Delivery Manager"));
       setPmFields(createEmptyManagerAllocationFields("Project Manager"));
       setLoading(false);
+      return;
     }
-  }, [open]);
+    const prefillsName = initialProjectName?.trim() ?? "";
+    if (prefillsName) {
+      setForm((prev) => ({ ...prev, project_name: prefillsName }));
+    }
+  }, [open, initialProjectName]);
 
   async function handleSubmit() {
     const name = form.project_name.trim();

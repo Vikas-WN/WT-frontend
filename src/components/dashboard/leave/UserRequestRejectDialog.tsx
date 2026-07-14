@@ -65,8 +65,7 @@ export function UserRequestRejectDialog({
           </Button>
           <Button
             type="button"
-            variant="destructive"
-            size="xs"
+            variant="outline"
             onClick={onConfirm}
             disabled={confirmDisabled || loading || !reason.trim()}
           >

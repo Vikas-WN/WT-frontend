@@ -19,6 +19,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "rea
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
 import { endpoints } from "@/api/endpoints";
 import { hrmsService, type PagedData } from "@/services/hrms.service";
@@ -191,6 +192,7 @@ export function AllocationPageClient() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const talentPoolPrefillHandled = useRef<string | null>(null);
+  const createProjectDeepLinkHandled = useRef(false);
     const [actionLoading, setActionLoading] = useState(false);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
@@ -446,6 +448,7 @@ export function AllocationPageClient() {
     "project" | "allocate" | "list"
   >("project");
   const [createProjectDialogOpen, setCreateProjectDialogOpen] = useState(false);
+  const [createProjectPrefillName, setCreateProjectPrefillName] = useState("");
   const [allocateDialogOpen, setAllocateDialogOpen] = useState(false);
   const [timelogSubTab, setTimelogSubTab] = useState<"my" | "team">("my");
   const [leaveSubTab, setLeaveSubTab] = useState<"my" | "team">("my");
@@ -2496,6 +2499,29 @@ export function AllocationPageClient() {
     setAllocateDialogOpen(true);
   }, [hasHrAccess, searchParams]);
 
+  useEffect(() => {
+    if (!hasHrAccess) return;
+    const tab = searchParams.get("tab")?.trim().toLowerCase();
+    if (tab === "project" || tab === "allocate" || tab === "list") {
+      setAllocationHrSubTab(tab);
+    }
+
+    const createProject = searchParams.get("createProject")?.trim();
+    const wantsCreate = createProject === "1" || createProject === "true";
+    if (!wantsCreate) {
+      createProjectDeepLinkHandled.current = false;
+      return;
+    }
+    if (createProjectDeepLinkHandled.current) return;
+    createProjectDeepLinkHandled.current = true;
+
+    const projectName = searchParams.get("projectName")?.trim() ?? "";
+    setCreateProjectPrefillName(projectName);
+    setAllocationHrSubTab("project");
+    setCreateProjectDialogOpen(true);
+    router.replace(DASHBOARD_ROUTES.allocation, { scroll: false });
+  }, [hasHrAccess, searchParams, router]);
+
   const filteredProjects = useMemo(() => {
     const search = projectFilters.search.trim().toLowerCase();
     const filtered = hrProjectRawRows.filter((project) => {
@@ -3432,7 +3458,10 @@ export function AllocationPageClient() {
                                       variant="brand"
                                       type="button"
                                       className="px-3 py-2"
-                                      onClick={() => setCreateProjectDialogOpen(true)}
+                                      onClick={() => {
+                                        setCreateProjectPrefillName("");
+                                        setCreateProjectDialogOpen(true);
+                                      }}
                                     >
                                       Create Project
                                     </Button>
@@ -4074,11 +4103,15 @@ export function AllocationPageClient() {
                               </div>
                               <CreateProjectDialog
                                 open={createProjectDialogOpen}
-                                onClose={() => setCreateProjectDialogOpen(false)}
+                                onClose={() => {
+                                  setCreateProjectDialogOpen(false);
+                                  setCreateProjectPrefillName("");
+                                }}
                                 onCreated={() => refreshHrProjects()}
                                 activeProjectTypes={activeProjectTypes}
                                 enabled={hasAllocationAccess}
                                 allocationPercentOptions={allocationPercentOptions}
+                                initialProjectName={createProjectPrefillName}
                               />
                               <AllocateEmployeeDialog
                                 open={allocateDialogOpen}
