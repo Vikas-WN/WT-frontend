@@ -41,6 +41,7 @@ import {
   weekDaysMonSun,
 } from "@/utils/timelog/weekDates";
 import type { DayTimelogEntry } from "@/hooks/timelog/useDayTimelog.types";
+import { timelogViewerRoles } from "@/utils/timelog/viewerRoles";
 
 function unwrapPayload<T>(response: unknown): T {
   return ((response as { data?: T }).data ?? response) as T;
@@ -61,6 +62,7 @@ export function TimelogPageClient() {
   const router = useRouter();
   const { user } = useAuth();
   const roles = user?.roles ?? [];
+  const viewerRoles = useMemo(() => timelogViewerRoles(roles), [roles]);
   const hasManagerAccess = roles.includes("ROLE_MANAGER");
   const hasHrAccess = roles.includes("ROLE_HR");
   const hasAdminAccess = roles.includes("ROLE_ADMIN");
@@ -122,6 +124,7 @@ export function TimelogPageClient() {
           employeeEmail: email,
           startDate,
           endDate,
+          viewerRoles,
         });
         const data = unwrapPayload<DayTimelogEntry[]>(res);
         setEmployeeEntries(Array.isArray(data) ? data : []);
@@ -131,7 +134,7 @@ export function TimelogPageClient() {
         setEntriesLoading(false);
       }
     },
-    [isTeamView, teamEmployeeEmail, dayDates]
+    [isTeamView, teamEmployeeEmail, dayDates, viewerRoles]
   );
 
   const loadTeamEmployees = useCallback(async () => {

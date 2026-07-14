@@ -15,6 +15,7 @@ import type {
   CalendarMonth,
   CalendarDayInfo,
 } from "./useDayTimelog.types";
+import { buildTimelogEntryPayload } from "@/utils/timelog/entryManager";
 
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
@@ -288,22 +289,14 @@ export function useDayTimelog() {
         if (!Number.isFinite(hours) || hours <= 0)
           throw new Error("Enter valid hours");
         if (editingEntry) {
-          await hrmsService.updateTimelogEntry(editingEntry.id, {
-            project_code: form.project_code,
-            log_date: selectedDate,
-            hours,
-            task_category: form.task_category,
-            sub_category: form.sub_category || null,
-            description: form.description || null,
-          });
+          await hrmsService.updateTimelogEntry(
+            editingEntry.id,
+            buildTimelogEntryPayload(form, selectedDate, hours)
+          );
         } else {
           await hrmsService.createTimelogDraft({
-            project_code: form.project_code,
-            log_date: selectedDate,
-            hours,
+            ...buildTimelogEntryPayload(form, selectedDate, hours),
             task_category: form.task_category || undefined,
-            sub_category: form.sub_category || null,
-            description: form.description || null,
           });
         }
         await hrmsService.submitTimelogDate({ log_date: selectedDate });
@@ -327,12 +320,8 @@ export function useDayTimelog() {
         if (!Number.isFinite(hours) || hours <= 0)
           throw new Error("Enter valid hours");
         await hrmsService.createTimelogDraft({
-          project_code: form.project_code,
-          log_date: selectedDate,
-          hours,
+          ...buildTimelogEntryPayload(form, selectedDate, hours),
           task_category: form.task_category || undefined,
-          sub_category: form.sub_category || null,
-          description: form.description || null,
         });
         await queryClient.invalidateQueries({
           queryKey: ["day-timelog-logs"],
@@ -353,14 +342,10 @@ export function useDayTimelog() {
         if (!Number.isFinite(hours) || hours <= 0)
           throw new Error("Enter valid hours");
         if (!selectedDate) return;
-        await hrmsService.updateTimelogEntry(entryId, {
-          project_code: form.project_code,
-          log_date: selectedDate,
-          hours,
-          task_category: form.task_category,
-          sub_category: form.sub_category || null,
-          description: form.description || null,
-        });
+        await hrmsService.updateTimelogEntry(
+          entryId,
+          buildTimelogEntryPayload(form, selectedDate, hours)
+        );
         await queryClient.invalidateQueries({
           queryKey: ["day-timelog-logs"],
         });

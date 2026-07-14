@@ -10,6 +10,7 @@ import {
   applyApiDateQuery,
   toApiDateParam,
 } from "@/utils/apiDate";
+import { timelogViewerRolesQueryValue } from "@/utils/timelog/viewerRoles";
 
 export type { OnboardListData, OnboardListItem, OnboardUserResponse } from "@/types/onboard";
 
@@ -664,16 +665,46 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.options);
   },
 
-  getTimelogWeek(params: { weekStart: string; employeeEmail?: string }) {
+  getTimelogWeek(params: {
+    weekStart: string;
+    employeeEmail?: string;
+    viewerRoles?: string[];
+  }) {
     const query: Record<string, string> = { weekStart: params.weekStart };
     if (params.employeeEmail?.trim()) {
-      query.employeeEmail = params.employeeEmail.trim().toLowerCase();
+      const email = params.employeeEmail.trim().toLowerCase();
+      query.employeeEmail = email;
+      query.employee_email = email;
+    }
+    const viewerRoles = timelogViewerRolesQueryValue(params.viewerRoles ?? []);
+    if (viewerRoles) {
+      query.viewer_roles = viewerRoles;
+      query.viewerRoles = viewerRoles;
     }
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.week, { query });
   },
 
-  getTimelogEmployeeEntries(params: { employeeEmail: string; startDate: string; endDate: string }) {
-    return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.employeeEntries, { query: params });
+  getTimelogEmployeeEntries(params: {
+    employeeEmail: string;
+    startDate: string;
+    endDate: string;
+    viewerRoles?: string[];
+  }) {
+    const email = params.employeeEmail.trim().toLowerCase();
+    const query: Record<string, string> = {
+      employeeEmail: email,
+      employee_email: email,
+      startDate: params.startDate,
+      start_date: params.startDate,
+      endDate: params.endDate,
+      end_date: params.endDate,
+    };
+    const viewerRoles = timelogViewerRolesQueryValue(params.viewerRoles ?? []);
+    if (viewerRoles) {
+      query.viewer_roles = viewerRoles;
+      query.viewerRoles = viewerRoles;
+    }
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.employeeEntries, { query });
   },
 
   getTimelogProjects() {
@@ -727,6 +758,9 @@ export const hrmsService = {
 
   createTimelogDraft(payload: {
     project_code: string;
+    project_name?: string | null;
+    primary_manager_emails?: string[];
+    primaryManagerEmails?: string[];
     log_date: string;
     hours: number;
     task_category?: string;
@@ -748,6 +782,9 @@ export const hrmsService = {
 
   updateTimelogEntry(timelogId: number, payload: {
     project_code: string;
+    project_name?: string | null;
+    primary_manager_emails?: string[];
+    primaryManagerEmails?: string[];
     log_date: string;
     hours: number;
     task_category: string;

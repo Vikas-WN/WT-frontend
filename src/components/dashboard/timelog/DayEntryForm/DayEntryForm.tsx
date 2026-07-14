@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useAllocationEmployees } from "@/hooks/useAllocationEmployees";
 import {
   subCategoriesFor,
   subCategoryRequired,
@@ -10,11 +11,14 @@ import {
 } from "@/utils/timelog/categories";
 import "./DayEntryForm.css";
 import type { DayEntryFormProps } from "./DayEntryForm.types";
-import type { DayTimelogEntryForm } from "@/hooks/timelog/useDayTimelog.types";
+import type { DayTimelogEntry, DayTimelogEntryForm } from "@/hooks/timelog/useDayTimelog.types";
+import { projectManagerEmailFromEntry } from "@/utils/timelog/entryManager";
 
 function emptyForm(): DayTimelogEntryForm {
   return {
     project_code: "",
+    project_name: "",
+    project_manager: "",
     task_category: "",
     sub_category: "",
     description: "",
@@ -22,10 +26,12 @@ function emptyForm(): DayTimelogEntryForm {
   };
 }
 
-function formForEntry(entry: DayTimelogEntryForm | null): DayTimelogEntryForm {
+function formForEntry(entry: DayTimelogEntry | null): DayTimelogEntryForm {
   if (!entry) return emptyForm();
   return {
     project_code: entry.project_code ?? "",
+    project_name: entry.project_name ?? "",
+    project_manager: projectManagerEmailFromEntry(entry),
     task_category: entry.task_category ?? "",
     sub_category: entry.sub_category ?? "",
     description: entry.description ?? "",
@@ -44,14 +50,16 @@ export function DayEntryForm({
   selectedDate,
   onCancel,
 }: DayEntryFormProps) {
-  const [form, setForm] = useState<DayTimelogEntryForm>(() => formForEntry(entry as unknown as DayTimelogEntryForm | null));
+  const [form, setForm] = useState<DayTimelogEntryForm>(() => formForEntry(entry));
   const [localError, setLocalError] = useState<string | null>(null);
   const [pendingSave, setPendingSave] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState(false);
   const isNew = !entry;
+  const activeEmployeesQ = useAllocationEmployees();
+  const managerOptions = useMemo(() => activeEmployeesQ.data ?? [], [activeEmployeesQ.data]);
 
   useEffect(() => {
-    setForm(formForEntry(entry as unknown as DayTimelogEntryForm | null));
+    setForm(formForEntry(entry));
     setLocalError(null);
   }, [entry]);
 
@@ -72,7 +80,13 @@ export function DayEntryForm({
 
   useEffect(() => {
     if (!form.project_code) {
-      setForm((prev) => ({ ...prev, task_category: "", sub_category: "" }));
+      setForm((prev) => ({
+        ...prev,
+        task_category: "",
+        sub_category: "",
+        project_name: "",
+        project_manager: "",
+      }));
       return;
     }
     const cats = taskCategoriesForProject(form.project_code);
@@ -89,6 +103,8 @@ export function DayEntryForm({
 
   const validate = useCallback((): string | null => {
     if (!form.project_code) return "Select a project.";
+    if (!form.project_name.trim()) return "Project name is required.";
+    if (!form.project_manager.trim()) return "Select a project manager.";
     if (!form.task_category) return "Select a task category.";
     if (isSubRequired && !form.sub_category) return "Select a sub category.";
     if (!form.description?.trim()) return "Description is required.";
@@ -165,12 +181,15 @@ export function DayEntryForm({
             <select
               className="day-entry-form-select"
               value={form.project_code}
-              onChange={(e) =>
+              onChange={(e) => {
+                const project_code = e.target.value;
+                const selected = projectOptions.find((p) => p.project_code === project_code);
                 setForm((prev) => ({
                   ...prev,
-                  project_code: e.target.value,
-                }))
-              }
+                  project_code,
+                  project_name: selected?.project_name ?? "",
+                }));
+              }}
             >
               <option value="">Select project</option>
               {projectOptions.map((p) => (
@@ -180,6 +199,54 @@ export function DayEntryForm({
               ))}
             </select>
           </label>
+
+          {form.project_code ? (
+            <label className="day-entry-form-field">
+              <span className="day-entry-form-label">
+                Project Name <span className="day-entry-form-required">*</span>
+              </span>
+              <textarea
+                className="day-entry-form-textarea"
+                value={form.project_name}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    project_name: e.target.value,
+                  }))
+                }
+                placeholder="Enter project name"
+                rows={2}
+              />
+            </label>
+          ) : null}
+
+          {form.project_code ? (
+            <label className="day-entry-form-field">
+              <span className="day-entry-form-label">
+                Project Manager <span className="day-entry-form-required">*</span>
+              </span>
+              <select
+                className="day-entry-form-select"
+                value={form.project_manager}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    project_manager: e.target.value,
+                  }))
+                }
+                disabled={activeEmployeesQ.isLoading}
+              >
+                <option value="">
+                  {activeEmployeesQ.isLoading ? "Loading managers…" : "Select project manager"}
+                </option>
+                {managerOptions.map((employee) => (
+                  <option key={employee.employeeEmail} value={employee.employeeEmail}>
+                    {employee.employeeName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
 
           {form.project_code ? (
             <label className="day-entry-form-field">
