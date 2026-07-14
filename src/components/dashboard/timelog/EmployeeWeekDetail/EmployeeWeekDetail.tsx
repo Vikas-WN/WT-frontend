@@ -18,6 +18,7 @@ export function EmployeeWeekDetail({
   dayDates,
   gridRows,
   loading,
+  error,
   actionLoading,
   onBack,
   onWeekChange,
@@ -69,6 +70,8 @@ export function EmployeeWeekDetail({
           </div>
           {loading ? (
             <WtLoaderCentered label="" />
+          ) : error ? (
+            <p className="loading-state text-rose-400">{error}</p>
           ) : gridRows.length === 0 ? (
             <p className="loading-state">No timelog entries for this week.</p>
           ) : (

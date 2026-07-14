@@ -2,6 +2,10 @@ export type DayTimelogEntry = {
   id: number;
   employee_email: string;
   project_code: string;
+  project_name?: string | null;
+  project_manager?: string | null;
+  primary_manager_emails?: string[] | null;
+  primaryManagerEmails?: string[] | null;
   log_date: string;
   hours: number;
   task_category: string;
@@ -17,6 +21,8 @@ export type DayTimelogEntry = {
 
 export type DayTimelogEntryForm = {
   project_code: string;
+  project_name: string;
+  project_manager: string;
   task_category: string;
   sub_category: string;
   description: string;

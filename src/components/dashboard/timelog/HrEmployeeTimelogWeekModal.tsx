@@ -9,6 +9,8 @@ import { hrmsService } from "@/services/hrms.service";
 import { projectOptionsFromPayload, type TimelogOptionsPayload } from "@/utils/timelog/categories";
 import { gridRowsFromWeekSnapshot, type TimelogWeekSnapshot } from "@/utils/timelog/gridState";
 import { weekColumnLabel } from "@/utils/timelog/monthWeeks";
+import { timelogViewerRoles } from "@/utils/timelog/viewerRoles";
+import { useAuth } from "@/context/AuthContext";
 import {
   formatApiDate,
   normalizeWeekStart,
@@ -40,6 +42,11 @@ export function HrEmployeeTimelogWeekModal({
   onWeekStartChange,
   onClose,
 }: HrEmployeeTimelogWeekModalProps) {
+  const { user } = useAuth();
+  const viewerRoles = useMemo(
+    () => timelogViewerRoles(user?.roles ?? []),
+    [user?.roles]
+  );
   const [options, setOptions] = useState<TimelogOptionsPayload | null>(null);
   const [snapshot, setSnapshot] = useState<TimelogWeekSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
@@ -80,6 +87,7 @@ export function HrEmployeeTimelogWeekModal({
         hrmsService.getTimelogWeek({
           weekStart,
           employeeEmail: employeeEmail.trim().toLowerCase(),
+          viewerRoles,
         }),
       ]);
       setOptions(unwrapPayload<TimelogOptionsPayload>(optionsRes));
@@ -90,7 +98,7 @@ export function HrEmployeeTimelogWeekModal({
     } finally {
       setLoading(false);
     }
-  }, [open, employeeEmail, weekStart]);
+  }, [open, employeeEmail, weekStart, viewerRoles]);
 
   useEffect(() => {
     if (!open) return;

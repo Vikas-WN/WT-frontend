@@ -11,7 +11,9 @@ function employeeTotal(
 ): string {
   const list = totals[projectCode];
   if (!list) return "0";
-  const found = list.find((e) => e.email === email);
+  const found = list.find(
+    (e) => e.email.trim().toLowerCase() === email.trim().toLowerCase()
+  );
   if (!found) return "0";
   const t = found.week_total;
   if (t <= 0) return "0";
@@ -65,7 +67,7 @@ export function ProjectTimelogCardList({
                   project.employees.map((emp) => (
                     <div
                       key={emp.email}
-                      className={`employee-row${selectedEmployee === emp.email ? " selected" : ""}`}
+                      className={`employee-row${selectedEmployee?.trim().toLowerCase() === emp.email.trim().toLowerCase() ? " selected" : ""}`}
                       onClick={() => onSelectEmployee(emp.email)}
                       role="button"
                       tabIndex={0}

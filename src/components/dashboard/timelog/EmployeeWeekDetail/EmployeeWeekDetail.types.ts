@@ -7,6 +7,7 @@ export type EmployeeWeekDetailProps = {
   dayDates: Date[];
   gridRows: TimelogGridRow[];
   loading: boolean;
+  error?: string | null;
   actionLoading: boolean;
   onBack: () => void;
   onWeekChange: (ws: Date) => void;

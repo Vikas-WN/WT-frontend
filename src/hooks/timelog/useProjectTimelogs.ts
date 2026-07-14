@@ -2,8 +2,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
-import { formatApiDate, normalizeWeekStart } from "@/utils/timelog/weekDates";
+import type { DayTimelogEntry } from "@/hooks/timelog/useDayTimelog.types";
+import { formatApiDate, normalizeWeekStart, weekDaysMonSun } from "@/utils/timelog/weekDates";
+import { weekSnapshotFromDayEntries } from "@/utils/timelog/weekSnapshotFromEntries";
+import { timelogViewerRoles } from "@/utils/timelog/viewerRoles";
 import type {
   ProjectTimelogsData,
   ProjectTimelogProject,
@@ -17,11 +21,20 @@ function unwrapData<T>(response: unknown): T {
 }
 
 export function useProjectTimelogs(enabled: boolean) {
+  const { user } = useAuth();
+  const viewerRoles = useMemo(
+    () => timelogViewerRoles(user?.roles ?? []),
+    [user?.roles]
+  );
+
   const [weekStart, setWeekStart] = useState(() => normalizeWeekStart(new Date()));
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
 
   const weekStartStr = useMemo(() => formatApiDate(weekStart), [weekStart]);
+  const dayDates = useMemo(() => weekDaysMonSun(weekStart), [weekStart]);
+  const dayKeys = useMemo(() => dayDates.map(formatApiDate), [dayDates]);
+  const weekEndStr = useMemo(() => dayKeys[dayKeys.length - 1] ?? weekStartStr, [dayKeys, weekStartStr]);
 
   const projectsQuery = useQuery({
     queryKey: ["project-timelogs-projects"],
@@ -52,14 +65,33 @@ export function useProjectTimelogs(enabled: boolean) {
   }, [weekTotalsQuery.data]);
 
   const employeeWeekQuery = useQuery({
-    queryKey: ["project-timelogs-employee-week", selectedEmployee, weekStartStr],
+    queryKey: [
+      "project-timelogs-employee-week",
+      selectedEmployee,
+      weekStartStr,
+      viewerRoles.join(","),
+    ],
     enabled: enabled && !!selectedEmployee,
     queryFn: async () => {
-      const response = await hrmsService.getTimelogWeek({
-        weekStart: weekStartStr,
-        employeeEmail: selectedEmployee!,
-      });
-      return unwrapData<TimelogWeekSnapshot>(response);
+      const email = selectedEmployee!.trim().toLowerCase();
+      try {
+        const response = await hrmsService.getTimelogWeek({
+          weekStart: weekStartStr,
+          employeeEmail: email,
+          viewerRoles,
+        });
+        return unwrapData<TimelogWeekSnapshot>(response);
+      } catch (weekError) {
+        const response = await hrmsService.getTimelogEmployeeEntries({
+          employeeEmail: email,
+          startDate: weekStartStr,
+          endDate: weekEndStr,
+          viewerRoles,
+        });
+        const entries = unwrapData<DayTimelogEntry[]>(response);
+        if (!Array.isArray(entries)) throw weekError;
+        return weekSnapshotFromDayEntries(entries, email, weekStartStr, weekEndStr, dayKeys);
+      }
     },
   });
 
@@ -74,7 +106,7 @@ export function useProjectTimelogs(enabled: boolean) {
   }, []);
 
   const selectEmployee = useCallback((email: string | null) => {
-    setSelectedEmployee(email);
+    setSelectedEmployee(email ? email.trim().toLowerCase() : null);
   }, []);
 
   return {
@@ -91,7 +123,12 @@ export function useProjectTimelogs(enabled: boolean) {
     selectedEmployee,
     weekStart,
     employeeWeekData,
-    employeeWeekLoading: employeeWeekQuery.isFetching,
+    employeeWeekLoading: employeeWeekQuery.isLoading || employeeWeekQuery.isFetching,
+    employeeWeekError: employeeWeekQuery.error
+      ? employeeWeekQuery.error instanceof Error
+        ? employeeWeekQuery.error.message
+        : "Failed to load employee time logs"
+      : null,
     setWeekStart: useCallback((ws: Date) => {
       setWeekStart(ws);
       setSelectedEmployee(null);

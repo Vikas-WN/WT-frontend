@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 import { formatTimelogTableDate } from "@/utils/timelog/weekDates";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
+import { projectManagerEmailFromEntry } from "@/utils/timelog/entryManager";
 import "./DayEntriesPanel.css";
 import type { DayEntriesPanelProps } from "./DayEntriesPanel.types";
 
@@ -85,11 +86,19 @@ export function DayEntriesPanel({
               ) : (
                 [...entries].reverse().map((entry) => {
               const taskLabel = TASK_CATEGORY_LABELS[entry.task_category] ?? entry.task_category;
+              const projectManagerEmail = projectManagerEmailFromEntry(entry);
               return (
                 <div key={entry.id} className="day-entries-card">
                   <div className="day-entries-card-header">
                     <div>
-                      <div className="day-entries-card-project">{entry.project_code}</div>
+                      <div className="day-entries-card-project">
+                        {entry.project_name?.trim() || entry.project_code}
+                      </div>
+                      {projectManagerEmail ? (
+                        <div className="day-entries-card-task">
+                          Project Manager: {projectManagerEmail}
+                        </div>
+                      ) : null}
                       <div className="day-entries-card-task">
                         {taskLabel}
                         {entry.sub_category ? ` / ${entry.sub_category}` : ""}

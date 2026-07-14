@@ -27,6 +27,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
     weekStart,
     employeeWeekData,
     employeeWeekLoading,
+    employeeWeekError,
     setWeekStart,
     toggleProject,
     selectEmployee,
@@ -92,7 +93,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
     [handleStatusChange]
   );
 
-  if (selectedEmployee && employeeWeekData) {
+  if (selectedEmployee) {
     return (
       <EmployeeWeekDetail
         employeeEmail={selectedEmployee}
@@ -100,7 +101,8 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
         dayKeys={dayKeys}
         dayDates={dayDates}
         gridRows={employeeGridRows}
-        loading={employeeWeekLoading}
+        loading={employeeWeekLoading && !employeeWeekData}
+        error={employeeWeekError}
         actionLoading={actionLoading}
         onBack={() => selectEmployee(null)}
         onWeekChange={setWeekStart}
