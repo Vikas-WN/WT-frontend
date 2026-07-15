@@ -2,10 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { hrmsService, type LeaveRecipientOption } from "@/services/hrms.service";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { FieldLabel } from "@/components/ui/field";
-import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { unwrapLeaveOptionItems } from "@/utils/leaveApiOptions";
 import { ChevronsUpDown, X, Check, Search, Loader2 } from "lucide-react";
 
@@ -22,6 +20,17 @@ function matchesQuery(option: LeaveRecipientOption, query: string): boolean {
     option.email.toLowerCase().includes(q) ||
     (option.name ?? "").toLowerCase().includes(q) ||
     (option.emp_id ?? "").toLowerCase().includes(q)
+  );
+}
+
+function SecondaryManagersLabel() {
+  return (
+    <FieldLabel>
+      Secondary managers
+      <span className="text-destructive" aria-hidden>
+        *
+      </span>
+    </FieldLabel>
   );
 }
 
@@ -98,8 +107,11 @@ export function LeaveAdditionalRecipientsSelector({
       options.map((option) => [String(option.email).trim().toLowerCase(), option] as const)
     );
     return selectedEmails
-      .map((email) => byEmail.get(email.trim().toLowerCase()))
-      .filter((option): option is LeaveRecipientOption => Boolean(option));
+      .map((email) => {
+        const opt = byEmail.get(email.trim().toLowerCase());
+        return { email: email.trim(), label: opt?.name?.trim() || email.trim() };
+      })
+      .filter((option) => Boolean(option.email));
   }, [options, selectedEmails]);
 
   const filteredOptions = useMemo(
@@ -131,26 +143,10 @@ export function LeaveAdditionalRecipientsSelector({
     toggleEmail(email, false);
   };
 
-  const triggerLabel = selectedEmails.length
-    ? `${selectedEmails.length} employee${selectedEmails.length > 1 ? "s" : ""} selected`
-    : "Select employees…";
-
-  if (loading) {
-    return (
-      <div className="space-y-2">
-        <FieldLabel>Secondary Managers *</FieldLabel>
-        <div className="flex h-10 w-full items-center gap-2 rounded-lg border border-input px-3 text-sm text-muted-foreground">
-          <Loader2 className="size-3.5 animate-spin" />
-          Loading employees…
-        </div>
-      </div>
-    );
-  }
-
   if (error && !options.length) {
     return (
       <div className="space-y-2">
-        <FieldLabel>Secondary Managers *</FieldLabel>
+        <SecondaryManagersLabel />
         <p className="text-sm text-destructive">{error}</p>
         <button
           type="button"
@@ -166,23 +162,58 @@ export function LeaveAdditionalRecipientsSelector({
 
   return (
     <div className="space-y-2" ref={rootRef}>
-      <FieldLabel>Secondary Managers *</FieldLabel>
+      <SecondaryManagersLabel />
 
       <div className="relative">
-        <Button
+        <button
           type="button"
-          variant="outline"
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
           onClick={() => setOpen((v) => !v)}
-          className="h-10 w-full justify-between px-3 text-sm font-normal text-muted-foreground"
+          className="flex h-auto min-h-10 w-full items-center gap-1.5 rounded-lg border border-input bg-transparent px-3 py-1.5 text-sm transition-colors hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-0 disabled:pointer-events-none disabled:opacity-50 disabled:bg-input/50 cursor-pointer"
         >
-          <span className={selectedEmails.length ? "text-foreground" : ""}>
-            {triggerLabel}
-          </span>
+          <div className="flex flex-1 flex-wrap items-center gap-1">
+            {loading && !selectedOptions.length ? (
+              <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                <Loader2 className="size-3.5 animate-spin" />
+                Loading employees…
+              </span>
+            ) : selectedOptions.length ? (
+              selectedOptions.map(({ email, label: optionName }) => (
+                <Badge
+                  key={email}
+                  variant="secondary"
+                  className="max-w-[160px] truncate pl-2 pr-1 text-xs font-normal gap-1 cursor-default"
+                >
+                  <span className="truncate">{optionName}</span>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Remove ${optionName}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeEmail(email);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        removeEmail(email);
+                      }
+                    }}
+                    className="inline-flex size-3.5 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
+                  >
+                    <X className="size-3" />
+                  </span>
+                </Badge>
+              ))
+            ) : (
+              <span className="text-muted-foreground">Select managers…</span>
+            )}
+          </div>
           <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
-        </Button>
+        </button>
 
         {open ? (
           <div className="absolute left-0 right-0 top-full z-50 mt-1.5 rounded-lg border border-border bg-popover text-popover-foreground shadow-lg">
@@ -243,35 +274,6 @@ export function LeaveAdditionalRecipientsSelector({
           </div>
         ) : null}
       </div>
-
-      {selectedOptions.length ? (
-        <div className="flex flex-wrap gap-1.5">
-          {selectedOptions.map((option) => {
-            const label = optionLabel(option);
-            return (
-              <span
-                key={option.email}
-                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${filledBadgeClass("neutral")}`}
-              >
-                <span className="max-w-[180px] truncate">{label}</span>
-                <button
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => removeEmail(option.email)}
-                  className="ml-0.5 inline-flex size-3.5 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground cursor-pointer"
-                  aria-label={`Remove ${label}`}
-                >
-                  <X className="size-3" />
-                </button>
-              </span>
-            );
-          })}
-        </div>
-      ) : null}
-
-      <p className="text-[11px] text-muted-foreground/80 mt-0.5 tracking-normal">
-        Required · Primary managers are excluded
-      </p>
     </div>
   );
 }

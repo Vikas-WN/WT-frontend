@@ -80,7 +80,10 @@ export function LeaveRequestForm({
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <Field>
             <FieldLabel>
-              Request Type *
+              Request Type
+              <span className="text-destructive" aria-hidden>
+                *
+              </span>
               <span
                 title="Leave — Deducts from your primary/secondary leave balance.&#10;Optional Leave — Deducts from your primary/secondary leave balance (mutually exclusive with paired holiday).&#10;Comp Off — Deducts from your approved Comp Off credit balance."
                 className="inline-flex align-middle ml-1 cursor-help"
@@ -103,7 +106,8 @@ export function LeaveRequestForm({
           </Field>
 
           <DatePicker
-            label="From Date *"
+            label="From Date"
+            required
             value={values.request_from_date}
             disabled={actionLoading}
             onChange={(v) =>
@@ -116,7 +120,8 @@ export function LeaveRequestForm({
           />
 
           <DatePicker
-            label="To Date *"
+            label="To Date"
+            required
             value={values.is_half_day ? values.request_from_date : values.request_to_date}
             disabled={actionLoading || values.is_half_day}
             onChange={(v) => {
@@ -189,7 +194,8 @@ export function LeaveRequestForm({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-1.5 min-w-0">
               <LeaveManagerSelector
-                label="Primary managers *"
+                label="Primary managers"
+                required
                 selectedEmails={selectedManagerEmails}
                 onChange={(emails) => {
                   onManagerEmailsChange(emails);
@@ -215,7 +221,12 @@ export function LeaveRequestForm({
         ) : null}
 
         <Field>
-          <FieldLabel>Comments *</FieldLabel>
+          <FieldLabel>
+            Comments
+            <span className="text-destructive" aria-hidden>
+              *
+            </span>
+          </FieldLabel>
           <Textarea
             placeholder="Enter your comments..."
             value={values.comments}

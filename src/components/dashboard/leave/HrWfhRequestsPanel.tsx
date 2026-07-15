@@ -22,7 +22,8 @@ import { LeaveManagerEmailsCell } from "@/components/dashboard/leave/LeaveManage
 import { useHrWfhRequests } from "@/hooks/leave/useHrWfhRequests";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import { formatUserRequestTypeLabel } from "@/utils/actionToast";
-import { formatLeaveDateRange, formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
+import { formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
+import { formatApiDateDisplay } from "@/utils/apiDate";
 import { pickManagerEmailList } from "@/utils/leaveManagerDisplay";
 import { requestFinalStatus } from "@/utils/userRequest";
 import {
@@ -33,7 +34,7 @@ import {
 } from "@/utils/listSort";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 
-const TABLE_COL_COUNT = 6;
+const TABLE_COL_COUNT = 7;
 const TABLE_MIN_HEIGHT = "min-h-[280px]";
 
 function wfhRequestMatchesSearch(row: Record<string, unknown>, query: string): boolean {
@@ -153,7 +154,8 @@ export function HrWfhRequestsPanel({
                     }
                   />
                 </TableHead>
-                <TableHead>Date Range</TableHead>
+                <TableHead>From</TableHead>
+                <TableHead>To</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Approver(s)</TableHead>
                 <TableHead>Days</TableHead>
@@ -198,7 +200,10 @@ export function HrWfhRequestsPanel({
                     <TableRow key={`${requestId || "wfh"}-${idx}`}>
                       <TableCell className="px-3 py-2.5 whitespace-nowrap">{employee}</TableCell>
                       <TableCell className="px-3 py-2.5 whitespace-nowrap">
-                        {formatLeaveDateRange(fromDate, toDate, isHalfDay)}
+                        {formatApiDateDisplay(fromDate) || "—"}
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5 whitespace-nowrap">
+                        {formatApiDateDisplay(toDate) || "—"}
                       </TableCell>
                       <TableCell className="px-3 py-2.5 whitespace-nowrap">
                         <LeaveRequestStatusBadge status={finalStatus} />

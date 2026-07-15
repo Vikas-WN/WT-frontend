@@ -20,7 +20,6 @@ import { DatePicker } from "@/components/ui/date-picker";
 
 import {
   formatApprovalStageLabel,
-  formatStageRejectionReason,
   requestFinalStatus,
   requestManagerStatus,
 } from "@/utils/userRequest";
@@ -29,7 +28,6 @@ import {
   type ListSortOption,
   toggleColumnSort,
 } from "@/utils/listSort";
-import { pickRowField } from "@/utils/compOff";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { IconPencil, IconTrash } from "@/components/dashboard/ui/icons";
 import { RefreshCw, Inbox } from "lucide-react";
@@ -118,7 +116,6 @@ export function MyLeaveRequestsView({
               <TableHead className="font-semibold px-3">To</TableHead>
               {showRequestType ? <TableHead className="font-semibold px-3">Request Type</TableHead> : null}
               <TableHead className="font-semibold px-3">Manager status</TableHead>
-              <TableHead className="font-semibold px-3">Reason</TableHead>
               <TableHead className="font-semibold px-3">Comments</TableHead>
               <TableHead className="font-semibold px-3 text-right">Actions</TableHead>
             </TableRow>
@@ -127,7 +124,7 @@ export function MyLeaveRequestsView({
             {loading ? (
               Array.from({ length: 5 }).map((_, rowIndex) => (
                 <TableRow key={`skeleton-${rowIndex}`}>
-                  {Array.from({ length: showRequestType ? 7 : 6 }).map((_, colIndex) => (
+                  {Array.from({ length: showRequestType ? 6 : 5 }).map((_, colIndex) => (
                     <TableCell key={colIndex} className="px-3 py-2.5">
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -147,10 +144,6 @@ export function MyLeaveRequestsView({
                 const rowRecord = row as Record<string, unknown>;
                 const finalStatus = requestFinalStatus(rowRecord);
                 const managerStatus = requestManagerStatus(rowRecord);
-                const managerReason = formatStageRejectionReason(
-                  managerStatus,
-                  pickRowField(rowRecord, "manager_reason", "managerReason")
-                );
                 const isPending = finalStatus === "PENDING";
                 return (
                     <TableRow key={`${requestId || "req"}-${idx}`}>
@@ -181,12 +174,6 @@ export function MyLeaveRequestsView({
                       >
                         {formatApprovalStageLabel(managerStatus)}
                       </Badge>
-                    </TableCell>
-                    <TableCell
-                      className="px-3 py-2.5 max-w-[180px] truncate text-muted-foreground"
-                      title={managerReason !== "—" ? managerReason : undefined}
-                    >
-                      {managerReason}
                     </TableCell>
                     <TableCell className="px-3 py-2.5 max-w-[200px] truncate text-muted-foreground">
                       {String(row.comments ?? "—")}
@@ -225,7 +212,7 @@ export function MyLeaveRequestsView({
             ) : (
               <TableRow className="hover:bg-transparent">
                 <TableCell
-                  colSpan={6}
+                  colSpan={showRequestType ? 6 : 5}
                   className="h-[200px] text-center align-middle"
                 >
                   <div className="flex flex-col items-center gap-2">

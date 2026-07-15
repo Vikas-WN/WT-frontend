@@ -53,7 +53,7 @@
 }
 
 .day-entry-form-required {
-  color: #e11d48;
+  color: var(--destructive, #e11d48);
 }
 
 .day-entry-form-select {

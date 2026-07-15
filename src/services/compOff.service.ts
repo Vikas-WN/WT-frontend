@@ -389,6 +389,7 @@ export const compOffService = {
     };
     if (status === "REJECTED" && requireReason && trimmedReason) {
       body.reason = trimmedReason;
+      body.message = trimmedReason;
     }
     try {
       return await apiClient.put<ApiEnvelope<unknown>>(endpoints.userRequest.status, {

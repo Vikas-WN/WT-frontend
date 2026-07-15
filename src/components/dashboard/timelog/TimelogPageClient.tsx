@@ -12,13 +12,12 @@ import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTab
 import { INNER_PANEL_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { SelectField } from "@/components/dashboard/ui/forms";
+import { SelectField, ApiDateField } from "@/components/dashboard/ui/forms";
 import { ApprovalRemarkModal } from "@/components/dashboard/timelog/ApprovalRemarkModal/ApprovalRemarkModal";
 import { HrEmployeeTimelogWeekModal } from "@/components/dashboard/timelog/HrEmployeeTimelogWeekModal";
 import { HrMonthlyTimelogSummary } from "@/components/dashboard/timelog/HrMonthlyTimelogSummary";
 import { MyWeeklyTimesheet } from "@/components/dashboard/timelog/MyWeeklyTimesheet";
 import { ProjectTimelogPanel } from "@/components/dashboard/timelog/ProjectTimelogPanel/ProjectTimelogPanel";
-import { WeekPickerField } from "@/components/dashboard/timelog/WeekPickerField";
 import {
   currentMonthRef,
   type MonthRef,
@@ -28,20 +27,19 @@ import {
   type HrTimelogEmployee,
   type HrMonthlyTimelogRow,
 } from "@/hooks/timelog/useHrMonthlyTimelogSummary";
-import { WtLoader, WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
+import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 import { HrReviewNoticeBanner } from "@/components/hr-review/HrReviewNoticeBanner";
 import { hrmsService } from "@/services/hrms.service";
 import { toPagedRows } from "@/utils/apiRows";
 import { isOffboardedUserStatus } from "@/utils/userStatus";
 import { managerTeamEmails } from "@/utils/dashboard/projects";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
-import {
-  formatApiDate,
-  normalizeWeekStart,
-  weekDaysMonSun,
-} from "@/utils/timelog/weekDates";
+import { lastSevenDaysInvitedEmployeesDateRange } from "@/utils/dashboard/invitedEmployees";
+import { compareApiDates } from "@/utils/apiDate";
 import type { DayTimelogEntry } from "@/hooks/timelog/useDayTimelog.types";
 import { timelogViewerRoles } from "@/utils/timelog/viewerRoles";
+import { RefreshCw } from "lucide-react";
+import { showErrorToast } from "@/lib/toast";
 
 function unwrapPayload<T>(response: unknown): T {
   return ((response as { data?: T }).data ?? response) as T;
@@ -77,7 +75,14 @@ export function TimelogPageClient() {
   const canManagerApprove = isTeamView && (hasManagerAccess || hasAdminAccess) && !hasHrAccess;
   const isHrTeamView = isTeamView && hasHrAccess && !canManagerApprove;
 
-  const [weekStart, setWeekStart] = useState(() => normalizeWeekStart(new Date()));
+  const [fromDate, setFromDate] = useState(
+    () => lastSevenDaysInvitedEmployeesDateRange().from
+  );
+  const [toDate, setToDate] = useState(
+    () => lastSevenDaysInvitedEmployeesDateRange().to
+  );
+  const [appliedFromDate, setAppliedFromDate] = useState(fromDate);
+  const [appliedToDate, setAppliedToDate] = useState(toDate);
   const [employeeEntries, setEmployeeEntries] = useState<DayTimelogEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [teamEmployeeEmail, setTeamEmployeeEmail] = useState("");
@@ -109,21 +114,17 @@ export function TimelogPageClient() {
 
   const { runAction } = useDashboardAction();
 
-  const dayDates = useMemo(() => weekDaysMonSun(weekStart), [weekStart]);
-
   const loadEmployeeEntries = useCallback(
     async (overrideEmail?: string) => {
       if (!isTeamView) return;
       const email = (overrideEmail ?? teamEmployeeEmail).trim().toLowerCase();
       if (!email) return;
-      const startDate = formatApiDate(dayDates[0]);
-      const endDate = formatApiDate(dayDates[dayDates.length - 1]);
       setEntriesLoading(true);
       try {
         const res = await hrmsService.getTimelogEmployeeEntries({
           employeeEmail: email,
-          startDate,
-          endDate,
+          startDate: appliedFromDate,
+          endDate: appliedToDate,
           viewerRoles,
         });
         const data = unwrapPayload<DayTimelogEntry[]>(res);
@@ -134,8 +135,31 @@ export function TimelogPageClient() {
         setEntriesLoading(false);
       }
     },
-    [isTeamView, teamEmployeeEmail, dayDates, viewerRoles]
+    [isTeamView, teamEmployeeEmail, appliedFromDate, appliedToDate, viewerRoles]
   );
+
+  const applyDateRange = useCallback(
+    (nextFrom: string, nextTo: string) => {
+      if (!nextFrom.trim() || !nextTo.trim()) {
+        showErrorToast("Select both From and To dates.");
+        return;
+      }
+      if (compareApiDates(nextFrom, nextTo) > 0) {
+        showErrorToast("From date cannot be after To date.");
+        return;
+      }
+      setFromDate(nextFrom);
+      setToDate(nextTo);
+      setAppliedFromDate(nextFrom);
+      setAppliedToDate(nextTo);
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!isTeamView || !teamEmployeeEmail.trim()) return;
+    void loadEmployeeEntries();
+  }, [isTeamView, teamEmployeeEmail, appliedFromDate, appliedToDate, loadEmployeeEntries]);
 
   const loadTeamEmployees = useCallback(async () => {
     const sortItems = (items: Array<{ value: string; label: string }>) =>
@@ -280,16 +304,55 @@ export function TimelogPageClient() {
                 <PageSectionHeader
                   title="Team Time Logs"
                   action={
-                    <div className="flex flex-wrap items-center gap-2">
-                      <WeekPickerField weekStart={weekStart} onWeekStartChange={setWeekStart} disabled={entriesLoading} />
+                    <div className="flex flex-wrap items-end gap-2">
+                      <ApiDateField
+                        label="From"
+                        value={fromDate}
+                        onChange={setFromDate}
+                        className="w-[10.5rem]"
+                      />
+                      <ApiDateField
+                        label="To"
+                        value={toDate}
+                        onChange={setToDate}
+                        className="w-[10.5rem]"
+                      />
+                      <Button
+                        variant="brand"
+                        size="sm"
+                        type="button"
+                        disabled={entriesLoading}
+                        className="h-10"
+                        onClick={() => applyDateRange(fromDate, toDate)}
+                      >
+                        Apply Dates
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         type="button"
                         disabled={entriesLoading}
-                        onClick={() => void loadEmployeeEntries()}
+                        className="h-10"
+                        onClick={() => {
+                          const range = lastSevenDaysInvitedEmployeesDateRange();
+                          applyDateRange(range.from, range.to);
+                        }}
                       >
-                        {entriesLoading ? <WtLoader size="sm" /> : "Refresh"}
+                        Last 7 Days
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        type="button"
+                        disabled={entriesLoading}
+                        onClick={() => void loadEmployeeEntries()}
+                        aria-label="Refresh"
+                        title="Refresh"
+                        className="h-10 w-10"
+                      >
+                        <RefreshCw
+                          className={`size-4 ${entriesLoading ? "animate-spin" : ""}`}
+                        />
                       </Button>
                     </div>
                   }
@@ -310,7 +373,6 @@ export function TimelogPageClient() {
                   onChange={(v) => {
                     setTeamEmployeeEmail(v);
                     setEmployeeEntries([]);
-                    void loadEmployeeEntries(v);
                   }}
                   placeholder="Select employee"
                   options={employeeOptions}
@@ -321,13 +383,13 @@ export function TimelogPageClient() {
                 ) : !teamEmployeeEmail.trim() ? (
                   <EmptyState
                     title="Select an Employee"
-                    description="Choose a team member to review their time log entries for the selected week."
+                    description="Choose a team member to review their time log entries for the selected date range."
                     className="py-10"
                   />
                 ) : !employeeEntries.length ? (
                   <EmptyState
                     title="No Time Log Entries"
-                    description="There are no entries for this employee during the selected week."
+                    description="There are no entries for this employee during the selected date range."
                     className="py-10"
                   />
                 ) : (

@@ -84,9 +84,13 @@ function formatBool(value: boolean): string {
 function bulkResendResultClassName(
   status: ExitSurveyBulkResendItemResult["status"]
 ): string {
-  if (status === "SENT") return "border-emerald-200 bg-emerald-50 text-emerald-900";
-  if (status === "FAILED") return "border-red-200 bg-red-50 text-red-900";
-  return "border-amber-200 bg-amber-50 text-amber-900";
+  if (status === "SENT") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200";
+  }
+  if (status === "FAILED") {
+    return "border-red-200 bg-red-50 text-red-900 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200";
+  }
+  return "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200";
 }
 
 export function OffboardingPanel() {
@@ -611,11 +615,11 @@ export function OffboardingPanel() {
             <DropdownSelectField
               label="User Type"
               className="w-[10.5rem] shrink-0"
-              value={filterType}
-              onChange={setFilterType}
+              value={filterType || "ALL"}
+              onChange={(value) => setFilterType(value === "ALL" ? "" : value)}
               placeholder="All types"
               options={[
-                { value: "", label: "All types" },
+                { value: "ALL", label: "All types" },
                 ...USER_TYPE_FILTER_OPTIONS.filter(Boolean).map((t) => ({
                   value: t,
                   label: formatUserTypeLabel(t),
@@ -676,7 +680,7 @@ export function OffboardingPanel() {
           <>
             <div className="relative">
               {loadingList ? (
-                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/60">
+                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-wt-surface-1/60">
                   <div className="h-6 w-6 animate-spin rounded-full border-2 border-wt-brand border-t-transparent" />
                 </div>
               ) : null}
@@ -737,7 +741,7 @@ export function OffboardingPanel() {
                       <TableRow
                         key={row.emp_id}
                         className={`hover:bg-wt-page-bg/50 ${
-                          isSelected ? "bg-indigo-50/70" : ""
+                          isSelected ? TABLE_ROW_SELECTED_CLASS : ""
                         } ${canView ? "cursor-pointer" : ""}`}
                         onClick={(event) => {
                           if (!canView || !detailHref) return;

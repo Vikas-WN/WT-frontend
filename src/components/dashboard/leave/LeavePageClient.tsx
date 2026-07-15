@@ -1384,22 +1384,41 @@ export function LeavePageClient() {
                                           onClick={() => setWfhExceptionOpen(true)}
                                           className="text-xs text-sky-600 hover:text-sky-700 underline cursor-pointer"
                                         >
-                                          Need more than 1 WFH day this week? Contact HR
+                                          Need a custom WFH exception? Contact HR
                                         </button>
                                       </div>
-                                      <div className="max-w-xs">
+                                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 max-w-xl">
                                         <DatePicker
-                                          label="Date"
+                                          label="From"
                                           required
                                           value={leaveRequestForm.request_from_date}
                                           onChange={(v) =>
                                             setLeaveRequestForm((p) => ({
                                               ...p,
                                               request_from_date: v,
-                                              request_to_date: v,
+                                              request_to_date: p.is_half_day
+                                                ? v
+                                                : p.request_to_date || v,
                                             }))
                                           }
                                           disabled={actionLoading}
+                                        />
+                                        <DatePicker
+                                          label="To"
+                                          required
+                                          value={
+                                            leaveRequestForm.is_half_day
+                                              ? leaveRequestForm.request_from_date
+                                              : leaveRequestForm.request_to_date
+                                          }
+                                          onChange={(v) => {
+                                            if (leaveRequestForm.is_half_day) return;
+                                            setLeaveRequestForm((p) => ({
+                                              ...p,
+                                              request_to_date: v,
+                                            }));
+                                          }}
+                                          disabled={actionLoading || leaveRequestForm.is_half_day}
                                         />
                                       </div>
                                       <div className="mt-4">
@@ -1411,11 +1430,15 @@ export function LeavePageClient() {
                                               setLeaveRequestForm((p) => ({
                                                 ...p,
                                                 is_half_day: checked === true,
+                                                request_to_date:
+                                                  checked === true
+                                                    ? p.request_from_date
+                                                    : p.request_to_date,
                                               }))
                                             }
                                             disabled={actionLoading}
                                           />
-                                          <span className="text-muted-foreground">Half-day</span>
+                                          <span className="text-muted-foreground">Half-day (single day only)</span>
                                         </label>
                                       </div>
                                       {requiresClientApproval ? (
@@ -1455,8 +1478,19 @@ export function LeavePageClient() {
                                                 const fromDate = normalizeToApiDate(
                                                   leaveRequestForm.request_from_date.trim()
                                                 );
+                                                const toDate = leaveRequestForm.is_half_day
+                                                  ? fromDate
+                                                  : normalizeToApiDate(
+                                                      leaveRequestForm.request_to_date.trim()
+                                                    );
                                                 if (!fromDate || !parseApiDate(fromDate)) {
-                                                  throw new Error("Please provide a valid date (dd/mm/yyyy).");
+                                                  throw new Error("Please provide a valid From date (dd/mm/yyyy).");
+                                                }
+                                                if (!toDate || !parseApiDate(toDate)) {
+                                                  throw new Error("Please provide a valid To date (dd/mm/yyyy).");
+                                                }
+                                                if (parseApiDate(toDate)! < parseApiDate(fromDate)!) {
+                                                  throw new Error("To date cannot be earlier than From date.");
                                                 }
                                                 const comments = leaveRequestForm.comments.trim();
                                                 if (!comments) {
@@ -1475,7 +1509,7 @@ export function LeavePageClient() {
                                                 const payload = buildUserRequestBody(
                                                   {
                                                     request_from_date: fromDate,
-                                                    request_to_date: fromDate,
+                                                    request_to_date: toDate,
                                                     request_type: "WFH",
                                                     comments,
                                                     is_half_day: leaveRequestForm.is_half_day,

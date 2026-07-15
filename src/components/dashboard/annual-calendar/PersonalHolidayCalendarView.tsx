@@ -68,9 +68,11 @@ export function PersonalHolidayCalendarView() {
   useEffect(() => {
     if (!storageQuery.isError) return;
     const error = storageQuery.error;
-    showErrorToast(
-      error instanceof Error ? error.message : "Failed to load holiday calendar."
-    );
+    const message =
+      error instanceof Error ? error.message : "Failed to load holiday calendar.";
+    // Missing calendar files are an empty state, not a toast-worthy failure.
+    if (/file not found|nosuchkey|not found/i.test(message)) return;
+    showErrorToast(message);
   }, [storageQuery.isError, storageQuery.error]);
 
   const rowsInYear = useMemo(() => {
@@ -95,6 +97,15 @@ export function PersonalHolidayCalendarView() {
   );
 
   const isLoading = storageQuery.isFetching;
+  const missingCalendar =
+    !storageQuery.isFetching &&
+    (storageQuery.data == null ||
+      (storageQuery.isError &&
+        /file not found|nosuchkey|not found/i.test(
+          storageQuery.error instanceof Error
+            ? storageQuery.error.message
+            : String(storageQuery.error ?? "")
+        )));
   const hasCalendarFile = storageQuery.data != null;
 
   return (
@@ -125,10 +136,10 @@ export function PersonalHolidayCalendarView() {
         <div className="mt-6">
           {isLoading ? (
             <TableRowsSkeleton rows={5} columns={4} />
-          ) : !hasCalendarFile ? (
+          ) : missingCalendar || !hasCalendarFile ? (
             <EmptyState
-              title="No Holiday Calendar"
-              description={`The ${selectedYear} holiday calendar has not been published yet.`}
+              title="There is no holiday calendar configured"
+              description={`No holiday calendar is configured for ${selectedYear}.`}
             />
           ) : displayRows.length === 0 ? (
             <EmptyState

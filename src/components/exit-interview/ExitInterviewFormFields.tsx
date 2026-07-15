@@ -14,7 +14,7 @@ import { ExitInterviewReportingManagersSelector } from "@/components/exit-interv
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
-  return <p className="mt-1 text-xs text-rose-600">{message}</p>;
+  return <p className="mt-1 text-xs text-destructive">{message}</p>;
 }
 
 function ReadonlyControl({ field, value }: { field: FormField; value: string }) {
@@ -170,7 +170,7 @@ export function ExitInterviewFormFields({
           <div key={field.key} className="rounded-xl border border-wt-border bg-wt-surface-1 p-4">
             <p className="text-sm font-medium text-wt-text">
               {field.label}
-              {field.required && !readonly ? <span className="text-rose-600"> *</span> : null}
+              {field.required && !readonly ? <span className="text-destructive"> *</span> : null}
             </p>
 
             <div className="mt-3">

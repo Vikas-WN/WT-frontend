@@ -1013,6 +1013,19 @@ select.input-field {
   --wt-toast-duration: 3.6s;
 }
 
+[data-sonner-toaster][data-x-position="right"] {
+  transition: right 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* When a right-side timelog panel (day entries / entry form / entry review)
+   is open, shift toasts left so they never overlap the panel. */
+@media (min-width: 40rem) {
+  body:has(.day-entries-overlay, .day-entry-form-overlay, .entry-review-overlay)
+    [data-sonner-toaster][data-x-position="right"] {
+    right: calc(28rem + 1.25rem) !important;
+  }
+}
+
 [data-sonner-toast].wt-toast {
   position: relative;
   overflow: hidden;

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useAllocationEmployees } from "@/hooks/useAllocationEmployees";
+import { useTimelogManagerOptions } from "@/hooks/timelog/useTimelogManagerOptions";
+import { showErrorToast } from "@/lib/toast";
 import {
   subCategoriesFor,
   subCategoryRequired,
@@ -56,8 +57,16 @@ export function DayEntryForm({
   const [pendingSave, setPendingSave] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState(false);
   const isNew = !entry;
-  const activeEmployeesQ = useAllocationEmployees();
-  const managerOptions = useMemo(() => activeEmployeesQ.data ?? [], [activeEmployeesQ.data]);
+  const activeEmployeesQ = useTimelogManagerOptions();
+  const managerOptions = useMemo(() => {
+    const fetched = activeEmployeesQ.data ?? [];
+    const current = form.project_manager.trim().toLowerCase();
+    // Keep the entry's saved manager selectable even if they are no longer active.
+    if (current && !fetched.some((emp) => emp.email === current)) {
+      return [{ email: current, name: current }, ...fetched];
+    }
+    return fetched;
+  }, [activeEmployeesQ.data, form.project_manager]);
 
   useEffect(() => {
     setForm(formForEntry(entry));
@@ -132,6 +141,7 @@ export function DayEntryForm({
     const error = validate();
     if (error) {
       setLocalError(error);
+      showErrorToast(error);
       return;
     }
     setLocalError(null);
@@ -143,6 +153,7 @@ export function DayEntryForm({
     const error = validate();
     if (error) {
       setLocalError(error);
+      showErrorToast(error);
       return;
     }
     setLocalError(null);
@@ -167,15 +178,6 @@ export function DayEntryForm({
           <h2 className="day-entry-form-title">
             {isNew ? "Add entry" : "Edit entry"}
           </h2>
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            onClick={onCancel}
-            disabled={actionLoading}
-          >
-            Cancel
-          </Button>
         </div>
 
         <div className="day-entry-form-body">
@@ -244,8 +246,8 @@ export function DayEntryForm({
                 loading={activeEmployeesQ.isLoading}
                 loadingLabel="Loading managers…"
                 options={managerOptions.map((employee) => ({
-                  value: employee.employeeEmail,
-                  label: employee.employeeName,
+                  value: employee.email,
+                  label: employee.name,
                 }))}
                 placeholder="Search project managers…"
                 inputClassName="day-entry-form-select"

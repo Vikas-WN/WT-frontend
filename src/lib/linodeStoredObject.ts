@@ -136,7 +136,7 @@ export async function getStoredObject(
     }
   }
 
-  throw lastError ?? new Error("File not found.");
+  throw lastError ?? Object.assign(new Error("File not found."), { name: "NoSuchKey", Code: "NoSuchKey" });
 }
 
 export function resolveStoredObjectFilename(

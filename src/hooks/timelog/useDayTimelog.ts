@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { hrmsService } from "@/services/hrms.service";
 import { ApiError } from "@/api/error";
+import { showSuccessToast } from "@/lib/toast";
 import { formatApiDate, parseTimelogDate, toIsoDateKey } from "@/utils/timelog/weekDates";
 import {
   projectOptionsFromPayload,
@@ -302,6 +303,7 @@ export function useDayTimelog() {
         });
         setShowEntryForm(false);
         setEditingEntry(null);
+        showSuccessToast("Entry submitted for approval.");
       }),
     [selectedDate, handleAction, queryClient, editingEntry],
   );
@@ -325,6 +327,7 @@ export function useDayTimelog() {
         });
         setShowEntryForm(false);
         setEditingEntry(null);
+        showSuccessToast("Draft saved.");
       }),
     [selectedDate, handleAction, queryClient],
   );
@@ -348,6 +351,7 @@ export function useDayTimelog() {
         });
         setShowEntryForm(false);
         setEditingEntry(null);
+        showSuccessToast("Entry updated.");
       }),
     [selectedDate, handleAction, queryClient],
   );
@@ -362,6 +366,7 @@ export function useDayTimelog() {
         await queryClient.invalidateQueries({
           queryKey: ["day-timelog-day"],
         });
+        showSuccessToast("Entry deleted.");
       }),
     [handleAction, queryClient],
   );
@@ -377,6 +382,7 @@ export function useDayTimelog() {
         await queryClient.invalidateQueries({
           queryKey: ["day-timelog-day"],
         });
+        showSuccessToast("Entries submitted for approval.");
       }),
     [selectedDate, handleAction, queryClient],
   );

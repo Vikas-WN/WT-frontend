@@ -86,6 +86,7 @@ export const endpoints = {
     timelog: {
       root: `${api}/timelog`,
       options: `${api}/timelog/options`,
+      managerOptions: `${api}/timelog/manager-options`,
       week: `${api}/timelog/week`,
       weekTotalsBatch: `${api}/timelog/week/totals/batch`,
       weekSubmit: `${api}/timelog/week/submit`,

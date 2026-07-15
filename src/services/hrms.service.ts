@@ -665,6 +665,16 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.options);
   },
 
+  /** GET /timelog/manager-options — ACTIVE employees for the project-manager picker. */
+  getTimelogManagerOptions(params?: { search?: string }) {
+    const query: Record<string, string> = {};
+    if (params?.search?.trim()) query.search = params.search.trim();
+    return apiClient.get<ApiEnvelope<Array<{ employee_id?: string | null; name: string; email: string }>>>(
+      endpoints.timelog.managerOptions,
+      { query }
+    );
+  },
+
   getTimelogWeek(params: {
     weekStart: string;
     employeeEmail?: string;

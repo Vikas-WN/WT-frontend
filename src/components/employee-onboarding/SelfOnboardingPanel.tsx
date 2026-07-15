@@ -160,6 +160,20 @@ export function SelfOnboardingPanel({
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean);
+      if (!primarySkills.length) {
+        throw new Error("At least one primary skill is required.");
+      }
+
+      if (form.secondary_skill.trim()) {
+        const rating = Number(form.secondary_rating);
+        if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+          throw new Error("Secondary skill rating must be a whole number from 1 to 5.");
+        }
+      }
+
+      if (form.yoe.trim() && !Number.isInteger(Number(form.yoe))) {
+        throw new Error("Years of experience must be a whole number.");
+      }
 
       const userData: Record<string, unknown> = {
         email,
@@ -171,10 +185,13 @@ export function SelfOnboardingPanel({
 
       if (yoeValue !== null) userData.yoe = yoeValue;
       if (experience) userData.experience = experience;
-      if (primarySkills.length) userData.primary_skills = primarySkills;
+      userData.primary_skills = primarySkills;
       if (form.secondary_skill.trim()) {
         userData.secondary_skills = [
-          { skill: form.secondary_skill.trim(), rating: Number(form.secondary_rating || "0") },
+          {
+            skill: form.secondary_skill.trim(),
+            rating: Number(form.secondary_rating),
+          },
         ];
       }
       if (form.work_location_type) userData.work_location_type = form.work_location_type;
@@ -193,7 +210,7 @@ export function SelfOnboardingPanel({
 
       for (const [key, file] of Object.entries(files)) {
         if (key === "salary_slips") {
-          if (file) fd.append("salary_slips[]", file as File);
+          if (file) fd.append("salary_slips", file as File);
           continue;
         }
         if (!file) continue;
@@ -259,6 +276,7 @@ export function SelfOnboardingPanel({
         ) : null}
         <InputField
           label="Primary Skills (comma separated)"
+          required
           value={form.primary_skills}
           onChange={(v) => setForm((p) => ({ ...p, primary_skills: v }))}
         />
@@ -269,6 +287,7 @@ export function SelfOnboardingPanel({
         />
         <SelectField
           label="Secondary Skill Rating"
+          required={Boolean(form.secondary_skill.trim())}
           placeholder="Select"
           value={form.secondary_rating}
           options={["1", "2", "3", "4", "5"]}

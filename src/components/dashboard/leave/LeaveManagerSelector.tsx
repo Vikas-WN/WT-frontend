@@ -34,6 +34,7 @@ export function LeaveManagerSelector({
   options: externalOptions,
   loading: externalLoading,
   label = "Primary managers",
+  required = false,
 }: {
   selectedEmails: string[];
   onChange: (emails: string[]) => void;
@@ -41,6 +42,7 @@ export function LeaveManagerSelector({
   options?: LeaveManagerOption[];
   loading?: boolean;
   label?: string;
+  required?: boolean;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -142,7 +144,14 @@ export function LeaveManagerSelector({
 
   return (
     <div className="space-y-2" ref={rootRef}>
-      <FieldLabel>{label}</FieldLabel>
+      <FieldLabel>
+        {label}
+        {required ? (
+          <span className="text-destructive" aria-hidden>
+            *
+          </span>
+        ) : null}
+      </FieldLabel>
 
       {fetchError && !options.length ? (
         <div className="space-y-2">

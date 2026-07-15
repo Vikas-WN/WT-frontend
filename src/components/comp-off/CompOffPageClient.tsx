@@ -1087,7 +1087,13 @@ export function CompOffPageClient({
                         return (
                           <TableRow key={`${id || idx}`} className={idx % 2 === 1 ? "bg-muted/20" : ""}>
                             <TableCell className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">
-                              {user?.name || user?.email || "\u2014"}
+                              {String(
+                                pickRowField(row, "employee_name", "employeeName") ??
+                                  pickRowField(row, "emp_email", "empEmail") ??
+                                  user?.name ??
+                                  user?.email ??
+                                  "\u2014"
+                              )}
                             </TableCell>
                             <TableCell className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">
                               {dateDisplay}
@@ -1203,16 +1209,10 @@ export function CompOffPageClient({
                     <TableHead className="font-semibold px-3">To</TableHead>
                     <TableHead className="font-semibold px-3">Description</TableHead>
                     {isHrOnly ? (
-                      <>
-                        <TableHead className="font-semibold px-3">Manager status</TableHead>
-                        <TableHead className="font-semibold px-3">Manager reason</TableHead>
-                      </>
+                      <TableHead className="font-semibold px-3">Manager status</TableHead>
                     ) : (
                       <>
                         <TableHead className="font-semibold px-3">Manager status</TableHead>
-                        {!managerOnlyReview ? (
-                          <TableHead className="font-semibold px-3">Manager reason</TableHead>
-                        ) : null}
                         {hasHrAccess ? (
                           <TableHead className="font-semibold px-3">HR status</TableHead>
                         ) : null}
@@ -1303,30 +1303,20 @@ export function CompOffPageClient({
                           )}
                         </TableCell>
                         {isHrOnly ? (
-                          <>
-                            <TableCell className="px-3 py-2.5 whitespace-nowrap">
-                              {renderStatusBadge(managerStatus)}
-                            </TableCell>
-                            <TableCell
-                              className="px-3 py-2.5 max-w-[180px] truncate"
-                              title={managerReason !== "\u2014" ? managerReason : undefined}
-                            >
-                              {managerReason}
-                            </TableCell>
-                          </>
+                          <TableCell
+                            className="px-3 py-2.5 whitespace-nowrap"
+                            title={managerReason !== "\u2014" ? managerReason : undefined}
+                          >
+                            {renderStatusBadge(managerStatus)}
+                          </TableCell>
                         ) : (
                           <>
-                            <TableCell className="px-3 py-2.5 whitespace-nowrap">
+                            <TableCell
+                              className="px-3 py-2.5 whitespace-nowrap"
+                              title={managerReason !== "\u2014" ? managerReason : undefined}
+                            >
                               {renderStatusBadge(managerStatus)}
                             </TableCell>
-                            {!managerOnlyReview ? (
-                              <TableCell
-                                className="px-3 py-2.5 max-w-[180px] truncate"
-                                title={managerReason !== "\u2014" ? managerReason : undefined}
-                              >
-                                {managerReason}
-                              </TableCell>
-                            ) : null}
                             {hasHrAccess ? (
                               <TableCell className="px-3 py-2.5 whitespace-nowrap">
                                 {flow === "COMP_OFF" ? renderStatusBadge(hrStatus) : "\u2014"}
@@ -1418,7 +1408,7 @@ export function CompOffPageClient({
       description={
         pendingReject?.flow === "COMP_OFF_EARN"
           ? "A reason is required. Only the project manager can reject earn requests."
-          : "A reason is required when rejecting. Both manager and HR must approve usage before balance is consumed."
+          : "A reason is required when rejecting. Balance is consumed only after the manager approves usage."
       }
       reasonPlaceholder="Enter rejection reason"
       confirmLabel="Reject"

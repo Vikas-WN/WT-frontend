@@ -232,15 +232,23 @@ export function EmployeeDirectoryPageClient() {
           />
         }
         filters={
-          <ToolbarFilterSelect
-            id="employee-directory-user-type"
-            value={userTypeFilter}
-            onChange={setUserTypeFilter}
-            options={userTypeSelectOptions}
-            placeholder="User Types"
-            aria-label="User Type"
-            compact
-          />
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="employee-directory-user-type"
+              className="text-sm text-muted-foreground whitespace-nowrap"
+            >
+              User type
+            </label>
+            <ToolbarFilterSelect
+              id="employee-directory-user-type"
+              value={userTypeFilter}
+              onChange={setUserTypeFilter}
+              options={userTypeSelectOptions}
+              placeholder="All User Types"
+              aria-label="User Type"
+              compact
+            />
+          </div>
         }
       >
         {isError ? (

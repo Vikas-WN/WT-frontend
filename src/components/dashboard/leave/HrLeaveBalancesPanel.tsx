@@ -16,10 +16,33 @@ import { useCallback, useEffect, useState } from "react";
 import { hrmsService, type LeaveBalancesListItem } from "@/services/hrms.service";
 import { InputField } from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { showErrorToast } from "@/lib/toast";
 import { Wallet } from "lucide-react";
 
 const BALANCES_TABLE_MIN_HEIGHT = "min-h-[320px]";
 const BALANCES_TABLE_COL_COUNT = 6;
+
+function validateLeaveBalancePeriod(yearRaw: string, monthRaw: string): {
+  year: number;
+  month: number;
+} {
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth() + 1;
+  const year = Number(String(yearRaw).trim());
+  const month = Number(String(monthRaw).trim());
+
+  if (!Number.isInteger(year) || year < 2000 || year > currentYear) {
+    throw new Error(`Enter a valid year between 2000 and ${currentYear}.`);
+  }
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    throw new Error("Enter a valid month between 1 and 12.");
+  }
+  if (year === currentYear && month > currentMonth) {
+    throw new Error("Future months are not allowed.");
+  }
+  return { year, month };
+}
 
 export function HrLeaveBalancesPanel({
   actionLoading,
@@ -45,12 +68,13 @@ export function HrLeaveBalancesPanel({
     setLoading(true);
     setLoadError(null);
     try {
+      const { year: yearNum, month: monthNum } = validateLeaveBalancePeriod(year, month);
       const res = await hrmsService.getLeaveBalancesList({
         page,
         size: pageSize,
         search: debouncedSearch.trim() || undefined,
-        year: Number(year) || undefined,
-        month: Number(month) || undefined,
+        year: yearNum,
+        month: monthNum,
       });
       const data = res.data;
       setRows(data?.items ?? []);
@@ -59,7 +83,9 @@ export function HrLeaveBalancesPanel({
     } catch (err) {
       setRows([]);
       setTotalElements(0);
-      setLoadError(err instanceof Error ? err.message : "Could not load leave balances.");
+      const message = err instanceof Error ? err.message : "Could not load leave balances.";
+      setLoadError(message);
+      showErrorToast(message);
     } finally {
       setLoading(false);
     }
