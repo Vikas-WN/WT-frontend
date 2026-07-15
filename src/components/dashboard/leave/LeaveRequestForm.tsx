@@ -3,13 +3,7 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
 import { Textarea } from "@/components/ui/textarea";
 import { LeaveManagerSelector } from "./LeaveManagerSelector";
 import { LeaveAdditionalRecipientsSelector } from "./LeaveAdditionalRecipientsSelector";
@@ -94,25 +88,18 @@ export function LeaveRequestForm({
                 <Info className="size-3.5 text-muted-foreground/60" />
               </span>
             </FieldLabel>
-            <Select
+            <SearchableSelectCombobox
               value={requestTypeValue}
-              onValueChange={(next) => {
-                const value = typeof next === "string" ? next : String(next ?? "LEAVE");
+              onChange={(next) => {
+                const value = String(next ?? "LEAVE");
                 onChange({ ...values, request_type: value || "LEAVE" });
               }}
+              options={selectItems}
+              placeholder="Search request type…"
               disabled={actionLoading}
-            >
-              <SelectTrigger className="cursor-pointer">
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                {selectItems.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              aria-label="Request type"
+              showChevron
+            />
           </Field>
 
           <DatePicker
@@ -202,9 +189,17 @@ export function LeaveRequestForm({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-1.5 min-w-0">
               <LeaveManagerSelector
-                label="Primary managers"
+                label="Primary managers *"
                 selectedEmails={selectedManagerEmails}
-                onChange={onManagerEmailsChange}
+                onChange={(emails) => {
+                  onManagerEmailsChange(emails);
+                  const primarySet = new Set(emails.map((email) => email.trim().toLowerCase()));
+                  onAdditionalEmailsChange(
+                    selectedAdditionalEmails.filter(
+                      (email) => !primarySet.has(email.trim().toLowerCase())
+                    )
+                  );
+                }}
                 disabled={actionLoading}
               />
             </div>
@@ -212,6 +207,7 @@ export function LeaveRequestForm({
               <LeaveAdditionalRecipientsSelector
                 selectedEmails={selectedAdditionalEmails}
                 onChange={onAdditionalEmailsChange}
+                excludedEmails={selectedManagerEmails}
                 disabled={actionLoading}
               />
             </div>

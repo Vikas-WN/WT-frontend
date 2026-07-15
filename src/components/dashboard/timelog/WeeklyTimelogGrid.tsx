@@ -32,6 +32,7 @@ import {
   isTimelogCellEditable,
 } from "@/utils/timelog/gridState";
 import { formatDayHeader, formatHoursDisplay } from "@/utils/timelog/weekDates";
+import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
 
 type WeeklyTimelogGridProps = {
   rows: TimelogGridRow[];
@@ -165,12 +166,10 @@ export function WeeklyTimelogGrid({
                   ) : (
                     <>
                       <TableCell className="px-2 py-2">
-                        <select
-                          className="input-field w-full px-2 py-1.5 text-sm"
+                        <SearchableSelectCombobox
                           disabled={!metadataEditable}
                           value={row.project_code}
-                          onChange={(e) => {
-                            const project_code = e.target.value;
+                          onChange={(project_code) => {
                             const opt = projectOptions.find((p) => p.project_code === project_code);
                             const firstTask = opt?.task_categories[0]?.value ?? "";
                             const subs =
@@ -185,22 +184,20 @@ export function WeeklyTimelogGrid({
                               })
                             );
                           }}
-                        >
-                          <option value="">Select project</option>
-                          {projectOptions.map((p) => (
-                            <option key={p.project_code} value={p.project_code}>
-                              {p.project_name}
-                            </option>
-                          ))}
-                        </select>
+                          options={projectOptions.map((p) => ({
+                            value: p.project_code,
+                            label: p.project_name,
+                          }))}
+                          placeholder="Search projects…"
+                          inputClassName="input-field w-full px-2 py-1.5 text-sm"
+                          showChevron
+                        />
                       </TableCell>
                       <TableCell className="px-2 py-2">
-                        <select
-                          className="input-field w-full px-2 py-1.5 text-sm"
+                        <SearchableSelectCombobox
                           disabled={!metadataEditable || !row.project_code}
                           value={row.task_category}
-                          onChange={(e) => {
-                            const task_category = e.target.value;
+                          onChange={(task_category) => {
                             const subs =
                               row.project_code && task_category
                                 ? subCategoriesFor(row.project_code, task_category)
@@ -212,36 +209,29 @@ export function WeeklyTimelogGrid({
                               })
                             );
                           }}
-                        >
-                          <option value="">Select task</option>
-                          {taskOptions.map((t) => (
-                            <option key={t.value} value={t.value}>
-                              {t.label}
-                            </option>
-                          ))}
-                        </select>
+                          options={taskOptions}
+                          placeholder="Search tasks…"
+                          inputClassName="input-field w-full px-2 py-1.5 text-sm"
+                          showChevron
+                        />
                       </TableCell>
                       <TableCell className="px-2 py-2">
                         {subOptions.length ? (
-                          <select
-                            className="input-field w-full px-2 py-1.5 text-sm"
+                          <SearchableSelectCombobox
                             disabled={!metadataEditable || !row.task_category}
                             value={row.sub_category}
-                            onChange={(e) =>
-                              onRowsChange(updateRow(rows, row.clientKey, { sub_category: e.target.value }))
+                            onChange={(sub_category) =>
+                              onRowsChange(updateRow(rows, row.clientKey, { sub_category }))
                             }
-                          >
-                            <option value="">
-                              {subCategoryRequired(row.project_code, row.task_category)
-                                ? "Select sub category"
-                                : "—"}
-                            </option>
-                            {subOptions.map((s) => (
-                              <option key={s} value={s}>
-                                {s}
-                              </option>
-                            ))}
-                          </select>
+                            options={subOptions.map((value) => ({ value, label: value }))}
+                            placeholder={
+                              subCategoryRequired(row.project_code, row.task_category)
+                                ? "Search sub categories…"
+                                : "—"
+                            }
+                            inputClassName="input-field w-full px-2 py-1.5 text-sm"
+                            showChevron
+                          />
                         ) : (
                           <span className="text-wt-text-muted text-xs py-2 block">—</span>
                         )}

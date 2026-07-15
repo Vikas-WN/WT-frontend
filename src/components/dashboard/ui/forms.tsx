@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { Children, isValidElement, useId, useRef, type ReactElement, type ReactNode } from "react";
 import { CalendarIcon } from "lucide-react";
-import { DropdownSelect } from "@/components/dashboard/ui/DropdownSelect";
 import {
   SearchableSelectCombobox,
   type SearchableSelectOption,
@@ -16,13 +15,6 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { FORM_FIELD_CLASS } from "@/components/dashboard/ui/uiLayout";
@@ -37,8 +29,6 @@ import {
 } from "@/utils/apiDate";
 
 export { SearchableSelectCombobox, type SearchableSelectOption };
-
-const ADAPTIVE_SELECT_SEARCH_THRESHOLD = 6;
 
 export function FieldLabel({
   label,
@@ -305,11 +295,7 @@ function withPlaceholderOption(
   return [{ value: "", label: placeholder }, ...items];
 }
 
-function selectItemsEqual(a: SearchableSelectOption, b: SearchableSelectOption) {
-  return a.value === b.value;
-}
-
-/** Selection-only dropdown with a visible chevron (no free-text entry). */
+/** Searchable selection-only dropdown with a visible chevron. */
 export function DropdownSelectField({
   label,
   value,
@@ -335,38 +321,23 @@ export function DropdownSelectField({
 }) {
   const fieldId = useId();
   const items = withPlaceholderOption(normalizeSelectOptions(options), placeholder, required);
-  const selected = items.find((opt) => opt.value === value) ?? null;
 
   return (
     <Field className={cn(FORM_FIELD_CLASS, className)}>
       <FieldLabel label={label} required={required} htmlFor={fieldId} />
-      <Select
-        value={selected}
-        onValueChange={(item) => onChange(item?.value ?? "")}
+      <SearchableSelectCombobox
+        id={fieldId}
+        value={value}
+        onChange={onChange}
+        options={items}
+        placeholder={loading ? loadingLabel : placeholder}
         disabled={disabled || loading}
+        loading={loading}
+        loadingLabel={loadingLabel}
         required={required}
-        items={items}
-        isItemEqualToValue={selectItemsEqual}
-      >
-        <SelectTrigger id={fieldId} aria-busy={loading || undefined} className="cursor-pointer">
-          <SelectValue placeholder={loading ? loadingLabel : placeholder} />
-        </SelectTrigger>
-        <SelectContent className="max-w-[min(calc(100vw-2rem),28rem)]">
-          {loading ? (
-            <div className="px-2 py-2 text-sm text-wt-text-muted">{loadingLabel}</div>
-          ) : (
-            items.map((option) => (
-              <SelectItem
-                key={`${option.value}-${option.label}`}
-                value={option}
-                className="max-w-full truncate"
-              >
-                <span className="block truncate">{option.label}</span>
-              </SelectItem>
-            ))
-          )}
-        </SelectContent>
-      </Select>
+        aria-label={label}
+        showChevron
+      />
     </Field>
   );
 }
@@ -398,39 +369,23 @@ export function AdaptiveSelectField({
 }) {
   const fieldId = useId();
   const items = withPlaceholderOption(normalizeSelectOptions(options), placeholder, required);
-  const selectableCount = items.filter((opt) => opt.value !== "").length;
-  const useSearch = selectableCount > ADAPTIVE_SELECT_SEARCH_THRESHOLD;
 
   return (
     <Field className={cn(FORM_FIELD_CLASS, className)}>
       <FieldLabel label={label} required={required} htmlFor={fieldId} />
-      {useSearch ? (
-        <SearchableSelectCombobox
-          id={fieldId}
-          value={value}
-          onChange={onChange}
-          options={items}
-          placeholder={loading ? loadingLabel : searchPlaceholder}
-          required={required}
-          disabled={disabled || loading}
-          loading={loading}
-          loadingLabel={loadingLabel}
-          aria-label={label}
-          showChevron
-        />
-      ) : (
-        <DropdownSelect
-          id={fieldId}
-          value={value}
-          onChange={onChange}
-          options={items}
-          required={required}
-          disabled={disabled}
-          loading={loading}
-          loadingLabel={loadingLabel}
-          aria-label={label}
-        />
-      )}
+      <SearchableSelectCombobox
+        id={fieldId}
+        value={value}
+        onChange={onChange}
+        options={items}
+        placeholder={loading ? loadingLabel : searchPlaceholder}
+        required={required}
+        disabled={disabled || loading}
+        loading={loading}
+        loadingLabel={loadingLabel}
+        aria-label={label}
+        showChevron
+      />
     </Field>
   );
 }

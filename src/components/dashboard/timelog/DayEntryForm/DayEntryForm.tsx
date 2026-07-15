@@ -13,6 +13,7 @@ import "./DayEntryForm.css";
 import type { DayEntryFormProps } from "./DayEntryForm.types";
 import type { DayTimelogEntry, DayTimelogEntryForm } from "@/hooks/timelog/useDayTimelog.types";
 import { projectManagerEmailFromEntry } from "@/utils/timelog/entryManager";
+import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
 
 function emptyForm(): DayTimelogEntryForm {
   return {
@@ -186,11 +187,9 @@ export function DayEntryForm({
             <span className="day-entry-form-label">
               Project <span className="day-entry-form-required">*</span>
             </span>
-            <select
-              className="day-entry-form-select"
+            <SearchableSelectCombobox
               value={form.project_code}
-              onChange={(e) => {
-                const project_code = e.target.value;
+              onChange={(project_code) => {
                 const selected = projectOptions.find((p) => p.project_code === project_code);
                 setForm((prev) => ({
                   ...prev,
@@ -198,14 +197,14 @@ export function DayEntryForm({
                   project_name: selected?.project_name ?? "",
                 }));
               }}
-            >
-              <option value="">Select project</option>
-              {projectOptions.map((p) => (
-                <option key={p.project_code} value={p.project_code}>
-                  {p.project_name}
-                </option>
-              ))}
-            </select>
+              options={projectOptions.map((p) => ({
+                value: p.project_code,
+                label: p.project_name,
+              }))}
+              placeholder="Search projects…"
+              inputClassName="day-entry-form-select"
+              showChevron
+            />
           </label>
 
           {form.project_code ? (
@@ -233,26 +232,25 @@ export function DayEntryForm({
               <span className="day-entry-form-label">
                 Project Manager <span className="day-entry-form-required">*</span>
               </span>
-              <select
-                className="day-entry-form-select"
+              <SearchableSelectCombobox
                 value={form.project_manager}
-                onChange={(e) =>
+                onChange={(project_manager) =>
                   setForm((prev) => ({
                     ...prev,
-                    project_manager: e.target.value,
+                    project_manager,
                   }))
                 }
                 disabled={activeEmployeesQ.isLoading}
-              >
-                <option value="">
-                  {activeEmployeesQ.isLoading ? "Loading managers…" : "Select project manager"}
-                </option>
-                {managerOptions.map((employee) => (
-                  <option key={employee.employeeEmail} value={employee.employeeEmail}>
-                    {employee.employeeName}
-                  </option>
-                ))}
-              </select>
+                loading={activeEmployeesQ.isLoading}
+                loadingLabel="Loading managers…"
+                options={managerOptions.map((employee) => ({
+                  value: employee.employeeEmail,
+                  label: employee.employeeName,
+                }))}
+                placeholder="Search project managers…"
+                inputClassName="day-entry-form-select"
+                showChevron
+              />
             </label>
           ) : null}
 
@@ -261,11 +259,9 @@ export function DayEntryForm({
               <span className="day-entry-form-label">
                 Task category <span className="day-entry-form-required">*</span>
               </span>
-              <select
-                className="day-entry-form-select"
+              <SearchableSelectCombobox
                 value={form.task_category}
-                onChange={(e) => {
-                  const task_category = e.target.value;
+                onChange={(task_category) => {
                   const subs = subCategoriesFor(form.project_code, task_category);
                   setForm((prev) => ({
                     ...prev,
@@ -273,13 +269,11 @@ export function DayEntryForm({
                     sub_category: subs[0] ?? "",
                   }));
                 }}
-              >
-                {taskOptions.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
+                options={taskOptions}
+                placeholder="Search task categories…"
+                inputClassName="day-entry-form-select"
+                showChevron
+              />
             </label>
           ) : null}
 
@@ -291,22 +285,19 @@ export function DayEntryForm({
                   <span className="day-entry-form-required"> *</span>
                 ) : null}
               </span>
-              <select
-                className="day-entry-form-select"
+              <SearchableSelectCombobox
                 value={form.sub_category}
-                onChange={(e) =>
+                onChange={(sub_category) =>
                   setForm((prev) => ({
                     ...prev,
-                    sub_category: e.target.value,
+                    sub_category,
                   }))
                 }
-              >
-                {subOptions.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
+                options={subOptions.map((value) => ({ value, label: value }))}
+                placeholder="Search sub categories…"
+                inputClassName="day-entry-form-select"
+                showChevron
+              />
             </label>
           ) : null}
 

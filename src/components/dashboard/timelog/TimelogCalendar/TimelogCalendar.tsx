@@ -6,6 +6,7 @@ import { showErrorToast } from "@/lib/toast";
 import { DAYS_OF_WEEK } from "@/hooks/timelog/useDayTimelog";
 import "./TimelogCalendar.css";
 import type { TimelogCalendarProps } from "./TimelogCalendar.types";
+import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
 
 const MONTH_OPTIONS = [
   "January", "February", "March", "April", "May", "June",
@@ -92,28 +93,30 @@ export function TimelogCalendar({
               →
             </Button>
           ) : null}
-          <select
-            className="timelog-calendar-select"
-            value={viewMonth}
-            onChange={(e) => onGoToMonth(viewYear, Number(e.target.value))}
-          >
-            {monthOptions.map((i) => (
-              <option key={i} value={i}>
-                {MONTH_OPTIONS[i]}
-              </option>
-            ))}
-          </select>
-          <select
-            className="timelog-calendar-select"
-            value={viewYear}
-            onChange={(e) => onGoToMonth(Number(e.target.value), viewMonth)}
-          >
-            {yearOptions.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
+          <SearchableSelectCombobox
+            value={String(viewMonth)}
+            onChange={(value) => onGoToMonth(viewYear, Number(value))}
+            options={monthOptions.map((value) => ({
+              value: String(value),
+              label: MONTH_OPTIONS[value],
+            }))}
+            placeholder="Search months…"
+            inputClassName="timelog-calendar-select"
+            aria-label="Month"
+            showChevron
+          />
+          <SearchableSelectCombobox
+            value={String(viewYear)}
+            onChange={(value) => onGoToMonth(Number(value), viewMonth)}
+            options={yearOptions.map((value) => ({
+              value: String(value),
+              label: String(value),
+            }))}
+            placeholder="Search years…"
+            inputClassName="timelog-calendar-select"
+            aria-label="Year"
+            showChevron
+          />
           <Button
             variant="outline"
             size="sm"

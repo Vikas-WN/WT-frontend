@@ -1656,7 +1656,14 @@ export function LeavePageClient() {
                                            normalizeUserRequestType(requestType) === "OPTIONAL") &&
                                           !selectedLeaveManagerEmails.length
                                         ) {
-                                          throw new Error("Select at least one manager to notify.");
+                                          throw new Error("Select at least one primary manager.");
+                                        }
+                                        if (
+                                          (normalizeUserRequestType(requestType) === "LEAVE" ||
+                                           normalizeUserRequestType(requestType) === "OPTIONAL") &&
+                                          !selectedAdditionalRecipientEmails.length
+                                        ) {
+                                          throw new Error("Select at least one secondary manager.");
                                         }
                                         const isCompOffUsage =
                                           normalizeCompOffRequestType(requestType) === "COMP_OFF";
@@ -1717,7 +1724,7 @@ export function LeavePageClient() {
                                               isLeaveOrOptional
                                                 ? selectedLeaveManagerEmails
                                                 : undefined,
-                                            additional_recipient_emails:
+                                            secondary_manager_emails:
                                               isLeaveOrOptional &&
                                               selectedAdditionalRecipientEmails.length
                                                 ? selectedAdditionalRecipientEmails
@@ -1752,6 +1759,8 @@ export function LeavePageClient() {
                                     }
                                     onCancelEdit={() => {
                                       setLeaveRequestForm(createDefaultLeaveRequestForm());
+                                      setSelectedLeaveManagerEmails([]);
+                                      setSelectedAdditionalRecipientEmails([]);
                                       setEditingLeaveRequestId("");
                                     }}
                                   />
@@ -1782,6 +1791,20 @@ export function LeavePageClient() {
                                         is_half_day: Boolean(row.is_half_day ?? row.isHalfDay ?? false),
                                         client_approval: false,
                                       });
+                                      const primaryManagers =
+                                        row.primary_managers ?? row.primaryManagers ?? [];
+                                      const secondaryManagers =
+                                        row.secondary_managers ?? row.secondaryManagers ?? [];
+                                      setSelectedLeaveManagerEmails(
+                                        Array.isArray(primaryManagers)
+                                          ? primaryManagers.map(String)
+                                          : []
+                                      );
+                                      setSelectedAdditionalRecipientEmails(
+                                        Array.isArray(secondaryManagers)
+                                          ? secondaryManagers.map(String)
+                                          : []
+                                      );
                                       const requestId = String(
                                         row.user_request_id ??
                                           row.userRequestId ??

@@ -1,18 +1,14 @@
 "use client";
 
-import type { SearchableSelectOption } from "@/components/dashboard/ui/SearchableSelectCombobox";
+import {
+  SearchableSelectCombobox,
+  type SearchableSelectOption,
+} from "@/components/dashboard/ui/SearchableSelectCombobox";
 import {
   TABLE_INLINE_SELECT_TRIGGER_CLASS,
   TOOLBAR_SELECT_TRIGGER_CLASS,
   TOOLBAR_SELECT_TRIGGER_COMPACT_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 export function ChevronDownIcon() {
@@ -63,42 +59,25 @@ export function DropdownSelect({
   id?: string;
   "aria-label"?: string;
 }) {
-  const selected = options.find((opt) => opt.value === value) ?? null;
-  const isDisabled = disabled || loading;
-
   return (
-    <Select
-      value={selected}
-      onValueChange={(item) => onChange(item?.value ?? "")}
-      disabled={isDisabled}
-      items={options}
-      isItemEqualToValue={(a, b) => a.value === b.value}
-    >
-      <SelectTrigger
-        id={id}
-        aria-label={ariaLabel}
-        aria-required={required || undefined}
-        aria-busy={loading || undefined}
-        className={cn(
-          triggerClassForVariant(variant),
-          selectClassName,
-          className,
-          loading ? "text-wt-text-muted" : undefined
-        )}
-      >
-        <SelectValue placeholder={loading ? loadingLabel : placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {loading ? (
-          <div className="px-2.5 py-2 text-sm text-wt-text-muted">{loadingLabel}</div>
-        ) : (
-          options.map((opt) => (
-            <SelectItem key={opt.value || `opt-${opt.label}`} value={opt}>
-              {opt.label}
-            </SelectItem>
-          ))
-        )}
-      </SelectContent>
-    </Select>
+    <SearchableSelectCombobox
+      value={value}
+      onChange={onChange}
+      options={options}
+      disabled={disabled}
+      loading={loading}
+      loadingLabel={loadingLabel}
+      placeholder={placeholder}
+      required={required}
+      id={id}
+      aria-label={ariaLabel}
+      showChevron
+      className={className}
+      inputClassName={cn(
+        triggerClassForVariant(variant),
+        selectClassName,
+        loading ? "text-wt-text-muted" : undefined
+      )}
+    />
   );
 }

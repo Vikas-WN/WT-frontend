@@ -19,7 +19,6 @@ export type OnboardFormState = {
   marital_status: string;
   personal_email: string;
   phone_number: string;
-  date_of_birth: string;
   holiday_calendar_id: string;
 };
 
@@ -45,7 +44,6 @@ export function createEmptyOnboardForm(): OnboardFormState {
     marital_status: "",
     personal_email: "",
     phone_number: "",
-    date_of_birth: "",
     holiday_calendar_id: "",
   };
 }

@@ -1,7 +1,5 @@
 /** Build POST/PUT /userRequest body with snake_case + camelCase aliases. */
 
-import { LEAVE_HR_CC_EMAILS } from "@/constants/leaveRequest";
-
 export type LeaveRequestFormPayload = {
   request_from_date: string;
   request_to_date: string;
@@ -11,8 +9,10 @@ export type LeaveRequestFormPayload = {
   client_approval?: boolean;
   reference_file_url?: string | null;
   primary_manager_emails?: string[];
+  secondary_manager_emails?: string[];
   /** @deprecated Use primary_manager_emails */
   selected_manager_emails?: string[];
+  /** @deprecated Use secondary_manager_emails */
   additional_recipient_emails?: string[];
 };
 
@@ -55,16 +55,27 @@ export function buildUserRequestBody(
     body.primary_manager_emails = normalizedManagers;
     body.primaryManagerEmails = normalizedManagers;
   }
-  if (requestType === "LEAVE") {
-    const hrCc = [...LEAVE_HR_CC_EMAILS];
-    body.secondary_manager_emails = hrCc;
-    body.secondaryManagerEmails = hrCc;
-    body.secondary_managers = hrCc;
-    body.secondaryManagers = hrCc;
-  }
-  if (form.additional_recipient_emails?.length) {
-    body.additional_recipient_emails = form.additional_recipient_emails;
-    body.additionalRecipientEmails = form.additional_recipient_emails;
+  const secondaryManagerEmails =
+    form.secondary_manager_emails?.length
+      ? form.secondary_manager_emails
+      : form.additional_recipient_emails?.length
+        ? form.additional_recipient_emails
+        : undefined;
+  if (secondaryManagerEmails?.length) {
+    const primarySet = new Set(
+      (managerEmails ?? []).map((email) => email.trim().toLowerCase())
+    );
+    const normalizedSecondaryManagers = [
+      ...new Set(
+        secondaryManagerEmails
+          .map((email) => email.trim().toLowerCase())
+          .filter((email) => email && !primarySet.has(email))
+      ),
+    ];
+    body.secondary_manager_emails = normalizedSecondaryManagers;
+    body.secondaryManagerEmails = normalizedSecondaryManagers;
+    body.secondary_managers = normalizedSecondaryManagers;
+    body.secondaryManagers = normalizedSecondaryManagers;
   }
   if (options?.userRequestId != null) {
     body.user_request_id = options.userRequestId;

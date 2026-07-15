@@ -4,7 +4,13 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { MAX_ONBOARD_FILE_BYTES, MAX_ONBOARD_TOTAL_BYTES } from "@/constants/dashboard";
-import { InputField, SelectField, FileField, TextAreaField } from "@/components/dashboard/ui/forms";
+import {
+  DatePickerField,
+  InputField,
+  SelectField,
+  FileField,
+  TextAreaField,
+} from "@/components/dashboard/ui/forms";
 import { Input } from "@/components/ui/input";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { isValidIndiaMobile, isValidPersonName } from "@/utils/dashboard/validation";
@@ -13,6 +19,7 @@ import { validateResumeShareLink } from "@/utils/employeeResume";
 import { createEmptySelfOnboardForm } from "@/utils/selfOnboardFormState";
 import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
 import { useOnboardOptions } from "@/hooks/useOnboardOptions";
+import { formatApiDate, fromApiDate, toApiDateParam } from "@/utils/apiDate";
 
 type OnboardFiles = {
   profile_photo: File | null;
@@ -89,6 +96,16 @@ export function SelfOnboardingPanel({
         throw new Error("Enter your full name as per ID (letters and spaces, 2–120 characters).");
       }
 
+      const dateOfBirth = toApiDateParam(form.date_of_birth);
+      if (!dateOfBirth) {
+        throw new Error("Date of birth is required. Use DD/MM/YYYY.");
+      }
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (fromApiDate(dateOfBirth) > today) {
+        throw new Error("Date of birth cannot be in the future.");
+      }
+
       const resumeShareLink = form.resume_share_link.trim();
       const resumeLinkError = validateResumeShareLink(resumeShareLink);
       if (resumeLinkError) throw new Error(resumeLinkError);
@@ -148,6 +165,7 @@ export function SelfOnboardingPanel({
         email,
         personal_email: personalEmail,
         name: legalName,
+        date_of_birth: dateOfBirth,
         resume_share_link: resumeShareLink,
       };
 
@@ -217,6 +235,13 @@ export function SelfOnboardingPanel({
           required
           value={form.full_name}
           onChange={(v) => setForm((p) => ({ ...p, full_name: v }))}
+        />
+        <DatePickerField
+          label="Date of Birth"
+          required
+          max={formatApiDate(new Date())}
+          value={form.date_of_birth}
+          onChange={(v) => setForm((p) => ({ ...p, date_of_birth: v }))}
         />
         <InputField
           label="Years of Experience"

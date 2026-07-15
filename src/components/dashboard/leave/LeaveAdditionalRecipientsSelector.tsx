@@ -28,10 +28,12 @@ function matchesQuery(option: LeaveRecipientOption, query: string): boolean {
 export function LeaveAdditionalRecipientsSelector({
   selectedEmails,
   onChange,
+  excludedEmails = [],
   disabled = false,
 }: {
   selectedEmails: string[];
   onChange: (emails: string[]) => void;
+  excludedEmails?: string[];
   disabled?: boolean;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -86,6 +88,10 @@ export function LeaveAdditionalRecipientsSelector({
     () => new Set(selectedEmails.map((email) => email.trim().toLowerCase()).filter(Boolean)),
     [selectedEmails]
   );
+  const excludedSet = useMemo(
+    () => new Set(excludedEmails.map((email) => email.trim().toLowerCase()).filter(Boolean)),
+    [excludedEmails]
+  );
 
   const selectedOptions = useMemo(() => {
     const byEmail = new Map(
@@ -97,13 +103,18 @@ export function LeaveAdditionalRecipientsSelector({
   }, [options, selectedEmails]);
 
   const filteredOptions = useMemo(
-    () => options.filter((option) => matchesQuery(option, query)),
-    [options, query]
+    () =>
+      options.filter(
+        (option) =>
+          !excludedSet.has(String(option.email ?? "").trim().toLowerCase()) &&
+          matchesQuery(option, query)
+      ),
+    [excludedSet, options, query]
   );
 
   const toggleEmail = (email: string, checked: boolean) => {
     const normalized = email.trim().toLowerCase();
-    if (!normalized) return;
+    if (!normalized || excludedSet.has(normalized)) return;
     const next = new Set(selectedSet);
     if (checked) next.add(normalized);
     else next.delete(normalized);
@@ -127,7 +138,7 @@ export function LeaveAdditionalRecipientsSelector({
   if (loading) {
     return (
       <div className="space-y-2">
-        <FieldLabel>Secondary Managers</FieldLabel>
+        <FieldLabel>Secondary Managers *</FieldLabel>
         <div className="flex h-10 w-full items-center gap-2 rounded-lg border border-input px-3 text-sm text-muted-foreground">
           <Loader2 className="size-3.5 animate-spin" />
           Loading employees…
@@ -139,7 +150,7 @@ export function LeaveAdditionalRecipientsSelector({
   if (error && !options.length) {
     return (
       <div className="space-y-2">
-        <FieldLabel>Secondary Managers</FieldLabel>
+        <FieldLabel>Secondary Managers *</FieldLabel>
         <p className="text-sm text-destructive">{error}</p>
         <button
           type="button"
@@ -155,7 +166,7 @@ export function LeaveAdditionalRecipientsSelector({
 
   return (
     <div className="space-y-2" ref={rootRef}>
-      <FieldLabel>Secondary Managers</FieldLabel>
+      <FieldLabel>Secondary Managers *</FieldLabel>
 
       <div className="relative">
         <Button
@@ -258,7 +269,9 @@ export function LeaveAdditionalRecipientsSelector({
         </div>
       ) : null}
 
-      <p className="text-[11px] text-muted-foreground/80 mt-0.5 tracking-normal">Optional · Notify additional teammates</p>
+      <p className="text-[11px] text-muted-foreground/80 mt-0.5 tracking-normal">
+        Required · Primary managers are excluded
+      </p>
     </div>
   );
 }

@@ -295,9 +295,6 @@ export function HrOnboardForm({
         work_location_type: form.work_location_type,
         category: form.category,
         reporting_manager_id: reportingManagerId,
-        ...(form.date_of_birth.trim()
-          ? { date_of_birth: form.date_of_birth.trim() }
-          : {}),
         ...(form.holiday_calendar_id.trim()
           ? { holiday_calendar_id: Number(form.holiday_calendar_id) }
           : {}),
@@ -515,11 +512,6 @@ export function HrOnboardForm({
             onChange={(v) => setForm((p) => ({ ...p, doj: v }))}
           />
         )}
-        <DatePickerField
-          label="Date of Birth"
-          value={form.date_of_birth}
-          onChange={(v) => setForm((p) => ({ ...p, date_of_birth: v }))}
-        />
             </div>
 
             <div className={CARD_FORM_ACTIONS_CLASS}>
