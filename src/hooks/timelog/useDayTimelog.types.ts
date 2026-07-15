@@ -38,8 +38,12 @@ export type CalendarDayInfo = {
   isCurrentMonth: boolean;
   isToday: boolean;
   isFuture: boolean;
+  /** Hours from submitted/approved/rejected entries only (drafts excluded). */
   totalHours: number;
+  /** Count of submitted/approved/rejected entries only (drafts excluded). */
   entryCount: number;
+  /** Count of draft entries, surfaced separately so they are not shown as logged entries. */
+  draftCount: number;
 };
 
 export type CalendarMonth = {

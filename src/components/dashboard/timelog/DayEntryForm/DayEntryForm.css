@@ -94,6 +94,12 @@
   color: #991b1b;
 }
 
+:is(.dark, [data-theme="dark"]) .day-entry-form-error {
+  border-color: rgba(244, 63, 94, 0.35);
+  background: rgba(244, 63, 94, 0.12);
+  color: #fda4af;
+}
+
 .day-entry-form-hint {
   font-size: 0.6875rem;
   color: var(--wt-text-muted, #888);

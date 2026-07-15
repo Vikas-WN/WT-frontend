@@ -29,6 +29,24 @@ function parseApiEnvelope<T>(response: unknown): T {
   return ((response as { data?: T }).data ?? response) as T;
 }
 
+function isDraftEntry(entry: DayTimelogEntry): boolean {
+  return String(entry.status ?? "").toUpperCase() === "DRAFT";
+}
+
+/** Drafts are excluded from logged hours/entry counts and reported separately. */
+function summarizeDayEntries(dayEntries: DayTimelogEntry[]): {
+  totalHours: number;
+  entryCount: number;
+  draftCount: number;
+} {
+  const submitted = dayEntries.filter((e) => !isDraftEntry(e));
+  return {
+    totalHours: submitted.reduce((s, e) => s + e.hours, 0),
+    entryCount: submitted.length,
+    draftCount: dayEntries.length - submitted.length,
+  };
+}
+
 function buildCalendarMonth(
   year: number,
   month: number,
@@ -43,53 +61,29 @@ function buildCalendarMonth(
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const days: CalendarDayInfo[] = [];
 
-  for (let i = 0; i < startPad; i++) {
-    const d = new Date(year, month, i - startPad + 1);
+  const pushDay = (d: Date, isCurrentMonth: boolean) => {
     const dateKey = formatApiDate(d);
     const dayEntries = entriesByDate[dateKey] ?? [];
     days.push({
       date: d,
       dateKey,
       day: d.getDate(),
-      isCurrentMonth: false,
+      isCurrentMonth,
       isToday: dateKey === todayKey,
       isFuture: d > todayStart,
-      totalHours: dayEntries.reduce((s, e) => s + e.hours, 0),
-      entryCount: dayEntries.length,
+      ...summarizeDayEntries(dayEntries),
     });
-  }
+  };
 
+  for (let i = 0; i < startPad; i++) {
+    pushDay(new Date(year, month, i - startPad + 1), false);
+  }
   for (let i = 1; i <= daysInMonth; i++) {
-    const d = new Date(year, month, i);
-    const dateKey = formatApiDate(d);
-    const dayEntries = entriesByDate[dateKey] ?? [];
-    days.push({
-      date: d,
-      dateKey,
-      day: i,
-      isCurrentMonth: true,
-      isToday: dateKey === todayKey,
-      isFuture: d > todayStart,
-      totalHours: dayEntries.reduce((s, e) => s + e.hours, 0),
-      entryCount: dayEntries.length,
-    });
+    pushDay(new Date(year, month, i), true);
   }
-
   const remaining = 42 - days.length;
   for (let i = 1; i <= remaining; i++) {
-    const d = new Date(year, month + 1, i);
-    const dateKey = formatApiDate(d);
-    const dayEntries = entriesByDate[dateKey] ?? [];
-    days.push({
-      date: d,
-      dateKey,
-      day: d.getDate(),
-      isCurrentMonth: false,
-      isToday: dateKey === todayKey,
-      isFuture: d > todayStart,
-      totalHours: dayEntries.reduce((s, e) => s + e.hours, 0),
-      entryCount: dayEntries.length,
-    });
+    pushDay(new Date(year, month + 1, i), false);
   }
 
   return { year, month, days };

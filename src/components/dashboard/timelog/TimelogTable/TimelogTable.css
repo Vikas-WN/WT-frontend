@@ -65,6 +65,26 @@
   color: #991b1b;
 }
 
+:is(.dark, [data-theme="dark"]) .timelog-table-status--draft {
+  background: rgba(148, 163, 184, 0.15);
+  color: #9ca3af;
+}
+
+:is(.dark, [data-theme="dark"]) .timelog-table-status--submitted {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+}
+
+:is(.dark, [data-theme="dark"]) .timelog-table-status--approved {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+}
+
+:is(.dark, [data-theme="dark"]) .timelog-table-status--rejected {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fda4af;
+}
+
 .timelog-table-empty {
   text-align: center;
   padding: 2.5rem 1rem;

@@ -138,12 +138,14 @@ export function TimelogCalendar({
         {calendar.days.map((day) => {
           const isSelected = selectedDate === day.dateKey;
           const hasEntries = day.entryCount > 0;
+          const hasDrafts = day.draftCount > 0;
           const classNames = [
             "timelog-calendar-cell",
             day.isCurrentMonth ? "" : "timelog-calendar-cell--other-month",
             day.isToday ? "timelog-calendar-cell--today" : "",
             isSelected && !day.isFuture ? "timelog-calendar-cell--selected" : "",
             hasEntries ? "timelog-calendar-cell--has-entries" : "",
+            !hasEntries && hasDrafts ? "timelog-calendar-cell--has-drafts" : "",
             day.isFuture ? "timelog-calendar-cell--future" : "",
           ]
             .filter(Boolean)
@@ -164,15 +166,24 @@ export function TimelogCalendar({
                   <span className="timelog-calendar-entry-dot" />
                 ) : null}
               </div>
-              {hasEntries ? (
+              {hasEntries || hasDrafts ? (
                 <div className="timelog-calendar-day-info">
-                  <span className="timelog-calendar-hours">
-                    {day.totalHours}h
-                  </span>
-                  <span className="timelog-calendar-entries">
-                    {day.entryCount}{" "}
-                    {day.entryCount === 1 ? "entry" : "entries"}
-                  </span>
+                  {hasEntries ? (
+                    <>
+                      <span className="timelog-calendar-hours">
+                        {day.totalHours}h
+                      </span>
+                      <span className="timelog-calendar-entries">
+                        {day.entryCount}{" "}
+                        {day.entryCount === 1 ? "entry" : "entries"}
+                      </span>
+                    </>
+                  ) : null}
+                  {hasDrafts ? (
+                    <span className="timelog-calendar-drafts">
+                      {day.draftCount} draft{day.draftCount === 1 ? "" : "s"}
+                    </span>
+                  ) : null}
                 </div>
               ) : null}
             </div>

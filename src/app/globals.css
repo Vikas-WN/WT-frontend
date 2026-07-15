@@ -1257,6 +1257,17 @@ select.input-field {
   outline-offset: 2px;
 }
 
+/* Text fields already signal focus via their border color. The generic
+   offset outline above rendered as a detached blue box around the field,
+   so suppress it for text-like inputs, textareas, and selects (checkboxes,
+   radios, and range inputs keep the ring for accessibility). */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  outline-offset: 0;
+}
+
 button:focus:not(:focus-visible),
 a:focus:not(:focus-visible) {
   outline: none;
