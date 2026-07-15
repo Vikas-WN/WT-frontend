@@ -29,6 +29,8 @@ export function applyResolvedTheme(resolved: ResolvedTheme) {
   const root = document.documentElement;
   root.setAttribute("data-theme", resolved);
   root.classList.toggle("dark", resolved === "dark");
+  // Keeps native UI (scrollbars, form controls, canvas before CSS paints) in sync.
+  root.style.colorScheme = resolved;
 }
 
 export function applyTheme(nextTheme: "light" | "dark" | "system") {

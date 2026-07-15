@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
@@ -42,10 +41,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={cn("h-full", inter.variable, plusJakarta.variable, "font-sans")} suppressHydrationWarning>
+      <head>
+        {/* Synchronous theme bootstrap: must run before first paint to avoid a
+            light-mode flash. next/script (even beforeInteractive) does not
+            guarantee pre-paint execution for inline scripts in the App Router. */}
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript() }} />
+      </head>
       <body className="min-h-full bg-wt-bg text-wt-text antialiased">
-        <Script id="wt-theme-init" strategy="beforeInteractive">
-          {themeInitScript()}
-        </Script>
         <AuthProvider>{children}</AuthProvider>
         <Toaster />
       </body>

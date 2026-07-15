@@ -8,6 +8,8 @@
 /* Design Tokens                                                         */
 /* ------------------------------------------------------------------ */
 :root {
+  color-scheme: light;
+
   /* Brand palette */
   --wt-indigo-50: #eef2ff;
   --wt-indigo-100: #e0e7ff;
@@ -94,6 +96,8 @@
 }
 
 :is(.dark, [data-theme="dark"]) {
+  color-scheme: dark;
+
   --wt-bg: #000000;
   --wt-page-bg: #000000;
   --wt-surface-1: #0a0a0a;
