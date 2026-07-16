@@ -16,6 +16,7 @@ type ToolbarFilterSelectProps = {
   placeholder?: string;
   "aria-label": string;
   className?: string;
+  contentClassName?: string;
   disabled?: boolean;
   loading?: boolean;
   compact?: boolean;
@@ -29,6 +30,7 @@ export function ToolbarFilterSelect({
   placeholder,
   "aria-label": ariaLabel,
   className,
+  contentClassName,
   disabled = false,
   loading = false,
   compact = false,
@@ -45,6 +47,7 @@ export function ToolbarFilterSelect({
       aria-label={ariaLabel}
       variant={compact ? "compact" : "toolbar"}
       className={cn("min-w-[11rem]", className)}
+      contentClassName={contentClassName}
     />
   );
 }

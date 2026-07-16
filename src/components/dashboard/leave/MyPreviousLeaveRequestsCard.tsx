@@ -163,7 +163,7 @@ export function MyPreviousLeaveRequestsCard({
                         {formatLeaveDateRange(fromDate, toDate, isHalfDay)}
                       </TableCell>
                       <TableCell className="px-3 py-2.5 whitespace-nowrap">
-                        {formatUserRequestTypeLabel(rowRecord.request_type ?? rowRecord.requestType)}
+                        {formatUserRequestTypeLabel(rowRecord.request_type ?? rowRecord.requestType, isHalfDay)}
                       </TableCell>
                       <TableCell className="px-3 py-2.5 whitespace-nowrap">
                         <LeaveRequestStatusBadge status={finalStatus} />

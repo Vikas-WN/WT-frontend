@@ -46,7 +46,7 @@ export function WfhExceptionModal({ open, onClose, onSubmit }: WfhExceptionModal
         role="dialog"
         aria-modal="true"
         aria-labelledby="wfh-exception-title"
-        className="w-full max-w-lg rounded-2xl border border-border bg-white p-6 shadow-xl space-y-5"
+        className="w-full max-w-lg rounded-2xl border border-wt-border bg-wt-surface-1 p-6 shadow-xl space-y-5"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="wfh-exception-title" className="text-base font-semibold text-foreground">

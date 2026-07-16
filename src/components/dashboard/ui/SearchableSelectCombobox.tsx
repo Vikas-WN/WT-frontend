@@ -24,6 +24,7 @@ export function SearchableSelectCombobox({
   required = false,
   className = "",
   inputClassName,
+  contentClassName,
   id: idProp,
   "aria-label": ariaLabel,
   dropdownAttached = false,
@@ -39,6 +40,7 @@ export function SearchableSelectCombobox({
   required?: boolean;
   className?: string;
   inputClassName?: string;
+  contentClassName?: string;
   id?: string;
   "aria-label"?: string;
   dropdownAttached?: boolean;
@@ -81,7 +83,14 @@ export function SearchableSelectCombobox({
         showClear={Boolean(selected) && !isDisabled}
         className={cn("w-full", inputClassName)}
       />
-      <ComboboxContent side="bottom" sideOffset={4} className="max-w-[min(calc(100vw-2rem),28rem)]">
+      <ComboboxContent
+        side="bottom"
+        sideOffset={4}
+        className={cn(
+          "max-w-[min(calc(100vw-2rem),28rem)]",
+          contentClassName
+        )}
+      >
         <ComboboxEmpty>{loading ? loadingLabel : "No matches"}</ComboboxEmpty>
         <ComboboxList>
           {(item) => (

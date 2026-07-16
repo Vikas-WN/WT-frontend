@@ -1028,12 +1028,15 @@ export function CompOffPageClient({
             <TabsContent value="view" className="pt-3">
               <div className="flex items-center justify-between pb-3 border-b border-border/50">
                 <h3 className="text-base font-semibold tracking-tight">History</h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">From</span>
-                  <DatePicker label="" value={myRequestsFrom} onChange={(v) => { setMyRequestsFrom(v); myRequestsCacheRef.current.clear(); }} />
-                  <span className="text-muted-foreground">—</span>
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">To</span>
-                  <DatePicker label="" value={myRequestsTo} onChange={(v) => { setMyRequestsTo(v); myRequestsCacheRef.current.clear(); }} />
+                <div className="flex items-end gap-3">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">From</span>
+                    <DatePicker label="" value={myRequestsFrom} onChange={(v) => { setMyRequestsFrom(v); myRequestsCacheRef.current.clear(); }} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">To</span>
+                    <DatePicker label="" value={myRequestsTo} onChange={(v) => { setMyRequestsTo(v); myRequestsCacheRef.current.clear(); }} />
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -1165,12 +1168,15 @@ export function CompOffPageClient({
           {!embedded ? <h2 className="text-xl font-semibold text-wt-text">Comp-off</h2> : null}
           <div className="flex items-center justify-between pb-3 border-b border-border/50">
             <h3 className="text-base font-semibold tracking-tight">Applications</h3>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">From</span>
-              <DatePicker label="" value={teamFilters.from} onChange={(v) => { setTeamFilters((p) => ({ ...p, from: v })); teamRequestsCacheRef.current.clear(); }} />
-              <span className="text-muted-foreground">—</span>
-              <span className="text-sm text-muted-foreground whitespace-nowrap">To</span>
-              <DatePicker label="" value={teamFilters.to} onChange={(v) => { setTeamFilters((p) => ({ ...p, to: v })); teamRequestsCacheRef.current.clear(); }} />
+            <div className="flex items-end gap-3">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">From</span>
+                <DatePicker label="" value={teamFilters.from} onChange={(v) => { setTeamFilters((p) => ({ ...p, from: v })); teamRequestsCacheRef.current.clear(); }} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">To</span>
+                <DatePicker label="" value={teamFilters.to} onChange={(v) => { setTeamFilters((p) => ({ ...p, to: v })); teamRequestsCacheRef.current.clear(); }} />
+              </div>
               {(managerOnlyReview || hasHrAccess) && !earnOnly ? (
                 <SelectField
                   label="Flow"

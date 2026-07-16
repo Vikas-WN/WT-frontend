@@ -122,6 +122,7 @@ export function PersonalHolidayCalendarView() {
               options={yearSelectItems}
               aria-label="Year"
               className="w-32 min-w-32"
+              contentClassName="min-w-[8rem] w-max z-[260]"
             />
           }
         />

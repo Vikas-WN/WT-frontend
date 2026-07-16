@@ -41,6 +41,7 @@ export function DropdownSelect({
   required = false,
   className = "",
   selectClassName,
+  contentClassName,
   variant = "default",
   id,
   "aria-label": ariaLabel,
@@ -55,6 +56,7 @@ export function DropdownSelect({
   required?: boolean;
   className?: string;
   selectClassName?: string;
+  contentClassName?: string;
   variant?: DropdownSelectVariant;
   id?: string;
   "aria-label"?: string;
@@ -73,6 +75,7 @@ export function DropdownSelect({
       aria-label={ariaLabel}
       showChevron
       className={className}
+      contentClassName={contentClassName}
       inputClassName={cn(
         triggerClassForVariant(variant),
         selectClassName,

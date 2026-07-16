@@ -25,7 +25,7 @@ function logoFrameClass(variant: Variant, compact: boolean) {
 
 function wordmarkClass(variant: Variant) {
   return cn(
-    "wt-brand-wordmark lowercase text-wt-text",
+    "wt-brand-wordmark text-wt-text",
     variant === "login" && "text-2xl font-bold tracking-[-0.045em] text-white",
     variant === "sidebar" && "truncate text-[1.125rem] font-semibold tracking-[-0.04em]",
     variant === "header" && "text-lg font-semibold tracking-[-0.035em]"
@@ -60,7 +60,7 @@ export function WebTrakBrand({
   const content = (
     <>
       {logo}
-      {!compact ? <span className={wordmarkClass(variant)}>webtrak</span> : null}
+      {!compact ? <span className={wordmarkClass(variant)}>WebTrak</span> : null}
     </>
   );
 

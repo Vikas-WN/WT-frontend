@@ -76,7 +76,7 @@ export function EmployeeUserTypeSelect({ empId, userType, canEdit, options }: Pr
   return (
     <>
       <div
-        className="min-w-[8.5rem] max-w-[11rem]"
+        className="w-[9.5rem] max-w-full"
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => event.stopPropagation()}
       >
@@ -88,7 +88,8 @@ export function EmployeeUserTypeSelect({ empId, userType, canEdit, options }: Pr
           disabled={saving}
           aria-label="User Type"
           variant="table-inline"
-          className="min-w-[8.5rem] max-w-[11rem]"
+          className="w-full"
+          contentClassName="min-w-[14rem] w-max"
         />
       </div>
 

@@ -186,6 +186,7 @@ export function HolidayCalendarsPageClient() {
               options={yearSelectItems}
               aria-label="Year"
               className="w-32 min-w-32"
+              contentClassName="min-w-[9rem] w-max"
             />
           </div>
         }

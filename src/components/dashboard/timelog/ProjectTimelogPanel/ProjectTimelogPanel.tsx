@@ -4,7 +4,8 @@ import { useMemo, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { WtLoader, WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
+import { RefreshCw } from "lucide-react";
+import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 import { WeekPickerField } from "@/components/dashboard/timelog/WeekPickerField";
 import { ProjectTimelogCardList } from "@/components/dashboard/timelog/ProjectTimelogCardList/ProjectTimelogCardList";
 import { EmployeeWeekDetail } from "@/components/dashboard/timelog/EmployeeWeekDetail/EmployeeWeekDetail";
@@ -129,8 +130,8 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
         <CardTitle>Project Time Logs</CardTitle>
         <div className="flex items-center gap-2">
           <WeekPickerField weekStart={weekStart} onWeekStartChange={setWeekStart} />
-          <Button variant="outline" size="sm" type="button" disabled={projectsLoading} onClick={() => queryClient.invalidateQueries({ queryKey: ["project-timelogs-projects"] })}>
-            {projectsLoading ? <WtLoader size="sm" /> : "Refresh"}
+          <Button variant="ghost" size="icon" type="button" disabled={projectsLoading} onClick={() => queryClient.invalidateQueries({ queryKey: ["project-timelogs-projects"] })} aria-label="Refresh" title="Refresh" className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground">
+            <RefreshCw className={`size-4 ${projectsLoading ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </CardHeader>
