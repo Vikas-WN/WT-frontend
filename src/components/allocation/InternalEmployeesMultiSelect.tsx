@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAllocationEmployees } from "@/hooks/useAllocationEmployees";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
@@ -35,9 +36,11 @@ export function InternalEmployeesMultiSelect({
   placeholder?: string;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const { data: employees = [], isLoading, isError } = useAllocationEmployees();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   const selectedSet = useMemo(
     () => new Set(value.map((email) => email.trim().toLowerCase()).filter(Boolean)),
@@ -59,13 +62,31 @@ export function InternalEmployeesMultiSelect({
 
   useEffect(() => {
     const onDocClick = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      if (
+        rootRef.current &&
+        !rootRef.current.contains(event.target as Node) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setOpen(false);
       }
     };
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
+
+  useEffect(() => {
+    if (open && rootRef.current) {
+      const rect = rootRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: "fixed",
+        top: `${rect.bottom + 6}px`,
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+        zIndex: 9999,
+      });
+    }
+  }, [open]);
 
   const toggleEmail = (email: string, checked: boolean) => {
     const normalized = email.trim().toLowerCase();
@@ -108,8 +129,13 @@ export function InternalEmployeesMultiSelect({
           <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
         </Button>
 
-        {open ? (
-          <div className="absolute left-0 right-0 top-full z-50 mt-1.5 rounded-lg border border-border bg-popover text-popover-foreground shadow-lg">
+        {open
+          ? createPortal(
+              <div
+                ref={dropdownRef}
+                style={dropdownStyle}
+                className="rounded-lg border border-border bg-popover text-popover-foreground shadow-lg"
+              >
             <div className="flex items-center gap-2 border-b border-border px-3">
               <Search className="size-4 shrink-0 text-muted-foreground" />
               <input
@@ -155,8 +181,10 @@ export function InternalEmployeesMultiSelect({
                 </p>
               )}
             </div>
-          </div>
-        ) : null}
+          </div>,
+              document.body
+            )
+          : null}
       </div>
 
       {selectedEmployees.length ? (

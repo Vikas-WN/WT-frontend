@@ -77,11 +77,8 @@ import {
 import { formatApiDateDisplay, normalizeToApiDate } from "@/utils/apiDate";
 import {
   allocationPercentLabelByCode,
-  allocationPercentOptionsForDesignation,
   ALL_ALLOCATION_PERCENT_LABELS,
   formatAllocatedPercentDisplay,
-  isKnownAllocationPercent,
-  isValidAllocationPercentForDesignation,
   resolveAllocatedPercentFromRow,
 } from "@/utils/allocationPercent";
 import { applyTheme } from "@/utils/dashboard/theme";
@@ -1276,18 +1273,6 @@ export function AllocationPageClient() {
         Boolean(u.role && u.role.toLowerCase().includes(q))
     );
   }, [allocationUsers, allocationEmployeePickerQuery]);
-  useEffect(() => {
-    const allowed = allocationPercentOptionsForDesignation(
-      allocationForm.role,
-      allocationPercentOptions
-    );
-    if (
-      allocationForm.allocated_percent &&
-      !isKnownAllocationPercent(allocationForm.allocated_percent, allowed)
-    ) {
-      setAllocationForm((p) => ({ ...p, allocated_percent: "" }));
-    }
-  }, [allocationForm.role, allocationPercentOptions, allocationForm.allocated_percent]);
   const allocationEmployeeSelectLabel = useMemo(() => {
     const email = allocationForm.employee_email.trim().toLowerCase();
     if (!email) return "Select employee";
@@ -1333,6 +1318,7 @@ export function AllocationPageClient() {
         email,
         name: String(row.employee_name ?? row.name ?? "—"),
         department: String(row.department ?? row.role ?? row.designation ?? "—"),
+        allocated_hours: 0,
         bench_days: "Investment allocation",
       });
     }

@@ -113,11 +113,8 @@ export function AllocateEmployeeDialog({
       showErrorToast("Please select or enter a project role.");
       return;
     }
-    if (
-      !form.allocated_percent ||
-      !isValidAllocationPercentForDesignation(form.allocated_percent, role, allocationPercentOptions)
-    ) {
-      showErrorToast("Please select a valid allocation %.");
+    if (!form.allocated_percent || Number(form.allocated_percent) <= 0 || Number(form.allocated_percent) > 100) {
+      showErrorToast("Please enter a valid allocation % (1–100).");
       return;
     }
     if (!form.allocation_type) {
