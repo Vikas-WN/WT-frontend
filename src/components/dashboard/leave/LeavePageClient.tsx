@@ -2036,11 +2036,11 @@ export function LeavePageClient() {
                                     const toDate = String(row.request_to_date ?? row.requestToDate ?? "").trim();
                                     const duration = fromDate && toDate ? `${fromDate} – ${toDate}` : "—";
                                     const comments = String(row.comments ?? "").trim();
-                                    const requestTypeLabel = String(
-                                      row.request_type ?? row.requestType ?? ""
-                                    )
-                                      .trim()
-                                      .toUpperCase();
+                                    const isHalfDay = Boolean(row.is_half_day ?? row.isHalfDay ?? false);
+                                    const requestTypeLabel = formatUserRequestTypeLabel(
+                                      row.request_type ?? row.requestType,
+                                      isHalfDay
+                                    );
                                     const hasDetails = managerReason || comments || requestTypeLabel;
                                     const statusBadgeClass =
                                       status === "APPROVED"

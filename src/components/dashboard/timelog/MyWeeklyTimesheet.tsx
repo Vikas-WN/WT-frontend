@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TimelogCalendar } from "@/components/dashboard/timelog/TimelogCalendar/TimelogCalendar";
@@ -54,8 +55,8 @@ export function MyWeeklyTimesheet() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle>My Time Logs</CardTitle>
-        <Button variant="outline" size="sm" type="button" disabled={loading} onClick={() => reload()}>
-          {loading ? "Loading\u2026" : "Refresh"}
+        <Button variant="ghost" size="icon" type="button" disabled={loading} onClick={() => reload()} aria-label="Refresh" title="Refresh" className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground">
+          <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">

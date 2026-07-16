@@ -75,12 +75,17 @@ export function MyLeaveRequestsView({
     <div className="space-y-0">
       <div className="flex items-center justify-between pb-3 border-b border-border/50">
         <h3 className="text-base font-semibold tracking-tight">Previous Requests</h3>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">From</span>
-          <DatePicker value={fromDate ?? ""} onChange={(v) => onFromDateChange?.(v)} />
-          <span className="text-muted-foreground">—</span>
-          <span className="text-sm text-muted-foreground whitespace-nowrap">To</span>
-          <DatePicker value={toDate ?? ""} onChange={(v) => onToDateChange?.(v)} />
+        <div className="flex items-end gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="space-y-1">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">From</span>
+              <DatePicker value={fromDate ?? ""} onChange={(v) => onFromDateChange?.(v)} />
+            </div>
+            <div className="space-y-1">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">To</span>
+              <DatePicker value={toDate ?? ""} onChange={(v) => onToDateChange?.(v)} />
+            </div>
+          </div>
           <Button
             variant="ghost"
             size="icon"
@@ -159,7 +164,10 @@ export function MyLeaveRequestsView({
                     </TableCell>
                     {showRequestType ? (
                       <TableCell className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">
-                        {formatUserRequestTypeLabel(row.request_type ?? row.requestType)}
+                        {formatUserRequestTypeLabel(
+                          row.request_type ?? row.requestType,
+                          Boolean(row.is_half_day ?? row.isHalfDay ?? false)
+                        )}
                       </TableCell>
                     ) : null}
                     <TableCell className="px-3 py-2.5 whitespace-nowrap">

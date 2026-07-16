@@ -253,7 +253,8 @@ export function LeaveApprovalsPanel({
                           </TableCell>
                           <TableCell className="px-3 py-2.5 whitespace-nowrap">
                             {formatUserRequestTypeLabel(
-                              rowRecord.request_type ?? rowRecord.requestType
+                              rowRecord.request_type ?? rowRecord.requestType,
+                              isHalfDay
                             )}
                           </TableCell>
                           <TableCell className="px-3 py-2.5 whitespace-nowrap">
