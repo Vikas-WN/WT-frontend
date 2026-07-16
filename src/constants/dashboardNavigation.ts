@@ -22,6 +22,7 @@ export type NavLink = {
   label: string;
   roles: string[];
   icon: SidebarIconName;
+  externalUrl?: string;
 };
 
 export type NavExpandable = {
@@ -185,6 +186,14 @@ export const dashboardNavigation: NavItem[] = [
     ],
   },
   { kind: "link", id: "uploads", label: "Uploads", roles: ["ROLE_HR", "ROLE_ADMIN"], icon: "upload" },
+  {
+    kind: "link",
+    id: "pulse",
+    label: "Pulse",
+    roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
+    icon: "trendingUp",
+    externalUrl: "https://pulse.webknot.in",
+  },
 ];
 
 function childVisible(

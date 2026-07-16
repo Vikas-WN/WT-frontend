@@ -29,6 +29,7 @@ export const DASHBOARD_ROUTES: Record<string, string> = {
   "reports-section-6": "/dashboard/reports/compliance",
   "reports-section-7": "/dashboard/reports/bgv-dashboard",
   uploads: "/dashboard/uploads",
+  pulse: "/dashboard/pulse",
   masters: "/dashboard/masters",
   profile: "/dashboard/profile",
   "exit-interview": "/dashboard/exit-interview",

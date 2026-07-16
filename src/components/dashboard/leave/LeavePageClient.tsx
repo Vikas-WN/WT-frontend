@@ -140,6 +140,7 @@ import {
   updateUserRequestStatus,
   type UserRequestStatusValue,
 } from "@/utils/userRequest";
+import { formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
 import { buildUserRequestBody } from "@/utils/leaveRequestPayload";
 import { activeAllocationsRequireClientApproval } from "@/utils/leaveAllocations";
 import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSummary";
@@ -1959,6 +1960,7 @@ export function LeavePageClient() {
                                       }
                                     />
                                   </TableHead>
+                                  <TableHead className="font-semibold px-4 text-center">Days</TableHead>
                                   <TableHead className="font-semibold px-4">Manager status</TableHead>
                                   <TableHead className="font-semibold px-4">Details</TableHead>
                                   {showTeamActionsColumn ? (
@@ -2034,7 +2036,11 @@ export function LeavePageClient() {
                                     ).trim();
                                     const fromDate = String(row.request_from_date ?? row.requestFromDate ?? "").trim();
                                     const toDate = String(row.request_to_date ?? row.requestToDate ?? "").trim();
+                                    const isHalfDay = Boolean(
+                                      row.is_half_day ?? row.isHalfDay ?? false
+                                    );
                                     const duration = fromDate && toDate ? `${fromDate} – ${toDate}` : "—";
+                                    const durationDays = formatLeaveDaysCount(fromDate, toDate, isHalfDay);
                                     const comments = String(row.comments ?? "").trim();
                                     const requestTypeLabel = String(
                                       row.request_type ?? row.requestType ?? ""
@@ -2064,7 +2070,10 @@ export function LeavePageClient() {
                                           ) : null}
                                         </TableCell>
                                         <TableCell className="px-4 py-3 whitespace-nowrap text-muted-foreground text-xs">
-                                          {duration}
+                                          <span>{duration}</span>
+                                        </TableCell>
+                                        <TableCell className="px-4 py-3 whitespace-nowrap text-center text-xs font-medium text-foreground/70">
+                                          {durationDays && durationDays !== "—" ? durationDays : "—"}
                                         </TableCell>
                                         <TableCell className="px-4 py-3 whitespace-nowrap">
                                           <Badge
