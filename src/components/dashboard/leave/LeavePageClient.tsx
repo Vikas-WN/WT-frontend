@@ -653,7 +653,7 @@ export function LeavePageClient() {
     }
   }, [hasManagerAccess, hasHrAccess, timelogSubTab]);
   useEffect(() => {
-    if (leaveSubTab === "org" && !hasHrAccess) {
+    if ((leaveSubTab === "org" || leaveSubTab === "balances") && !hasHrAccess) {
       setLeaveSubTab("team");
     }
   }, [leaveSubTab, hasHrAccess]);
@@ -1352,9 +1352,9 @@ export function LeavePageClient() {
                              </Tabs>
                            ) : null}
                           <div>
-                          <div hidden={!(leaveSubTab === "balances" && hasHrAccess)}>
-                            <HrLeaveBalancesPanel actionLoading={actionLoading} runAction={runAction} />
-                          </div>
+                          {leaveSubTab === "balances" && hasHrAccess ? (
+                             <HrLeaveBalancesPanel actionLoading={actionLoading} runAction={runAction} />
+                           ) : null}
                           <div hidden={leaveSubTab !== "comp-off"}>
                             <CompOffPageClient
                               embedded

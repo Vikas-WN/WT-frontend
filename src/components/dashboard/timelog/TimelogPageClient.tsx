@@ -206,8 +206,9 @@ export function TimelogPageClient() {
   }, [hasHrAccess, hasAdminAccess, hasManagerAccess]);
 
   useEffect(() => {
+    if (!isTeamView && !isProjectView) return;
     void loadTeamEmployees().catch(() => setEmployeeOptions([]));
-  }, [loadTeamEmployees]);
+  }, [loadTeamEmployees, isTeamView, isProjectView]);
 
   const handleEntryRemarkConfirm = (remark: string) => {
     const action = remarkAction;
