@@ -2042,7 +2042,6 @@ export function LeavePageClient() {
                                     const duration = fromDate && toDate ? `${fromDate} – ${toDate}` : "—";
                                     const durationDays = formatLeaveDaysCount(fromDate, toDate, isHalfDay);
                                     const comments = String(row.comments ?? "").trim();
-                                    const isHalfDay = Boolean(row.is_half_day ?? row.isHalfDay ?? false);
                                     const requestTypeLabel = formatUserRequestTypeLabel(
                                       row.request_type ?? row.requestType,
                                       isHalfDay
