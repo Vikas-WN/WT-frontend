@@ -207,7 +207,7 @@ export function EmployeeDirectoryPageClient() {
           <p className="mt-2 text-sm text-wt-text-muted">
             Employee Directory is available to HR and admin users only.
           </p>
-          <Link href={DASHBOARD_ROUTES.overview} className="mt-4 inline-block text-sm text-blue-600 hover:underline">
+          <Link href={DASHBOARD_ROUTES.overview} className="mt-4 inline-block text-sm text-[var(--wt-brand)] hover:underline">
             Back to overview
           </Link>
         </div>
@@ -216,7 +216,7 @@ export function EmployeeDirectoryPageClient() {
   }
 
   return (
-    <DashboardPageShell className="wt-detail-page p-3 sm:p-4">
+    <DashboardPageShell className="wt-detail-page">
       <ManagementListCard
         density="compact"
         title="All Employees"
@@ -274,8 +274,13 @@ export function EmployeeDirectoryPageClient() {
         >
           <>
             <div className="wt-detail-scroll-section min-h-0">
-              <ScrollableTable scrollChain maxHeightClass="max-h-[min(68vh,640px)]">
-                <WtTable className="text-xs">
+              <ScrollableTable
+                scrollChain
+                axis="y"
+                maxHeightClass="max-h-[min(68vh,640px)]"
+                className="overflow-x-hidden"
+              >
+                <WtTable className="w-full table-fixed text-xs">
                   <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
                     <TableRow className="hover:bg-transparent">
                       {LIST_COLUMNS.map((col) => {
@@ -291,12 +296,27 @@ export function EmployeeDirectoryPageClient() {
                             )
                           : null;
                         return (
-                          <TableHead key={col.key} className={WT_TABLE_HEAD_COMPACT_CLASS}>
+                          <TableHead
+                            key={col.key}
+                            className={cn(
+                              WT_TABLE_HEAD_COMPACT_CLASS,
+                              "overflow-hidden",
+                              col.key === "name" && "w-[14%]",
+                              col.key === "email" && "w-[18%]",
+                              col.key === "phone_number" && "w-[11%]",
+                              col.key === "portal_role" && "w-[12%]",
+                              col.key === "band" && "w-[7%]",
+                              col.key === "user_type" && "w-[11%]",
+                              col.key === "work_mode" && "w-[9%]",
+                              col.key === "date_of_joining" && "w-[10%]",
+                              col.key === "status" && "w-[8%]"
+                            )}
+                          >
                             <TableSortHeader
                               label={col.label}
                               activeDirection={activeDir}
                               sortable={columnSortOpts.length > 0}
-                              className="h-7 px-1.5 text-xs"
+                              className="h-7 max-w-full px-1.5 text-xs"
                               onSort={
                                 columnSortOpts.length
                                   ? () =>
@@ -335,9 +355,14 @@ export function EmployeeDirectoryPageClient() {
                           {LIST_COLUMNS.map((col) => (
                             <TableCell
                               key={col.key}
-                              className={cn(WT_TABLE_CELL_COMPACT_CLASS, "max-w-[12rem]")}
+                              className={cn(
+                                WT_TABLE_CELL_COMPACT_CLASS,
+                                "max-w-0 overflow-hidden whitespace-nowrap"
+                              )}
                               title={
-                                col.key === "status"
+                                col.key === "status" ||
+                                col.key === "portal_role" ||
+                                col.key === "user_type"
                                   ? undefined
                                   : String(display[col.key] ?? "—")
                               }
@@ -347,7 +372,7 @@ export function EmployeeDirectoryPageClient() {
                               ) : col.key === "name" ? (
                                 <span className="block truncate font-medium text-wt-text">{display[col.key]}</span>
                               ) : col.key === "email" ? (
-                                <div className="flex w-full min-w-0 items-center gap-1.5">
+                                <div className="flex w-full min-w-0 items-center gap-1">
                                   <span className="block min-w-0 flex-1 truncate text-wt-text">{display.email}</span>
                                   <CopyValueButton
                                     value={display.email}
@@ -356,7 +381,7 @@ export function EmployeeDirectoryPageClient() {
                                   />
                                 </div>
                               ) : col.key === "phone_number" ? (
-                                <div className="flex w-full min-w-0 items-center gap-1.5">
+                                <div className="flex w-full min-w-0 items-center gap-1">
                                   <span className="block min-w-0 flex-1 truncate text-wt-text">{display.phone_number}</span>
                                   <CopyValueButton
                                     value={display.phone_number}

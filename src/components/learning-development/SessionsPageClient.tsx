@@ -46,7 +46,7 @@ export function SessionsPageClient() {
         {trainingId ? (
           <Link
             href={`/dashboard/learning-development/trainings/${encodeURIComponent(trainingId)}?tab=sessions`}
-            className="text-sm font-medium text-indigo-600 hover:underline"
+            className="text-sm font-medium text-[var(--wt-brand)] hover:underline"
           >
             Open in training detail
           </Link>

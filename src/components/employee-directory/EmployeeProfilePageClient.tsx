@@ -248,7 +248,7 @@ export function EmployeeProfilePageClient() {
           <p className="mt-2 text-sm text-wt-text-muted">
             Employee profiles in the directory are available to HR and admin users only.
           </p>
-          <Link href={DASHBOARD_ROUTES.overview} className="mt-4 inline-block text-sm text-blue-600 hover:underline">
+          <Link href={DASHBOARD_ROUTES.overview} className="mt-4 inline-block text-sm text-[var(--wt-brand)] hover:underline">
             Back to overview
           </Link>
         </div>
@@ -261,7 +261,7 @@ export function EmployeeProfilePageClient() {
       <DashboardPageShell>
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 text-sm text-wt-text-muted shadow-sm">
           Invalid employee ID.
-          <Link href={DASHBOARD_ROUTES["employee-directory"]} className="ml-2 text-blue-600 hover:underline">
+          <Link href={DASHBOARD_ROUTES["employee-directory"]} className="ml-2 text-[var(--wt-brand)] hover:underline">
             Back to directory
           </Link>
         </div>
@@ -274,7 +274,7 @@ export function EmployeeProfilePageClient() {
       <div className="employee-profile-scroll-root w-full">
         <Link
           href={DASHBOARD_ROUTES["employee-directory"]}
-          className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
+          className="inline-flex items-center gap-1 text-sm font-medium text-[var(--wt-brand)] hover:underline"
         >
           ← Back to directory
         </Link>

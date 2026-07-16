@@ -35,8 +35,6 @@ import {
   USER_REQUEST_FILTER_TYPE_OPTIONS,
   USER_REQUEST_TYPE_SELECT_OPTIONS,
 } from "@/utils/actionToast";
-import { AllocationExtensionPanel } from "@/components/dashboard/sections/AllocationExtensionPanel";
-import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
 import {
   normalizePickerEmail,
   requestRowEmail,
@@ -44,8 +42,6 @@ import {
 import { useAccountManagerEmails } from "@/hooks/useAccountManagerEmails";
 import { HrReviewNoticeBanner } from "@/components/hr-review/HrReviewNoticeBanner";
 import { hasDmRole, isAccountManagerEmployeeUser } from "@/utils/roles";
-import { loadSelfProfileState } from "@/utils/selfProfile";
-import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
 import {
   HARDCODED_DEPARTMENT_OPTIONS,
   MAX_ONBOARD_FILE_BYTES,
@@ -88,7 +84,6 @@ import {
   managerTeamEmails,
   managerTeamRowsForProject,
 } from "@/utils/dashboard/projects";
-import { MetricCard } from "@/components/dashboard/ui/MetricCard";
 import { InputField, SelectField, TextAreaField, FileField, UploadTile } from "@/components/dashboard/ui/forms";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
@@ -96,9 +91,9 @@ import {
   ProfileField,
   formatSecondarySkillsForProfile,
 } from "@/components/dashboard/ui/profile";
-import { DataTable } from "@/components/dashboard/ui/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
+import { RequestStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { useClientPagination } from "@/hooks/useClientPagination";
@@ -109,7 +104,6 @@ import {
   toggleColumnSort,
 } from "@/utils/listSort";
 import { Calendar, Clock, Home, Users, Building2, Wallet } from "lucide-react";
-import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
@@ -121,6 +115,7 @@ import {
   parseApiDate,
   todayApiDate,
 } from "@/utils/apiDate";
+import { filterTeamRequestsForPrimaryManager } from "@/utils/leaveManagerDisplay";
 import {
   canHrShowTeamRequestActions,
   canManagerActOnRequest,
@@ -145,6 +140,8 @@ import { buildUserRequestBody } from "@/utils/leaveRequestPayload";
 import { activeAllocationsRequireClientApproval } from "@/utils/leaveAllocations";
 import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSummary";
 import { HrLeaveBalancesPanel } from "@/components/dashboard/leave/HrLeaveBalancesPanel";
+import { CONTENT_CARD_CLASS, FILTER_BAR_CLASS } from "@/components/dashboard/ui/uiLayout";
+import { cn } from "@/lib/utils";
 
 import { LeaveManagerSelector } from "@/components/dashboard/leave/LeaveManagerSelector";
 import { LeaveAdditionalRecipientsSelector } from "@/components/dashboard/leave/LeaveAdditionalRecipientsSelector";
@@ -158,10 +155,27 @@ import { compOffService } from "@/services/compOff.service";
 import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
 import { CompOffCreditsDialog } from "@/components/dashboard/leave/CompOffCreditsDialog";
 import { WfhExceptionModal } from "@/components/dashboard/leave/WfhExceptionModal";
-import { CompOffPageClient } from "@/components/comp-off/CompOffPageClient";
+import dynamic from "next/dynamic";
 import { LeaveRequestForm } from "@/components/dashboard/leave/LeaveRequestForm";
 import { MyLeaveRequestsView } from "@/components/dashboard/leave/MyLeaveRequestsView";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
+const CompOffPageClient = dynamic(
+  () =>
+    import("@/components/comp-off/CompOffPageClient").then((m) => ({
+      default: m.CompOffPageClient,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="space-y-4 rounded-2xl border border-wt-border/70 bg-wt-surface-1 p-6">
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+    ),
+  }
+);
 
 const LEAVE_REQUESTS_TABLE_MIN_HEIGHT = "min-h-[320px]";
 const MY_LEAVE_TABLE_COL_COUNT = 8;
@@ -222,6 +236,29 @@ export function LeavePageClient() {
       .includes("manager");
   const { user, refresh: refreshSession } = useAuth();
   const userEmail = useMemo(() => String(user?.email ?? "").trim(), [user?.email]);
+  const pathname = usePathname();
+  const isTeamLeaveRoute = pathname.includes("/dashboard/leave/team");
+  const [leaveSubTab, setLeaveSubTab] = useState<
+    "my" | "team" | "org" | "comp-off" | "wfh" | "balances"
+  >(isTeamLeaveRoute ? "team" : "my");
+  useEffect(() => {
+    if (isTeamLeaveRoute) {
+      setLeaveSubTab((prev) => {
+        if (prev === "comp-off" || prev === "balances" || prev === "team" || prev === "org") {
+          return prev;
+        }
+        return "team";
+      });
+    } else if (pathname.includes("/dashboard/leave")) {
+      setLeaveSubTab((prev) => {
+        if (prev === "team" || prev === "org") return "my";
+        if (prev === "balances" || prev === "comp-off" || prev === "wfh") return prev;
+        return "my";
+      });
+    }
+  }, [isTeamLeaveRoute, pathname]);
+  const myLeaveTabActive = leaveSubTab === "my" || leaveSubTab === "wfh";
+  const teamLeaveTabActive = leaveSubTab === "team" || leaveSubTab === "org";
   const queryClient = useQueryClient();
   const invalidateLeaveBalance = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["leave", "my-balance"] });
@@ -229,7 +266,12 @@ export function LeavePageClient() {
 
   const [myRequestsFromDate, setMyRequestsFromDate] = useState(() => defaultMyLeaveRequestRange().fromDate);
   const [myRequestsToDate, setMyRequestsToDate] = useState(() => defaultMyLeaveRequestRange().toDate);
-  const myLeaveRequestsQ = useMyLeaveRequests(userEmail, true, myRequestsFromDate, myRequestsToDate);
+  const myLeaveRequestsQ = useMyLeaveRequests(
+    userEmail,
+    myLeaveTabActive,
+    myRequestsFromDate,
+    myRequestsToDate
+  );
   const myLeaveRequests = myLeaveRequestsQ.rows;
   const myLeaveRequestsLoading = myLeaveRequestsQ.isFetching;
   const loadMyLeaveRequests = useCallback(async () => {
@@ -255,8 +297,6 @@ export function LeavePageClient() {
     [invalidateLeaveBalance, loadMyLeaveRequests]
   );
   const [actionLoading, setActionLoading] = useState(false);
-  const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
-  const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
     () => defaultInvitedEmployeesDateRange().from
   );
@@ -530,27 +570,6 @@ export function LeavePageClient() {
     "project"
   );
   const [timelogSubTab, setTimelogSubTab] = useState<"my" | "team">("my");
-  const pathname = usePathname();
-  const isTeamLeaveRoute = pathname.includes("/dashboard/leave/team");
-  const [leaveSubTab, setLeaveSubTab] = useState<
-    "my" | "team" | "org" | "comp-off" | "wfh" | "balances"
-  >(isTeamLeaveRoute ? "team" : "my");
-  useEffect(() => {
-    if (isTeamLeaveRoute) {
-      setLeaveSubTab((prev) => {
-        if (prev === "comp-off" || prev === "balances" || prev === "team" || prev === "org") {
-          return prev;
-        }
-        return "team";
-      });
-    } else if (pathname.includes("/dashboard/leave")) {
-      setLeaveSubTab((prev) => {
-        if (prev === "team" || prev === "org") return "my";
-        if (prev === "balances" || prev === "comp-off" || prev === "wfh") return prev;
-        return "my";
-      });
-    }
-  }, [isTeamLeaveRoute, pathname]);
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasAdminAccess = userRoles.includes("ROLE_ADMIN");
@@ -600,7 +619,9 @@ export function LeavePageClient() {
       ? "DM status"
       : "Manager status";
   const submitsToHrForReview = isAccountManagerEmployeeUser(userRoles);
-  const { data: accountManagerEmails = new Set<string>() } = useAccountManagerEmails();
+  const { data: accountManagerEmails = new Set<string>() } = useAccountManagerEmails(
+    teamLeaveTabActive
+  );
   /** HR without manager portfolio — no allocated projects; use Team timelogs for org view */
   const timelogHrNoSelfProject =
     userRoles.includes("ROLE_HR") && !hasManagerAccess;
@@ -698,22 +719,6 @@ export function LeavePageClient() {
     [hasManagerAccess, managerProjects, managerPortfolioRows]
   );
 
-  const loadMyProfile = useCallback(async () => {
-    try {
-      const { profile } = await loadSelfProfileState(userRoles, user);
-      setEmployeeProfile(profile);
-    } catch {
-      // Keep session-derived onboarding state if profile is temporarily unavailable.
-      setEmployeeProfile(null);
-    }
-  }, [user, userRoles]);
-  useEffect(() => {
-    if (!user) return;
-    const id = window.setTimeout(() => {
-      void loadMyProfile();
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [user, loadMyProfile]);
   useEffect(() => {
     if (!canAccessProfile || requiresSelfOnboarding) return;
     if (leaveSubTab !== "my" && leaveSubTab !== "wfh") return;
@@ -741,13 +746,6 @@ export function LeavePageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [canAccessProfile, requiresSelfOnboarding, leaveSubTab]);
-  useEffect(() => {
-    if (leaveSubTab !== "my" && leaveSubTab !== "wfh") return;
-    const id = window.setTimeout(() => {
-      void loadMyLeaveRequests();
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [leaveSubTab, loadMyLeaveRequests]);
 
   async function runAction(label: string, fn: () => Promise<unknown>) {
     setActionLoading(true);
@@ -969,14 +967,22 @@ export function LeavePageClient() {
             })
           ).values()
         );
+        // Non-primary managers must not see leave/WFH in Team Requests (HR keeps full list).
+        rows = filterTeamRequestsForPrimaryManager(rows, {
+          actorEmail: userEmail,
+          hasHrAccess,
+        });
         // Newest submissions first for Team Requests.
         rows = applyListSort(rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
         totalPages = 1;
         totalElements = rows.length;
       } else {
-        rows = applyListSort(portfolioRes.rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
+        rows = filterTeamRequestsForPrimaryManager(
+          applyListSort(portfolioRes.rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS),
+          { actorEmail: userEmail, hasHrAccess }
+        );
         totalPages = portfolioRes.totalPages;
-        totalElements = portfolioRes.totalElements;
+        totalElements = rows.length;
       }
     } else if (hasHrAccess) {
       const result = await fetchPaginatedScopedUserRequests({ fromDate: from, toDate: to, requestType, page, size });
@@ -1075,7 +1081,7 @@ export function LeavePageClient() {
       totalElements,
     });
   },
-    [employeeRequestFilters, hasHrAccess, hasManagerAccess, hasDmAccess, hasPrimaryLeaveInbox, loadScopeEmployees]
+    [employeeRequestFilters, hasHrAccess, hasManagerAccess, hasDmAccess, hasPrimaryLeaveInbox, loadScopeEmployees, userEmail]
   );
 
   /** All Employee Requests (HR org view) is read-only — no Actions column. */
@@ -1332,13 +1338,13 @@ export function LeavePageClient() {
     <>
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
-          <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-6 max-sm:p-4">
+          <section className={cn(CONTENT_CARD_CLASS, "p-5 sm:p-6")}>
                            {showLeaveSubTabBar ? (
                              <Tabs value={leaveSubTab} onValueChange={(value) => setLeaveSubTab(value as "my" | "team" | "org" | "wfh" | "comp-off" | "balances")} className="gap-0">
-                                 <div className="w-full px-5 pt-6 pb-6">
-                                   <TabsList aria-label="Leave views" className="relative h-auto gap-1.5 bg-transparent p-0">
+                                 <div className="w-full overflow-x-auto border-b border-wt-border pb-5">
+                                   <TabsList aria-label="Leave views" variant="default" className="min-w-max">
                                       {leaveTabItems.map((item) => (
-                                        <TabsTrigger key={item.value} value={item.value} className="relative flex-none h-10 px-6 text-sm font-medium text-muted-foreground transition-all duration-200 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black rounded-full cursor-pointer hover:text-foreground border-0 gap-2">
+                                        <TabsTrigger key={item.value} value={item.value}>
                                           {item.value === "my" && <Calendar className="size-4" />}
                                           {item.value === "team" && <Users className="size-4" />}
                                           {item.value === "org" && <Building2 className="size-4" />}
@@ -1352,26 +1358,26 @@ export function LeavePageClient() {
                                  </div>
                              </Tabs>
                            ) : null}
-                          <div>
+                          <div className={showLeaveSubTabBar ? "pt-6" : undefined}>
                           {leaveSubTab === "balances" && hasHrAccess ? (
                              <HrLeaveBalancesPanel actionLoading={actionLoading} runAction={runAction} />
                            ) : null}
-                          <div hidden={leaveSubTab !== "comp-off"}>
+                          {leaveSubTab === "comp-off" && showCompOffTab ? (
                             <CompOffPageClient
                               embedded
                               flowScope="earn"
                               forcedTab={compOffForcedTab}
                             />
-                          </div>
-                          <div hidden={!(leaveSubTab === "my" || leaveSubTab === "wfh")}>
-
+                          ) : null}
+                          {(leaveSubTab === "my" || leaveSubTab === "wfh") ? (
+                          <div>
                           {leaveSubTab === "wfh" ? (
                             <div className="space-y-6">
                               {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
                               <Tabs value={wfhRequestViewTab} onValueChange={(v) => setWfhRequestViewTab(v as "request" | "view")} orientation="horizontal">
-                                <TabsList variant="line" className="h-9 gap-1">
-                                  <TabsTrigger value="request" className="px-3 text-xs font-medium cursor-pointer">Apply for WFH</TabsTrigger>
-                                  <TabsTrigger value="view" className="px-3 text-xs font-medium cursor-pointer">History </TabsTrigger>
+                                <TabsList variant="line" className="w-full justify-start border-b border-wt-border/80">
+                                  <TabsTrigger value="request">Apply for WFH</TabsTrigger>
+                                  <TabsTrigger value="view">History</TabsTrigger>
                                 </TabsList>
                                   <TabsContent value="request" className="pt-6">
                                   <div className="space-y-6">
@@ -1383,7 +1389,7 @@ export function LeavePageClient() {
                                         <button
                                           type="button"
                                           onClick={() => setWfhExceptionOpen(true)}
-                                          className="text-xs text-sky-600 hover:text-sky-700 underline cursor-pointer"
+                                          className="text-xs text-[var(--wt-brand)] hover:text-[var(--wt-brand)] underline cursor-pointer"
                                         >
                                           Need a custom WFH exception? Contact HR
                                         </button>
@@ -1629,9 +1635,9 @@ export function LeavePageClient() {
                               {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
                               <div className="mb-6"><LeaveBalanceSummary selectedType={normalizeUserRequestType(leaveRequestForm.request_type)} /></div>
                               <Tabs value={requestViewTab} onValueChange={(v) => setRequestViewTab(v as "request" | "view")} orientation="horizontal">
-                                <TabsList variant="line" className="h-9 gap-1">
-                                  <TabsTrigger value="request" className="px-3 text-xs font-medium cursor-pointer">Apply for Leave</TabsTrigger>
-                                  <TabsTrigger value="view" className="px-3 text-xs font-medium cursor-pointer">History</TabsTrigger>
+                                <TabsList variant="line" className="w-full justify-start border-b border-wt-border/80">
+                                  <TabsTrigger value="request">Apply for Leave</TabsTrigger>
+                                  <TabsTrigger value="view">History</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="request" className="pt-6">
                                   <LeaveRequestForm
@@ -1874,10 +1880,12 @@ export function LeavePageClient() {
                             </>
                           )}
                         </div>
-                          <div hidden={!((leaveSubTab === "team" || leaveSubTab === "org") && canViewTeamLeave)}>
-                        <div className="bg-white dark:bg-zinc-950 rounded-xl border border-border/40 shadow-sm p-6 space-y-5">
+                          ) : null}
+                          {(leaveSubTab === "team" || leaveSubTab === "org") && canViewTeamLeave ? (
+                          <div className="space-y-5">
+                        <div className={FILTER_BAR_CLASS}>
                           <div className="flex flex-col gap-3">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end w-full">
+                            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-end">
                               <div className="w-full sm:min-w-[140px] sm:flex-1">
                                 <SelectField
                                   label="Request Type"
@@ -1902,16 +1910,17 @@ export function LeavePageClient() {
                                 />
                               </div>
                             </div>
-                            <div className="flex flex-col w-full">
+                            <div className="flex w-full flex-col">
                               <input
                                 type="search"
                                 value={teamLeaveSearch}
                                 onChange={(e) => setTeamLeaveSearch(e.target.value)}
                                 placeholder="Search by employee name…"
-                                className="h-10 w-full min-w-0 rounded-lg border border-input bg-transparent px-3 py-1 text-sm transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-0 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50"
+                                className="h-11 w-full min-w-0 rounded-xl border border-wt-border bg-wt-surface-1 px-3.5 text-sm text-wt-text outline-none transition-colors placeholder:text-wt-text-faint focus-visible:border-[var(--wt-brand)] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)] dark:border-wt-border-md dark:bg-wt-surface-1"
                               />
                             </div>
                           </div>
+                        </div>
 
                           <ScrollableTable
                             maxHeightClass="max-h-[min(70vh,520px)]"
@@ -2075,13 +2084,11 @@ export function LeavePageClient() {
                                           {durationDays && durationDays !== "—" ? durationDays : "—"}
                                         </TableCell>
                                         <TableCell className="px-4 py-3 whitespace-nowrap">
-                                          <Badge
-                                            variant="secondary"
-                                            className={`rounded-full border-0 font-normal ${managerStatus ? (filledBadgeClass(managerStatus === "APPROVED" ? "success" : managerStatus === "REJECTED" ? "danger" : "warning") || "bg-muted/60 text-muted-foreground") : "bg-muted/60 text-muted-foreground"}`}
-                                            title={managerStatus}
-                                          >
-                                            {managerStatus || "—"}
-                                          </Badge>
+                                          {managerStatus ? (
+                                            <RequestStatusBadge status={managerStatus} />
+                                          ) : (
+                                            <span className="text-xs text-muted-foreground">—</span>
+                                          )}
                                         </TableCell>
                                         <TableCell className="px-4 py-3">
                                           {hasDetails ? (
@@ -2248,7 +2255,7 @@ export function LeavePageClient() {
                             </div>
                           ) : null}
                         </div>
-                          </div>
+                          ) : null}
                           </div>
                         </section>
         </OnboardingGate>

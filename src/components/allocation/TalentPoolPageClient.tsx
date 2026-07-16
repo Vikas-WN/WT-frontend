@@ -52,7 +52,7 @@ export function TalentPoolPageClient() {
           </p>
           <Link
             href={DASHBOARD_ROUTES.overview}
-            className="mt-4 inline-block text-sm text-blue-600 hover:underline"
+            className="mt-4 inline-block text-sm text-[var(--wt-brand)] hover:underline"
           >
             Back to overview
           </Link>
@@ -73,7 +73,7 @@ export function TalentPoolPageClient() {
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-52 max-w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
+              className="h-11 w-52 max-w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3.5 text-sm text-wt-text outline-none focus:border-[var(--wt-brand)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)]"
               placeholder="Search"
               aria-label="Search"
             />

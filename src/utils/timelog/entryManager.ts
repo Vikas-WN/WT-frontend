@@ -36,7 +36,7 @@ export function buildTimelogEntryPayload(
   logDate: string,
   hours: number
 ): TimelogEntryWritePayload {
-  const managerEmail = form.project_manager.trim();
+  const managerEmail = form.project_manager.trim().toLowerCase();
   const primaryManagerEmails = managerEmail ? [managerEmail] : undefined;
   const payload: TimelogEntryWritePayload = {
     project_code: form.project_code,

@@ -74,7 +74,7 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
       <div className="mx-auto max-w-4xl space-y-4">
         <Link
           href={DASHBOARD_ROUTES.offboarding}
-          className="text-xs font-medium text-indigo-600 hover:underline"
+          className="text-xs font-medium text-[var(--wt-brand)] hover:underline"
         >
           ← Back to Offboarding
         </Link>

@@ -4,6 +4,7 @@ import type {
 } from "@/services/hrms.service";
 import type { ApiEnvelope } from "@/api/httpClient";
 import { formatApiDate, inputValueToApiDate, normalizeToApiDate, parseApiDate } from "@/utils/apiDate";
+import { toRows } from "@/utils/apiRows";
 import { allocationProjectCode } from "@/utils/dashboard/allocationDisplay";
 import { cleanEmployeeName } from "@/utils/employeeDirectory";
 
@@ -458,7 +459,14 @@ export function parseAllocationExtensionListResponse(
   res: ApiEnvelope<unknown>
 ): AllocationExtensionListPage {
   const page = (res.data ?? {}) as Record<string, unknown>;
-  const rowsRaw = Array.isArray(page.data) ? page.data : [];
+  const rowsFromHelpers = toRows(page);
+  const rowsRaw = rowsFromHelpers.length
+    ? rowsFromHelpers
+    : Array.isArray(page.data)
+      ? page.data
+      : Array.isArray(page.items)
+        ? page.items
+        : [];
 
   const current_page = Number(page.current_page ?? page.currentPage ?? 0);
   const total_pages = Number(page.total_pages ?? page.totalPages ?? 1);
@@ -486,14 +494,20 @@ export function buildCreateAllocationExtensionBody(payload: {
   projectCode: string;
   requestedEndDate: string;
   reason?: string;
+  user_email: string;
+  project_code: string;
+  requested_end_date: string;
 } {
   const userEmail = payload.userEmail.trim();
   const projectCode = payload.projectCode.trim();
   const requestedEndDate = inputValueToApiDate(payload.requestedEndDate.trim());
   const reason = payload.reason?.trim();
   return {
+    user_email: userEmail,
     userEmail,
+    project_code: projectCode,
     projectCode,
+    requested_end_date: requestedEndDate,
     requestedEndDate,
     ...(reason ? { reason } : {}),
   };

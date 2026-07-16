@@ -412,7 +412,7 @@ export function OffboardingPanel() {
                 <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
                   Voluntary %
                 </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums text-sky-700">
+                <p className="mt-2 text-2xl font-semibold tabular-nums text-[var(--wt-brand)]">
                   {formatPercent(voluntaryPercent)}
                 </p>
                 <p className="mt-1 text-xs text-wt-text-muted">Share of FY exits</p>
@@ -810,7 +810,7 @@ export function OffboardingPanel() {
                           ) : surveySubmitted && detailHref ? (
                             <Link
                               href={detailHref}
-                              className="text-xs font-medium text-indigo-600 hover:underline"
+                              className="text-xs font-medium text-[var(--wt-brand)] hover:underline"
                               onClick={(e) => e.stopPropagation()}
                             >
                               View responses

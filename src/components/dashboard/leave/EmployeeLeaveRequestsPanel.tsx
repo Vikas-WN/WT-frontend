@@ -17,8 +17,13 @@ import { SECTION_STACK_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { UI_COPY } from "@/constants/uiCopy";
 import { formatUserRequestTypeLabel, normalizeUserRequestType } from "@/utils/actionToast";
 import { formatLeaveDateRange } from "@/utils/leaveRequestDisplay";
-import { requestFinalStatus } from "@/utils/userRequest";
+import {
+  requestFinalStatus,
+  requestHrRejectionReason,
+  requestManagerRejectionReason,
+} from "@/utils/userRequest";
 import { pickManagerEmailList } from "@/utils/leaveManagerDisplay";
+import { LeaveRequestStatusBadge } from "@/components/dashboard/leave/LeaveRequestStatusBadge";
 import { Send } from "lucide-react";
 import type { useClientPagination } from "@/hooks/useClientPagination";
 
@@ -124,6 +129,16 @@ export function EmployeeLeaveRequestsPanel({
       onRevoke={onRevokeRequest}
     />
   );
+
+  const viewingStatus = viewingRequest ? requestFinalStatus(viewingRequest) : null;
+  const viewingManagerRejection =
+    viewingRequest && viewingStatus === "REJECTED"
+      ? requestManagerRejectionReason(viewingRequest)
+      : null;
+  const viewingHrRejection =
+    viewingRequest && viewingStatus === "REJECTED"
+      ? requestHrRejectionReason(viewingRequest)
+      : null;
 
   return (
     <div className={SECTION_STACK_CLASS}>
@@ -324,7 +339,9 @@ export function EmployeeLeaveRequestsPanel({
             </div>
             <div>
               <dt className="text-wt-text-muted">Status</dt>
-              <dd className="font-medium">{requestFinalStatus(viewingRequest)}</dd>
+              <dd className="font-medium">
+                <LeaveRequestStatusBadge status={viewingStatus} />
+              </dd>
             </div>
             <div>
               <dt className="text-wt-text-muted">Primary managers</dt>
@@ -336,6 +353,20 @@ export function EmployeeLeaveRequestsPanel({
               <dt className="text-wt-text-muted">Reason</dt>
               <dd className="font-medium whitespace-pre-wrap">{String(viewingRequest.comments ?? "—")}</dd>
             </div>
+            {viewingManagerRejection ? (
+              <div className="sm:col-span-2">
+                <dt className="text-wt-text-muted">Manager rejection reason</dt>
+                <dd className="font-medium whitespace-pre-wrap text-rose-700">
+                  {viewingManagerRejection}
+                </dd>
+              </div>
+            ) : null}
+            {viewingHrRejection ? (
+              <div className="sm:col-span-2">
+                <dt className="text-wt-text-muted">HR rejection reason</dt>
+                <dd className="font-medium whitespace-pre-wrap text-rose-700">{viewingHrRejection}</dd>
+              </div>
+            ) : null}
           </dl>
           <div className="mt-4 flex justify-end">
             <Button type="button" variant="outline" onClick={() => setViewingRequest(null)}>

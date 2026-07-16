@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { NATIVE_CONTROL_CLASS } from "@/components/dashboard/ui/uiLayout";
+import { cn } from "@/lib/utils";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
@@ -20,6 +22,7 @@ import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { UI_COPY } from "@/constants/uiCopy";
 import { useClients, useInvalidateClients } from "@/hooks/clients/useClients";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import type { ClientRecord } from "@/types/client";
 
 function displayPerson(name: string | null | undefined, email: string | null | undefined) {
@@ -55,7 +58,7 @@ export function ClientsPageClient() {
           </p>
           <Link
             href={DASHBOARD_ROUTES.overview}
-            className="mt-4 inline-block text-sm text-blue-600 hover:underline"
+            className="mt-4 inline-block text-sm text-[var(--wt-brand)] hover:underline"
           >
             Back to overview
           </Link>
@@ -90,7 +93,7 @@ export function ClientsPageClient() {
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-52 max-w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
+                className={cn(NATIVE_CONTROL_CLASS, "w-52 max-w-full bg-wt-surface-2 shadow-none")}
                 placeholder="Search clients"
                 aria-label="Search clients"
               />
@@ -99,16 +102,10 @@ export function ClientsPageClient() {
                   Create Client
                 </Button>
               ) : null}
-              <Button
-                variant="outline"
-                size="sm"
-                type="button"
-                className="px-4 py-2 text-sm"
-                disabled={isLoading}
+              <RefreshIconButton
                 onClick={() => void refetch()}
-              >
-                Refresh
-              </Button>
+                loading={isLoading}
+              />
             </div>
           </div>
 

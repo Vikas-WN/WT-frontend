@@ -51,9 +51,9 @@ function GoogleIcon({ size = 20 }: { size?: number }) {
 
 function LoginBackdrop() {
   return (
-    <div className="pointer-events-none fixed inset-0 bg-black" aria-hidden="true">
-      <div className="absolute -left-24 top-0 h-[420px] w-[420px] rounded-full bg-[#355095]/20 blur-[100px]" />
-      <div className="absolute bottom-0 right-0 h-[360px] w-[360px] rounded-full bg-[#4a6fa5]/10 blur-[90px]" />
+    <div className="pointer-events-none fixed inset-0 bg-[var(--wt-bg)]" aria-hidden="true">
+      <div className="absolute -left-24 top-0 h-[420px] w-[420px] rounded-full bg-[var(--wt-brand)]/20 blur-[100px]" />
+      <div className="absolute bottom-0 right-0 h-[360px] w-[360px] rounded-full bg-[var(--wt-brand)]/10 blur-[90px]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.04),transparent_55%)]" />
     </div>
   );
@@ -63,7 +63,7 @@ function ErrorBanner({ message }: { message: string }) {
   return (
     <div
       role="alert"
-      className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm leading-relaxed text-red-100"
+      className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm leading-relaxed text-red-100"
     >
       {message}
     </div>
@@ -72,15 +72,15 @@ function ErrorBanner({ message }: { message: string }) {
 
 function LoginShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-dvh bg-black text-wt-text">
+    <div className="relative min-h-dvh bg-[var(--wt-bg)] text-wt-text">
       <LoginBackdrop />
       <div className="relative z-10 mx-auto grid min-h-dvh w-full max-w-6xl grid-cols-1 lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="hidden flex-col justify-between border-r border-white/[0.06] px-10 py-12 lg:flex xl:px-14">
+        <section className="hidden flex-col justify-between border-r border-wt-border px-10 py-12 lg:flex xl:px-14">
           <WebTrakBrand variant="login" className="!justify-start" />
           <div className="max-w-md space-y-8">
             <div className="space-y-4">
               <p className="text-sm font-medium text-[var(--wt-brand)]">Workforce Tracker</p>
-              <h1 className="text-3xl font-semibold leading-tight tracking-tight text-white xl:text-4xl">
+              <h1 className="text-3xl font-semibold leading-tight tracking-tight text-wt-text xl:text-4xl">
                 One workspace for your entire workforce.
               </h1>
               <p className="text-base leading-relaxed text-wt-text-muted">{TAGLINE}</p>
@@ -88,7 +88,7 @@ function LoginShell({ children }: { children: React.ReactNode }) {
             <ul className="space-y-3">
               {HIGHLIGHTS.map((item) => (
                 <li key={item} className="flex items-center gap-3 text-sm text-wt-text-muted">
-                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--wt-brand)]/20 text-[10px] text-[var(--wt-brand)]">
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--wt-brand-soft)] text-[10px] text-[var(--wt-brand)]">
                     ✓
                   </span>
                   {item}
@@ -198,11 +198,11 @@ function LoginPageInner() {
         </div>
 
         <div
-          className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:p-8"
+          className="rounded-2xl border border-wt-border bg-wt-surface-1/95 p-6 shadow-xl backdrop-blur-sm sm:p-8"
           aria-labelledby="login-heading"
         >
           <div className="space-y-2 text-center lg:text-left">
-            <h2 id="login-heading" className="text-2xl font-semibold tracking-tight text-white">
+            <h2 id="login-heading" className="text-2xl font-semibold tracking-tight text-wt-text">
               Welcome Back
             </h2>
             <p className="text-sm leading-relaxed text-wt-text-muted">
@@ -216,13 +216,14 @@ function LoginPageInner() {
             <Button
               id="google-signin-btn"
               type="button"
+              variant="outline"
               onClick={handleGoogleSignIn}
               disabled={googleLoading}
-              className="h-12 w-full rounded-xl border border-white/[0.12] bg-white text-[15px] font-medium text-slate-900 shadow-sm transition hover:bg-slate-100 disabled:opacity-70"
+              className="h-12 w-full rounded-xl border-wt-border bg-wt-surface-1 text-[15px] font-medium text-wt-text shadow-sm hover:bg-wt-surface-2"
             >
               {googleLoading ? (
                 <>
-                  <span className="spinner" />
+                  <span className="spinner-dark-sm" />
                   Redirecting to Google…
                 </>
               ) : (

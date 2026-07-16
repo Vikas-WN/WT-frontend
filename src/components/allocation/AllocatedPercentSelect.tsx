@@ -8,7 +8,7 @@ export function AllocatedPercentSelect({
   required = false,
   disabled = false,
 }: {
-  designation: string;
+  designation?: string;
   value: string;
   onChange: (value: string) => void;
   required?: boolean;
@@ -24,9 +24,13 @@ export function AllocatedPercentSelect({
       value={value}
       disabled={disabled}
       onChange={(v) => {
-        const num = Number(v);
-        if (v === "" || (Number.isFinite(num) && num >= 0 && num <= 100)) {
+        if (v === "") {
           onChange(v);
+          return;
+        }
+        const num = Number(v);
+        if (Number.isFinite(num) && num >= 1 && num <= 100) {
+          onChange(String(Math.trunc(num)));
         }
       }}
     />

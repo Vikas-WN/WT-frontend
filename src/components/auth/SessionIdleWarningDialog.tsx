@@ -28,7 +28,7 @@ export function SessionIdleWarningDialog({
         className="w-full max-w-md rounded-2xl border border-wt-border bg-wt-surface-1 p-6 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-sky-500/15 text-sky-600">
+        <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]">
           <IdleWarningIcon />
         </div>
         <h2

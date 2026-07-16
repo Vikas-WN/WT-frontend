@@ -90,13 +90,13 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
             <span>
               Total Available
               <span title="Comp Off is not included in this total. It is tracked separately." className="inline-flex align-middle ml-1 cursor-help">
-                <Info className="size-3.5 text-sky-600/60" />
+                <Info className="size-3.5 text-[var(--wt-brand)]/60" />
               </span>
             </span>
           }
           {...formatBalanceDays(total)}
           icon={CalendarDays}
-          className="bg-sky-50 text-sky-700"
+          className="bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]"
         />
       ) : null}
       {showAll ? (
@@ -112,7 +112,7 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
           label="Secondary"
           {...formatBalanceDays(secondary)}
           icon={Users}
-          className="bg-violet-50 text-violet-700"
+          className="bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]"
         />
       ) : null}
       {showAll ? (

@@ -89,3 +89,20 @@ export function canPrimaryManagerActOnLeave(
   if (isOwnUserRequest(row, actorEmail)) return false;
   return requestFinalStatus(row) === "PENDING";
 }
+
+/**
+ * Team Requests visibility: non-HR viewers only see leave/WFH where they are an
+ * assigned primary manager. Other request types pass through unchanged.
+ */
+export function filterTeamRequestsForPrimaryManager(
+  rows: Array<Record<string, unknown>>,
+  options: { actorEmail?: string | null; hasHrAccess: boolean }
+): Array<Record<string, unknown>> {
+  if (options.hasHrAccess) return rows;
+  const email = String(options.actorEmail ?? "").trim().toLowerCase();
+  return rows.filter((row) => {
+    if (!isLeaveOrWfhRequestRow(row)) return true;
+    if (!email) return false;
+    return isAssignedPrimaryLeaveManager(row, email);
+  });
+}

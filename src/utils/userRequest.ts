@@ -23,6 +23,7 @@ import {
 } from "@/utils/compOff";
 
 import { canPrimaryManagerActOnLeave, hasPrimaryLeaveManagers } from "@/utils/leaveManagerDisplay";
+import { formatUiStatusLabel } from "@/utils/statusLabel";
 
 export type UserRequestStatusValue = ApprovalStage;
 
@@ -701,13 +702,7 @@ export function extractStatusUpdateData(envelope: ApiEnvelope<unknown>): Record<
 
 
 export function formatApprovalStageLabel(value: unknown): string {
-
-  const s = normalizeRequestStatus(value);
-
-  if (s === "SUBMITTED") return "Submitted";
-
-  return s || "—";
-
+  return formatUiStatusLabel(normalizeRequestStatus(value));
 }
 
 
@@ -716,7 +711,7 @@ export function approvalStageTone(value: unknown): string {
 
   const s = normalizeRequestStatus(value);
 
-  if (s === "SUBMITTED") return "text-indigo-700";
+  if (s === "SUBMITTED") return "text-[var(--wt-brand)]";
 
   if (s === "APPROVED") return "text-emerald-700";
 
@@ -729,18 +724,40 @@ export function approvalStageTone(value: unknown): string {
 
 
 /** Show rejection reason only when the stage status is REJECTED (manager / legacy HR). */
-
 export function formatStageRejectionReason(stage: unknown, reason: unknown): string {
-
   if (normalizeRequestStatus(stage) !== "REJECTED") return "—";
-
   const text = String(reason ?? "").trim();
-
   return text || "—";
-
 }
 
+/** Manager-stage rejection comment when that stage is REJECTED. */
+export function requestManagerRejectionReason(row: Record<string, unknown>): string | null {
+  if (requestManagerStatus(row) !== "REJECTED" && requestFinalStatus(row) !== "REJECTED") {
+    return null;
+  }
+  const text = String(
+    pickRowField(row, "manager_reason", "managerReason") ?? ""
+  ).trim();
+  return text || null;
+}
 
+/** HR-stage rejection comment when that stage is REJECTED. */
+export function requestHrRejectionReason(row: Record<string, unknown>): string | null {
+  if (requestHrStatus(row) !== "REJECTED" && requestFinalStatus(row) !== "REJECTED") {
+    return null;
+  }
+  const text = String(pickRowField(row, "hr_reason", "hrReason") ?? "").trim();
+  return text || null;
+}
+
+/**
+ * Best rejection reason to show in list UIs: prefer manager_reason, then hr_reason.
+ * Returns null unless the request is REJECTED overall.
+ */
+export function requestRejectionReason(row: Record<string, unknown>): string | null {
+  if (requestFinalStatus(row) !== "REJECTED") return null;
+  return requestManagerRejectionReason(row) ?? requestHrRejectionReason(row);
+}
 
 /** GET /api/v1/userRequest?... — logged-in user's own requests (session-scoped). */
 export async function listSelfUserRequests(params: {

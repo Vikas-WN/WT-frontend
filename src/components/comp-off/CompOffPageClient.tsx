@@ -3,7 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Clock, Loader2, RefreshCw, Inbox } from "lucide-react";
+import { Clock, Loader2, Inbox } from "lucide-react";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
@@ -26,6 +27,7 @@ import { InputField, SelectField, TextAreaField } from "@/components/dashboard/u
 import { ProjectSelectField } from "@/components/comp-off/ProjectSelectField";
 import { Badge } from "@/components/ui/badge";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
+import { RequestStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { WtLoadingOverlay } from "@/components/dashboard/ui/WtLoader";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
@@ -816,29 +818,6 @@ export function CompOffPageClient({
     return () => window.clearTimeout(id);
   }, [showMyCompOff, myRequestsFrom, myRequestsTo, loadMyRequests]);
 
-  useEffect(() => {
-    if (!showMyCompOff) return;
-    void loadMyRequests();
-    void loadBalanceAndGrants();
-  }, [showMyCompOff, loadMyRequests, loadBalanceAndGrants]);
-
-  useEffect(() => {
-    if (!showMyCompOff) return;
-    const refreshEmployeeView = () => {
-      void loadMyRequests();
-      void loadBalanceAndGrants();
-    };
-    window.addEventListener("focus", refreshEmployeeView);
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") refreshEmployeeView();
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      window.removeEventListener("focus", refreshEmployeeView);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [showMyCompOff, loadMyRequests, loadBalanceAndGrants]);
-
   async function submitEarn() {
     const workedDate = normalizeToApiDate(earnForm.worked_date.trim());
     const projectCode = earnForm.project_code.trim();
@@ -920,11 +899,11 @@ export function CompOffPageClient({
   const pageBody = (
     <section>
       {!forcedTab && canReviewTeam ? (
-        <div className="flex items-center justify-between border-b border-wt-border px-5 pb-4 pt-6">
+        <div className="flex items-center justify-between border-b border-wt-border/80 px-5 pb-4 pt-6">
           <Tabs value={mainTab} onValueChange={(value) => setMainTab(value as "my" | "team")} className="gap-0">
-            <TabsList aria-label="Comp-off views" className="gap-3 bg-transparent p-0">
-              <TabsTrigger value="my" className="cursor-pointer">My Comp-off</TabsTrigger>
-              <TabsTrigger value="team" className="cursor-pointer">Team Review</TabsTrigger>
+            <TabsList aria-label="Comp-off views" variant="default">
+              <TabsTrigger value="my">My Comp-off</TabsTrigger>
+              <TabsTrigger value="team">Team Review</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -933,9 +912,9 @@ export function CompOffPageClient({
         <div className={`${!embedded ? "pt-6" : ""} space-y-4 px-5 pb-5`}>
           {!embedded ? <h2 className="text-xl font-semibold tracking-tight text-wt-text">Comp-off</h2> : null}
           <Tabs value={compOffSubTab} onValueChange={(v) => setCompOffSubTab(v as "apply" | "view")} orientation="horizontal">
-            <TabsList variant="line" className="h-9 gap-1">
-              <TabsTrigger value="apply" className="px-3 text-xs font-medium cursor-pointer">Apply for Compensation Off</TabsTrigger>
-              <TabsTrigger value="view" className="px-3 text-xs font-medium cursor-pointer">History</TabsTrigger>
+            <TabsList variant="line" className="w-full justify-start border-b border-wt-border/80">
+              <TabsTrigger value="apply">Apply for Compensation Off</TabsTrigger>
+              <TabsTrigger value="view">History</TabsTrigger>
             </TabsList>
 
             <TabsContent value="apply" className="pt-6">
@@ -1041,16 +1020,11 @@ export function CompOffPageClient({
                     <span className="text-xs text-muted-foreground">To</span>
                     <DatePicker label="" value={myRequestsTo} onChange={(v) => { setMyRequestsTo(v); myRequestsCacheRef.current.clear(); }} />
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    type="button"
+                  <RefreshIconButton
                     onClick={() => runAction("Refresh", loadMyRequests)}
                     disabled={actionLoading}
-                    className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
-                  >
-                    <RefreshCw className={`size-4 ${actionLoading ? "animate-spin" : ""}`} />
-                  </Button>
+                    loading={actionLoading}
+                  />
                 </div>
               </div>
 
@@ -1112,21 +1086,7 @@ export function CompOffPageClient({
                               {days}
                             </TableCell>
                             <TableCell className="px-3 py-2.5 whitespace-nowrap">
-                              <Badge
-                                className={
-                                  status === "APPROVED"
-                                    ? `rounded-full border-0 font-normal text-[11px] ${filledBadgeClass("success")}`
-                                    : status === "REJECTED"
-                                      ? `rounded-full border-0 font-normal text-[11px] ${filledBadgeClass("danger")}`
-                                      : "rounded-full border-0 font-normal text-[11px] bg-muted/60 text-muted-foreground"
-                                }
-                              >
-                                {status === "APPROVED"
-                                  ? "Approved"
-                                  : status === "REJECTED"
-                                    ? "Rejected"
-                                    : "Pending"}
-                              </Badge>
+                              <RequestStatusBadge status={status} />
                             </TableCell>
                           </TableRow>
                         );
@@ -1198,9 +1158,16 @@ export function CompOffPageClient({
                   }
                 />
               ) : null}
-              <Button variant="ghost" size="icon" type="button" className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground" disabled={actionLoading} onClick={() => runAction(compOffTeamReviewActionLabel("COMP_OFF", "fetch"), () => loadTeamRequests({ raiseOnError: true }))}>
-                <RefreshCw className={`size-4 ${actionLoading ? "animate-spin" : ""}`} />
-              </Button>
+              <RefreshIconButton
+                onClick={() =>
+                  runAction(compOffTeamReviewActionLabel("COMP_OFF", "fetch"), () =>
+                    loadTeamRequests({ raiseOnError: true })
+                  )
+                }
+                disabled={actionLoading}
+                loading={actionLoading}
+                label="Refresh Team Requests"
+              />
             </div>
           </div>
 
@@ -1278,9 +1245,10 @@ export function CompOffPageClient({
                       !isRowUpdating &&
                       (canManagerActEarn || canManagerActUsage || canHrActUsage);
                     const renderStatusBadge = (value: string) => {
-                      if (value === "\u2014" || !value) return <span className="text-muted-foreground">{value || "\u2014"}</span>;
-                      const tone = value === "APPROVED" ? "success" : value === "PENDING" ? "warning" : value === "REJECTED" ? "danger" : "neutral";
-                      return <Badge variant="secondary" className={filledBadgeClass(tone)}>{value}</Badge>;
+                      if (value === "\u2014" || !value) {
+                        return <span className="text-muted-foreground">{value || "\u2014"}</span>;
+                      }
+                      return <RequestStatusBadge status={value} />;
                     };
                     return (
                       <TableRow key={`${id || idx}`}>

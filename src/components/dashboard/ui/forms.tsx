@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { FORM_FIELD_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { formatUILabel } from "@/utils/titleCase";
+import { formatUiStatusLabel } from "@/utils/statusLabel";
 import {
   API_DATE_PLACEHOLDER,
   apiDateFieldValue,
@@ -87,7 +88,7 @@ export function ApiDateField({
   return (
     <Field className={cn(FORM_FIELD_CLASS, className)}>
       <FieldLabel label={label} required={required} htmlFor={fieldId} />
-      <InputGroup className="h-10">
+      <InputGroup className="h-11">
         <InputGroupInput
           id={fieldId}
           type="text"
@@ -137,7 +138,7 @@ export function ApiDateField({
 
 export function ReadonlyDateField({ value, className }: { value: string; className?: string }) {
   return (
-    <InputGroup className={cn("h-10 opacity-80", className)}>
+    <InputGroup className={cn("h-11 opacity-80", className)}>
       <InputGroupInput
         type="text"
         className="api-date-field"
@@ -261,9 +262,17 @@ export function TextAreaField({
 export type SelectFieldOption = string | { value: string; label: string };
 
 function normalizeSelectOptions(options: SelectFieldOption[]): SearchableSelectOption[] {
-  return options.map((opt) =>
-    typeof opt === "string" ? { value: opt, label: opt } : { value: opt.value, label: opt.label }
-  );
+  return options.map((opt) => {
+    if (typeof opt !== "string") {
+      return { value: opt.value, label: opt.label };
+    }
+    // String enums (PENDING, IN_PROGRESS, …) get human labels; plain text stays readable.
+    const looksLikeCode = /^[A-Z][A-Z0-9_]*$/.test(opt) || opt.includes("_");
+    return {
+      value: opt,
+      label: looksLikeCode ? formatUiStatusLabel(opt) : opt,
+    };
+  });
 }
 
 function optionsFromSelectChildren(children: ReactNode): SearchableSelectOption[] {

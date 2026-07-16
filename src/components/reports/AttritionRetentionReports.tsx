@@ -86,7 +86,7 @@ function ReportMetricCard({
       : accent === "emerald"
         ? "text-emerald-700"
         : accent === "sky"
-          ? "text-sky-700"
+          ? "text-[var(--wt-brand)]"
           : accent === "amber"
             ? "text-amber-700"
             : "text-wt-text";

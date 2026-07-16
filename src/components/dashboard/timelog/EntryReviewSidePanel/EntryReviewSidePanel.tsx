@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
+import { formatUiStatusLabel } from "@/utils/statusLabel";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
 import { formatDayHeader } from "@/utils/timelog/weekDates";
 import { useMemo, useState } from "react";
@@ -37,6 +38,17 @@ export function EntryReviewSidePanel({
     return "";
   }, [row.manager_comment_by_date, dayKeys]);
   const [remark, setRemark] = useState(existingRemark);
+
+  const hasActionableDays = useMemo(
+    () =>
+      dayKeys.some((key) => {
+        const hours = row.hours_by_date[key];
+        if (!hours || hours === "0" || hours === "0.00") return false;
+        const status = String(row.status_by_date?.[key] ?? "").toUpperCase();
+        return status === "SUBMITTED" || status === "REJECTED";
+      }),
+    [dayKeys, row.hours_by_date, row.status_by_date]
+  );
 
   const taskLabel = TASK_CATEGORY_LABELS[row.task_category] ?? row.task_category;
 
@@ -88,7 +100,7 @@ export function EntryReviewSidePanel({
                     <div className="entry-review-day-hours">{hours}h</div>
                     {status ? (
                       <span className={`entry-review-status entry-review-status--${status.toLowerCase()}`}>
-                        {status}
+                        {formatUiStatusLabel(status)}
                       </span>
                     ) : null}
                     {row.manager_comment_by_date?.[key] ? (
@@ -115,7 +127,7 @@ export function EntryReviewSidePanel({
         <div className="entry-review-footer">
           {actionLoading ? (
             <WtLoaderCentered label="" />
-          ) : (
+          ) : hasActionableDays ? (
             <>
               <Button
                 variant="destructive"
@@ -134,6 +146,10 @@ export function EntryReviewSidePanel({
                 Approve
               </Button>
             </>
+          ) : (
+            <p className="entry-review-footer-hint text-sm text-wt-text-muted">
+              No submitted entries to approve or reject for this row.
+            </p>
           )}
         </div>
       </div>

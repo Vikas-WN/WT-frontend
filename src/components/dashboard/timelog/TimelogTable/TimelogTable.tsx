@@ -2,6 +2,7 @@
 
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
+import { formatUiStatusLabel } from "@/utils/statusLabel";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
 import { formatTimelogTableDate } from "@/utils/timelog/weekDates";
 import "./TimelogTable.css";
@@ -84,7 +85,7 @@ export function TimelogTable({
                     <span
                       className={`timelog-table-status ${statusClass(entry.status)}`}
                     >
-                      {entry.status}
+                      {formatUiStatusLabel(entry.status)}
                     </span>
                   </td>
                   <td className="max-w-[200px] truncate text-wt-text-muted text-xs">

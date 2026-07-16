@@ -1041,6 +1041,9 @@ export const hrmsService = {
     projectCode: string;
     requestedEndDate: string;
     reason?: string;
+    user_email?: string;
+    project_code?: string;
+    requested_end_date?: string;
   }) {
     return apiClient.post<ApiEnvelope<number>>(endpoints.allocation.extensionRequest, {
       contentType: "application/json",
@@ -1094,7 +1097,11 @@ export const hrmsService = {
   }) {
     const res = await apiClient.put<ApiEnvelope<unknown>>(endpoints.allocation.extensionStatus, {
       contentType: "application/json",
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        request_id: payload.requestId,
+        requestId: payload.requestId,
+        status: payload.status,
+      }),
     });
     return res;
   },

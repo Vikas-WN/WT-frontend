@@ -10,8 +10,13 @@ export function LearningHubRedirect({ feature }: { feature: string }) {
       <p className="text-sm text-wt-text-muted">
         Open a training from the library, then use the tabs inside that training to manage {feature.toLowerCase()}.
       </p>
-      <Button variant="brand" size="sm" render={<Link href="/dashboard/learning-development/trainings" />}>
-        Browse trainings
+      <Button
+        variant="brand"
+        size="sm"
+        nativeButton={false}
+        render={<Link href="/dashboard/learning-development/trainings" />}
+      >
+        Browse Trainings
       </Button>
     </div>
   );

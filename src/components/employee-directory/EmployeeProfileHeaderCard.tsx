@@ -106,7 +106,7 @@ export function EmployeeProfileHeaderCard({
       icon: <Mail className="h-3.5 w-3.5" aria-hidden />,
       label: "Email",
       value: email ? (
-        <a href={`mailto:${email}`} className="text-blue-600 hover:underline">
+        <a href={`mailto:${email}`} className="text-[var(--wt-brand)] hover:underline">
           {email}
         </a>
       ) : (

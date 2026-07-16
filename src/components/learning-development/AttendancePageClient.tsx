@@ -25,6 +25,7 @@ import { traineeTableRowsFromParticipants } from "@/utils/learning/participants"
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
 import { toPagedRows } from "@/utils/apiRows";
 import { hrmsService } from "@/services/hrms.service";
+import { EnrollmentStatusBadge } from "@/components/learning-development/EnrollmentStatusBadge";
 
 type AttendanceStatus = "PRESENT" | "ABSENT";
 
@@ -196,7 +197,9 @@ export function AttendancePageClient({ fixedTrainingId }: { fixedTrainingId?: st
                 {traineeRows.map((row) => (
                   <TableRow key={row.key}>
                     <TableCell className="px-3 py-2 whitespace-nowrap">{row.name}</TableCell>
-                    <TableCell className="px-3 py-2 whitespace-nowrap">{row.enrollmentStatus}</TableCell>
+                    <TableCell className="px-3 py-2 whitespace-nowrap">
+                      <EnrollmentStatusBadge status={row.enrollmentStatus} />
+                    </TableCell>
                     <TableCell className="px-3 py-2">
                       <AttendanceToggle
                         value={attendanceByUser[row.userId] ?? "PRESENT"}

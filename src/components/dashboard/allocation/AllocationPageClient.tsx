@@ -75,6 +75,7 @@ import {
   formatAllocatedHoursPercentLabel,
 } from "@/utils/dashboard/validation";
 import { formatApiDateDisplay, normalizeToApiDate } from "@/utils/apiDate";
+import { formatUiStatusLabel } from "@/utils/statusLabel";
 import {
   allocationPercentLabelByCode,
   ALL_ALLOCATION_PERCENT_LABELS,
@@ -125,7 +126,8 @@ import {
   ALLOCATION_LIST_SORT_OPTIONS,
   toggleColumnSort,
 } from "@/utils/listSort";
-import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
+import { IconPencil, IconTrash } from "@/components/dashboard/ui/icons";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
@@ -3456,19 +3458,11 @@ export function AllocationPageClient() {
                                 <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-3">
                                   <div className="flex flex-wrap items-center justify-between gap-2">
                                     <p className="text-sm font-medium">All Projects</p>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      type="button"
-                                      className="px-3 py-2 text-sm"
-                                      disabled={hrProjectsQ.isFetching}
+                                    <RefreshIconButton
                                       onClick={() => refreshHrProjects()}
-                                    >
-                                      <IconRefresh
-                                        className={`mr-1.5 inline size-4 ${hrProjectsQ.isFetching ? "animate-spin" : ""}`}
-                                      />
-                                      Refresh
-                                    </Button>
+                                      loading={hrProjectsQ.isFetching}
+                                      label="Refresh Projects"
+                                    />
                                   </div>
                                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                     <InputField
@@ -3519,9 +3513,8 @@ export function AllocationPageClient() {
                                               />
                                             </TableHead>
                                             <TableHead>Type</TableHead>
-                                            <TableHead>Start date</TableHead>
-                                            <TableHead>End date</TableHead>
-                                            <TableHead className="text-right w-20">Actions</TableHead>
+                                            <TableHead>Start Date</TableHead>
+                                            <TableHead>End Date</TableHead>
                                           </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -3544,26 +3537,6 @@ export function AllocationPageClient() {
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{typ}</TableCell>
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{startDate || "—"}</TableCell>
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{endDate || "—"}</TableCell>
-                                                <TableCell className="px-3 py-2 text-right">
-                                                  <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon-sm"
-                                                    className="text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600"
-                                                    aria-label={`Delete project ${name || code}`}
-                                                    title="Delete project"
-                                                    disabled={actionLoading || !code}
-                                                    onClick={() =>
-                                                      runAction("Delete project", async () => {
-                                                        throw new Error(
-                                                          "Project delete API is not available on backend yet."
-                                                        );
-                                                      })
-                                                    }
-                                                  >
-                                                    <IconTrash />
-                                                  </Button>
-                                                </TableCell>
                                               </TableRow>
                                             );
                                           })}
@@ -3651,7 +3624,7 @@ export function AllocationPageClient() {
                                           <TableRow className="hover:bg-transparent">
                                             <TableHead>
                                               <TableSortHeader
-                                                label="ALLOCATED PROJECT"
+                                                label="Allocated Project"
                                                 activeDirection={activeSortDirectionForColumn(
                                                   "allocated_project",
                                                   allocationListSortId,
@@ -3669,8 +3642,8 @@ export function AllocationPageClient() {
                                                 }
                                               />
                                             </TableHead>
-                                            <TableHead>EMPLOYEE NAME</TableHead>
-                                            <TableHead>PROJECT ROLE</TableHead>
+                                            <TableHead>Employee Name</TableHead>
+                                            <TableHead>Project Role</TableHead>
                                             <TableHead>
                                               ALLOCATION %
                                             </TableHead>
@@ -3696,7 +3669,7 @@ export function AllocationPageClient() {
                                             </TableHead>
                                             <TableHead>
                                               <TableSortHeader
-                                                label="BILLING STATUS"
+                                                label="Billing Status"
                                                 activeDirection={activeSortDirectionForColumn(
                                                   "billing_status",
                                                   allocationListSortId,
@@ -3714,8 +3687,8 @@ export function AllocationPageClient() {
                                                 }
                                               />
                                             </TableHead>
-                                            <TableHead>START DATE</TableHead>
-                                            <TableHead>END DATE</TableHead>
+                                            <TableHead>Start Date</TableHead>
+                                            <TableHead>End Date</TableHead>
                                             <TableHead className="text-right">ACTIONS</TableHead>
                                           </TableRow>
                                         </TableHeader>
@@ -3771,9 +3744,9 @@ export function AllocationPageClient() {
                                                     : ""
                                                 } ${
                                                   isHighlightedRow
-                                                    ? "bg-indigo-500/10"
+                                                    ? "bg-[var(--wt-brand-soft)]0/10"
                                                     : isSelectedEmployee
-                                                      ? "bg-indigo-500/5"
+                                                      ? "bg-[var(--wt-brand-soft)]0/5"
                                                       : ""
                                                 }`}
                                                 onClick={() => void loadEmployeeAllocationsForRow(row)}
@@ -3796,7 +3769,11 @@ export function AllocationPageClient() {
                                                   )}
                                                 </TableCell>
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.allocation_type ?? "—")}</TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.billing_status ?? row.billingStatus ?? "—")}</TableCell>
+                                                <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                  {formatUiStatusLabel(
+                                                    row.billing_status ?? row.billingStatus ?? ""
+                                                  )}
+                                                </TableCell>
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.start_date ?? "—")}</TableCell>
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.end_date ?? "—")}</TableCell>
                                                 <TableCell className="px-3 py-2 text-right">
@@ -3983,7 +3960,7 @@ export function AllocationPageClient() {
                                                     <TableRow
                                                       key={`${detailId || "emp-alloc"}-${detailIdx}`}
                                                       className={`border-t border-wt-border ${
-                                                        highlighted ? "bg-indigo-500/10 font-medium" : ""
+                                                        highlighted ? "bg-[var(--wt-brand-soft)]0/10 font-medium" : ""
                                                       }`}
                                                     >
                                                       <TableCell className="px-3 py-2 whitespace-nowrap">
@@ -4093,7 +4070,10 @@ export function AllocationPageClient() {
                                   setCreateProjectDialogOpen(false);
                                   setCreateProjectPrefillName("");
                                 }}
-                                onCreated={() => refreshHrProjects()}
+                                onCreated={() => {
+                                  refreshHrProjects();
+                                  void loadAllocationsForHr();
+                                }}
                                 activeProjectTypes={activeProjectTypes}
                                 enabled={hasAllocationAccess}
                                 allocationPercentOptions={allocationPercentOptions}

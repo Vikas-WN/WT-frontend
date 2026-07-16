@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { formatUILabel } from "@/utils/titleCase";
+import { formatUiStatusLabel, normalizeStatusKey } from "@/utils/statusLabel";
+import { formatEmployeeStatusLabel, normalizeEmployeeStatusKey } from "@/utils/userStatus";
 
 export function resolveProfilePhotoSrc(profile: Record<string, unknown> | null | undefined): string | null {
   if (!profile) return null;
@@ -189,7 +191,13 @@ export function ProfileField({
   fullWidth?: boolean;
   link?: boolean;
 }) {
-  const formatted = formatProfileFieldValue(value);
+  const labelKey = formatUILabel(label).toLowerCase();
+  let formatted = formatProfileFieldValue(value);
+  if (labelKey === "status" && formatted !== "—") {
+    formatted = normalizeEmployeeStatusKey(formatted)
+      ? formatEmployeeStatusLabel(formatted)
+      : formatUiStatusLabel(normalizeStatusKey(formatted) || formatted);
+  }
   const href = link && formatted !== "—" ? formatted : null;
   const spanClass = fullWidth ? "sm:col-span-2" : "";
 
@@ -202,7 +210,7 @@ export function ProfileField({
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-600 hover:underline"
+            className="text-[var(--wt-brand)] hover:underline"
           >
             {formatted}
           </a>

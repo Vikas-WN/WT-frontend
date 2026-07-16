@@ -8,10 +8,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
 import { toPagedRows } from "@/utils/apiRows";
-import {
-  formatActionErrorMessage,
-  formatActionSuccessMessage,
-} from "@/utils/actionToast";
+import { formatActionErrorMessage, formatActionSuccessMessage } from "@/utils/actionToast";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import {
   defaultInvitedEmployeesDateRange,
   filterInvitedRowsByCreatedAtRange,
@@ -328,15 +326,11 @@ export function EmployeePageClient() {
                 title="Invited Employees"
                 description="Invited employees within the selected date range."
                 headerAction={
-                  <Button
-                    variant="ghost"
-                    type="button"
-                    className="px-3 py-2"
+                  <RefreshIconButton
                     onClick={() => void refreshInvitedList()}
-                    disabled={invitedListLoading}
-                  >
-                    Refresh Employees
-                  </Button>
+                    loading={invitedListLoading}
+                    label="Refresh Employees"
+                  />
                 }
                 search={
                   <SearchInput

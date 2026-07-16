@@ -3,6 +3,15 @@
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { UI_COPY } from "@/constants/uiCopy";
+import {
+  MODAL_BODY_CLASS,
+  MODAL_FOOTER_CLASS,
+  MODAL_HEADER_CLASS,
+  MODAL_OVERLAY_CLASS,
+  MODAL_PANEL_CLASS,
+  SECTION_DESCRIPTION_CLASS,
+  SECTION_TITLE_CLASS,
+} from "@/components/dashboard/ui/uiLayout";
 import { cn } from "@/lib/utils";
 
 export function WtFormDialog({
@@ -33,33 +42,24 @@ export function WtFormDialog({
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      role="presentation"
-      onClick={onClose}
-    >
+    <div className={MODAL_OVERLAY_CLASS} role="presentation" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="wt-form-dialog-title"
-        className={cn(
-          "flex max-h-[min(92vh,880px)] w-full flex-col rounded-2xl border border-wt-border bg-wt-surface-1 shadow-xl",
-          maxWidthClass
-        )}
+        className={cn(MODAL_PANEL_CLASS, "wt-soft-in", maxWidthClass)}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="shrink-0 border-b border-wt-border px-5 py-4 md:px-6">
-          <h2 id="wt-form-dialog-title" className="text-base font-semibold text-wt-text">
+        <div className={MODAL_HEADER_CLASS}>
+          <h2 id="wt-form-dialog-title" className={SECTION_TITLE_CLASS}>
             {title}
           </h2>
-          {description ? (
-            <p className="mt-1 text-sm text-wt-text-muted">{description}</p>
-          ) : null}
+          {description ? <p className={SECTION_DESCRIPTION_CLASS}>{description}</p> : null}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 md:px-6">{children}</div>
+        <div className={MODAL_BODY_CLASS}>{children}</div>
 
-        <div className="flex shrink-0 justify-end gap-2 border-t border-wt-border px-5 py-4 md:px-6">
+        <div className={MODAL_FOOTER_CLASS}>
           <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
             {UI_COPY.cancel}
           </Button>

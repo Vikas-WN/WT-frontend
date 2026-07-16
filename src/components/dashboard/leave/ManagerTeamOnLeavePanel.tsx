@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -12,6 +11,7 @@ import {
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { useCallback, useEffect, useState } from "react";
 import { hrmsService, type ManagerTeamOnLeaveRow } from "@/services/hrms.service";
 import { todayApiDate } from "@/utils/apiDate";
@@ -54,9 +54,7 @@ export function ManagerTeamOnLeavePanel() {
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <InputField label="As of date" type="date" value={asOfDate} onChange={setAsOfDate} />
-          <Button variant="outline" type="button" className="px-3 py-2 h-10 border border-wt-border" onClick={() => void load()}>
-            Refresh
-          </Button>
+          <RefreshIconButton onClick={() => void load()} loading={loading} />
         </div>
       </div>
 

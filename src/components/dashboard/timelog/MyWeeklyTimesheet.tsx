@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { TimelogCalendar } from "@/components/dashboard/timelog/TimelogCalendar/TimelogCalendar";
 import { DayEntriesPanel } from "@/components/dashboard/timelog/DayEntriesPanel/DayEntriesPanel";
 import { DayEntryForm } from "@/components/dashboard/timelog/DayEntryForm/DayEntryForm";
@@ -55,17 +54,15 @@ export function MyWeeklyTimesheet() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle>My Time Logs</CardTitle>
-        <Button variant="ghost" size="icon" type="button" disabled={loading} onClick={() => reload()} aria-label="Refresh" title="Refresh" className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground">
-          <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
-        </Button>
+        <RefreshIconButton onClick={() => reload()} loading={loading} />
       </CardHeader>
       <CardContent className="space-y-4">
         <Tabs
           value={viewMode}
           onValueChange={(v) => setViewMode(v as "calendar" | "table")}
         >
-          <TabsList aria-label="View mode" className="gap-3 bg-transparent p-0">
-            <TabsTrigger value="table">All entries</TabsTrigger>
+          <TabsList aria-label="View mode" variant="default">
+            <TabsTrigger value="table">All Entries</TabsTrigger>
             <TabsTrigger value="calendar">Add Time Logs</TabsTrigger>
           </TabsList>
         </Tabs>

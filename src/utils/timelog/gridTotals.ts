@@ -40,6 +40,6 @@ export function dailyHourHighlight(total: number): DailyHourHighlight {
 
 export function dailyHourHighlightClass(highlight: DailyHourHighlight): string {
   if (highlight === "high") return "bg-amber-100 text-amber-900";
-  if (highlight === "low") return "bg-sky-100 text-sky-900";
+  if (highlight === "low") return "bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]";
   return "";
 }

@@ -76,7 +76,7 @@ export function ParticipantsPageClient() {
         {trainingId ? (
           <Link
             href={`/dashboard/learning-development/trainings/${encodeURIComponent(trainingId)}?tab=participants`}
-            className="text-sm font-medium text-indigo-600 hover:underline self-center"
+            className="text-sm font-medium text-[var(--wt-brand)] hover:underline self-center"
           >
             Detail view
           </Link>

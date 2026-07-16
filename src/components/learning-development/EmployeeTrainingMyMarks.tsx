@@ -137,7 +137,7 @@ export function EmployeeTrainingMyMarks({
           <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
             Overall score
           </p>
-          <p className="text-2xl font-semibold mt-1 text-indigo-700">
+          <p className="text-2xl font-semibold mt-1 text-[var(--wt-brand)]">
             {marks.finalScorePercent != null ? `${marks.finalScorePercent}%` : "—"}
           </p>
           <p className="text-xs text-wt-text-muted mt-1">

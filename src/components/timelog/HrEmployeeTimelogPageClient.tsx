@@ -137,7 +137,7 @@ export function HrEmployeeTimelogPageClient() {
           <p className="mt-2 text-sm text-wt-text-muted">
             Employee time log lookup is available to HR and admin only.
           </p>
-          <Link href={DASHBOARD_ROUTES.timelog} className="mt-4 inline-block text-sm text-blue-600 hover:underline">
+          <Link href={DASHBOARD_ROUTES.timelog} className="mt-4 inline-block text-sm text-[var(--wt-brand)] hover:underline">
             Back to Time Log
           </Link>
         </div>
@@ -149,7 +149,7 @@ export function HrEmployeeTimelogPageClient() {
     <DashboardPageShell>
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 shadow-sm">
-        <div className="border-b border-wt-border bg-gradient-to-r from-sky-50/80 via-white to-blue-50/50 px-5 py-6 md:px-7">
+        <div className="border-b border-wt-border bg-wt-surface-2/60 px-5 py-6 md:px-7">
           <h3 className="text-lg font-semibold">All Employee Time Logs</h3>
           <p className="mt-1 max-w-2xl text-sm text-wt-text-muted">
             View time log entries for any employee on a given date (

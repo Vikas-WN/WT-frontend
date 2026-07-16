@@ -87,6 +87,7 @@ async function allocateManagerOnProject({
     allocationType,
     billingStatus,
     lockedInDate,
+    isManager: true,
   });
 }
 
@@ -190,11 +191,22 @@ export function CreateProjectDialog({
       }));
 
       const pmEmail = pmFields.email.trim();
+      const dmEmail = dmFields.email.trim();
+
+      if (dmEmail) {
+        await allocateManagerOnProject({
+          email: dmEmail,
+          fields: { ...dmFields, email: dmEmail, role: "Delivery Manager" },
+          projectCode,
+          projectStart: startDate,
+          projectEnd: endDate,
+        });
+      }
 
       if (pmEmail) {
         await allocateManagerOnProject({
           email: pmEmail,
-          fields: { ...pmFields, email: pmEmail },
+          fields: { ...pmFields, email: pmEmail, role: "Project Manager" },
           projectCode,
           projectStart: startDate,
           projectEnd: endDate,
@@ -305,7 +317,6 @@ export function CreateProjectDialog({
           allocationPercentOptions={allocationPercentOptions}
           enabled={enabled}
           percentDesignation="Delivery Manager"
-          managerContactOnly
         />
 
         <ManagerAllocationFields

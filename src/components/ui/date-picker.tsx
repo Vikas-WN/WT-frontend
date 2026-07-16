@@ -6,6 +6,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverTrigger, PopoverPortal, PopoverPositioner, PopoverContent } from "@/components/ui/popover"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { parseApiDate, formatApiDate, apiDateFieldValue } from "@/utils/apiDate"
+import { FORM_CONTROL_CLASS } from "@/components/dashboard/ui/uiLayout"
 import { cn } from "@/lib/utils"
 
 function formatDisplayDate(value: string): string {
@@ -72,12 +73,9 @@ export function DatePicker({
         <PopoverTrigger
           disabled={disabled}
           className={cn(
-            "flex h-10 w-full items-center gap-2 rounded-lg border border-input bg-transparent px-3 text-sm transition-colors",
-            "hover:bg-accent/50",
-            "focus-visible:border-ring focus-visible:ring-0",
-            "disabled:pointer-events-none disabled:opacity-50 disabled:bg-input/50",
+            FORM_CONTROL_CLASS,
+            "flex cursor-pointer items-center gap-2 hover:bg-wt-surface-2/70",
             "aria-invalid:border-destructive",
-            "cursor-pointer",
             displayText ? "text-foreground" : "text-muted-foreground"
           )}
         >

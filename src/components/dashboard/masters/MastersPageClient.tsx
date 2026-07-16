@@ -73,7 +73,7 @@ import {
   formatSecondarySkillsForProfile,
 } from "@/components/dashboard/ui/profile";
 import { DataTable } from "@/components/dashboard/ui/DataTable";
-import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
@@ -3122,16 +3122,17 @@ export function MastersPageClient() {
                 <PageSectionHeader
                   title="KPI Definitions"
                   action={
-                    <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
-                                  runAction("Load KPI definitions", async () => {
-                                    const res = await hrmsService.getKpis({ limit: "500", offset: "0" });
-                                    setKpis(toRows((res as { data?: unknown[] }).data ?? res));
-                                  })
-                                }
-                                disabled={actionLoading}
-                              >
-                                Refresh
-                              </Button>
+                    <RefreshIconButton
+                      onClick={() =>
+                        runAction("Load KPI definitions", async () => {
+                          const res = await hrmsService.getKpis({ limit: "500", offset: "0" });
+                          setKpis(toRows((res as { data?: unknown[] }).data ?? res));
+                        })
+                      }
+                      disabled={actionLoading}
+                      loading={actionLoading}
+                      label="Refresh Kpis"
+                    />
                   }
                 />
                 <div className="mt-6">
@@ -3206,7 +3207,11 @@ export function MastersPageClient() {
                                   >
                                     Assign Role
                                   </Button>
-                                  <Button variant="ghost" size="sm" type="button" className="px-3 py-2 text-sm" disabled={actionLoading} onClick={() =>
+                                  <RefreshIconButton
+                                    disabled={actionLoading}
+                                    loading={actionLoading}
+                                    label="Refresh Emails"
+                                    onClick={() =>
                                       runAction("Refresh employee list", async () => {
                                         const res = await hrmsService.getOnboardList({ page: "0", size: "200" });
                                         const rows = toPagedRows((res as { data?: unknown }).data ?? res);
@@ -3225,9 +3230,7 @@ export function MastersPageClient() {
                                         setRoleAssignUsers(users);
                                       })
                                     }
-                                  >
-                                    Refresh Emails
-                                  </Button>
+                                  />
                                 </div>
                               </div>
                             </details>

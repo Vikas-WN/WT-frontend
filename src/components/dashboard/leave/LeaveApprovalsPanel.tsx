@@ -16,6 +16,7 @@ import {
 } from "@/components/dashboard/ui/wtTable";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { LeaveRequestStatusBadge } from "@/components/dashboard/leave/LeaveRequestStatusBadge";
 import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
 import {
@@ -30,6 +31,7 @@ import {
   applyLeaveTeamRequestDecisions,
   patchLeaveTeamRequestStatus,
   requestFinalStatus,
+  requestRejectionReason,
   updateUserRequestStatus,
   type UserRequestStatusValue,
 } from "@/utils/userRequest";
@@ -102,6 +104,10 @@ export function LeaveApprovalsPanel({
         row.requestType,
         requestFinalStatus(row),
         row.comments,
+        row.manager_reason,
+        row.managerReason,
+        row.hr_reason,
+        row.hrReason,
       ]
         .map((value) => String(value ?? "").toLowerCase())
         .join(" ");
@@ -192,15 +198,12 @@ export function LeaveApprovalsPanel({
                   onChange={(event) => setSearch(event.target.value)}
                   aria-label="Search leave and WFH approvals"
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-10 shrink-0"
-                  disabled={actionLoading || inboxQ.isFetching}
+                <RefreshIconButton
                   onClick={() => void runAction("Refresh leave and WFH approvals", refreshInbox)}
-                >
-                  Refresh
-                </Button>
+                  disabled={actionLoading}
+                  loading={inboxQ.isFetching}
+                  label="Refresh Approvals"
+                />
               </div>
             </div>
 
@@ -242,6 +245,9 @@ export function LeaveApprovalsPanel({
                       );
                       const isUpdating = statusUpdatingId === requestId;
                       const canAct = canPrimaryManagerActOnLeave(rowRecord, actorEmail);
+                      const rowStatus = requestFinalStatus(rowRecord);
+                      const rejectionReason =
+                        rowStatus === "REJECTED" ? requestRejectionReason(rowRecord) : null;
 
                       return (
                         <TableRow key={`${requestId || "approval"}-${idx}`}>
@@ -257,8 +263,18 @@ export function LeaveApprovalsPanel({
                               isHalfDay
                             )}
                           </TableCell>
-                          <TableCell className="px-3 py-2.5 whitespace-nowrap">
-                            <LeaveRequestStatusBadge status={requestFinalStatus(rowRecord)} />
+                          <TableCell className="px-3 py-2.5">
+                            <div className="flex flex-col items-start gap-1">
+                              <LeaveRequestStatusBadge status={rowStatus} />
+                              {rejectionReason ? (
+                                <p
+                                  className="max-w-[14rem] truncate text-xs text-rose-700/90"
+                                  title={rejectionReason}
+                                >
+                                  {rejectionReason}
+                                </p>
+                              ) : null}
+                            </div>
                           </TableCell>
                           <TableCell className="px-3 py-2.5 whitespace-nowrap tabular-nums">
                             {formatLeaveDaysCount(fromDate, toDate, isHalfDay)}

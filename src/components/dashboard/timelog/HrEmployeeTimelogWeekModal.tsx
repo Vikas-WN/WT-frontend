@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SelectField } from "@/components/dashboard/ui/forms";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { WeeklyTimelogGrid } from "@/components/dashboard/timelog/WeeklyTimelogGrid";
 import { hrmsService } from "@/services/hrms.service";
 import { projectOptionsFromPayload, type TimelogOptionsPayload } from "@/utils/timelog/categories";
@@ -150,9 +151,7 @@ export function HrEmployeeTimelogWeekModal({
               onChange={onWeekStartChange}
               options={weekOptions}
             />
-            <Button variant="outline" size="sm" type="button" disabled={loading} onClick={() => void loadWeek()}>
-              {loading ? "Loading\u2026" : "Refresh"}
-            </Button>
+            <RefreshIconButton onClick={() => void loadWeek()} loading={loading} />
           </div>
 
           {error ? (

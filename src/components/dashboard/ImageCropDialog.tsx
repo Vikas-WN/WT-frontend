@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { Button } from "@/components/ui/button";
 
 export function ImageCropDialog({
   imageSrc: initialSrc,
@@ -83,21 +84,13 @@ export function ImageCropDialog({
           />
         </div>
 
-        <div className="flex gap-2">
-          <button
-            type="button"
-            className="btn-primary flex-1"
-            onClick={handleCrop}
-          >
+        <div className="flex gap-3">
+          <Button type="button" variant="brand" className="flex-1" onClick={handleCrop}>
             Crop & Save
-          </button>
-          <button
-            type="button"
-            className="btn-ghost flex-1"
-            onClick={onCancel}
-          >
+          </Button>
+          <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>
             Cancel
-          </button>
+          </Button>
         </div>
       </div>
       <canvas ref={canvasRef} className="sr-only" />

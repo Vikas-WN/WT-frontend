@@ -1,4 +1,5 @@
 import type { ClientProjectSummary, ClientRecord } from "@/types/client";
+import { toRows } from "@/utils/apiRows";
 
 function readString(row: Record<string, unknown>, ...keys: string[]): string {
   for (const key of keys) {
@@ -71,20 +72,9 @@ export function parseClientRow(row: Record<string, unknown>): ClientRecord | nul
 }
 
 function parseClientItems(payload: unknown): ClientRecord[] {
-  if (Array.isArray(payload)) {
-    return payload
-      .map((row) => parseClientRow(row as Record<string, unknown>))
-      .filter((row): row is ClientRecord => Boolean(row));
-  }
-  if (payload && typeof payload === "object") {
-    const items = (payload as Record<string, unknown>).items;
-    if (Array.isArray(items)) {
-      return items
-        .map((row) => parseClientRow(row as Record<string, unknown>))
-        .filter((row): row is ClientRecord => Boolean(row));
-    }
-  }
-  return [];
+  return toRows(payload)
+    .map((row) => parseClientRow(row))
+    .filter((row): row is ClientRecord => Boolean(row));
 }
 
 export function parseClientList(data: unknown): ClientRecord[] {
@@ -93,11 +83,12 @@ export function parseClientList(data: unknown): ClientRecord[] {
   if (typeof data !== "object") return [];
 
   const envelope = data as Record<string, unknown>;
-  const nested = envelope.data;
-  if (nested !== undefined) {
-    const fromNested = parseClientItems(nested);
+  if (envelope.data !== undefined) {
+    const fromNested = parseClientItems(envelope.data);
     if (fromNested.length) return fromNested;
   }
+  const fromClients = parseClientItems(envelope.clients);
+  if (fromClients.length) return fromClients;
   return parseClientItems(envelope);
 }
 

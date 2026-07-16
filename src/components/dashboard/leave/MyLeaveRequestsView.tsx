@@ -22,6 +22,7 @@ import {
   formatApprovalStageLabel,
   requestFinalStatus,
   requestManagerStatus,
+  requestRejectionReason,
 } from "@/utils/userRequest";
 import {
   activeSortDirectionForColumn,
@@ -30,7 +31,8 @@ import {
 } from "@/utils/listSort";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { IconPencil, IconTrash } from "@/components/dashboard/ui/icons";
-import { RefreshCw, Inbox } from "lucide-react";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
+import { Inbox } from "lucide-react";
 import { formatUserRequestTypeLabel } from "@/utils/actionToast";
 
 type SortOption = ListSortOption<Record<string, unknown>>;
@@ -86,16 +88,11 @@ export function MyLeaveRequestsView({
               <DatePicker value={toDate ?? ""} onChange={(v) => onToDateChange?.(v)} />
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            type="button"
+          <RefreshIconButton
             onClick={onRefresh}
-            disabled={actionLoading || loading}
-            className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
-          >
-            <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
-          </Button>
+            disabled={actionLoading}
+            loading={loading}
+          />
         </div>
       </div>
 
@@ -150,6 +147,10 @@ export function MyLeaveRequestsView({
                 const finalStatus = requestFinalStatus(rowRecord);
                 const managerStatus = requestManagerStatus(rowRecord);
                 const isPending = finalStatus === "PENDING";
+                const rejectionReason =
+                  managerStatus === "REJECTED" || finalStatus === "REJECTED"
+                    ? requestRejectionReason(rowRecord)
+                    : null;
                 return (
                     <TableRow key={`${requestId || "req"}-${idx}`}>
                     <TableCell className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">
@@ -171,17 +172,27 @@ export function MyLeaveRequestsView({
                       </TableCell>
                     ) : null}
                     <TableCell className="px-3 py-2.5 whitespace-nowrap">
-                      <Badge
-                        className={
-                          managerStatus === "APPROVED"
-                            ? `rounded-full border-0 font-normal ${filledBadgeClass("success")}`
-                            : managerStatus === "REJECTED"
-                              ? `rounded-full border-0 font-normal ${filledBadgeClass("danger")}`
-                              : "rounded-full border-0 font-normal bg-muted/60 text-muted-foreground"
-                        }
-                      >
-                        {formatApprovalStageLabel(managerStatus)}
-                      </Badge>
+                      <div className="flex flex-col items-start gap-1">
+                        <Badge
+                          className={
+                            managerStatus === "APPROVED"
+                              ? `rounded-full border-0 font-normal ${filledBadgeClass("success")}`
+                              : managerStatus === "REJECTED"
+                                ? `rounded-full border-0 font-normal ${filledBadgeClass("danger")}`
+                                : "rounded-full border-0 font-normal bg-muted/60 text-muted-foreground"
+                          }
+                        >
+                          {formatApprovalStageLabel(managerStatus)}
+                        </Badge>
+                        {rejectionReason ? (
+                          <p
+                            className="max-w-[14rem] truncate text-xs text-rose-700/90"
+                            title={rejectionReason}
+                          >
+                            {rejectionReason}
+                          </p>
+                        ) : null}
+                      </div>
                     </TableCell>
                     <TableCell className="px-3 py-2.5 max-w-[200px] truncate text-muted-foreground">
                       {String(row.comments ?? "—")}

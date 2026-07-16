@@ -18,6 +18,7 @@ import { HrEmployeeTimelogWeekModal } from "@/components/dashboard/timelog/HrEmp
 import { HrMonthlyTimelogSummary } from "@/components/dashboard/timelog/HrMonthlyTimelogSummary";
 import { MyWeeklyTimesheet } from "@/components/dashboard/timelog/MyWeeklyTimesheet";
 import { ProjectTimelogPanel } from "@/components/dashboard/timelog/ProjectTimelogPanel/ProjectTimelogPanel";
+import { formatUiStatusLabel } from "@/utils/statusLabel";
 import {
   currentMonthRef,
   type MonthRef,
@@ -38,8 +39,8 @@ import { lastSevenDaysInvitedEmployeesDateRange } from "@/utils/dashboard/invite
 import { compareApiDates } from "@/utils/apiDate";
 import type { DayTimelogEntry } from "@/hooks/timelog/useDayTimelog.types";
 import { timelogViewerRoles } from "@/utils/timelog/viewerRoles";
-import { RefreshCw } from "lucide-react";
 import { showErrorToast } from "@/lib/toast";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 
 function unwrapPayload<T>(response: unknown): T {
   return ((response as { data?: T }).data ?? response) as T;
@@ -48,7 +49,7 @@ function unwrapPayload<T>(response: unknown): T {
 function entryStatusClass(status: string): string {
   const map: Record<string, string> = {
     DRAFT: "rounded-md bg-wt-surface-3 px-2 py-0.5 text-xs font-medium text-wt-text-muted",
-    SUBMITTED: "rounded-md bg-sky-500/15 px-2 py-0.5 text-xs font-medium text-sky-300",
+    SUBMITTED: "rounded-md bg-[var(--wt-brand-soft)] px-2 py-0.5 text-xs font-medium text-[var(--wt-brand)]",
     APPROVED: "rounded-md bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-300",
     REJECTED: "rounded-md bg-rose-500/15 px-2 py-0.5 text-xs font-medium text-rose-300",
   };
@@ -72,7 +73,8 @@ export function TimelogPageClient() {
   const canSeeTeamTab = hasManagerAccess || hasHrAccess || hasAdminAccess;
   const isTeamView = subTab === "team";
   const isProjectView = subTab === "projects";
-  const canManagerApprove = isTeamView && (hasManagerAccess || hasAdminAccess) && !hasHrAccess;
+  const canManagerApprove =
+    isTeamView && (hasManagerAccess || hasAdminAccess) && !(hasHrAccess && !hasManagerAccess && !hasAdminAccess);
   const isHrTeamView = isTeamView && hasHrAccess && !canManagerApprove;
 
   const [fromDate, setFromDate] = useState(
@@ -341,20 +343,10 @@ export function TimelogPageClient() {
                       >
                         Last 7 Days
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        type="button"
-                        disabled={entriesLoading}
+                      <RefreshIconButton
                         onClick={() => void loadEmployeeEntries()}
-                        aria-label="Refresh"
-                        title="Refresh"
-                        className="h-10 w-10"
-                      >
-                        <RefreshCw
-                          className={`size-4 ${entriesLoading ? "animate-spin" : ""}`}
-                        />
-                      </Button>
+                        loading={entriesLoading}
+                      />
                     </div>
                   }
                 />
@@ -423,7 +415,9 @@ export function TimelogPageClient() {
                               <td className="px-2 py-2 max-w-[200px] truncate">{entry.description || "—"}</td>
                               <td className="px-2 py-2 text-center tabular-nums">{entry.hours}h</td>
                               <td className="px-2 py-2 text-center">
-                                <span className={entryStatusClass(entry.status)}>{entry.status}</span>
+                                <span className={entryStatusClass(entry.status)}>
+                                  {formatUiStatusLabel(entry.status)}
+                                </span>
                                 {entry.manager_comment ? (
                                   <div className="text-[10px] text-wt-text-muted mt-0.5 max-w-[120px] truncate" title={entry.manager_comment}>
                                     Remark: {entry.manager_comment}

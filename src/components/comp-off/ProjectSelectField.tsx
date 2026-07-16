@@ -184,7 +184,7 @@ export function ProjectSelectField({
                 <Button
                   type="button"
                   variant="ghost"
-                  className="block h-auto w-full justify-start rounded-none px-3 py-2 text-indigo-700 hover:bg-indigo-50"
+                  className="block h-auto w-full justify-start rounded-none px-3 py-2 text-[var(--wt-brand)] hover:bg-[var(--wt-brand-soft)]"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={handleAddProject}
                 >

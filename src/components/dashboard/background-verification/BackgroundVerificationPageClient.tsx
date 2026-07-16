@@ -72,7 +72,6 @@ import {
   formatSecondarySkillsForProfile,
 } from "@/components/dashboard/ui/profile";
 import { DataTable } from "@/components/dashboard/ui/DataTable";
-import { IconUser, IconPencil, IconTrash, IconRefresh } from "@/components/dashboard/ui/icons";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";

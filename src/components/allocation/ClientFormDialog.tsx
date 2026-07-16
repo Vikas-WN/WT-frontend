@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { InputField, TextAreaField } from "@/components/dashboard/ui/forms";
+import { InputField, TextAreaField, SelectField } from "@/components/dashboard/ui/forms";
 import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
 import { InternalEmployeeSelect } from "@/components/allocation/InternalEmployeeSelect";
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
@@ -103,6 +103,18 @@ export function ClientFormDialog({
               required
               value={form.name}
               onChange={(value) => setForm((prev) => ({ ...prev, name: value }))}
+            />
+            <SelectField
+              label="Status"
+              required
+              value={form.is_active ? "ACTIVE" : "INACTIVE"}
+              options={[
+                { value: "ACTIVE", label: "Active" },
+                { value: "INACTIVE", label: "Inactive" },
+              ]}
+              onChange={(value) =>
+                setForm((prev) => ({ ...prev, is_active: value === "ACTIVE" }))
+              }
             />
             <div className="sm:col-span-2">
               <TextAreaField

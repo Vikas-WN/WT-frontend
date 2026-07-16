@@ -62,7 +62,7 @@ export function MaterialsPageClient() {
           <p className="text-sm text-wt-text-muted mt-1">Upload PDFs and control visibility.</p>
         </div>
         {trainingId ? (
-          <Link href={`/dashboard/learning-development/trainings/${encodeURIComponent(trainingId)}?tab=materials`} className="text-sm font-medium text-indigo-600 hover:underline self-center">
+          <Link href={`/dashboard/learning-development/trainings/${encodeURIComponent(trainingId)}?tab=materials`} className="text-sm font-medium text-[var(--wt-brand)] hover:underline self-center">
             Detail view
           </Link>
         ) : null}

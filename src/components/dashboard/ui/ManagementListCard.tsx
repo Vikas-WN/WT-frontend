@@ -77,7 +77,7 @@ export function ManagementListCard({
       <Separator />
 
       {hasToolbar ? (
-        <CardToolbar className={compact ? CARD_TOOLBAR_COMPACT_CLASS : undefined}>
+        <CardToolbar className={compact ? CARD_TOOLBAR_COMPACT_CLASS : CARD_TOOLBAR_CLASS}>
           {toolbar ?? (
             <div className={compact ? CARD_TOOLBAR_INNER_COMPACT_CLASS : CARD_TOOLBAR_INNER_CLASS}>
               {search ? <div className="min-w-0 flex-1">{search}</div> : null}

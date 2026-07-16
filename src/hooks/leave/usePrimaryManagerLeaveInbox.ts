@@ -6,7 +6,6 @@ import { listScopedUserRequests } from "@/utils/userRequest";
 import {
   isAssignedPrimaryLeaveManager,
   isOwnUserRequest,
-  pickManagerEmailList,
 } from "@/utils/leaveManagerDisplay";
 
 export const PRIMARY_MANAGER_INBOX_QUERY_KEY = ["leave", "primary-manager-inbox"] as const;
@@ -24,8 +23,6 @@ function filterPrimaryManagerInbox(
 
   return rows.filter((row) => {
     if (isOwnUserRequest(row, email)) return false;
-    const primaries = pickManagerEmailList(row, "primary");
-    if (!primaries.length) return true;
     return isAssignedPrimaryLeaveManager(row, email);
   });
 }

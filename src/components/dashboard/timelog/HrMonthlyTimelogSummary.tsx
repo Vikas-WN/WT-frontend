@@ -12,6 +12,7 @@ import {
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import {
   formatMonthYearLabel,
   formatSummaryHours,
@@ -63,9 +64,7 @@ export function HrMonthlyTimelogSummary({
             Next month
           </Button>
         </div>
-        <Button variant="outline" size="sm" type="button" disabled={loading} onClick={onRefresh}>
-          Refresh
-        </Button>
+        <RefreshIconButton onClick={onRefresh} loading={loading} />
       </div>
 
       {error ? (

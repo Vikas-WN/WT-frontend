@@ -48,7 +48,7 @@ export function AssessmentsPageClient() {
           <p className="text-sm text-wt-text-muted mt-1">Define weighted assessments with supporting documents.</p>
         </div>
         {trainingId ? (
-          <Link href={`/dashboard/learning-development/trainings/${encodeURIComponent(trainingId)}?tab=assessments`} className="text-sm font-medium text-indigo-600 hover:underline self-center">
+          <Link href={`/dashboard/learning-development/trainings/${encodeURIComponent(trainingId)}?tab=assessments`} className="text-sm font-medium text-[var(--wt-brand)] hover:underline self-center">
             Detail view
           </Link>
         ) : null}

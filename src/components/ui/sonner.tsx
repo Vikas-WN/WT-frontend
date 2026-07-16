@@ -62,7 +62,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           </ToastGlyph>
         ),
         info: (
-          <ToastGlyph className="border-sky-200/80 bg-sky-50 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-300">
+          <ToastGlyph className="border-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)] bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]">
             <Info className="size-4" strokeWidth={2.25} aria-hidden />
           </ToastGlyph>
         ),

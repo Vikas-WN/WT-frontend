@@ -23,6 +23,7 @@ import { exitInterviewService } from "@/services/exitInterview.service";
 import type { ExitSurveyBulkResendItemResult } from "@/types/exit-interview";
 import { DatePickerField, SelectField } from "@/components/dashboard/ui/forms";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { useExitSurveyFollowUpList } from "@/hooks/exit-interview/useExitSurveyFollowUpList";
@@ -333,16 +334,10 @@ export function ExitSurveyFollowUpPanel() {
             { value: "COMPLETED", label: "Completed" },
           ]}
         />
-        <Button
-          variant="outline"
-          size="sm"
-          type="button"
-          className="px-3 py-2 text-sm h-10 border border-wt-border rounded-lg"
+        <RefreshIconButton
           onClick={() => void followUpQ.refetch()}
-          disabled={loadingList}
-        >
-          Refresh
-        </Button>
+          loading={loadingList}
+        />
         {selectedResendableCount > 0 ? (
           <Button
             variant="brand"
@@ -501,7 +496,7 @@ export function ExitSurveyFollowUpPanel() {
                         {canView && detailHref ? (
                           <Link
                             href={detailHref}
-                            className="font-medium text-indigo-600 hover:underline"
+                            className="font-medium text-[var(--wt-brand)] hover:underline"
                             onClick={(e) => e.stopPropagation()}
                           >
                             {row.employee_name || "—"}
@@ -524,7 +519,7 @@ export function ExitSurveyFollowUpPanel() {
                           canView && detailHref ? (
                             <Link
                               href={detailHref}
-                              className="text-xs font-medium text-indigo-600 hover:underline"
+                              className="text-xs font-medium text-[var(--wt-brand)] hover:underline"
                               onClick={(e) => e.stopPropagation()}
                             >
                               View responses

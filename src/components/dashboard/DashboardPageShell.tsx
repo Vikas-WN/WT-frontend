@@ -12,7 +12,7 @@ export function DashboardPageShell({
   return (
     <main
       className={cn(
-        "min-h-0 w-full min-w-0 flex-1 bg-wt-page-bg p-3 sm:p-4 md:p-6",
+        "wt-page-enter min-h-0 w-full min-w-0 flex-1 p-4 sm:p-6 md:p-8",
         PAGE_STACK_CLASS,
         className
       )}

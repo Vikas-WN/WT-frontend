@@ -17,6 +17,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { Input } from "@/components/ui/input";
 import { useEmployeeResumes } from "@/hooks/resumes/useEmployeeResumes";
 import { canViewEmployeeResumes } from "@/utils/roles";
@@ -79,7 +80,7 @@ export function ResumesPageClient() {
           <p className="mt-2 text-sm text-wt-text-muted">
             Resumes are available to account manager users only.
           </p>
-          <Link href={DASHBOARD_ROUTES.profile} className="mt-4 inline-block text-sm text-blue-600 hover:underline">
+          <Link href={DASHBOARD_ROUTES.profile} className="mt-4 inline-block text-sm text-[var(--wt-brand)] hover:underline">
             Back to profile
           </Link>
         </div>
@@ -113,10 +114,10 @@ export function ResumesPageClient() {
 
         <div className="space-y-4 p-5 md:p-7">
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="brand" size="sm" type="button" className="px-3 py-2 text-sm" disabled={isLoading} onClick={() => void refetch()}
-            >
-              Refresh
-            </Button>
+            <RefreshIconButton
+              onClick={() => void refetch()}
+              loading={isLoading}
+            />
             <Button variant="ghost" size="sm" type="button" className="px-3 py-2 text-sm" onClick={() => setShowRawJson((v) => !v)}
             >
               {showRawJson ? "Hide" : "Show"} API response

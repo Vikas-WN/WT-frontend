@@ -121,7 +121,7 @@ export function EmployeePortalRoleSelect({
   if (compact) {
     return (
       <div
-        className="w-[9.5rem] max-w-full"
+        className="w-full max-w-full min-w-0"
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => event.stopPropagation()}
       >
@@ -133,7 +133,7 @@ export function EmployeePortalRoleSelect({
           disabled={saving}
           aria-label="Role"
           variant="table-inline"
-          className="w-full"
+          className="w-full min-w-0"
           contentClassName="min-w-[14rem] w-max"
         />
       </div>

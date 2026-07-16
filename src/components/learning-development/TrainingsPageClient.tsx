@@ -14,6 +14,7 @@ import { TrainingCard } from "@/components/learning-development/TrainingCard";
 import { InputField, SelectField, Sheet } from "@/components/learning-development/ui/forms";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import {
   activeSortDirectionForColumn,
@@ -175,10 +176,7 @@ function HrTrainingsView() {
             <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Trainings</h1>
           </div>
           <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2">
-            <Button variant="brand" size="sm" type="button" className="px-3 py-2 text-sm" onClick={() => refetch()}
-            >
-              Refresh
-            </Button>
+            <RefreshIconButton onClick={() => void refetch()} />
             <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" onClick={openCreate}>
               New training
             </Button>

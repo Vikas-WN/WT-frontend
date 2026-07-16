@@ -1,8 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { WtLoader, WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
+import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { WeeklyTimelogGrid } from "@/components/dashboard/timelog/WeeklyTimelogGrid";
 import { WeekPickerField } from "@/components/dashboard/timelog/WeekPickerField";
 import { EntryReviewSidePanel } from "@/components/dashboard/timelog/EntryReviewSidePanel/EntryReviewSidePanel";
@@ -63,9 +63,7 @@ export function EmployeeWeekDetail({
             </div>
             <div className="detail-actions">
               <WeekPickerField weekStart={weekStart} onWeekStartChange={onWeekChange} />
-              <Button variant="outline" size="sm" type="button" disabled={loading} onClick={onRefresh}>
-                {loading ? <WtLoader size="sm" /> : "Refresh"}
-              </Button>
+              <RefreshIconButton onClick={onRefresh} loading={loading} />
             </div>
           </div>
           {loading ? (

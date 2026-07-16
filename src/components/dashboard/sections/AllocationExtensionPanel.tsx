@@ -17,12 +17,14 @@ import { hrmsService, type AllocationExtensionRequestRow, type AllocationExtensi
 import { useAuth } from "@/context/AuthContext";
 import { ApiDateField, SelectField } from "@/components/dashboard/ui/forms";
 import { Button } from "@/components/ui/button";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import {
   HrLeaveStatusToggle,
   type HrToggleStatus,
 } from "@/components/dashboard/leave/HrLeaveStatusToggle";
 import { formatApiDateDisplay } from "@/utils/apiDate";
+import { RequestStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
 import {
   buildAllocationExtensionContextQuery,
   buildCreateAllocationExtensionBody,
@@ -62,7 +64,7 @@ export function AllocationExtensionPanel() {
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasManagerRole = userRoles.includes("ROLE_MANAGER");
-  const canCreateRequest = hasManagerRole && !hasHrAccess;
+  const canCreateRequest = hasManagerRole;
 
   // Manager create form
   const [createForm, setCreateForm] = useState(createEmptyAllocationExtensionForm);
@@ -481,7 +483,7 @@ export function AllocationExtensionPanel() {
               <input
                 value={createForm.reason}
                 onChange={(e) => setCreateForm((p) => ({ ...p, reason: e.target.value }))}
-                className="w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
+                className="w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:border-[var(--wt-brand)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)]"
                 placeholder="Needed for release closure"
               />
             </label>
@@ -534,7 +536,7 @@ export function AllocationExtensionPanel() {
               setSearch(e.target.value);
               setPage(0);
             }}
-            className="w-64 max-w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
+            className="w-64 max-w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:border-[var(--wt-brand)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)]"
             placeholder="Search"
             aria-label="Search"
           />
@@ -557,9 +559,7 @@ export function AllocationExtensionPanel() {
             />
           ) : null}
 
-          <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
-            Refresh
-          </Button>
+          <RefreshIconButton onClick={() => void load()} />
         </div>
 
         {rows.length ? (
@@ -602,17 +602,7 @@ export function AllocationExtensionPanel() {
                             threeWay
                           />
                         ) : (
-                          <span
-                            className={
-                              status === "APPROVED"
-                                ? "text-emerald-700"
-                                : status === "REJECTED"
-                                  ? "text-rose-700"
-                                  : "text-amber-700"
-                            }
-                          >
-                            {status}
-                          </span>
+                          <RequestStatusBadge status={status} />
                         )}
                       </TableCell>
                       {visibleMode === "hr" ? (

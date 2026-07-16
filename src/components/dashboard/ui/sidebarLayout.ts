@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 /** Sidebar shell — fixed viewport height; nav scrolls inside. */
 export const SIDEBAR_SHELL_BASE =
-  "wt-sidebar z-40 flex h-dvh max-h-dvh shrink-0 flex-col border-r border-wt-border bg-wt-surface-1 shadow-xl transition-[width,transform,padding] duration-200 ease-out max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,280px)] lg:min-w-0 lg:translate-x-0 lg:shadow-none";
+  "wt-sidebar z-40 flex h-dvh max-h-dvh shrink-0 flex-col border-r border-wt-border bg-wt-surface-1 transition-[width,transform,padding] duration-[var(--wt-duration)] ease-[var(--wt-ease)] max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,288px)] lg:min-w-0 lg:translate-x-0 dark:bg-black dark:shadow-none lg:shadow-none max-lg:shadow-xl";
 
 /** @deprecated Use sidebarShellClass */
 export const SIDEBAR_SHELL_CLASS = cn(SIDEBAR_SHELL_BASE, "w-[min(88vw,280px)] p-4 lg:w-[264px] lg:px-4 lg:py-5");
@@ -14,7 +14,7 @@ export function sidebarShellClass(mobileOpen: boolean, collapsed: boolean) {
     collapsed ? "lg:overflow-visible" : "overflow-y-hidden",
     "p-4",
     sidebarShellStateClass(mobileOpen),
-    collapsed ? "lg:w-20 lg:px-2 lg:py-3" : "lg:w-[264px] lg:px-4 lg:py-5"
+    collapsed ? "lg:w-20 lg:px-2 lg:py-3" : "lg:w-[272px] lg:px-4 lg:py-5"
   );
 }
 
@@ -71,8 +71,8 @@ export const SIDEBAR_FOOTER_CLASS = "mt-2 shrink-0";
 
 export function sidebarFooterCardClass(collapsed: boolean) {
   return cn(
-    "rounded-xl border border-wt-border bg-wt-surface-2/80 p-1 shadow-sm",
-    collapsed && "lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
+    "rounded-xl border border-wt-border bg-wt-surface-2 p-1 dark:bg-wt-surface-2",
+    collapsed && "lg:border-0 lg:bg-transparent lg:p-0"
   );
 }
 
@@ -98,22 +98,22 @@ export const SIDEBAR_COMPACT_MARK_CLASS =
   "flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--wt-brand)] text-[11px] font-bold tracking-tight text-white shadow-sm";
 
 export const DASHBOARD_HEADER_CLASS =
-  "z-20 flex shrink-0 items-center justify-between gap-3 border-b border-wt-border bg-wt-surface-1/95 px-4 py-3.5 backdrop-blur-md sm:gap-4 sm:px-6 sm:py-4";
+  "z-20 flex shrink-0 items-center justify-between gap-3 border-b border-wt-border bg-wt-surface-1/95 px-4 py-4 sm:gap-4 sm:px-7 sm:py-5 dark:bg-black/95 dark:backdrop-blur-md backdrop-blur-xl";
 
 export const DASHBOARD_HEADER_MENU_BUTTON_CLASS =
-  "flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2 text-wt-text shadow-sm transition-colors duration-150 hover:bg-wt-surface-3 lg:hidden";
+  "flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2 text-wt-text shadow-sm transition-[background-color,border-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:bg-wt-surface-3 lg:hidden";
 
 const SIDEBAR_PARENT_BASE =
-  "wt-sidebar-nav-item relative flex h-auto min-h-10 w-full min-w-0 items-center gap-2.5 rounded-xl px-3 py-2.5 font-normal whitespace-normal transition-all duration-150 ease-out";
+  "wt-sidebar-nav-item relative flex h-auto min-h-10 w-full min-w-0 items-center gap-2.5 rounded-xl px-3 py-2.5 font-normal whitespace-normal transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)]";
 
 const SIDEBAR_CHILD_BASE =
-  "wt-sidebar-nav-item relative flex w-full min-w-0 items-center gap-2 rounded-lg px-2.5 py-2 font-normal whitespace-normal transition-all duration-150 ease-out";
+  "wt-sidebar-nav-item relative flex w-full min-w-0 items-center gap-2 rounded-lg px-2.5 py-2 font-normal whitespace-normal transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)]";
 
 const SIDEBAR_ACTIVE_CLASS =
-  "bg-wt-surface-3 text-wt-text shadow-sm ring-1 ring-wt-border before:absolute before:left-1.5 before:top-1/2 before:h-4 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-[var(--wt-brand)]";
+  "bg-[var(--wt-brand-soft)] font-medium text-wt-text ring-1 ring-[color-mix(in_srgb,var(--wt-brand)_22%,transparent)] before:absolute before:left-1.5 before:top-1/2 before:h-4 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-[var(--wt-brand)] dark:bg-wt-surface-2 dark:ring-wt-border-md";
 
 const SIDEBAR_ACTIVE_COLLAPSED_CLASS =
-  "lg:bg-wt-surface-3 lg:text-wt-text lg:shadow-sm lg:ring-1 lg:ring-[var(--wt-brand)]/35 lg:before:hidden";
+  "lg:bg-[var(--wt-brand-soft)] lg:text-wt-text lg:shadow-sm lg:ring-1 lg:ring-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)] lg:before:hidden";
 
 const SIDEBAR_IDLE_CLASS =
   "text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text";

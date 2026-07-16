@@ -22,7 +22,7 @@ import { SelectField } from "@/components/dashboard/ui/forms";
 import { formatUserRequestTypeLabel } from "@/utils/actionToast";
 import { formatLeaveDateRange, formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
 import { pickManagerEmailList } from "@/utils/leaveManagerDisplay";
-import { requestFinalStatus } from "@/utils/userRequest";
+import { requestFinalStatus, requestRejectionReason } from "@/utils/userRequest";
 import { Eye, Filter, MoreVertical } from "lucide-react";
 import type { useClientPagination } from "@/hooks/useClientPagination";
 
@@ -152,6 +152,8 @@ export function MyPreviousLeaveRequestsCard({
                   ).trim();
                   const finalStatus = requestFinalStatus(rowRecord);
                   const isPending = finalStatus === "PENDING";
+                  const rejectionReason =
+                    finalStatus === "REJECTED" ? requestRejectionReason(rowRecord) : null;
                   const primaryManagers = pickManagerEmailList(rowRecord, "primary");
                   const fromDate = String(rowRecord.request_from_date ?? rowRecord.requestFromDate ?? "");
                   const toDate = String(rowRecord.request_to_date ?? rowRecord.requestToDate ?? "");
@@ -165,8 +167,18 @@ export function MyPreviousLeaveRequestsCard({
                       <TableCell className="px-3 py-2.5 whitespace-nowrap">
                         {formatUserRequestTypeLabel(rowRecord.request_type ?? rowRecord.requestType, isHalfDay)}
                       </TableCell>
-                      <TableCell className="px-3 py-2.5 whitespace-nowrap">
-                        <LeaveRequestStatusBadge status={finalStatus} />
+                      <TableCell className="px-3 py-2.5">
+                        <div className="flex flex-col items-start gap-1">
+                          <LeaveRequestStatusBadge status={finalStatus} />
+                          {rejectionReason ? (
+                            <p
+                              className="max-w-[14rem] truncate text-xs text-rose-700/90"
+                              title={rejectionReason}
+                            >
+                              {rejectionReason}
+                            </p>
+                          ) : null}
+                        </div>
                       </TableCell>
                       <TableCell className="px-3 py-2.5 whitespace-nowrap">
                         <LeaveManagerEmailsCell emails={primaryManagers} />

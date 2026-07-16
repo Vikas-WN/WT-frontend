@@ -18,11 +18,13 @@ import {
   useTrainingTrainers,
 } from "@/hooks/learning/useLearningTrainings";
 import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainerDirectory";
+import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { EmployeeTrainingMyMarks } from "@/components/learning-development/EmployeeTrainingMyMarks";
 import { ScoresPageClient } from "@/components/learning-development/ScoresPageClient";
 import { TrainingStatusControl } from "@/components/learning-development/TrainingStatusControl";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { AssignedTrainersList } from "@/components/learning-development/AssignedTrainersList";
+import { TrainingStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
 import { MaterialVisibilityBadge } from "@/components/learning-development/MaterialVisibilityBadge";
 import { TrainingParticipantsList } from "@/components/learning-development/TrainingParticipantsList";
 import { DataTable, FileField, InputField } from "@/components/learning-development/ui/forms";
@@ -305,9 +307,10 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
             />
           </div>
         </div>
-        <Button variant="outline" size="sm" type="button" className="px-3 py-2 text-sm border border-wt-border rounded-lg" onClick={() => router.refresh()}>
-          Refresh view
-        </Button>
+        <RefreshIconButton
+          onClick={() => router.refresh()}
+          label="Refresh View"
+        />
       </div>
 
       {detailQ.isError ? (
@@ -370,7 +373,13 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
               </div>
               <div>
                 <dt className="text-wt-text-muted">Status</dt>
-                <dd className="font-medium">{String(training.status ?? "—")}</dd>
+                <dd className="font-medium">
+                  {training.status ? (
+                    <TrainingStatusBadge status={String(training.status)} />
+                  ) : (
+                    "—"
+                  )}
+                </dd>
               </div>
               <div>
                 <dt className="text-wt-text-muted">Dates</dt>

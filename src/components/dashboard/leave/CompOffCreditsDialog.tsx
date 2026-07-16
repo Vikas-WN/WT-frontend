@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, Info } from "lucide-react";
 import { compOffService } from "@/services/compOff.service";
-import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
+import { RequestStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
 
 interface CompOffCredit {
   workedDate: string;
@@ -112,17 +111,7 @@ export function CompOffCreditsDialog({
                         )}
                       </td>
                       <td className="px-3 py-2.5 whitespace-nowrap">
-                        <Badge
-                          className={`rounded-full border-0 font-normal text-[11px] ${
-                            c.status === "APPROVED"
-                              ? filledBadgeClass("success")
-                              : c.status === "REJECTED"
-                                ? filledBadgeClass("danger")
-                                : "bg-muted/60 text-muted-foreground"
-                          }`}
-                        >
-                          {c.status}
-                        </Badge>
+                        <RequestStatusBadge status={c.status} />
                       </td>
                       <td className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">{c.projectCode}</td>
                     </tr>

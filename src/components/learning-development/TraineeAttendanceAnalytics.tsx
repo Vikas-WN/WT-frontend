@@ -17,6 +17,7 @@ import type { TraineeTableRow } from "@/utils/learning/participants";
 import { toPagedRows } from "@/utils/apiRows";
 import { hrmsService } from "@/services/hrms.service";
 import { formatApiDateDisplay } from "@/utils/apiDate";
+import { formatUiStatusLabel } from "@/utils/statusLabel";
 
 function isPresentStatus(status: string): boolean {
   return status.trim().toUpperCase() === "PRESENT";
@@ -163,7 +164,7 @@ export function TraineeAttendanceAnalytics({
                               : "text-wt-text-muted"
                         }
                       >
-                        {row.status}
+                        {formatUiStatusLabel(row.status)}
                       </span>
                     </TableCell>
                   </TableRow>

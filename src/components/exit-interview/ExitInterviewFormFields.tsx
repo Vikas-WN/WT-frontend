@@ -127,7 +127,7 @@ function ScaleControl({
             onClick={() => onChange(n)}
             className={`min-w-[2.25rem] rounded-lg border px-2 py-1.5 tabular-nums ${
               value === n
-                ? "border-indigo-500 bg-indigo-50 text-indigo-800 hover:bg-indigo-50 hover:text-indigo-800"
+                ? "border-[var(--wt-brand)] bg-[var(--wt-brand-soft)] text-[var(--wt-brand)] hover:bg-[var(--wt-brand-soft)] hover:text-[var(--wt-brand)]"
                 : "border-wt-border bg-wt-surface-1 text-wt-text hover:bg-wt-surface-2"
             }`}
           >

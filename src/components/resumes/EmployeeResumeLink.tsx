@@ -14,7 +14,7 @@ export function EmployeeResumeLink({
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="font-medium text-blue-600 hover:underline"
+      className="font-medium text-[var(--wt-brand)] hover:underline"
     >
       resume
     </a>

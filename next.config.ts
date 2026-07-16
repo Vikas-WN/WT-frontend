@@ -4,7 +4,12 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   // Turbopack is enabled via `pnpm dev` (`next dev --turbopack`).
   experimental: {
-    optimizePackageImports: ["@tanstack/react-query", "@base-ui/react"],
+    optimizePackageImports: [
+      "@tanstack/react-query",
+      "@base-ui/react",
+      "lucide-react",
+      "date-fns",
+    ],
     // Allow large multipart onboarding/profile uploads through the BFF proxy.
     proxyClientMaxBodySize: "50mb",
     serverActions: {

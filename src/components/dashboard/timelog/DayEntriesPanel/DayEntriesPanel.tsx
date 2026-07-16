@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
+import { formatUiStatusLabel } from "@/utils/statusLabel";
 import { formatTimelogTableDate } from "@/utils/timelog/weekDates";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
 import { projectManagerEmailFromEntry } from "@/utils/timelog/entryManager";
@@ -111,7 +112,7 @@ export function DayEntriesPanel({
                   ) : null}
                   <div>
                     <span className={`day-entries-card-status ${statusClass(entry.status)}`}>
-                      {entry.status}
+                      {formatUiStatusLabel(entry.status)}
                     </span>
                     {entry.manager_comment ? (
                       <div className="day-entries-card-remark">

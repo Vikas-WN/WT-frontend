@@ -45,7 +45,7 @@ import {
 } from "@/components/dashboard/ui/sidebarLayout";
 
 const HEADER_ICON_BUTTON_CLASS =
-  "flex cursor-pointer items-center justify-center rounded-lg border border-wt-border bg-wt-surface-1 p-2.5 text-wt-text shadow-sm transition hover:bg-wt-surface-2";
+  "flex size-10 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-1 text-wt-text transition-[background-color,border-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:bg-wt-surface-2 dark:border-wt-border dark:bg-wt-surface-2 dark:hover:bg-wt-surface-3";
 
 function IconMenu({ className = "" }: { className?: string }) {
   return (
@@ -280,16 +280,12 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void loadNotifications();
+    // Soft poll — avoid competing with page data fetches on every focus.
     const intervalId = window.setInterval(() => {
       void loadNotifications();
-    }, 60_000);
-    const onFocus = () => {
-      void loadNotifications();
-    };
-    window.addEventListener("focus", onFocus);
+    }, 120_000);
     return () => {
       window.clearInterval(intervalId);
-      window.removeEventListener("focus", onFocus);
     };
   }, [loadNotifications]);
 
@@ -384,7 +380,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         onLogout={logout}
       />
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-wt-page-bg">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-wt-page-bg dark:bg-black">
         <header className={DASHBOARD_HEADER_CLASS}>
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <button
@@ -398,7 +394,9 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
             </button>
             <WebTrakBrand variant="header" compact className="shrink-0 lg:hidden" />
             <div className="min-w-0">
-            <h2 className="truncate text-lg font-semibold tracking-tight text-wt-text sm:text-xl">{pageTitle}</h2>
+            <h2 className="truncate text-xl font-semibold tracking-tight text-wt-text sm:text-[1.35rem]">
+              {pageTitle}
+            </h2>
             {isEmployeeDirectoryRoute && !isLearningRoute && !isEmployeeOnboardingRoute ? (
               <nav
                 className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
@@ -500,7 +498,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                             "flex items-start justify-between gap-2 rounded-lg border border-wt-border p-2.5",
                             isRead ? "bg-wt-surface-2/60" : "bg-wt-surface-2",
                             isNavigable &&
-                              "cursor-pointer transition hover:border-indigo-300 hover:bg-wt-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+                              "cursor-pointer transition hover:border-[color-mix(in_srgb,var(--wt-brand)_35%,transparent)] hover:bg-wt-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--wt-brand)_35%,transparent)]"
                           )}
                         >
                           <div className="min-w-0 space-y-1">
@@ -561,7 +559,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <div className="wt-page-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain bg-wt-page-bg">
+        <div className="wt-page-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
           {children}
         </div>
       </div>
