@@ -1,4 +1,5 @@
 import { hrmsService } from "@/services/hrms.service";
+import { compOffService } from "@/services/compOff.service";
 import { toPagedRows } from "@/utils/apiRows";
 import { buildProfileAssignedProjects } from "@/utils/dashboard/projects";
 import {
@@ -197,7 +198,34 @@ export type CompOffProjectCatalog = {
   userIdToEmail: Map<string, string>;
 };
 
+function buildOptionsFromEarnProjects(
+  rows: Array<Record<string, unknown>>
+): CompOffProjectOption[] {
+  const map = new Map<string, CompOffProjectOption>();
+  for (const row of rows) {
+    const code = String(row.project_code ?? row.projectCode ?? "").trim();
+    if (!code) continue;
+    const name = String(row.project_name ?? row.projectName ?? code).trim() || code;
+    const key = code.toLowerCase();
+    map.set(key, {
+      code,
+      name,
+      label: name !== code ? name : code,
+      managerEmail: "",
+    });
+  }
+  return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+}
+
 export async function loadCompOffProjectCatalog(): Promise<CompOffProjectCatalog> {
+  let earnProjectRows: Array<Record<string, unknown>> = [];
+  try {
+    const earnProjectsRes = await compOffService.getEarnProjects();
+    earnProjectRows = toPagedRows(earnProjectsRes.data ?? earnProjectsRes);
+  } catch {
+    earnProjectRows = [];
+  }
+
   const [assignedRes, allocationRes, onboardRes] = await Promise.allSettled([
     hrmsService.getAssignedProjects(),
     hrmsService.getMyAllocations(),
@@ -226,8 +254,11 @@ export async function loadCompOffProjectCatalog(): Promise<CompOffProjectCatalog
   }
   userMap = await resolveEmailsForUserIds([...userIdsToResolve], userMap);
 
-  // Primary source: GET /api/v1/project-assigned-to-user (current employee's projects).
-  let options = buildCompOffProjectOptionsFromAssignedProjects(assignedRows, userMap);
+  // Primary source: GET /comp-off/earn/projects (active allocations for the actor).
+  let options = buildOptionsFromEarnProjects(earnProjectRows);
+  if (!options.length) {
+    options = buildCompOffProjectOptionsFromAssignedProjects(assignedRows, userMap);
+  }
   if (!options.length) {
     options = buildCompOffProjectOptions(assignedRows, allocationRows, userMap);
   }

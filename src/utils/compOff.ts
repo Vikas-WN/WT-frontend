@@ -110,11 +110,17 @@ export function requestEarnManagerStatus(row: Record<string, unknown>): string {
 
 export function mapEarnListRow(row: Record<string, unknown>): Record<string, unknown> {
   const worked = String(pickRowField(row, "worked_date", "workedDate") ?? "").trim();
+  const projectCode = String(pickRowField(row, "project_code", "projectCode") ?? "").trim();
+  const projectName = String(pickRowField(row, "project_name", "projectName") ?? "").trim();
   return {
     ...row,
     request_type: COMP_OFF_EARN_LIST_TYPE,
     request_from_date: worked || (pickRowField(row, "request_from_date", "requestFromDate") ?? ""),
     request_to_date: worked || (pickRowField(row, "request_to_date", "requestToDate") ?? ""),
+    project_code: projectCode || pickRowField(row, "project_code", "projectCode") || "",
+    projectCode: projectCode || pickRowField(row, "projectCode", "project_code") || "",
+    project_name: projectName || pickRowField(row, "project_name", "projectName") || "",
+    projectName: projectName || pickRowField(row, "projectName", "project_name") || "",
     comments:
       pickRowField(row, "work_description", "workDescription", "comments", "comment") ?? "",
     emp_email: pickRowField(row, "emp_email", "empEmail") ?? "",

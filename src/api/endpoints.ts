@@ -124,6 +124,7 @@ export const endpoints = {
 
   compOff: {
     earn: `${api}/comp-off/earn`,
+    earnProjects: `${api}/comp-off/earn/projects`,
     earnStatus: `${api}/comp-off/earn/status`,
     earnCancel: `${api}/comp-off/earn/cancel`,
     earnManagerOptions: `${api}/comp-off/earn/manager-options`,

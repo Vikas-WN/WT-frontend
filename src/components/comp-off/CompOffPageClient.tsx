@@ -306,9 +306,13 @@ export function CompOffPageClient({
   const earnProjectLabel = useCallback(
     (row: Record<string, unknown>) => {
       const code = String(pickRowField(row, "project_code", "projectCode") ?? "").trim();
-      if (!code) return "—";
-      const option = projectOptions.find((p) => p.code === code);
-      return option?.label ?? code;
+      const name = String(pickRowField(row, "project_name", "projectName") ?? "").trim();
+      if (name && name !== code) return name;
+      if (code) {
+        const option = projectOptions.find((p) => p.code.toLowerCase() === code.toLowerCase());
+        return option?.label ?? code;
+      }
+      return "—";
     },
     [projectOptions]
   );

@@ -44,6 +44,11 @@ export const compOffService = {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.compOff.earnManagerOptions);
   },
 
+  /** GET /comp-off/earn/projects — active allocation projects for comp-off earn. */
+  getEarnProjects() {
+    return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.compOff.earnProjects);
+  },
+
   cancelEarnRequest(userRequestId: number) {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.compOff.earnCancel, {
       query: { userRequestId: String(userRequestId) },
