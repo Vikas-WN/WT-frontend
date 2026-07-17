@@ -248,8 +248,8 @@ export function EmployeeProfilePageClient() {
           <p className="mt-2 text-sm text-wt-text-muted">
             Employee profiles in the directory are available to HR and admin users only.
           </p>
-          <Link href={DASHBOARD_ROUTES.overview} className="mt-4 inline-block text-sm text-[var(--wt-brand)] hover:underline">
-            Back to overview
+          <Link href={DASHBOARD_ROUTES.profile} className="mt-4 inline-block text-sm text-[var(--wt-brand)] hover:underline">
+            Back To Home
           </Link>
         </div>
       </DashboardPageShell>

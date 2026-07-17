@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  fetchMe,
   getGoogleSignInUrl,
   oauthErrorMessages,
 } from "@/lib/auth";
@@ -115,7 +116,7 @@ function LoginShell({ children }: { children: React.ReactNode }) {
 function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { status, refresh } = useAuth();
+  const { status } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [sessionLogoutReason, setSessionLogoutReason] = useState<SessionLogoutReason | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -154,13 +155,15 @@ function LoginPageInner() {
     if (status !== "unauthenticated" || didPostLoginRefresh.current) return;
     didPostLoginRefresh.current = true;
     void (async () => {
-      const fresh = await refresh();
+      // Read-only check: if a session already exists (e.g. just returned from
+      // OAuth), redirect. Never rotates tokens, so no refresh -> 401 -> logout loop.
+      const fresh = await fetchMe();
       if (fresh && !didRedirect.current) {
         didRedirect.current = true;
         window.location.replace("/dashboard");
       }
     })();
-  }, [status, refresh]);
+  }, [status]);
 
   function handleGoogleSignIn() {
     setGoogleLoading(true);

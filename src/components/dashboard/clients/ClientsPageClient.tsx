@@ -57,10 +57,10 @@ export function ClientsPageClient() {
             Clients are available to HR and admin only.
           </p>
           <Link
-            href={DASHBOARD_ROUTES.overview}
+            href={DASHBOARD_ROUTES.profile}
             className="mt-4 inline-block text-sm text-[var(--wt-brand)] hover:underline"
           >
-            Back to overview
+            Back To Home
           </Link>
         </div>
       </DashboardPageShell>

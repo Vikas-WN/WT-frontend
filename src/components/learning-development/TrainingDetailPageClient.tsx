@@ -21,6 +21,7 @@ import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainer
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { EmployeeTrainingMyMarks } from "@/components/learning-development/EmployeeTrainingMyMarks";
 import { ScoresPageClient } from "@/components/learning-development/ScoresPageClient";
+import { AttendancePageClient } from "@/components/learning-development/AttendancePageClient";
 import { TrainingStatusControl } from "@/components/learning-development/TrainingStatusControl";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { AssignedTrainersList } from "@/components/learning-development/AssignedTrainersList";
@@ -49,6 +50,7 @@ const HR_TABS = [
   { id: "sessions", label: "Sessions" },
   { id: "trainers", label: "Trainers" },
   { id: "participants", label: "Trainees" },
+  { id: "attendance", label: "Attendance" },
   { id: "materials", label: "Materials" },
   { id: "assessments", label: "Assessments" },
   { id: "scores", label: "Scores" },
@@ -584,6 +586,9 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
         </section>
       ) : null}
 
+      {safeTab === "attendance" && hasHrAccess ? (
+        <AttendancePageClient fixedTrainingId={tid} />
+      ) : null}
       {safeTab === "scores" && hasHrAccess ? <ScoresPageClient fixedTrainingId={tid} /> : null}
       {safeTab === "scores" && !hasHrAccess ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">

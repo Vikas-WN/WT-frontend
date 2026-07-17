@@ -49,7 +49,7 @@ export function MyLeaveRequestsView({
   onRefresh,
   onEdit,
   onRevoke,
-  emptyLabel = "No Data",
+  emptyLabel = "No Leave Requests",
   fromDate,
   toDate,
   onFromDateChange,

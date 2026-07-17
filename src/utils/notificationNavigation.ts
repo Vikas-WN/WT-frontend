@@ -2,9 +2,9 @@ import { DASHBOARD_ROUTES } from "@/constants/routes";
 import type { NotificationItem } from "@/services/hrms.service";
 import { normalizeRoles } from "@/utils/roles";
 
-const COMP_OFF_TEAM = "/dashboard/comp-off/team";
-const COMP_OFF_SELF = "/dashboard/comp-off";
-const LEARNING_SCORES = "/dashboard/learning-development/scores";
+const COMP_OFF_TEAM = "/dashboard/leave/team?tab=comp-off";
+const COMP_OFF_SELF = "/dashboard/leave?tab=comp-off";
+const LEARNING_SCORES = "/dashboard/learning-development";
 
 type NotificationRouteContext = {
   userRoles?: string[];
@@ -184,7 +184,7 @@ export function resolveNotificationHref(
       return DASHBOARD_ROUTES.profile;
 
     case "ANNOUNCEMENT":
-      return DASHBOARD_ROUTES.overview;
+      return DASHBOARD_ROUTES.profile;
 
     default:
       return null;

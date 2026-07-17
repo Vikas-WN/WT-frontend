@@ -95,7 +95,7 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "allocation",
-        label: "Projects Allocation",
+        label: "Project Allocation",
         roles: ["ROLE_HR", "ROLE_ADMIN"],
         icon: "layoutGrid",
       },
@@ -127,7 +127,7 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "leave",
-        label: "Leave Request",
+        label: "Leave Requests",
         roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
       },
@@ -180,7 +180,6 @@ export const dashboardNavigation: NavItem[] = [
       { id: "reports-bench", label: "Bench" },
       { id: "reports-section-3", label: "Attrition & Retention" },
       { id: "reports-section-4", label: "Skill & Capacity Report" },
-      { id: "reports-section-5", label: "Engagement & Culture Metrics" },
       { id: "reports-section-6", label: "Compliance & Risk Support Report" },
       { id: "reports-section-7", label: "BGV Report Dashboard" },
     ],

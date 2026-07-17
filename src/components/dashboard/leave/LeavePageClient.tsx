@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/api/httpClient";
 import { endpoints } from "@/api/endpoints";
@@ -237,11 +237,36 @@ export function LeavePageClient() {
   const { user, refresh: refreshSession } = useAuth();
   const userEmail = useMemo(() => String(user?.email ?? "").trim(), [user?.email]);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isTeamLeaveRoute = pathname.includes("/dashboard/leave/team");
+  const tabFromQuery = String(searchParams.get("tab") ?? "").trim().toLowerCase();
   const [leaveSubTab, setLeaveSubTab] = useState<
     "my" | "team" | "org" | "comp-off" | "wfh" | "balances"
-  >(isTeamLeaveRoute ? "team" : "my");
+  >(() => {
+    if (
+      tabFromQuery === "comp-off" ||
+      tabFromQuery === "wfh" ||
+      tabFromQuery === "balances" ||
+      tabFromQuery === "team" ||
+      tabFromQuery === "org" ||
+      tabFromQuery === "my"
+    ) {
+      return tabFromQuery;
+    }
+    return isTeamLeaveRoute ? "team" : "my";
+  });
   useEffect(() => {
+    if (
+      tabFromQuery === "comp-off" ||
+      tabFromQuery === "wfh" ||
+      tabFromQuery === "balances" ||
+      tabFromQuery === "team" ||
+      tabFromQuery === "org" ||
+      tabFromQuery === "my"
+    ) {
+      setLeaveSubTab(tabFromQuery);
+      return;
+    }
     if (isTeamLeaveRoute) {
       setLeaveSubTab((prev) => {
         if (prev === "comp-off" || prev === "balances" || prev === "team" || prev === "org") {
@@ -256,7 +281,7 @@ export function LeavePageClient() {
         return "my";
       });
     }
-  }, [isTeamLeaveRoute, pathname]);
+  }, [isTeamLeaveRoute, pathname, tabFromQuery]);
   const myLeaveTabActive = leaveSubTab === "my" || leaveSubTab === "wfh";
   const teamLeaveTabActive = leaveSubTab === "team" || leaveSubTab === "org";
   const queryClient = useQueryClient();

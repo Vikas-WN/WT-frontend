@@ -1,5 +1,6 @@
 import { formatUserTypeLabel } from "@/utils/offboardingFormState";
 import { formatRoleDisplayValue } from "@/utils/roles";
+import { formatUiStatusLabel } from "@/utils/statusLabel";
 import { toTitleCase } from "@/utils/titleCase";
 
 const EMAIL_COLUMN_KEYS = new Set([
@@ -129,29 +130,31 @@ export function sanitizeTableRowsForDisplay(
 }
 
 const COLUMN_HEADER_LABELS: Record<string, string> = {
-  session_date: "Session date",
-  start_time: "Start time",
-  end_time: "End time",
-  meeting_link: "Meeting link",
-  enrollment_status: "Enrollment status",
+  session_date: "Session Date",
+  start_time: "Start Time",
+  end_time: "End Time",
+  meeting_link: "Meeting Link",
+  enrollment_status: "Enrollment Status",
   material_url: "Material URL",
   visibility: "Visibility",
   file_url: "File URL",
   weight_percent: "Weight %",
-  duration_days: "Duration (days)",
-  date_of_joining: "Date of joining",
-  date_of_birth: "Date of birth",
-  phone_number: "Phone number",
-  created_on: "Created on",
+  duration_days: "Duration (Days)",
+  date_of_joining: "Date Of Joining",
+  date_of_birth: "Date Of Birth",
+  phone_number: "Phone Number",
+  created_on: "Created On",
   user_type: "User Type",
-  work_mode: "Work mode",
-  log_date: "Log date",
-  request_from_date: "From",
-  request_to_date: "To",
-  request_type: "Request type",
-  project_name: "Project name",
-  project_type: "Project type",
+  work_mode: "Work Mode",
+  log_date: "Log Date",
+  request_from_date: "From Date",
+  request_to_date: "To Date",
+  request_type: "Request Type",
+  project_name: "Project Name",
+  project_type: "Project Type",
   employee_name: "Employee",
+  from_date: "From Date",
+  to_date: "To Date",
 };
 
 export function formatTableColumnHeader(column: string): string {
@@ -172,7 +175,26 @@ export function formatTableCellValue(column: string, value: unknown): string {
     return formatRoleDisplayValue(value);
   }
   const text = String(value).trim();
-  return text || "—";
+  if (!text) return "—";
+  // Humanize status-like / enum columns for services HR tables (BGV, reports, L&D).
+  if (
+    key === "status" ||
+    key.endsWith("_status") ||
+    key.endsWith("status") ||
+    key === "overall_status" ||
+    key === "billing_status" ||
+    key === "allocation_type" ||
+    key === "employment_type" ||
+    key === "work_mode" ||
+    key === "attendance_status"
+  ) {
+    return formatUiStatusLabel(text);
+  }
+  // ALL_CAPS / snake enums that slipped through without a *_status suffix
+  if (/^[A-Z][A-Z0-9_]*$/.test(text) && text.includes("_")) {
+    return formatUiStatusLabel(text);
+  }
+  return text;
 }
 
 export function prepareTableForDisplay(

@@ -22,7 +22,7 @@ import {
   toggleColumnSort,
   type ListSortOption,
 } from "@/utils/listSort";
-import { formatTableColumnHeader, prepareTableForDisplay } from "@/utils/tableDisplay";
+import { formatTableColumnHeader, formatTableCellValue, prepareTableForDisplay } from "@/utils/tableDisplay";
 
 export function DataTable({
   title,
@@ -130,7 +130,7 @@ export function DataTable({
                       ? "—"
                       : isValidElement(row[col])
                         ? (row[col] as ReactNode)
-                        : String(row[col])}
+                        : formatTableCellValue(col, row[col])}
                   </TableCell>
                 ))}
               </TableRow>

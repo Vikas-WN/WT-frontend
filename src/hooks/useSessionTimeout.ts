@@ -7,12 +7,11 @@ import {
   SESSION_IDLE_WARNING_MS,
   SESSION_INACTIVITY_MS,
   SESSION_MAX_MS,
-  SESSION_REFRESH_INTERVAL_MS,
   SESSION_STORAGE_LAST_ACTIVITY,
   SESSION_STORAGE_STARTED_AT,
   type SessionLogoutReason,
 } from "@/constants/sessionPolicy";
-import { recordSessionActivity, refreshSession } from "@/lib/auth";
+import { recordSessionActivity } from "@/lib/auth";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
@@ -72,7 +71,6 @@ export function useSessionTimeout(
   const onIdleWarningRef = useRef(onIdleWarning);
   const lastActivityRef = useRef(Date.now());
   const lastPingRef = useRef(Date.now());
-  const lastRefreshRef = useRef(Date.now());
   const idleWarningShownRef = useRef(false);
 
   useEffect(() => {
@@ -94,7 +92,6 @@ export function useSessionTimeout(
     const now = Date.now();
     lastActivityRef.current = readLastActivityMs();
     lastPingRef.current = now;
-    lastRefreshRef.current = now;
 
     const events: Array<keyof WindowEventMap> = [
       "mousedown",
@@ -144,13 +141,8 @@ export function useSessionTimeout(
         void recordSessionActivity().catch(() => undefined);
       }
 
-      if (
-        idleFor < SESSION_INACTIVITY_MS &&
-        now - lastRefreshRef.current >= SESSION_REFRESH_INTERVAL_MS
-      ) {
-        lastRefreshRef.current = now;
-        void refreshSession().catch(() => undefined);
-      }
+      // Access-token refresh is handled reactively by the HTTP client on 401
+      // (single-flight refresh + retry), so no proactive timer refresh here.
     }, 30_000);
 
     return () => {

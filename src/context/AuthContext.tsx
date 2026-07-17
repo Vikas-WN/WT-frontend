@@ -8,8 +8,8 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { useRouter } from "next/navigation";
-import { type AuthUser, refreshSession, logout as authLogout, recordSessionActivity } from "@/lib/auth";
+import { usePathname, useRouter } from "next/navigation";
+import { type AuthUser, fetchMe, refreshSession, logout as authLogout, recordSessionActivity } from "@/lib/auth";
 import { normalizeRoles } from "@/utils/roles";
 import {
   clearSessionTiming,
@@ -57,6 +57,7 @@ function applyAuthenticatedUser(freshUser: AuthUser): AuthUser {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [sessionLogoutReason, setSessionLogoutReason] = useState<SessionLogoutReason | null>(null);
@@ -96,6 +97,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return null;
     }
   }, []);
+
+  /**
+   * First-mount session bootstrap.
+   *
+   * Uses the cheap, read-only GET /auth/me to confirm the session WITHOUT
+   * rotating tokens. Only when the access token is missing/expired (me -> null)
+   * do we fall back to refresh(), which rotates the refresh token. This avoids
+   * the refresh -> 401 -> logout storm that came from refreshing on every mount.
+   */
+  const bootstrap = useCallback(async (): Promise<AuthUser | null> => {
+    setStatus("loading");
+    try {
+      const me = await fetchMe();
+      if (me) {
+        const normalized = applyAuthenticatedUser(me);
+        setUser(normalized);
+        setStatus("authenticated");
+        return normalized;
+      }
+    } catch {
+      /* fall through below */
+    }
+    // No valid access-token session. On /login there is nothing to recover, so
+    // do NOT rotate tokens — that caused the refresh -> 401 -> logout loop.
+    // On protected routes, try a single refresh to recover a still-valid refresh
+    // session (sliding sessions after the short-lived access token expires).
+    if (pathname?.startsWith("/login")) {
+      clearSessionTiming();
+      setUser(null);
+      setStatus("unauthenticated");
+      return null;
+    }
+    return refresh();
+  }, [pathname, refresh]);
 
   const logout = useCallback(async () => {
     try {
@@ -169,12 +204,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener(SESSION_LOGOUT_EVENT, onSessionLogout);
   }, [handleSessionTimeout]);
 
-  /* Validate session on first mount */
+  /* Validate session on first mount (read-only, refresh only if needed) */
   useEffect(() => {
     if (didInitialRefresh.current) return;
     didInitialRefresh.current = true;
-    refresh();
-  }, [refresh]);
+    void bootstrap();
+  }, [bootstrap]);
 
   useEffect(() => {
     if (status === "authenticated") {

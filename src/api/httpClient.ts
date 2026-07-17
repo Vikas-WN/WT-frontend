@@ -27,6 +27,8 @@ export interface ApiRequestOptions {
   withCredentials?: boolean;
   responseType?: ResponseType;
   skipAuth?: boolean;
+  /** Internal: set when a request is being retried after a silent token refresh. */
+  __isRetry?: boolean;
 }
 
 type RequestInterceptor = (
@@ -71,6 +73,8 @@ export class HttpClient {
   private readonly baseUrl: string;
   private authTokenGetter?: () => string | null | undefined;
   private onUnauthorized?: () => void;
+  private tokenRefresher?: () => Promise<boolean>;
+  private refreshInFlight: Promise<boolean> | null = null;
   private requestInterceptors: RequestInterceptor[] = [];
   private responseInterceptors: ResponseInterceptor[] = [];
   private errorInterceptors: ErrorInterceptor[] = [];
@@ -85,6 +89,30 @@ export class HttpClient {
 
   setUnauthorizedHandler(handler: () => void) {
     this.onUnauthorized = handler;
+  }
+
+  /**
+   * Registers the function used for reactive, silent token refresh on 401.
+   * Should resolve to true when the session was refreshed, false otherwise.
+   */
+  setTokenRefresher(refresher: () => Promise<boolean>) {
+    this.tokenRefresher = refresher;
+  }
+
+  /**
+   * Runs at most one refresh at a time. Concurrent 401s all await the same
+   * refresh promise, so a rotating refresh token is only spent once.
+   */
+  private runSingleFlightRefresh(): Promise<boolean> {
+    if (!this.tokenRefresher) return Promise.resolve(false);
+    if (!this.refreshInFlight) {
+      this.refreshInFlight = this.tokenRefresher()
+        .catch(() => false)
+        .finally(() => {
+          this.refreshInFlight = null;
+        });
+    }
+    return this.refreshInFlight;
   }
 
   useRequest(interceptor: RequestInterceptor) {
@@ -110,6 +138,7 @@ export class HttpClient {
       withCredentials = true,
       responseType = "json",
       skipAuth = false,
+      __isRetry = false,
     } = options;
 
     const url = this.buildUrl(path, query);
@@ -139,6 +168,16 @@ export class HttpClient {
       let response = await fetch(request.url, request.init);
       for (const interceptor of this.responseInterceptors) {
         response = await interceptor(response, request);
+      }
+
+      // Reactive silent refresh: on a 401 for an authenticated request, refresh
+      // the session once (single-flight) and retry the original request. Only if
+      // refresh fails do we surface the 401 / dispatch logout below.
+      if (response.status === 401 && !skipAuth && !__isRetry && this.tokenRefresher) {
+        const refreshed = await this.runSingleFlightRefresh();
+        if (refreshed) {
+          return this.request<T>(path, { ...options, __isRetry: true });
+        }
       }
 
       if (!response.ok) {

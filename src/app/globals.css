@@ -885,6 +885,146 @@ select.input-field {
   }
 }
 
+/* ── Not found page (space) ─────────────────────────────────────── */
+@keyframes wt-not-found-nebula {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.05);
+  }
+}
+
+@keyframes wt-space-ring-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes wt-space-orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes wt-space-sat-counter {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(-360deg);
+  }
+}
+
+@keyframes wt-space-star {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.25);
+  }
+}
+
+@keyframes wt-space-code-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 24px color-mix(in srgb, var(--wt-brand) 28%, transparent);
+  }
+  50% {
+    text-shadow: 0 0 42px color-mix(in srgb, var(--wt-brand) 48%, transparent);
+  }
+}
+
+.wt-not-found-nebula {
+  animation: wt-not-found-nebula 10s ease-in-out infinite;
+}
+
+.wt-space-ring--outer {
+  animation: wt-space-ring-spin 28s linear infinite;
+}
+
+.wt-space-ring--inner {
+  animation: wt-space-ring-spin 18s linear infinite reverse;
+}
+
+.wt-space-orbit {
+  animation: wt-space-orbit 9s linear infinite;
+}
+
+.wt-space-sat {
+  /* kept upright while parent orbit spins */
+  animation: wt-space-sat-counter 9s linear infinite;
+}
+
+.wt-space-star {
+  animation: wt-space-star 2.6s ease-in-out infinite;
+}
+
+.wt-space-star--2 {
+  animation-delay: 0.35s;
+}
+.wt-space-star--3 {
+  animation-delay: 0.7s;
+}
+.wt-space-star--4 {
+  animation-delay: 1.05s;
+}
+.wt-space-star--5 {
+  animation-delay: 1.4s;
+}
+.wt-space-star--6 {
+  animation-delay: 1.75s;
+}
+
+.wt-space-code {
+  animation: wt-space-code-glow 4s ease-in-out infinite;
+}
+
+.wt-not-found-enter {
+  animation: fadeUp 0.65s var(--wt-ease-out) both;
+}
+
+.wt-not-found-enter--1 {
+  animation-delay: 40ms;
+}
+.wt-not-found-enter--2 {
+  animation-delay: 110ms;
+}
+.wt-not-found-enter--3 {
+  animation-delay: 200ms;
+}
+.wt-not-found-enter--4 {
+  animation-delay: 280ms;
+}
+.wt-not-found-enter--5 {
+  animation-delay: 360ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wt-not-found-nebula,
+  .wt-space-ring--outer,
+  .wt-space-ring--inner,
+  .wt-space-orbit,
+  .wt-space-sat,
+  .wt-space-star,
+  .wt-space-code,
+  .wt-not-found-enter {
+    animation: none !important;
+  }
+}
+
 .fade-up {
   animation: fadeUp var(--wt-duration-slow) var(--wt-ease) both;
 }

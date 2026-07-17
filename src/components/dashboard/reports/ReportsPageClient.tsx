@@ -82,6 +82,7 @@ import { DataTable } from "@/components/dashboard/ui/DataTable";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
+import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { CARD_CONTENT_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
@@ -3384,9 +3385,10 @@ export function ReportsPageClient() {
                                 />
                               </div>
                             ) : activeSection === "reports-section-5" ? (
-                              <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-4 text-sm text-wt-text">
-                                <h4 className="font-medium">Engagement &amp; Culture Metrics</h4>
-                              </div>
+                              <EmptyState
+                                title="Engagement Metrics Coming Soon"
+                                description="Pulse and culture engagement metrics for service teams will appear here once the report feed is connected."
+                              />
                             ) : activeSection === "reports-section-6" ? (
                               <div className="space-y-4">
                                 <DataTable
@@ -3433,9 +3435,10 @@ export function ReportsPageClient() {
                                 />
                               </div>
                             ) : (
-                              <div className="rounded-xl border border-wt-border bg-wt-surface-2 p-4 text-sm text-wt-text-muted">
-                                Placeholder for {activeSection.replace("reports-", "section ")}. Share requirements and I will implement it.
-                              </div>
+                              <EmptyState
+                                title="Report Not Available"
+                                description="This report section is not available yet. Choose another report from the sidebar."
+                              />
                             )}
               </div>
             </div>

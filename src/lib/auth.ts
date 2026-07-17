@@ -69,6 +69,29 @@ export async function refreshSession(): Promise<AuthUser | null> {
 }
 
 /**
+ * Single-flight token refresh used by the HTTP client's reactive 401 handler.
+ *
+ * Returns true when the session was refreshed, false otherwise. Unlike
+ * refreshSession(), it does NOT dispatch a logout — the caller (httpClient)
+ * decides what to do when refresh fails (surface the original 401 / logout).
+ */
+export async function attemptTokenRefresh(): Promise<boolean> {
+  try {
+    const body = await apiClient.post<ApiResponse<AuthUser>>(endpoints.auth.refresh, {
+      skipAuth: true,
+    });
+    return Boolean(body?.data);
+  } catch {
+    return false;
+  }
+}
+
+// Wire reactive, single-flight refresh-on-401 into the shared API client so any
+// authenticated request transparently refreshes + retries once when the access
+// token has expired. This is the primary refresh path (no proactive timer).
+apiClient.setTokenRefresher(attemptTokenRefresh);
+
+/**
  * Records user activity server-side to reset the inactivity timer.
  */
 export async function recordSessionActivity(): Promise<void> {
@@ -107,6 +130,30 @@ export async function devBypassLogin(email: string): Promise<AuthUser | null> {
     skipAuth: true,
   });
   return body.data;
+}
+
+/**
+ * Read-only session check against GET /api/v1/auth/me.
+ *
+ * Returns the current user when the cookie session is valid, or null on 401.
+ * Unlike refreshSession(), this does NOT rotate tokens, so it's safe to call on
+ * every mount without triggering the refresh -> 401 -> logout loop.
+ *
+ * Uses skipAuth so a 401 does not fire the global session-logout bridge — the
+ * caller decides what to do with a null result.
+ */
+export async function fetchMe(): Promise<AuthUser | null> {
+  try {
+    const body = await apiClient.get<ApiResponse<AuthUser>>(endpoints.auth.me, {
+      skipAuth: true,
+    });
+    return body.data;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 /** Human-readable messages for OAuth error query params */

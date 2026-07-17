@@ -64,8 +64,8 @@ export function AssignAccountManagerPageClient() {
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
           <h3 className="text-lg font-semibold">Access Restricted</h3>
           <p className="mt-2 text-sm text-wt-text-muted">Only HR users can assign account managers.</p>
-          <Link href={DASHBOARD_ROUTES.overview} className="mt-4 inline-block text-sm text-[var(--wt-brand)] hover:underline">
-            Back to overview
+          <Link href={DASHBOARD_ROUTES.profile} className="mt-4 inline-block text-sm text-[var(--wt-brand)] hover:underline">
+            Back To Home
           </Link>
         </div>
       </DashboardPageShell>

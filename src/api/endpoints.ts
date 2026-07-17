@@ -9,6 +9,7 @@ export const endpoints = {
     refresh: `${api}/auth/refresh`,
     activity: `${api}/auth/activity`,
     logout: `${api}/auth/logout`,
+    me: `${api}/auth/me`,
     oauthBypass: (email: string) => `${api}/oauth/bypass/${encodeURIComponent(email)}`,
   },
 
