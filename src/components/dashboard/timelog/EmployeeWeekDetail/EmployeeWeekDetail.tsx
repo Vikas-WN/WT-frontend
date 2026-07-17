@@ -62,7 +62,11 @@ export function EmployeeWeekDetail({
               <span>{employeeEmail}</span>
             </div>
             <div className="detail-actions">
-              <WeekPickerField weekStart={weekStart} onWeekStartChange={onWeekChange} />
+              <WeekPickerField
+                weekStart={weekStart}
+                onWeekStartChange={onWeekChange}
+                placeholder="Select Week"
+              />
               <RefreshIconButton onClick={onRefresh} loading={loading} />
             </div>
           </div>

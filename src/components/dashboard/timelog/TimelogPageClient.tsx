@@ -12,12 +12,13 @@ import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTab
 import { INNER_PANEL_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { SelectField, ApiDateField } from "@/components/dashboard/ui/forms";
+import { SelectField } from "@/components/dashboard/ui/forms";
 import { ApprovalRemarkModal } from "@/components/dashboard/timelog/ApprovalRemarkModal/ApprovalRemarkModal";
 import { HrEmployeeTimelogWeekModal } from "@/components/dashboard/timelog/HrEmployeeTimelogWeekModal";
 import { HrMonthlyTimelogSummary } from "@/components/dashboard/timelog/HrMonthlyTimelogSummary";
 import { MyWeeklyTimesheet } from "@/components/dashboard/timelog/MyWeeklyTimesheet";
 import { ProjectTimelogPanel } from "@/components/dashboard/timelog/ProjectTimelogPanel/ProjectTimelogPanel";
+import { DatePicker } from "@/components/ui/date-picker";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
 import {
   currentMonthRef,
@@ -33,13 +34,12 @@ import { HrReviewNoticeBanner } from "@/components/hr-review/HrReviewNoticeBanne
 import { hrmsService } from "@/services/hrms.service";
 import { toPagedRows } from "@/utils/apiRows";
 import { isOffboardedUserStatus } from "@/utils/userStatus";
-import { managerTeamEmails } from "@/utils/dashboard/projects";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
-import { lastSevenDaysInvitedEmployeesDateRange } from "@/utils/dashboard/invitedEmployees";
-import { compareApiDates } from "@/utils/apiDate";
+import { formatApiDate } from "@/utils/apiDate";
 import type { DayTimelogEntry } from "@/hooks/timelog/useDayTimelog.types";
 import { timelogViewerRoles } from "@/utils/timelog/viewerRoles";
-import { showErrorToast } from "@/lib/toast";
+import { normalizeProjectTimelogsData } from "@/utils/timelog/normalizeProjectTimelogs";
+import { normalizeDayTimelogEntries } from "@/utils/timelog/normalizeWeekSnapshot";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 
 function unwrapPayload<T>(response: unknown): T {
@@ -69,22 +69,21 @@ export function TimelogPageClient() {
   const isOffboarded = isOffboardedUserStatus(user?.status);
   const requiresSelfOnboarding = Boolean(user?.requiresSelfOnboarding);
 
-  const subTab = pathname.endsWith("/dashboard/timelog/team") ? "team" : pathname.endsWith("/dashboard/timelog/projects") ? "projects" : "my";
-  const canSeeTeamTab = hasManagerAccess || hasHrAccess || hasAdminAccess;
+  const subTab = pathname.endsWith("/dashboard/timelog/team")
+    ? "team"
+    : pathname.endsWith("/dashboard/timelog/projects")
+      ? "projects"
+      : "my";
+  // Primary managers may only have ROLE_EMPLOYEE; inbox comes from GET /timelog/projects.
+  const canSeeTeamTab = true;
   const isTeamView = subTab === "team";
   const isProjectView = subTab === "projects";
-  const canManagerApprove =
-    isTeamView && (hasManagerAccess || hasAdminAccess) && !(hasHrAccess && !hasManagerAccess && !hasAdminAccess);
-  const isHrTeamView = isTeamView && hasHrAccess && !canManagerApprove;
+  const canManagerApprove = isTeamView || isProjectView;
+  const isHrTeamView = isTeamView && hasHrAccess && !hasManagerAccess && !hasAdminAccess;
 
-  const [fromDate, setFromDate] = useState(
-    () => lastSevenDaysInvitedEmployeesDateRange().from
-  );
-  const [toDate, setToDate] = useState(
-    () => lastSevenDaysInvitedEmployeesDateRange().to
-  );
-  const [appliedFromDate, setAppliedFromDate] = useState(fromDate);
-  const [appliedToDate, setAppliedToDate] = useState(toDate);
+  // Empty = show full data; both set = filter to that range (no default 7-day range).
+  const [teamFromDate, setTeamFromDate] = useState("");
+  const [teamToDate, setTeamToDate] = useState("");
   const [employeeEntries, setEmployeeEntries] = useState<DayTimelogEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [teamEmployeeEmail, setTeamEmployeeEmail] = useState("");
@@ -100,6 +99,17 @@ export function TimelogPageClient() {
     action: "APPROVED" | "REJECTED";
   } | null>(null);
 
+  const teamDateRange = useMemo(() => {
+    if (teamFromDate.trim() && teamToDate.trim()) {
+      return { from: teamFromDate.trim(), to: teamToDate.trim() };
+    }
+    const end = new Date();
+    end.setHours(0, 0, 0, 0);
+    const start = new Date(end);
+    start.setMonth(start.getMonth() - 6);
+    return { from: formatApiDate(start), to: formatApiDate(end) };
+  }, [teamFromDate, teamToDate]);
+
   const hrEmployees = useMemo<HrTimelogEmployee[]>(
     () => employeeOptions.map((opt) => ({ email: opt.value, label: opt.label })),
     [employeeOptions]
@@ -114,7 +124,7 @@ export function TimelogPageClient() {
     [hrMonthlySummary.rows]
   );
 
-  const { runAction } = useDashboardAction();
+  const { actionLoading, runAction } = useDashboardAction();
 
   const loadEmployeeEntries = useCallback(
     async (overrideEmail?: string) => {
@@ -125,43 +135,24 @@ export function TimelogPageClient() {
       try {
         const res = await hrmsService.getTimelogEmployeeEntries({
           employeeEmail: email,
-          startDate: appliedFromDate,
-          endDate: appliedToDate,
-          viewerRoles,
+          startDate: teamDateRange.from,
+          endDate: teamDateRange.to,
+          viewerRoles: viewerRoles.length ? viewerRoles : undefined,
         });
-        const data = unwrapPayload<DayTimelogEntry[]>(res);
-        setEmployeeEntries(Array.isArray(data) ? data : []);
+        setEmployeeEntries(normalizeDayTimelogEntries(unwrapPayload(res)));
       } catch {
         setEmployeeEntries([]);
       } finally {
         setEntriesLoading(false);
       }
     },
-    [isTeamView, teamEmployeeEmail, appliedFromDate, appliedToDate, viewerRoles]
-  );
-
-  const applyDateRange = useCallback(
-    (nextFrom: string, nextTo: string) => {
-      if (!nextFrom.trim() || !nextTo.trim()) {
-        showErrorToast("Select both From and To dates.");
-        return;
-      }
-      if (compareApiDates(nextFrom, nextTo) > 0) {
-        showErrorToast("From date cannot be after To date.");
-        return;
-      }
-      setFromDate(nextFrom);
-      setToDate(nextTo);
-      setAppliedFromDate(nextFrom);
-      setAppliedToDate(nextTo);
-    },
-    []
+    [isTeamView, teamEmployeeEmail, teamDateRange.from, teamDateRange.to, viewerRoles]
   );
 
   useEffect(() => {
     if (!isTeamView || !teamEmployeeEmail.trim()) return;
     void loadEmployeeEntries();
-  }, [isTeamView, teamEmployeeEmail, appliedFromDate, appliedToDate, loadEmployeeEntries]);
+  }, [isTeamView, teamEmployeeEmail, teamDateRange.from, teamDateRange.to, loadEmployeeEntries]);
 
   const loadTeamEmployees = useCallback(async () => {
     const sortItems = (items: Array<{ value: string; label: string }>) =>
@@ -184,27 +175,20 @@ export function TimelogPageClient() {
       return;
     }
 
-    if (hasManagerAccess) {
-      const res = await hrmsService.getManagerProjectsWithRoles();
-      const portfolio = toPagedRows((res as { data?: unknown }).data ?? res);
-      const emails = new Map<string, string>();
-      for (const row of portfolio) {
-        const nested = Array.isArray(row.employees)
-          ? (row.employees as Array<Record<string, unknown>>)
-          : [];
-        for (const emp of nested) {
-          const email = String(emp.email ?? emp.user_email ?? emp.userEmail ?? "").trim().toLowerCase();
-          const name = String(emp.name ?? email).trim();
-          if (email) emails.set(email, name || email);
-        }
+    // Source of truth for primary-manager inbox: GET /timelog/projects
+    const res = await hrmsService.getTimelogProjects();
+    const data = normalizeProjectTimelogsData(
+      ((res as { data?: unknown }).data ?? res) as unknown
+    );
+    const emails = new Map<string, string>();
+    for (const project of data.projects) {
+      for (const emp of project.employees) {
+        if (emp.email) emails.set(emp.email, emp.name || emp.email);
       }
-      for (const email of managerTeamEmails(portfolio)) {
-        if (!emails.has(email)) emails.set(email, email);
-      }
-      setEmployeeOptions(
-        sortItems(Array.from(emails.entries()).map(([value, label]) => ({ value, label })))
-      );
     }
+    setEmployeeOptions(
+      sortItems(Array.from(emails.entries()).map(([value, label]) => ({ value, label })))
+    );
   }, [hasHrAccess, hasAdminAccess, hasManagerAccess]);
 
   useEffect(() => {
@@ -212,19 +196,40 @@ export function TimelogPageClient() {
     void loadTeamEmployees().catch(() => setEmployeeOptions([]));
   }, [loadTeamEmployees, isTeamView, isProjectView]);
 
-  const handleEntryRemarkConfirm = (remark: string) => {
+  const handleEntryRemarkConfirm = async (remark: string) => {
     const action = remarkAction;
     if (!action) return;
-    setRemarkAction(null);
-    void runAction(action.action === "APPROVED" ? "Approve Time Log" : "Reject Time Log", async () => {
-      await hrmsService.updateTimelogStatus({
-        timelog_id: action.entryId,
-        status: action.action,
-        manager_comment: remark || undefined,
-      });
-      await loadEmployeeEntries();
-    });
+    const ok = await runAction(
+      action.action === "APPROVED" ? "Approve Time Log" : "Reject Time Log",
+      async () => {
+        await hrmsService.updateTimelogStatus({
+          timelog_id: action.entryId,
+          status: action.action,
+          manager_comment: remark || undefined,
+        });
+        setEmployeeEntries((prev) =>
+          prev.map((entry) =>
+            entry.id === action.entryId
+              ? {
+                  ...entry,
+                  status: action.action,
+                  manager_comment: remark || entry.manager_comment,
+                }
+              : entry
+          )
+        );
+        await loadEmployeeEntries();
+      }
+    );
+    if (ok) setRemarkAction(null);
   };
+
+  useEffect(() => {
+    // /team is legacy; primary-manager inbox lives on /projects (GET /timelog/projects).
+    if (isTeamView && !isHrTeamView) {
+      router.replace("/dashboard/timelog/projects");
+    }
+  }, [isTeamView, isHrTeamView, router]);
 
   useEffect(() => {
     if ((isTeamView || isProjectView) && !canSeeTeamTab) {
@@ -308,41 +313,24 @@ export function TimelogPageClient() {
                   title="Team Time Logs"
                   action={
                     <div className="flex flex-wrap items-end gap-2">
-                      <ApiDateField
-                        label="From"
-                        value={fromDate}
-                        onChange={setFromDate}
-                        className="w-[10.5rem]"
-                      />
-                      <ApiDateField
-                        label="To"
-                        value={toDate}
-                        onChange={setToDate}
-                        className="w-[10.5rem]"
-                      />
-                      <Button
-                        variant="brand"
-                        size="sm"
-                        type="button"
-                        disabled={entriesLoading}
-                        className="h-10"
-                        onClick={() => applyDateRange(fromDate, toDate)}
-                      >
-                        Apply Dates
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        type="button"
-                        disabled={entriesLoading}
-                        className="h-10"
-                        onClick={() => {
-                          const range = lastSevenDaysInvitedEmployeesDateRange();
-                          applyDateRange(range.from, range.to);
-                        }}
-                      >
-                        Last 7 Days
-                      </Button>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <div className="space-y-1">
+                          <span className="whitespace-nowrap text-sm text-muted-foreground">From</span>
+                          <DatePicker
+                            value={teamFromDate}
+                            onChange={setTeamFromDate}
+                            max={teamToDate || undefined}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <span className="whitespace-nowrap text-sm text-muted-foreground">To</span>
+                          <DatePicker
+                            value={teamToDate}
+                            onChange={setTeamToDate}
+                            min={teamFromDate || undefined}
+                          />
+                        </div>
+                      </div>
                       <RefreshIconButton
                         onClick={() => void loadEmployeeEntries()}
                         loading={entriesLoading}
@@ -350,13 +338,6 @@ export function TimelogPageClient() {
                     </div>
                   }
                 />
-
-                {canManagerApprove ? (
-                  <p className="text-xs text-wt-text-muted">
-                    Review individual entries below. Approve or reject each entry; rejected entries return to the employee
-                    as drafts.
-                  </p>
-                ) : null}
 
                 <SelectField
                   label="Employee"
@@ -376,13 +357,17 @@ export function TimelogPageClient() {
                 ) : !teamEmployeeEmail.trim() ? (
                   <EmptyState
                     title="Select an Employee"
-                    description="Choose a team member to review their time log entries for the selected date range."
+                    description="Choose a team member to review their time log entries."
                     className="py-10"
                   />
                 ) : !employeeEntries.length ? (
                   <EmptyState
                     title="No Time Log Entries"
-                    description="There are no entries for this employee during the selected date range."
+                    description={
+                      teamFromDate.trim() && teamToDate.trim()
+                        ? "There are no entries for this employee during the selected dates."
+                        : "There are no entries for this employee."
+                    }
                     className="py-10"
                   />
                 ) : (
@@ -485,8 +470,11 @@ export function TimelogPageClient() {
             remarkAction?.action === "APPROVED" ? "Approve" : "Reject"
           }
           actionVariant={remarkAction?.action === "REJECTED" ? "destructive" : "brand"}
+          loading={actionLoading}
           onConfirm={handleEntryRemarkConfirm}
-          onCancel={() => setRemarkAction(null)}
+          onCancel={() => {
+            if (!actionLoading) setRemarkAction(null);
+          }}
         />
       </DashboardPageShell>
     </OnboardingGate>

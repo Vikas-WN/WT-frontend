@@ -101,14 +101,25 @@ export function hasSubmittableEntries(rows: TimelogGridRow[], dayKeys: string[])
 
 export function weekPayloadFromGridRows(
   rows: TimelogGridRow[],
-  dayKeys: string[]
+  dayKeys: string[],
+  primaryManagerEmails?: string[]
 ): Array<{
   project_code: string;
+  projectCode: string;
   task_category: string;
+  taskCategory: string;
   sub_category?: string;
+  subCategory?: string;
   comment?: string;
   hours_by_date: Record<string, number>;
+  hoursByDate: Record<string, number>;
+  primary_manager_emails?: string[];
+  primaryManagerEmails?: string[];
 }> {
+  const managers = (primaryManagerEmails ?? [])
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+
   return rows
     .filter((row) => row.project_code.trim() && row.task_category.trim())
     .map((row) => {
@@ -119,12 +130,26 @@ export function weekPayloadFromGridRows(
         if (Number.isFinite(n) && n > 0) hours_by_date[key] = n;
       }
       if (!Object.keys(hours_by_date).length) return null;
+      const projectCode = row.project_code.trim();
+      const taskCategory = row.task_category.trim();
+      const subCategory = row.sub_category.trim() || undefined;
+      const comment = row.comment.trim() || undefined;
       return {
-        project_code: row.project_code.trim(),
-        task_category: row.task_category.trim(),
-        sub_category: row.sub_category.trim() || undefined,
-        comment: row.comment.trim() || undefined,
+        project_code: projectCode,
+        projectCode,
+        task_category: taskCategory,
+        taskCategory,
+        sub_category: subCategory,
+        subCategory,
+        comment,
         hours_by_date,
+        hoursByDate: hours_by_date,
+        ...(managers.length
+          ? {
+              primary_manager_emails: managers,
+              primaryManagerEmails: managers,
+            }
+          : {}),
       };
     })
     .filter((row): row is NonNullable<typeof row> => row != null);

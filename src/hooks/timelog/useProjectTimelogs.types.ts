@@ -36,8 +36,11 @@ export interface ProjectTimelogsState {
   selectedProject: string | null;
   selectedEmployee: string | null;
   expandedProject: string | null;
-  weekStart: string;
-  setWeekStart: (ws: string) => void;
+  fromDate: string;
+  toDate: string;
+  hasDateFilter: boolean;
+  setFromDate: (value: string) => void;
+  setToDate: (value: string) => void;
   toggleProject: (code: string) => void;
   selectEmployee: (email: string | null) => void;
   reload: () => void;

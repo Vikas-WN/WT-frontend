@@ -12,6 +12,29 @@ export function projectManagerEmailFromEntry(entry: DayTimelogEntry): string {
   return picked[0] ?? "";
 }
 
+/** Unique primary-manager emails from entries (for submit-date / week submit). */
+export function primaryManagerEmailsFromEntries(entries: DayTimelogEntry[]): string[] {
+  const emails = new Set<string>();
+  for (const entry of entries) {
+    const email = projectManagerEmailFromEntry(entry).trim().toLowerCase();
+    if (email) emails.add(email);
+  }
+  return Array.from(emails);
+}
+
+export function withPrimaryManagerEmails(
+  managerEmailOrList: string | string[] | undefined | null
+): { primary_manager_emails: string[]; primaryManagerEmails: string[] } | Record<string, never> {
+  const list = (Array.isArray(managerEmailOrList) ? managerEmailOrList : [managerEmailOrList ?? ""])
+    .map((email) => String(email ?? "").trim().toLowerCase())
+    .filter(Boolean);
+  if (!list.length) return {};
+  return {
+    primary_manager_emails: list,
+    primaryManagerEmails: list,
+  };
+}
+
 export type TimelogEntryWritePayload = {
   project_code: string;
   project_name: string | null;
@@ -37,7 +60,6 @@ export function buildTimelogEntryPayload(
   hours: number
 ): TimelogEntryWritePayload {
   const managerEmail = form.project_manager.trim().toLowerCase();
-  const primaryManagerEmails = managerEmail ? [managerEmail] : undefined;
   const payload: TimelogEntryWritePayload = {
     project_code: form.project_code,
     project_name: form.project_name.trim() || null,
@@ -46,10 +68,7 @@ export function buildTimelogEntryPayload(
     task_category: form.task_category,
     sub_category: form.sub_category || null,
     description: form.description || null,
+    ...withPrimaryManagerEmails(managerEmail),
   };
-  if (primaryManagerEmails?.length) {
-    payload.primary_manager_emails = primaryManagerEmails;
-    payload.primaryManagerEmails = primaryManagerEmails;
-  }
   return payload;
 }

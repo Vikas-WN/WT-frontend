@@ -16,6 +16,7 @@ export function useDashboardAction() {
     try {
       await fn();
       showSuccessToast(formatActionSuccessMessage(label));
+      return true;
     } catch (error) {
       const backendMessage =
         error instanceof ApiError
@@ -24,6 +25,7 @@ export function useDashboardAction() {
             ? error.message
             : "";
       showErrorToast(formatActionErrorMessage(label, backendMessage));
+      return false;
     } finally {
       setActionLoading(false);
     }

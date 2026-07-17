@@ -16,7 +16,7 @@ import type {
   CalendarMonth,
   CalendarDayInfo,
 } from "./useDayTimelog.types";
-import { buildTimelogEntryPayload } from "@/utils/timelog/entryManager";
+import { buildTimelogEntryPayload, primaryManagerEmailsFromEntries } from "@/utils/timelog/entryManager";
 
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
@@ -283,18 +283,24 @@ export function useDayTimelog() {
         const hours = Number(form.hours);
         if (!Number.isFinite(hours) || hours <= 0)
           throw new Error("Enter valid hours");
+        const entryPayload = buildTimelogEntryPayload(form, selectedDate, hours);
+        if (!entryPayload.primaryManagerEmails?.length) {
+          throw new Error("Select a project manager before submitting.");
+        }
         if (editingEntry) {
-          await hrmsService.updateTimelogEntry(
-            editingEntry.id,
-            buildTimelogEntryPayload(form, selectedDate, hours)
-          );
+          await hrmsService.updateTimelogEntry(editingEntry.id, entryPayload);
         } else {
           await hrmsService.createTimelogDraft({
-            ...buildTimelogEntryPayload(form, selectedDate, hours),
+            ...entryPayload,
             task_category: form.task_category || undefined,
           });
         }
-        await hrmsService.submitTimelogDate({ log_date: selectedDate });
+        await hrmsService.submitTimelogDate({
+          log_date: selectedDate,
+          date: selectedDate,
+          primaryManagerEmails: entryPayload.primaryManagerEmails,
+          primary_manager_emails: entryPayload.primary_manager_emails,
+        });
         await queryClient.invalidateQueries({
           queryKey: ["day-timelog-logs"],
         });
@@ -305,7 +311,7 @@ export function useDayTimelog() {
         setEditingEntry(null);
         showSuccessToast("Entry submitted for approval.");
       }),
-    [selectedDate, handleAction, queryClient, editingEntry],
+    [selectedDate, handleAction, queryClient, editingEntry]
   );
 
   const addEntry = useCallback(
@@ -375,7 +381,18 @@ export function useDayTimelog() {
     () =>
       handleAction(async () => {
         if (!selectedDate) return;
-        await hrmsService.submitTimelogDate({ log_date: selectedDate });
+        const managers = primaryManagerEmailsFromEntries(selectedDayEntries);
+        if (!managers.length) {
+          throw new Error(
+            "Each entry needs a project manager before submit. Edit drafts to select a manager."
+          );
+        }
+        await hrmsService.submitTimelogDate({
+          log_date: selectedDate,
+          date: selectedDate,
+          primaryManagerEmails: managers,
+          primary_manager_emails: managers,
+        });
         await queryClient.invalidateQueries({
           queryKey: ["day-timelog-logs"],
         });
@@ -384,7 +401,7 @@ export function useDayTimelog() {
         });
         showSuccessToast("Entries submitted for approval.");
       }),
-    [selectedDate, handleAction, queryClient],
+    [selectedDate, selectedDayEntries, handleAction, queryClient]
   );
 
   const openAddForm = useCallback(() => {
