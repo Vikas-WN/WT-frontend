@@ -12,6 +12,12 @@ export function bandNameMatchKey(name: string): string {
   return name.trim().toUpperCase().replace(/[\s\-_–—]+/g, "");
 }
 
+/** Intern-only bands — mirrors backend INTERN_ONLY_BAND_NAMES ("B8", "B8 - Intern"). */
+export function isInternOnlyBand(name: string): boolean {
+  const key = bandNameMatchKey(name);
+  return key === "B8" || key === "B8INTERN" || (key.includes("B8") && key.includes("INTERN"));
+}
+
 export function bandDisplayLabel(row: Record<string, unknown>): string {
   return String(row.name ?? row.band_name ?? row.bandName ?? row.id ?? "").trim();
 }
@@ -82,8 +88,18 @@ export function bandSelectOptionsForUserType(
   userType: string,
   internBandId: number
 ): Array<{ value: string; label: string }> {
-  const opts = bandSelectOptions(bandsForDepartment(bands, department));
-  if (userType !== "INTERN" || internBandId <= 0) return opts;
+  const scoped = bandsForDepartment(bands, department);
+  const isIntern = userType === "INTERN";
+
+  // Full-time / consultant must never see intern-only bands (B8, B8 - Intern).
+  const visible = isIntern
+    ? scoped
+    : scoped.filter(
+        (row) => !isInternOnlyBand(String(row.name ?? row.band_name ?? row.bandName ?? ""))
+      );
+
+  const opts = bandSelectOptions(visible);
+  if (!isIntern || internBandId <= 0) return opts;
   if (opts.some((option) => option.value === String(internBandId))) return opts;
 
   const internRow = bands.find((row) => Number(row.id) === internBandId);

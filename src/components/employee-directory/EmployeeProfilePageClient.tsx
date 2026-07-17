@@ -29,6 +29,7 @@ import {
   type EmployeeProfileEditForm,
 } from "@/utils/employeeDirectory";
 import { validatePersonalEmail, validateWorkEmail } from "@/utils/personalEmail";
+import { isInternOnlyBand } from "@/utils/dashboard/validation";
 import {
   PHONE_COUNTRY_OPTIONS,
   defaultPhoneCountryIso,
@@ -95,6 +96,10 @@ export function EmployeeProfilePageClient() {
     profileRecord.user_id ?? profileRecord.userId ?? ""
   ).trim();
   const employeeRole = pickEmployeeRole(profileRecord);
+  const isFulltimeEmployee =
+    String(pickProfileField(profileRecord, ["user_type", "userType"]) ?? "")
+      .toUpperCase()
+      .replace(/[\s\-_]/g, "") === "FULLTIME";
 
   const resumeShareHref = useMemo(() => {
     const index = buildResumeShareLinkIndex(resumePayload?.rows ?? []);
@@ -172,7 +177,10 @@ export function EmployeeProfilePageClient() {
   }, [isEditing, canEditProfile]);
 
   const bandSelectOptions = useMemo(() => {
-    const options = [...bandOptions];
+    // Full-time employees must never be offered intern-only bands (B8, B8 - Intern).
+    const options = isFulltimeEmployee
+      ? bandOptions.filter((band) => !isInternOnlyBand(band.label))
+      : [...bandOptions];
     const currentId = editForm?.band_id?.trim();
     if (currentId && !options.some((band) => band.id === currentId)) {
       const bandName = String(
@@ -181,7 +189,7 @@ export function EmployeeProfilePageClient() {
       options.unshift({ id: currentId, label: bandName || currentId });
     }
     return options;
-  }, [bandOptions, editForm?.band_id, profileRecord]);
+  }, [bandOptions, editForm?.band_id, profileRecord, isFulltimeEmployee]);
 
   const bandSelectValue = editForm?.band_id?.trim() ?? "";
 
