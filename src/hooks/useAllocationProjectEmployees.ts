@@ -50,6 +50,8 @@ export function useAllocationProjectEmployees(projectKey: string, enabled = true
     queryKey: ["allocation", "project-employees", key, search ?? ""],
     enabled: enabled && Boolean(key),
     queryFn: () => fetchProjectEmployees(key, search),
-    staleTime: 30_000,
+    // Always revalidate: backend expires ended allocations on this endpoint.
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 }

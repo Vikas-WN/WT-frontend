@@ -115,10 +115,15 @@ export const NATIVE_CONTROL_CLASS = cn(
 );
 
 /** Dialog / modal shell — shared by WtFormDialog and hand-rolled overlays. */
-export const MODAL_OVERLAY_CLASS =
-  "fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4 backdrop-blur-[2px] dark:bg-black/75";
+export const MODAL_OVERLAY_CLASS = cn(
+  // Scroll the overlay itself so tall dialogs are never clipped at the top.
+  "fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain",
+  "bg-black/55 p-4 backdrop-blur-[2px] dark:bg-black/75"
+);
 export const MODAL_PANEL_CLASS = cn(
-  "flex max-h-[min(92vh,880px)] w-full flex-col rounded-2xl border border-wt-border bg-wt-surface-1 shadow-xl",
+  // my-auto centers when short; min-h-0 + overflow-hidden lets the body scroll when tall.
+  "relative my-auto flex max-h-[min(90dvh,880px)] w-full min-h-0 flex-col overflow-hidden",
+  "rounded-2xl border border-wt-border bg-wt-surface-1 shadow-xl",
   "dark:border-wt-border-md dark:bg-wt-surface-1 dark:shadow-none"
 );
 export const MODAL_HEADER_CLASS =

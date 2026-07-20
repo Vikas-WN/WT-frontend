@@ -11,7 +11,7 @@ import { InternalEmployeesMultiSelect } from "@/components/allocation/InternalEm
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { hrmsService } from "@/services/hrms.service";
-import { normalizeToApiDate } from "@/utils/apiDate";
+import { normalizeToApiDate, parseApiDate } from "@/utils/apiDate";
 import {
   createEmptyAllocationForm,
   type AllocationFormState,
@@ -130,7 +130,17 @@ export function AllocateEmployeeDialog({
       showErrorToast("Start date is required.");
       return;
     }
-    const endDate = form.end_date ? normalizeToApiDate(form.end_date) : null;
+    const endDate = normalizeToApiDate(form.end_date);
+    if (!endDate) {
+      showErrorToast("End date is required.");
+      return;
+    }
+    const startParsed = parseApiDate(startDate);
+    const endParsed = parseApiDate(endDate);
+    if (startParsed && endParsed && endParsed < startParsed) {
+      showErrorToast("End date must be on or after the start date.");
+      return;
+    }
 
     const nextPercent = Number(form.allocated_percent);
     try {
@@ -324,6 +334,7 @@ export function AllocateEmployeeDialog({
           />
           <InputField
             label="End Date"
+            required
             type="date"
             value={form.end_date}
             onChange={(value) => setForm((prev) => ({ ...prev, end_date: value }))}

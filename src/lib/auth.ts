@@ -86,10 +86,9 @@ export async function attemptTokenRefresh(): Promise<boolean> {
   }
 }
 
-// Wire reactive, single-flight refresh-on-401 into the shared API client so any
-// authenticated request transparently refreshes + retries once when the access
-// token has expired. This is the primary refresh path (no proactive timer).
-apiClient.setTokenRefresher(attemptTokenRefresh);
+export function initAuthClient(): void {
+  apiClient.setTokenRefresher(attemptTokenRefresh);
+}
 
 /**
  * Records user activity server-side to reset the inactivity timer.

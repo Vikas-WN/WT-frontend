@@ -23,6 +23,7 @@ import { isKnownProjectTypeCode } from "@/utils/projectTypes";
 import { normalizePickerEmail } from "@/utils/learning/onboardOptions";
 import { parseEmployeeAllocationsResponse } from "@/utils/allocationList";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { UI_COPY } from "@/constants/uiCopy";
 
 import type { ProjectTypeRow } from "@/types/projectType";
 import type { AllocationPercentRow } from "@/types/allocationPercent";
@@ -99,6 +100,8 @@ export function CreateProjectDialog({
   enabled,
   allocationPercentOptions,
   initialProjectName,
+  editingProjectCode = "",
+  initialForm,
 }: {
   open: boolean;
   onClose: () => void;
@@ -107,6 +110,9 @@ export function CreateProjectDialog({
   enabled: boolean;
   allocationPercentOptions: AllocationPercentRow[];
   initialProjectName?: string;
+  /** When set, dialog updates this project instead of creating. */
+  editingProjectCode?: string;
+  initialForm?: ProjectFormState | null;
 }) {
   const [form, setForm] = useState<ProjectFormState>(createEmptyProjectForm());
   const [dmFields, setDmFields] = useState(() =>
@@ -116,6 +122,7 @@ export function CreateProjectDialog({
     createEmptyManagerAllocationFields("Project Manager")
   );
   const [loading, setLoading] = useState(false);
+  const isEditing = Boolean(editingProjectCode.trim());
 
   useEffect(() => {
     if (!open) {
@@ -125,11 +132,15 @@ export function CreateProjectDialog({
       setLoading(false);
       return;
     }
+    if (initialForm) {
+      setForm({ ...createEmptyProjectForm(), ...initialForm });
+      return;
+    }
     const prefillsName = initialProjectName?.trim() ?? "";
     if (prefillsName) {
       setForm((prev) => ({ ...prev, project_name: prefillsName }));
     }
-  }, [open, initialProjectName]);
+  }, [open, initialProjectName, initialForm, editingProjectCode]);
 
   async function handleSubmit() {
     const name = form.project_name.trim();
@@ -168,6 +179,21 @@ export function CreateProjectDialog({
 
     setLoading(true);
     try {
+      if (isEditing) {
+        await hrmsService.updateProject(editingProjectCode.trim(), {
+          project_name: name,
+          project_type: form.project_type,
+          client_id: clientId,
+          account_manager_email: accountManagerEmail,
+          start_date: startDate,
+          end_date: endDate,
+        });
+        showSuccessToast("Project updated successfully.");
+        onCreated();
+        onClose();
+        return;
+      }
+
       const projectCode = generateAutomaticProjectCode();
       await hrmsService.createProject({
         project_code: projectCode,
@@ -225,7 +251,13 @@ export function CreateProjectDialog({
       onCreated();
       onClose();
     } catch (error) {
-      showErrorToast(error instanceof Error ? error.message : "Could not create project.");
+      showErrorToast(
+        error instanceof Error
+          ? error.message
+          : isEditing
+            ? "Could not update project."
+            : "Could not create project."
+      );
     } finally {
       setLoading(false);
     }
@@ -234,16 +266,20 @@ export function CreateProjectDialog({
   return (
     <WtFormDialog
       open={open}
-      title="Create Project"
-      description="Set project details, then assign delivery and project managers."
+      title={isEditing ? "Edit Project" : "Create Project"}
+      description={
+        isEditing
+          ? "Update project details. Manager allocations are managed from Project Allocation."
+          : "Set project details, then assign delivery and project managers."
+      }
       onClose={onClose}
       onSubmit={() => void handleSubmit()}
-      submitLabel="Create Project"
+      submitLabel={isEditing ? UI_COPY.updateProject : "Create Project"}
       loading={loading}
       maxWidthClass="max-w-3xl"
     >
       <div className="space-y-6">
-        <FormSection title="Create Project">
+        <FormSection title={isEditing ? "Edit Project" : "Create Project"}>
           <div className="grid gap-4 sm:grid-cols-2">
             <InputField
               label="Name"
@@ -310,23 +346,27 @@ export function CreateProjectDialog({
           </div>
         </FormSection>
 
-        <ManagerAllocationFields
-          title="Delivery Manager"
-          state={dmFields}
-          onChange={setDmFields}
-          allocationPercentOptions={allocationPercentOptions}
-          enabled={enabled}
-          percentDesignation="Delivery Manager"
-        />
+        {!isEditing ? (
+          <>
+            <ManagerAllocationFields
+              title="Delivery Manager"
+              state={dmFields}
+              onChange={setDmFields}
+              allocationPercentOptions={allocationPercentOptions}
+              enabled={enabled}
+              percentDesignation="Delivery Manager"
+            />
 
-        <ManagerAllocationFields
-          title="Project Manager"
-          state={pmFields}
-          onChange={setPmFields}
-          allocationPercentOptions={allocationPercentOptions}
-          enabled={enabled}
-          percentDesignation="Project Manager"
-        />
+            <ManagerAllocationFields
+              title="Project Manager"
+              state={pmFields}
+              onChange={setPmFields}
+              allocationPercentOptions={allocationPercentOptions}
+              enabled={enabled}
+              percentDesignation="Project Manager"
+            />
+          </>
+        ) : null}
       </div>
     </WtFormDialog>
   );

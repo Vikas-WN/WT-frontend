@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export const DEFAULT_PAGE_SIZE = 10;
 
@@ -18,6 +18,8 @@ export function useClientPagination<T>(items: readonly T[], options?: Options) {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(options?.pageSize ?? DEFAULT_PAGE_SIZE);
 
+  const totalPagesRef = useRef(1);
+
   const resetSignature =
     options?.resetKeys?.map((key) => String(key)).join("\u0000") ?? "";
 
@@ -27,6 +29,7 @@ export function useClientPagination<T>(items: readonly T[], options?: Options) {
 
   const totalItems = items.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize) || 1);
+  totalPagesRef.current = totalPages;
 
   const safePage = Math.min(page, Math.max(0, totalPages - 1));
 
