@@ -9,7 +9,13 @@ export const HR_PROJECTS_QUERY_KEY = ["allocation", "hr", "projects"] as const;
 
 export type HrProjectsData = {
   rawRows: Array<Record<string, unknown>>;
-  pickerRows: Array<{ code: string; name: string; project_type: string; id?: number }>;
+  pickerRows: Array<{
+    code: string;
+    name: string;
+    project_type: string;
+    id?: number;
+    client_id?: number | null;
+  }>;
 };
 
 export async function fetchHrProjects(): Promise<HrProjectsData> {

@@ -34,6 +34,7 @@ import { AllocationExtensionPanel } from "@/components/dashboard/sections/Alloca
 import { AllocatedPercentSelect } from "@/components/allocation/AllocatedPercentSelect";
 import { AllocateEmployeeDialog } from "@/components/allocation/AllocateEmployeeDialog";
 import { CreateProjectDialog } from "@/components/allocation/CreateProjectDialog";
+import { ProjectEmployeesDetailDialog } from "@/components/allocation/ProjectEmployeesDetailDialog";
 import { ProjectTypeSelect } from "@/components/allocation/ProjectTypeSelect";
 import { ProjectTypeFilterSelect } from "@/components/allocation/ProjectTypeFilterSelect";
 import { useAllocationEmployees } from "@/hooks/useAllocationEmployees";
@@ -74,7 +75,7 @@ import {
   generateAutomaticProjectCode,
   formatAllocatedHoursPercentLabel,
 } from "@/utils/dashboard/validation";
-import { formatApiDateDisplay, normalizeToApiDate } from "@/utils/apiDate";
+import { apiDateToInputValue, formatApiDateDisplay, normalizeToApiDate } from "@/utils/apiDate";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
 import {
   allocationPercentLabelByCode,
@@ -126,7 +127,7 @@ import {
   ALLOCATION_LIST_SORT_OPTIONS,
   toggleColumnSort,
 } from "@/utils/listSort";
-import { IconPencil, IconTrash } from "@/components/dashboard/ui/icons";
+import { IconPencil, IconTrash, IconUsers } from "@/components/dashboard/ui/icons";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
@@ -135,6 +136,7 @@ import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAc
 import {
   createEmptyAllocationForm,
   createEmptyProjectForm,
+  type ProjectFormState,
 } from "@/utils/allocationFormState";
 import {
   allocationRowId,
@@ -148,6 +150,7 @@ import {
   parseDeallocatedAllocationListRows,
   ALLOCATION_LIST_DEFAULT_SORT_ID,
   filterAllocationListBySearch,
+  isSystemProjectAllocationRow,
   mergeUniqueAllocationListRows,
   sortAllocationListForDisplay,
   sortAllocationListRows,
@@ -446,8 +449,14 @@ export function AllocationPageClient() {
   const [allocationHrSubTab, setAllocationHrSubTab] = useState<
     "project" | "allocate" | "list"
   >("project");
+  const [projectDetail, setProjectDetail] = useState<{
+    code: string;
+    name: string;
+  } | null>(null);
   const [createProjectDialogOpen, setCreateProjectDialogOpen] = useState(false);
   const [createProjectPrefillName, setCreateProjectPrefillName] = useState("");
+  const [editingProjectCode, setEditingProjectCode] = useState("");
+  const [editingProjectForm, setEditingProjectForm] = useState<ProjectFormState | null>(null);
   const [allocateDialogOpen, setAllocateDialogOpen] = useState(false);
   const [timelogSubTab, setTimelogSubTab] = useState<"my" | "team">("my");
   const [leaveSubTab, setLeaveSubTab] = useState<"my" | "team">("my");
@@ -2504,6 +2513,8 @@ export function AllocationPageClient() {
     createProjectDeepLinkHandled.current = true;
 
     const projectName = searchParams.get("projectName")?.trim() ?? "";
+    setEditingProjectCode("");
+    setEditingProjectForm(null);
     setCreateProjectPrefillName(projectName);
     setAllocationHrSubTab("project");
     setCreateProjectDialogOpen(true);
@@ -2532,7 +2543,10 @@ export function AllocationPageClient() {
     resetKeys: [projectFilters.search, projectFilters.project_type, projectSortId],
   });
   const filteredAllocations = useMemo(
-    () => filterAllocationListBySearch(allocations, allocationListSearch),
+    () =>
+      filterAllocationListBySearch(allocations, allocationListSearch).filter(
+        (row) => !isSystemProjectAllocationRow(row)
+      ),
     [allocations, allocationListSearch]
   );
 
@@ -3438,7 +3452,8 @@ export function AllocationPageClient() {
                                   <div>
                                     <h3 className="font-semibold">Projects</h3>
                                     <p className="text-sm text-wt-text-muted">
-                                      Create projects with client, account manager, delivery manager, and project managers.
+                                      Create projects with client and managers. Click a project to
+                                      view employees and allocation dates.
                                     </p>
                                   </div>
                                   <div className="flex flex-wrap gap-2">
@@ -3447,6 +3462,8 @@ export function AllocationPageClient() {
                                       type="button"
                                       className="px-3 py-2"
                                       onClick={() => {
+                                        setEditingProjectCode("");
+                                        setEditingProjectForm(null);
                                         setCreateProjectPrefillName("");
                                         setCreateProjectDialogOpen(true);
                                       }}
@@ -3515,6 +3532,7 @@ export function AllocationPageClient() {
                                             <TableHead>Type</TableHead>
                                             <TableHead>Start Date</TableHead>
                                             <TableHead>End Date</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
                                           </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -3532,11 +3550,114 @@ export function AllocationPageClient() {
                                               String(row.end_date ?? row.endDate ?? "")
                                             );
                                             return (
-                                              <TableRow key={code || String(idx)}>
-                                                <TableCell className="px-3 py-2 max-w-[240px] truncate">{name || "—"}</TableCell>
+                                              <TableRow
+                                                key={code || String(idx)}
+                                                className="transition hover:bg-blue-50/50 dark:hover:bg-wt-surface-2"
+                                              >
+                                                <TableCell className="px-3 py-2 max-w-[240px] truncate font-medium">{name || "—"}</TableCell>
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{typ}</TableCell>
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{startDate || "—"}</TableCell>
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{endDate || "—"}</TableCell>
+                                                <TableCell className="px-3 py-2 text-right">
+                                                  <div className="inline-flex items-center justify-end gap-1">
+                                                    <Button
+                                                      type="button"
+                                                      variant="ghost"
+                                                      size="icon-sm"
+                                                      className="text-wt-text-muted hover:text-wt-text"
+                                                      disabled={!code}
+                                                      aria-label={`View employees for ${name || code}`}
+                                                      title="View employees"
+                                                      onClick={() => {
+                                                        if (!code) return;
+                                                        setProjectDetail({ code, name: name || code });
+                                                      }}
+                                                    >
+                                                      <IconUsers />
+                                                    </Button>
+                                                    <Button
+                                                      type="button"
+                                                      variant="ghost"
+                                                      size="icon-sm"
+                                                      className="text-wt-text-muted hover:text-wt-text disabled:opacity-40"
+                                                      disabled={!code || actionLoading}
+                                                      aria-label={`Edit ${name || code}`}
+                                                      title="Edit project"
+                                                      onClick={() => {
+                                                        if (!code) return;
+                                                        void (async () => {
+                                                          let payload: Record<string, unknown> =
+                                                            row as Record<string, unknown>;
+                                                          try {
+                                                            const res = await hrmsService.getProjectByCode(code);
+                                                            const data = (res.data ?? res) as Record<string, unknown>;
+                                                            if (data && typeof data === "object") payload = data;
+                                                          } catch {
+                                                            /* fall back to list row */
+                                                          }
+                                                          const nextForm: ProjectFormState = {
+                                                            ...createEmptyProjectForm(),
+                                                            project_name: String(
+                                                              payload.project_name ?? payload.projectName ?? name ?? ""
+                                                            ).trim(),
+                                                            project_type: projectTypeCodeFromRow(payload),
+                                                            client_id: String(
+                                                              payload.client_id ?? payload.clientId ?? ""
+                                                            ).trim(),
+                                                            client_name: String(
+                                                              payload.client_name ?? payload.clientName ?? ""
+                                                            ).trim(),
+                                                            account_manager_email: String(
+                                                              payload.account_manager_email ??
+                                                                payload.accountManagerEmail ??
+                                                                ""
+                                                            )
+                                                              .trim()
+                                                              .toLowerCase(),
+                                                            start_date: apiDateToInputValue(
+                                                              String(payload.start_date ?? payload.startDate ?? "")
+                                                            ),
+                                                            end_date: apiDateToInputValue(
+                                                              String(payload.end_date ?? payload.endDate ?? "")
+                                                            ),
+                                                          };
+                                                          setEditingProjectCode(code);
+                                                          setEditingProjectForm(nextForm);
+                                                          setCreateProjectPrefillName("");
+                                                          setCreateProjectDialogOpen(true);
+                                                        })();
+                                                      }}
+                                                    >
+                                                      <IconPencil />
+                                                    </Button>
+                                                    <Button
+                                                      type="button"
+                                                      variant="ghost"
+                                                      size="icon-sm"
+                                                      className="text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-40"
+                                                      disabled={!code || actionLoading}
+                                                      aria-label={`Delete ${name || code}`}
+                                                      title="Delete project"
+                                                      onClick={() => {
+                                                        if (!code) return;
+                                                        const label = name || code;
+                                                        if (
+                                                          !window.confirm(
+                                                            `Delete project "${label}"? It will be removed from the active projects list.`
+                                                          )
+                                                        ) {
+                                                          return;
+                                                        }
+                                                        runAction("Delete project", async () => {
+                                                          await hrmsService.deleteProject(code);
+                                                          refreshHrProjects();
+                                                        });
+                                                      }}
+                                                    >
+                                                      <IconTrash />
+                                                    </Button>
+                                                  </div>
+                                                </TableCell>
                                               </TableRow>
                                             );
                                           })}
@@ -3905,7 +4026,7 @@ export function AllocationPageClient() {
                                           </p>
                                           <div className="flex flex-wrap items-center gap-2">
                                             <p className="text-xs text-wt-text-muted">
-                                              Total allocated:{" "}
+                                              Allocated to projects:{" "}
                                               {selectedEmployeeAllocations.totalAllocatedPercent}%
                                             </p>
                                             <Button
@@ -3949,7 +4070,9 @@ export function AllocationPageClient() {
                                               </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                              {selectedEmployeeAllocations.allocations.map(
+                                              {selectedEmployeeAllocations.allocations
+                                                .filter((row) => !isSystemProjectAllocationRow(row))
+                                                .map(
                                                 (detailRow, detailIdx) => {
                                                   const detailId = allocationRowId(detailRow);
                                                   const highlighted =
@@ -4069,6 +4192,8 @@ export function AllocationPageClient() {
                                 onClose={() => {
                                   setCreateProjectDialogOpen(false);
                                   setCreateProjectPrefillName("");
+                                  setEditingProjectCode("");
+                                  setEditingProjectForm(null);
                                 }}
                                 onCreated={() => {
                                   refreshHrProjects();
@@ -4078,6 +4203,24 @@ export function AllocationPageClient() {
                                 enabled={hasAllocationAccess}
                                 allocationPercentOptions={allocationPercentOptions}
                                 initialProjectName={createProjectPrefillName}
+                                editingProjectCode={editingProjectCode}
+                                initialForm={editingProjectForm}
+                              />
+                              <ProjectEmployeesDetailDialog
+                                open={Boolean(projectDetail)}
+                                projectCode={projectDetail?.code ?? ""}
+                                projectName={projectDetail?.name}
+                                onClose={() => {
+                                  setProjectDetail(null);
+                                  // Viewing may expire ended allocations → refresh bench + list.
+                                  void queryClient.invalidateQueries({
+                                    queryKey: TALENT_POOL_QUERY_KEY,
+                                  });
+                                  void queryClient.invalidateQueries({
+                                    queryKey: ["allocation", "project-employees"],
+                                  });
+                                  void loadAllocationsForHr();
+                                }}
                               />
                               <AllocateEmployeeDialog
                                 open={allocateDialogOpen}

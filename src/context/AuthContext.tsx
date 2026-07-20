@@ -9,7 +9,7 @@ import React, {
   useState,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { type AuthUser, fetchMe, refreshSession, logout as authLogout, recordSessionActivity } from "@/lib/auth";
+import { type AuthUser, fetchMe, refreshSession, logout as authLogout, recordSessionActivity, initAuthClient } from "@/lib/auth";
 import { normalizeRoles } from "@/utils/roles";
 import {
   clearSessionTiming,
@@ -56,6 +56,8 @@ function applyAuthenticatedUser(freshUser: AuthUser): AuthUser {
 /* ------------------------------------------------------------------ */
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  initAuthClient();
+
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<AuthUser | null>(null);

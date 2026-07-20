@@ -83,13 +83,26 @@ export function parseClientList(data: unknown): ClientRecord[] {
   if (typeof data !== "object") return [];
 
   const envelope = data as Record<string, unknown>;
-  if (envelope.data !== undefined) {
-    const fromNested = parseClientItems(envelope.data);
-    if (fromNested.length) return fromNested;
+  const payload = (envelope.data !== undefined ? envelope.data : envelope) as unknown;
+
+  // Prefer explicit list shapes — do not use generic toRows("projects"), which can
+  // mistake a single client's projects[] for the clients list.
+  if (payload && typeof payload === "object") {
+    const obj = payload as Record<string, unknown>;
+    if (Array.isArray(obj.items)) {
+      return obj.items
+        .map((row) => parseClientRow(row as Record<string, unknown>))
+        .filter((row): row is ClientRecord => Boolean(row));
+    }
+    if (Array.isArray(obj.clients)) {
+      return obj.clients
+        .map((row) => parseClientRow(row as Record<string, unknown>))
+        .filter((row): row is ClientRecord => Boolean(row));
+    }
   }
-  const fromClients = parseClientItems(envelope.clients);
-  if (fromClients.length) return fromClients;
-  return parseClientItems(envelope);
+
+  if (Array.isArray(payload)) return parseClientItems(payload);
+  return [];
 }
 
 export function clientToFormState(client: ClientRecord) {

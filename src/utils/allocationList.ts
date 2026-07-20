@@ -131,6 +131,29 @@ export function sortAllocationListForDisplay(
   });
 }
 
+import { resolveAllocatedPercentFromRow } from "@/utils/allocationPercent";
+
+const SYSTEM_PROJECT_CODES = new Set(["BENCH", "GLOBAL"]);
+
+/** True when the row is a bench/global capacity filler, not a client project allocation. */
+export function isSystemProjectAllocationRow(row: Record<string, unknown>): boolean {
+  const code = String(row.project_code ?? row.projectCode ?? row.allocated_project ?? "")
+    .trim()
+    .toUpperCase();
+  return SYSTEM_PROJECT_CODES.has(code);
+}
+
+/** Sum allocation % on real projects only (excludes BENCH/GLOBAL filler rows). */
+export function sumProjectAllocatedPercent(rows: Array<Record<string, unknown>>): number {
+  let total = 0;
+  for (const row of rows) {
+    if (isSystemProjectAllocationRow(row)) continue;
+    const pct = resolveAllocatedPercentFromRow(row);
+    if (pct != null && Number.isFinite(pct)) total += pct;
+  }
+  return total;
+}
+
 export function filterAllocationListBySearch(
   rows: Array<Record<string, unknown>>,
   query: string
@@ -400,8 +423,17 @@ export function parseEmployeeAllocationsResponse(res: unknown): EmployeeAllocati
   const empId = String(o.emp_id ?? o.empId ?? "").trim() || undefined;
   const totalRaw = o.total_elements ?? o.totalElements ?? allocations.length;
   const totalElements = Number(totalRaw);
-  const totalPercentRaw = o.total_allocated_percent ?? o.totalAllocatedPercent ?? 0;
-  const totalAllocatedPercent = Number(totalPercentRaw);
+  const projectTotal = sumProjectAllocatedPercent(allocations);
+  const totalPercentRaw = o.total_allocated_percent ?? o.totalAllocatedPercent;
+  const apiTotal =
+    totalPercentRaw !== undefined && totalPercentRaw !== null && totalPercentRaw !== ""
+      ? Number(totalPercentRaw)
+      : NaN;
+  const totalAllocatedPercent = Number.isFinite(projectTotal)
+    ? projectTotal
+    : Number.isFinite(apiTotal)
+      ? apiTotal
+      : 0;
   return {
     employeeEmail,
     employeeName,

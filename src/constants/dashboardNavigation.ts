@@ -279,7 +279,12 @@ const PAGE_TITLE_OVERRIDES: Record<string, string> = {
 };
 
 function groupChildPageTitle(groupLabel: string, childLabel: string): string {
-  if (childLabel.toLowerCase().startsWith(groupLabel.toLowerCase())) {
+  const child = childLabel.toLowerCase();
+  const group = groupLabel.toLowerCase();
+  const groupSingular = group.replace(/s$/, "");
+  // Skip the group prefix when the child already conveys the group context,
+  // matching both plural ("Projects") and singular ("Project Allocation") forms.
+  if (child.startsWith(group) || child.startsWith(groupSingular)) {
     return toTitleCase(childLabel);
   }
   return `${groupLabel} ${toTitleCase(childLabel)}`;

@@ -97,7 +97,7 @@ export function CompOffCreditsDialog({
                   const isExpiring = c.daysUntilExpiry > 0 && c.daysUntilExpiry <= 60;
                   const isExpired = c.daysUntilExpiry <= 0;
                   return (
-                    <tr key={i} className={i % 2 === 1 ? "bg-muted/20" : ""}>
+                    <tr key={`${c.workedDate}-${c.projectCode}`} className={i % 2 === 1 ? "bg-muted/20" : ""}>
                       <td className="px-3 py-2.5 whitespace-nowrap">{c.workedDate}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{c.expiryDate}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">

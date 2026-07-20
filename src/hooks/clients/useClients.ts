@@ -29,7 +29,7 @@ export function useClients({
       });
       return parseClientList(res);
     },
-    staleTime: 60_000,
+    staleTime: includeProjects ? 15_000 : 60_000,
   });
 }
 
