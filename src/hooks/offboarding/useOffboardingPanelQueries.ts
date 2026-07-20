@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { showErrorToast } from "@/lib/toast";
 import { hrmsService } from "@/services/hrms.service";
 import type { HrOffboardListItem } from "@/types/offboard";
+import { pickRowField } from "@/utils/compOff";
 import { toPagedRows } from "@/utils/apiRows";
 import { formatApiDate } from "@/utils/apiDate";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -23,6 +24,8 @@ export type OffboardCandidate = {
 };
 
 export const OFFBOARDING_LIST_PAGE_SIZE = 10;
+
+const EMPTY_OFFBOARD_LIST: HrOffboardListItem[] = [];
 
 const OFFBOARDING_LWD_WINDOW_DAYS = 60;
 
@@ -57,6 +60,73 @@ function exitSplitPercent(part: unknown, total: unknown): number {
   const t = Number(total);
   if (!Number.isFinite(p) || !Number.isFinite(t) || t <= 0) return 0;
   return Math.round((p / t) * 1000) / 10;
+}
+
+function parseOffboardListItem(row: Record<string, unknown>): HrOffboardListItem | null {
+  const empId = String(pickRowField(row, "emp_id", "empId") ?? "").trim();
+  if (!empId) return null;
+
+  return {
+    emp_id: empId,
+    status: String(pickRowField(row, "status") ?? "").trim(),
+    employee_name: String(pickRowField(row, "employee_name", "employeeName") ?? "").trim(),
+    email: String(pickRowField(row, "email") ?? "").trim() || undefined,
+    exit_type: String(
+      pickRowField(row, "exit_type", "exitType", "separation_type", "separationType") ?? ""
+    ).trim(),
+    reason: (pickRowField(row, "reason") as string | null | undefined) ?? null,
+    expected_behavior:
+      (pickRowField(row, "expected_behavior", "expectedBehavior") as string | null | undefined) ??
+      null,
+    critical_skill:
+      (pickRowField(row, "critical_skill", "criticalSkill") as string | null | undefined) ?? null,
+    is_regretted: Boolean(pickRowField(row, "is_regretted", "isRegretted")),
+    resignation_date: String(
+      pickRowField(row, "resignation_date", "resignationDate") ?? ""
+    ).trim(),
+    last_working_day: String(
+      pickRowField(row, "last_working_day", "lastWorkingDay") ?? ""
+    ).trim(),
+    notice_period_days: Number(pickRowField(row, "notice_period_days", "noticePeriodDays") ?? 0),
+    designation: (pickRowField(row, "designation") as string | null | undefined) ?? null,
+    band_name: (pickRowField(row, "band_name", "bandName") as string | null | undefined) ?? null,
+    band_role: (pickRowField(row, "band_role", "bandRole") as string | null | undefined) ?? null,
+    project_manager:
+      (pickRowField(row, "project_manager", "projectManager") as string | null | undefined) ?? null,
+    exit_survey_submitted: Boolean(
+      pickRowField(row, "exit_survey_submitted", "exitSurveySubmitted")
+    ),
+    can_resend_exit_survey: Boolean(
+      pickRowField(row, "can_resend_exit_survey", "canResendExitSurvey")
+    ),
+    submission_status: pickRowField(row, "submission_status", "submissionStatus") as
+      | HrOffboardListItem["submission_status"]
+      | undefined,
+    lookup_id: String(pickRowField(row, "lookup_id", "lookupId") ?? "").trim() || undefined,
+    can_view_submission: Boolean(
+      pickRowField(row, "can_view_submission", "canViewSubmission")
+    ),
+  };
+}
+
+function parseOffboardListPayload(payload: unknown): { items: HrOffboardListItem[]; total: number } {
+  const envelope =
+    payload && typeof payload === "object"
+      ? (payload as Record<string, unknown>)
+      : {};
+  const data =
+    envelope.data && typeof envelope.data === "object"
+      ? (envelope.data as Record<string, unknown>)
+      : envelope;
+  const rawItems = Array.isArray(data.items) ? data.items : [];
+  const items = rawItems
+    .map((row) => parseOffboardListItem(row as Record<string, unknown>))
+    .filter((row): row is HrOffboardListItem => Boolean(row));
+  const total = Number(data.total ?? items.length);
+  return {
+    items,
+    total: Number.isFinite(total) ? total : items.length,
+  };
 }
 
 function buildOffboardCandidates(
@@ -99,11 +169,10 @@ export function useOffboardingPanelQueries() {
   const [listPage, setListPage] = useState(0);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
-  const defaultLwdWindow = useMemo(() => defaultOffboardingLwdWindow(), []);
-  const [filterFromDate, setFilterFromDate] = useState(defaultLwdWindow.from);
-  const [filterToDate, setFilterToDate] = useState(defaultLwdWindow.to);
+  const [filterFromDate, setFilterFromDate] = useState("");
+  const [filterToDate, setFilterToDate] = useState("");
   const [filterType, setFilterType] = useState("");
-  const [fyStartYear, setFyStartYear] = useState(defaultFinancialYearStart);
+  const [fyStartYear, setFyStartYear] = useState(() => defaultFinancialYearStart());
 
   const listFilters = useMemo(
     () => ({
@@ -116,18 +185,13 @@ export function useOffboardingPanelQueries() {
   );
 
   const listFiltersKey = useMemo(() => JSON.stringify(listFilters), [listFilters]);
-  const lastListFiltersKey = useRef(listFiltersKey);
-  let queryPage = listPage;
-  if (lastListFiltersKey.current !== listFiltersKey) {
-    lastListFiltersKey.current = listFiltersKey;
-    queryPage = 0;
-  }
+  const prevListFiltersKey = useRef(listFiltersKey);
 
   useEffect(() => {
-    if (queryPage === 0 && listPage !== 0) {
-      setListPage(0);
-    }
-  }, [listFiltersKey, listPage, queryPage]);
+    if (prevListFiltersKey.current === listFiltersKey) return;
+    prevListFiltersKey.current = listFiltersKey;
+    setListPage(0);
+  }, [listFiltersKey]);
 
   const fyYear = useMemo(() => parseFinancialYear(fyStartYear), [fyStartYear]);
 
@@ -165,7 +229,7 @@ export function useOffboardingPanelQueries() {
         hrmsService.getOffboardList({ page: 0, size: 200 }),
       ]);
       const onboardRows = toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes);
-      const offboardedItems = (offboardRes.data?.items ?? []) as HrOffboardListItem[];
+      const offboardedItems = parseOffboardListPayload(offboardRes).items;
       return buildOffboardCandidates(onboardRows, offboardedItems);
     },
     staleTime: OFFBOARDING_STALE_MS,
@@ -175,17 +239,14 @@ export function useOffboardingPanelQueries() {
   });
 
   const listQ = useQuery({
-    queryKey: ["offboarding", "list", queryPage, OFFBOARDING_LIST_PAGE_SIZE, listFilters],
+    queryKey: ["offboarding", "list", listPage, OFFBOARDING_LIST_PAGE_SIZE, listFilters],
     queryFn: async () => {
       const res = await hrmsService.getOffboardList({
-        page: queryPage,
+        page: listPage,
         size: OFFBOARDING_LIST_PAGE_SIZE,
         ...listFilters,
       });
-      return {
-        items: (res.data?.items ?? []) as HrOffboardListItem[],
-        total: res.data?.total ?? 0,
-      };
+      return parseOffboardListPayload(res);
     },
     staleTime: OFFBOARDING_LIST_STALE_MS,
     refetchOnMount: false,
@@ -214,7 +275,7 @@ export function useOffboardingPanelQueries() {
   }, []);
 
   const offboardCandidates = candidatesQ.data ?? [];
-  const offboardedRows = listQ.data?.items ?? [];
+  const offboardedRows = listQ.data?.items ?? EMPTY_OFFBOARD_LIST;
   const listTotal = listQ.data?.total ?? 0;
   const loadingAttrition = attritionQ.isLoading && !attritionQ.data;
   const loadingCandidates = candidatesQ.isLoading && !candidatesQ.data;
@@ -258,6 +319,8 @@ export function useOffboardingPanelQueries() {
     attritionExitCount: attritionQ.data?.attritionExitCount ?? null,
     refreshOffboardingData,
     refetchList: listQ.refetch,
+    listFetched: listQ.isFetched,
+    financialYearOptions: FINANCIAL_YEAR_OPTIONS,
   };
 }
 
@@ -270,3 +333,5 @@ export function financialYearSelectOptions() {
     };
   });
 }
+
+const FINANCIAL_YEAR_OPTIONS = financialYearSelectOptions();

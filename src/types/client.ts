@@ -37,7 +37,6 @@ export type ClientFormState = {
   poc_internal_email: string;
   account_manager_email: string;
   delivery_manager_email: string;
-  project_manager_email: string;
   is_active: boolean;
 };
 
@@ -51,7 +50,6 @@ export function createEmptyClientForm(): ClientFormState {
     poc_internal_email: "",
     account_manager_email: "",
     delivery_manager_email: "",
-    project_manager_email: "",
     is_active: true,
   };
 }

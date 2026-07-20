@@ -43,7 +43,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import {
-  financialYearSelectOptions,
   OFFBOARDING_LIST_PAGE_SIZE,
   useOffboardingPanelQueries,
 } from "@/hooks/offboarding/useOffboardingPanelQueries";
@@ -95,7 +94,8 @@ function bulkResendResultClassName(
 
 export function OffboardingPanel() {
   const router = useRouter();
-  const [offboardingForm, setOffboardingForm] = useState(createEmptyOffboardingForm);
+  // `createEmptyOffboardingForm` is a factory; store the actual form object in state.
+  const [offboardingForm, setOffboardingForm] = useState(() => createEmptyOffboardingForm());
   const {
     listPage,
     setListPage,
@@ -120,6 +120,8 @@ export function OffboardingPanel() {
     involuntaryPercent,
     attritionExitCount,
     refreshOffboardingData,
+    listFetched,
+    financialYearOptions,
   } = useOffboardingPanelQueries();
   const [listCache, setListCache] = useState<{
     loaded: boolean;
@@ -128,10 +130,19 @@ export function OffboardingPanel() {
   }>({ loaded: false, rows: [], total: 0 });
 
   useEffect(() => {
-    if (offboardedRows.length > 0) {
-      setListCache({ loaded: true, rows: offboardedRows, total: listTotal });
-    }
-  }, [offboardedRows, listTotal]);
+    if (!listFetched) return;
+    setListCache((prev) => {
+      if (
+        prev.loaded &&
+        prev.total === listTotal &&
+        prev.rows.length === offboardedRows.length &&
+        prev.rows.every((row, index) => row.emp_id === offboardedRows[index]?.emp_id)
+      ) {
+        return prev;
+      }
+      return { loaded: true, rows: offboardedRows, total: listTotal };
+    });
+  }, [listFetched, offboardedRows, listTotal]);
 
   const displayRows = loadingList && !offboardedRows.length ? listCache.rows : offboardedRows;
   const displayTotal = loadingList && !offboardedRows.length ? listCache.total : listTotal;
@@ -391,7 +402,7 @@ export function OffboardingPanel() {
             className="w-[11rem] shrink-0"
             value={fyStartYear}
             onChange={setFyStartYear}
-            options={financialYearSelectOptions()}
+            options={financialYearOptions}
           />
         </CardHeader>
         <Separator />
@@ -671,10 +682,10 @@ export function OffboardingPanel() {
 
         {loadingList && !listCache.loaded ? (
           <TableRowsSkeleton rows={8} columns={10} />
-        ) : !loadingList && !offboardedRows.length && listCache.loaded ? (
+        ) : listFetched && !loadingList && !displayRows.length ? (
           <EmptyState
             title="No Offboarded Employees Found"
-            description="Try adjusting your search or filters."
+            description="Try adjusting your search or Last Working Day filters."
           />
         ) : (
           <>

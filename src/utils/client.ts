@@ -115,7 +115,6 @@ export function clientToFormState(client: ClientRecord) {
     poc_internal_email: client.pocInternalEmail ?? "",
     account_manager_email: client.accountManagerEmail ?? "",
     delivery_manager_email: client.deliveryManagerEmail ?? "",
-    project_manager_email: client.projectManagerEmail ?? "",
     is_active: client.isActive,
   };
 }

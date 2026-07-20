@@ -26,7 +26,6 @@ function buildClientPayload(form: ClientFormState) {
     poc_internal_email: form.poc_internal_email.trim() || null,
     account_manager_email: form.account_manager_email.trim() || null,
     delivery_manager_email: form.delivery_manager_email.trim() || null,
-    project_manager_email: form.project_manager_email.trim() || null,
     is_active: form.is_active,
   };
 }
@@ -168,7 +167,7 @@ export function ClientFormDialog({
 
         <FormSection
           title="Account Leadership"
-          description="Account manager, delivery manager, and default project manager for this client."
+          description="Account manager and delivery manager assigned to this client."
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <AccountManagerSelect
@@ -179,11 +178,6 @@ export function ClientFormDialog({
               label="Delivery Manager"
               value={form.delivery_manager_email}
               onChange={(value) => setForm((prev) => ({ ...prev, delivery_manager_email: value }))}
-            />
-            <InternalEmployeeSelect
-              label="Project Manager"
-              value={form.project_manager_email}
-              onChange={(value) => setForm((prev) => ({ ...prev, project_manager_email: value }))}
             />
           </div>
         </FormSection>

@@ -54,12 +54,14 @@ async function allocateManagerOnProject({
   projectCode,
   projectStart,
   projectEnd,
+  isManager = false,
 }: {
   email: string;
   fields: ManagerAllocationFieldsState;
   projectCode: string;
   projectStart: string;
   projectEnd: string;
+  isManager?: boolean;
 }) {
   const normalized = normalizePickerEmail(email);
   if (!normalized) return;
@@ -88,7 +90,7 @@ async function allocateManagerOnProject({
     allocationType,
     billingStatus,
     lockedInDate,
-    isManager: true,
+    isManager,
   });
 }
 
@@ -226,6 +228,7 @@ export function CreateProjectDialog({
           projectCode,
           projectStart: startDate,
           projectEnd: endDate,
+          isManager: false,
         });
       }
 
@@ -236,15 +239,8 @@ export function CreateProjectDialog({
           projectCode,
           projectStart: startDate,
           projectEnd: endDate,
+          isManager: true,
         });
-        try {
-          await hrmsService.assignProjectManager({
-            userEmail: pmEmail.trim().toLowerCase(),
-            projectCode,
-          });
-        } catch {
-          /* Requires active allocation */
-        }
       }
 
       showSuccessToast("Project created successfully.");
@@ -293,7 +289,6 @@ export function CreateProjectDialog({
               onChange={(value) => setForm((prev) => ({ ...prev, client_id: value }))}
               onClientSelected={(client) => {
                 const dmEmail = client.deliveryManagerEmail?.trim() || "";
-                const pmEmail = client.projectManagerEmail?.trim() || "";
                 setForm((prev) => ({
                   ...prev,
                   client_id: String(client.id),
@@ -303,9 +298,6 @@ export function CreateProjectDialog({
                 }));
                 if (dmEmail) {
                   setDmFields((prev) => ({ ...prev, email: dmEmail }));
-                }
-                if (pmEmail) {
-                  setPmFields((prev) => ({ ...prev, email: pmEmail }));
                 }
               }}
             />
