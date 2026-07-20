@@ -58,6 +58,7 @@ const PATH_TO_NAV_ID: Array<{ prefix: string; id: string }> = [
   { prefix: "/dashboard/allocation", id: "allocation" },
   { prefix: "/dashboard/offboarding", id: "offboarding" },
   { prefix: "/dashboard/background-verification", id: "background-verification" },
+  { prefix: "/dashboard/timelog/team", id: "timelog-team" },
   { prefix: "/dashboard/timelog/projects", id: "timelog-team" },
   { prefix: "/dashboard/timelog", id: "timelog" },
   { prefix: "/dashboard/leave/team", id: "leave-team" },

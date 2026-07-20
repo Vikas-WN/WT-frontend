@@ -9,7 +9,11 @@ function employeeTotal(
   projectCode: string,
   email: string
 ): string {
-  const list = totals[projectCode];
+  const code = projectCode.trim().toUpperCase();
+  const list =
+    totals[projectCode] ??
+    totals[code] ??
+    Object.entries(totals).find(([key]) => key.trim().toUpperCase() === code)?.[1];
   if (!list) return "0";
   const found = list.find(
     (e) => e.email.trim().toLowerCase() === email.trim().toLowerCase()

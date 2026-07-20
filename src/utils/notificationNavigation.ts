@@ -64,6 +64,8 @@ export function notificationCategoryLabel(
       return "Allocation Extension";
     case "TIMELOG_APPROVED":
     case "TIMELOG_REJECTED":
+    case "TIMELOG_SUBMITTED":
+    case "TIMELOG_REQUEST":
     case "NO_TIME_LOGS":
       return "Time Log";
     case "TRAINING_SCHEDULED":
@@ -146,9 +148,10 @@ export function resolveNotificationHref(
     case "NO_TIME_LOGS":
     case "TIMELOG_APPROVED":
     case "TIMELOG_REJECTED":
-      return hasAnyRole(roles, ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"])
-        ? DASHBOARD_ROUTES["timelog-team"]
-        : DASHBOARD_ROUTES.timelog;
+    case "TIMELOG_SUBMITTED":
+    case "TIMELOG_REQUEST":
+      // Primary managers may only have ROLE_EMPLOYEE; always open the projects inbox.
+      return DASHBOARD_ROUTES["timelog-team"];
 
     case "TRAINING_MARKS_PUBLISHED":
       return LEARNING_SCORES;

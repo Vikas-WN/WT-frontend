@@ -712,7 +712,21 @@ export const hrmsService = {
     employeeEmail?: string;
     viewerRoles?: string[];
   }) {
-    const query: Record<string, string> = { weekStart: params.weekStart };
+    const weekStart = params.weekStart.trim();
+    const query: Record<string, string> = {
+      weekStart,
+      week_start: weekStart,
+    };
+    // Dual-format so either backend convention works.
+    const slash = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(weekStart);
+    const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(weekStart);
+    if (slash) {
+      query.weekStartIso = `${slash[3]}-${slash[2]}-${slash[1]}`;
+    } else if (iso) {
+      query.weekStartDmy = `${iso[3]}/${iso[2]}/${iso[1]}`;
+      // Also set week_start as dd/mm/yyyy for backends that expect that shape.
+      query.week_start = `${iso[3]}/${iso[2]}/${iso[1]}`;
+    }
     if (params.employeeEmail?.trim()) {
       query.employee_email = params.employeeEmail.trim().toLowerCase();
     }
@@ -730,11 +744,23 @@ export const hrmsService = {
     viewerRoles?: string[];
   }) {
     const email = params.employeeEmail.trim().toLowerCase();
+    const startDate = params.startDate.trim();
+    const endDate = params.endDate.trim();
     const query: Record<string, string> = {
       employee_email: email,
-      start_date: params.startDate,
-      end_date: params.endDate,
+      startDate,
+      start_date: startDate,
+      endDate,
+      end_date: endDate,
     };
+    const startIso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(startDate);
+    const endIso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(endDate);
+    if (startIso) {
+      query.start_date = `${startIso[3]}/${startIso[2]}/${startIso[1]}`;
+    }
+    if (endIso) {
+      query.end_date = `${endIso[3]}/${endIso[2]}/${endIso[1]}`;
+    }
     const viewerRoles = timelogViewerRolesQueryValue(params.viewerRoles ?? []);
     if (viewerRoles) {
       query.viewer_roles = viewerRoles;
@@ -747,9 +773,10 @@ export const hrmsService = {
   },
 
   getTimelogProjectWeekTotals(projectCode: string, weekStart: string) {
+    const week = weekStart.trim();
     return apiClient.get<ApiEnvelope<unknown>>(
       endpoints.timelog.projectWeekTotals(projectCode),
-      { query: { weekStart } }
+      { query: { weekStart: week, week_start: week } }
     );
   },
 
@@ -764,16 +791,44 @@ export const hrmsService = {
   },
 
   saveTimelogWeek(payload: Record<string, unknown>) {
+    const weekStart = String(payload.weekStart ?? payload.week_start ?? "");
+    const body: Record<string, unknown> = {
+      ...payload,
+      week_start: weekStart,
+      weekStart,
+    };
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.timelog.week, {
       contentType: "application/json",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
   },
 
-  submitTimelogWeek(payload: { week_start: string; employee_email?: string }) {
+  submitTimelogWeek(payload: {
+    week_start?: string;
+    weekStart?: string;
+    employee_email?: string;
+    employeeEmail?: string;
+    primary_manager_emails?: string[];
+    primaryManagerEmails?: string[];
+  }) {
+    const weekStart = payload.weekStart ?? payload.week_start ?? "";
+    const body: Record<string, unknown> = {
+      week_start: weekStart,
+      weekStart,
+    };
+    const employeeEmail = payload.employeeEmail ?? payload.employee_email;
+    if (employeeEmail) {
+      body.employee_email = employeeEmail;
+      body.employeeEmail = employeeEmail;
+    }
+    const managers = payload.primaryManagerEmails ?? payload.primary_manager_emails;
+    if (managers?.length) {
+      body.primary_manager_emails = managers;
+      body.primaryManagerEmails = managers;
+    }
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.timelog.weekSubmit, {
       contentType: "application/json",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
   },
 
@@ -784,10 +839,30 @@ export const hrmsService = {
     task_category?: string;
     sub_category?: string | null;
     description?: string | null;
+    primary_manager_emails?: string[];
+    primaryManagerEmails?: string[];
   }) {
+    const managers = payload.primaryManagerEmails ?? payload.primary_manager_emails;
+    const body: Record<string, unknown> = {
+      project_code: payload.project_code,
+      projectCode: payload.project_code,
+      log_date: payload.log_date,
+      date: payload.log_date,
+      hours: payload.hours,
+      loggedHours: payload.hours,
+      task_category: payload.task_category,
+      taskCategory: payload.task_category,
+      sub_category: payload.sub_category,
+      subCategory: payload.sub_category,
+      description: payload.description,
+    };
+    if (managers?.length) {
+      body.primary_manager_emails = managers;
+      body.primaryManagerEmails = managers;
+    }
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.timelog.root, {
       contentType: "application/json",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
   },
 
@@ -808,10 +883,25 @@ export const hrmsService = {
     });
   },
 
-  submitTimelogDate(payload: { log_date: string }) {
+  submitTimelogDate(payload: {
+    log_date?: string;
+    date?: string;
+    primary_manager_emails?: string[];
+    primaryManagerEmails?: string[];
+  }) {
+    const date = payload.date ?? payload.log_date ?? "";
+    const managers = payload.primaryManagerEmails ?? payload.primary_manager_emails;
+    const body: Record<string, unknown> = {
+      log_date: date,
+      date,
+    };
+    if (managers?.length) {
+      body.primary_manager_emails = managers;
+      body.primaryManagerEmails = managers;
+    }
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.timelog.submitDate, {
       contentType: "application/json",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
   },
 
@@ -841,9 +931,19 @@ export const hrmsService = {
     status: "APPROVED" | "REJECTED";
     manager_comment?: string | null;
   }) {
+    const body: Record<string, unknown> = {
+      timelog_id: payload.timelog_id,
+      timelogId: payload.timelog_id,
+      status: payload.status,
+    };
+    if (payload.manager_comment) {
+      body.manager_comment = payload.manager_comment;
+      body.approverComment = payload.manager_comment;
+      body.approver_comment = payload.manager_comment;
+    }
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.timelog.status, {
       contentType: "application/json",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
   },
 
@@ -854,9 +954,23 @@ export const hrmsService = {
     status: "APPROVED" | "REJECTED";
     manager_comment?: string | null;
   }) {
+    const body: Record<string, unknown> = {
+      employee_email: payload.employee_email,
+      employeeEmail: payload.employee_email,
+      project_code: payload.project_code,
+      projectCode: payload.project_code,
+      log_date: payload.log_date,
+      date: payload.log_date,
+      status: payload.status,
+    };
+    if (payload.manager_comment) {
+      body.manager_comment = payload.manager_comment;
+      body.approverComment = payload.manager_comment;
+      body.approver_comment = payload.manager_comment;
+    }
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.timelog.statusBatch, {
       contentType: "application/json",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
   },
 

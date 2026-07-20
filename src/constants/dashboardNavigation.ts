@@ -76,7 +76,7 @@ export const dashboardNavigation: NavItem[] = [
       {
         id: "timelog-team",
         label: "Time Logs",
-        roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+        roles: ["ROLE_EMPLOYEE", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
         icon: "clock",
       },
     ],
