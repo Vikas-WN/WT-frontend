@@ -15,6 +15,7 @@ import { formatUiStatusLabel } from "@/utils/statusLabel";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
 import { toIsoDateKey } from "@/utils/timelog/weekDates";
 import type { DayTimelogEntry } from "@/hooks/timelog/useDayTimelog.types";
+import type { ProjectWeekEmployeeTotal } from "@/hooks/timelog/useProjectTimelogs.types";
 import type { ProjectTimelogPanelProps } from "./ProjectTimelogPanel.types";
 import { ApprovalRemarkModal } from "@/components/dashboard/timelog/ApprovalRemarkModal/ApprovalRemarkModal";
 
@@ -32,6 +33,30 @@ function entryStatusClass(status: string): string {
     REJECTED: "rounded-md bg-rose-500/15 px-2 py-0.5 text-xs font-medium text-rose-300",
   };
   return map[status] ?? map.DRAFT;
+}
+
+function patchApprovedTotalsForEntry(
+  totals: ProjectWeekEmployeeTotal[] | undefined,
+  employeeEmail: string,
+  entry: DayTimelogEntry,
+  newStatus: "APPROVED" | "REJECTED"
+): ProjectWeekEmployeeTotal[] | undefined {
+  if (!totals) return totals;
+  const previousStatus = entry.status.toUpperCase();
+  const hours = Number(entry.hours);
+  if (!Number.isFinite(hours) || hours <= 0) return totals;
+
+  let delta = 0;
+  if (newStatus === "APPROVED" && previousStatus !== "APPROVED") delta = hours;
+  if (newStatus === "REJECTED" && previousStatus === "APPROVED") delta = -hours;
+  if (delta === 0) return totals;
+
+  const email = employeeEmail.trim().toLowerCase();
+  return totals.map((row) =>
+    row.email.trim().toLowerCase() === email
+      ? { ...row, week_total: Math.max(0, row.week_total + delta) }
+      : row
+  );
 }
 
 function patchEntriesStatus(
@@ -125,9 +150,15 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
     await queryClient.refetchQueries({ queryKey: ["project-timelogs-projects"] });
   }, [queryClient, selectedEmployee]);
 
+  const handleBackFromEmployee = useCallback(() => {
+    selectEmployee(null);
+    void queryClient.refetchQueries({ queryKey: ["project-timelogs-approved-totals"] });
+  }, [selectEmployee, queryClient]);
+
   const handleEntryRemarkConfirm = async (remark: string) => {
     const action = remarkAction;
     if (!action) return;
+    const entry = employeeEntries.find((item) => item.id === action.entryId);
     const ok = await runAction(
       action.action === "APPROVED" ? "Approve Time Log" : "Reject Time Log",
       async () => {
@@ -148,6 +179,18 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
           }
         );
 
+        if (entry && expandedProject && selectedEmployee) {
+          queryClient.setQueriesData<ProjectWeekEmployeeTotal[]>(
+            { queryKey: ["project-timelogs-approved-totals", expandedProject] },
+            (old) => {
+              const base = old ?? weekTotals[expandedProject] ?? [];
+              return (
+                patchApprovedTotalsForEntry(base, selectedEmployee, entry, action.action) ?? base
+              );
+            }
+          );
+        }
+
         await refreshAfterStatusChange();
       }
     );
@@ -160,7 +203,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" type="button" onClick={() => selectEmployee(null)}>
+              <Button variant="outline" size="sm" type="button" onClick={handleBackFromEmployee}>
                 ← Back
               </Button>
               <CardTitle className="text-base">{selectedEmployee}</CardTitle>
@@ -172,14 +215,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                 onFromDateChange={setFromDate}
                 onToDateChange={setToDate}
               />
-              <RefreshIconButton
-                onClick={() =>
-                  void queryClient.invalidateQueries({
-                    queryKey: ["project-timelogs-employee-detail", selectedEmployee],
-                  })
-                }
-                loading={employeeWeekLoading}
-              />
+              <RefreshIconButton onClick={() => void reload()} loading={employeeWeekLoading} />
             </div>
           </CardHeader>
           <CardContent className="relative space-y-3">
@@ -308,7 +344,10 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
             onFromDateChange={setFromDate}
             onToDateChange={setToDate}
           />
-          <RefreshIconButton onClick={() => void reload()} loading={projectsLoading} />
+          <RefreshIconButton
+            onClick={() => void reload()}
+            loading={projectsLoading || weekTotalsLoading}
+          />
         </div>
       </CardHeader>
       <CardContent className="space-y-4">

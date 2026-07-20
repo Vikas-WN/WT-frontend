@@ -728,11 +728,14 @@ export const hrmsService = {
       query.week_start = `${iso[3]}/${iso[2]}/${iso[1]}`;
     }
     if (params.employeeEmail?.trim()) {
-      query.employee_email = params.employeeEmail.trim().toLowerCase();
+      const email = params.employeeEmail.trim().toLowerCase();
+      query.employeeEmail = email;
+      query.employee_email = email;
     }
     const viewerRoles = timelogViewerRolesQueryValue(params.viewerRoles ?? []);
     if (viewerRoles) {
       query.viewer_roles = viewerRoles;
+      query.viewerRoles = viewerRoles;
     }
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.week, { query });
   },
@@ -747,6 +750,7 @@ export const hrmsService = {
     const startDate = params.startDate.trim();
     const endDate = params.endDate.trim();
     const query: Record<string, string> = {
+      employeeEmail: email,
       employee_email: email,
       startDate,
       start_date: startDate,
@@ -764,6 +768,7 @@ export const hrmsService = {
     const viewerRoles = timelogViewerRolesQueryValue(params.viewerRoles ?? []);
     if (viewerRoles) {
       query.viewer_roles = viewerRoles;
+      query.viewerRoles = viewerRoles;
     }
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.employeeEntries, { query });
   },

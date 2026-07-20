@@ -1,15 +1,21 @@
-/** Parse API date strings: dd/mm/yyyy, dd-mm-yyyy, or yyyy-mm-dd. */
+/** Parse API date strings: dd/mm/yyyy, dd-mm-yyyy, yyyy-mm-dd, or ISO datetime. */
 export function parseTimelogDate(value: string): Date | null {
   const raw = value.trim();
   if (!raw) return null;
 
-  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  const datePart = raw.includes("T")
+    ? (raw.split("T")[0] ?? raw)
+    : raw.includes(" ")
+      ? (raw.split(/\s+/)[0] ?? raw)
+      : raw;
+
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datePart);
   if (iso) {
     const d = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
     return Number.isNaN(d.getTime()) ? null : d;
   }
 
-  const dmy = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(raw);
+  const dmy = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(datePart);
   if (dmy) {
     const d = new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
     return Number.isNaN(d.getTime()) ? null : d;
