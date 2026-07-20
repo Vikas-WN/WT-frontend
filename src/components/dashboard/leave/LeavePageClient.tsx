@@ -654,7 +654,7 @@ export function LeavePageClient() {
   const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
   const { requiresSelfOnboarding } = useDashboardAccess();
   /** Self-service profile + onboarding (non-HR employees only) */
-  const employeeSelfServeProfile = isEmployee && !hasHrAccess;
+  const employeeSelfServeProfile = isEmployee || hasHrAccess;
   const canApplyCompOff = !hasHrAccess && !hasManagerAccess;
   const teamRequestType = employeeRequestFilters.requestType || "ALL";
   const showCompOffTab = canApplyCompOff || hasManagerAccess || hasHrAccess || hasDmAccess;

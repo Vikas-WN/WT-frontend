@@ -373,7 +373,7 @@ export function ReportsPageClient() {
     isEmployee && !hasHrAccess && !hasManagerAccess;
   const requiresSelfOnboarding = restrictForPendingOnboarding && !isSelfOnboarded;
   /** Self-service profile + onboarding (non-HR employees only) */
-  const employeeSelfServeProfile = isEmployee && !hasHrAccess;
+  const employeeSelfServeProfile = isEmployee || hasHrAccess;
   const canAccessProfile = Boolean(user);
   useEffect(() => {
     if (activeSection !== "timelog") return;

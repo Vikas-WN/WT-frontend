@@ -54,7 +54,8 @@ export function useDashboardAccess() {
   const requiresSelfOnboarding = shouldRequireSelfOnboarding(profileStatus, userRoles);
   const requiresExitSurvey = shouldShowExitSurveyForStatus(profileStatus, userRoles);
   const isExitSurveyOnlyAccess = requiresExitSurvey;
-  const employeeSelfServeProfile = isEmployee && !hasStaffPortalRole(userRoles);
+  // Own Profile self-edit: employees and HR/Admin personas (HR was previously excluded).
+  const employeeSelfServeProfile = isEmployee || hasHrAccess;
   const canAccessProfile = Boolean(user);
   const canAccessOverview = useMemo(
     () =>
