@@ -80,6 +80,26 @@ export function isServingNoticeUserStatus(status: unknown): boolean {
   return normalizeEmployeeStatusKey(status) === "SERVING_NOTICE";
 }
 
+/** Roles that skip employee-only self-service flows (onboarding, exit survey). */
+const STAFF_PORTAL_ROLES = new Set([
+  "ROLE_MANAGER",
+  "ROLE_DM",
+  "ROLE_HR",
+  "ROLE_ADMIN",
+  "ROLE_AM",
+  "ROLE_FINANCE",
+]);
+
+function hasStaffPortalRole(roles: string[]): boolean {
+  return roles.some((role) => STAFF_PORTAL_ROLES.has(normalizeRoleName(role)));
+}
+
+function normalizeRoleName(role: string): string {
+  const token = role.trim().toUpperCase();
+  if (!token) return token;
+  return token.startsWith("ROLE_") ? token : `ROLE_${token}`;
+}
+
 /** Employee self-service onboarding — INVITED only; not ACTIVE, offboarded, or serving notice. */
 export function shouldRequireSelfOnboarding(
   status: unknown,
@@ -87,9 +107,8 @@ export function shouldRequireSelfOnboarding(
 ): boolean {
   const userRoles = roles ?? [];
   const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
-  const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
-  const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
-  const restrictForPendingOnboarding = isEmployee && !hasHrAccess && !hasManagerAccess;
+  const hasStaffAccess = hasStaffPortalRole(userRoles);
+  const restrictForPendingOnboarding = isEmployee && !hasStaffAccess;
 
   if (!restrictForPendingOnboarding) return false;
 
@@ -106,9 +125,8 @@ export function shouldShowExitSurveyForStatus(
 ): boolean {
   const userRoles = roles ?? [];
   const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
-  const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
-  const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
-  const employeeSelfServe = isEmployee && !hasHrAccess && !hasManagerAccess;
+  const hasStaffAccess = hasStaffPortalRole(userRoles);
+  const employeeSelfServe = isEmployee && !hasStaffAccess;
 
   return employeeSelfServe && isServingNoticeUserStatus(status);
 }

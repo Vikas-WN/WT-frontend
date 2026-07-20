@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useSelfProfile, selfProfileQueryKey } from "@/hooks/useSelfProfile";
-import { hasDmRole, hasManagerRole } from "@/utils/roles";
+import { hasDmRole, hasManagerRole, normalizeRoleName } from "@/utils/roles";
 import {
   isOffboardedUserStatus,
   isServingNoticeUserStatus,
@@ -14,6 +14,19 @@ import {
   shouldShowExitSurveyForStatus,
 } from "@/utils/userStatus";
 import { isPortalLockedProfile } from "@/utils/portalLock";
+
+const STAFF_PORTAL_ROLES = new Set([
+  "ROLE_MANAGER",
+  "ROLE_DM",
+  "ROLE_HR",
+  "ROLE_ADMIN",
+  "ROLE_AM",
+  "ROLE_FINANCE",
+]);
+
+function hasStaffPortalRole(roles: string[]): boolean {
+  return roles.some((role) => STAFF_PORTAL_ROLES.has(normalizeRoleName(role)));
+}
 
 export function useDashboardAccess() {
   const queryClient = useQueryClient();
@@ -27,7 +40,7 @@ export function useDashboardAccess() {
   const isAccountManagerOnly =
     hasAccountManagerAccess && !hasHrAccess && !hasManagerAccess;
   const restrictForPendingOnboarding =
-    isEmployee && !hasHrAccess && !hasManagerAccess;
+    isEmployee && !hasStaffPortalRole(userRoles);
   const initialStatus = normalizeUserStatus(user?.status);
   const [profileStatus, setProfileStatus] = useState(initialStatus);
   const [isSelfOnboarded, setIsSelfOnboarded] = useState(
@@ -41,7 +54,7 @@ export function useDashboardAccess() {
   const requiresSelfOnboarding = shouldRequireSelfOnboarding(profileStatus, userRoles);
   const requiresExitSurvey = shouldShowExitSurveyForStatus(profileStatus, userRoles);
   const isExitSurveyOnlyAccess = requiresExitSurvey;
-  const employeeSelfServeProfile = isEmployee && !hasHrAccess;
+  const employeeSelfServeProfile = isEmployee && !hasStaffPortalRole(userRoles);
   const canAccessProfile = Boolean(user);
   const canAccessOverview = useMemo(
     () =>

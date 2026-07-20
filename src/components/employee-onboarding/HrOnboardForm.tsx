@@ -23,6 +23,7 @@ import { parseApiDate } from "@/utils/apiDate";
 import { parseDesignationList } from "@/utils/masters";
 import type { OnboardFormState } from "@/utils/onboardFormState";
 import type { OnboardOptionsResponse } from "@/types/onboard-options";
+import { PORTAL_ROLE_SELECT_OPTIONS } from "@/utils/roles";
 
 type HrOnboardFormProps = {
   formKey: number;
@@ -290,6 +291,7 @@ export function HrOnboardForm({
         user_type: form.user_type,
         department,
         role,
+        portal_role: form.portal_role || "ROLE_EMPLOYEE",
         band_id: bandId,
         work_mode: form.work_mode,
         work_location_type: form.work_location_type,
@@ -331,8 +333,9 @@ export function HrOnboardForm({
       <CardHeader>
         <CardTitle>Information</CardTitle>
         <CardDescription>
-          Complete the required work fields to create and invite the employee. They will complete
-          personal details during self-service onboarding.
+          Complete the required work fields to create and invite the employee. Employee portal
+          roles complete personal details during self-service onboarding; Manager and other staff
+          roles skip that flow and are activated immediately.
         </CardDescription>
       </CardHeader>
       <Separator />
@@ -374,6 +377,14 @@ export function HrOnboardForm({
               return { ...p, user_type: ut, role: "" };
             })
           }
+        />
+        <DropdownSelectField
+          label="Portal Role"
+          required
+          placeholder="Select"
+          value={form.portal_role || "ROLE_EMPLOYEE"}
+          options={[...PORTAL_ROLE_SELECT_OPTIONS]}
+          onChange={(v) => setForm((p) => ({ ...p, portal_role: v }))}
         />
         <DropdownSelectField
           label="Department"

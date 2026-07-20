@@ -7,6 +7,7 @@ export type OnboardFormState = {
   work_mode: string;
   work_location_type: string;
   role: string;
+  portal_role: string;
   band_id: number;
   category: string;
   doj: string;
@@ -32,6 +33,7 @@ export function createEmptyOnboardForm(): OnboardFormState {
     work_mode: "",
     work_location_type: "",
     role: "",
+    portal_role: "ROLE_EMPLOYEE",
     band_id: 0,
     category: "",
     doj: "",

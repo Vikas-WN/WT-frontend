@@ -298,6 +298,14 @@ export function AllocationExtensionPanel() {
       return;
     }
 
+    const minimumRequested = allocationContext?.minimum_requested_end_date?.trim();
+    if (minimumRequested && requestedEndDate < minimumRequested) {
+      showErrorToast(
+        `Requested end date must be on or after ${minimumRequested} (minimum extension period).`
+      );
+      return;
+    }
+
     setCreating(true);
     try {
       const body = buildCreateAllocationExtensionBody({
