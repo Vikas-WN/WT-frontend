@@ -372,9 +372,6 @@ export function buildGroupedProfileSections(
     pickProfileField(profile, ["delivery_status", "deliveryStatus"]);
 
   const internProfile = isInternProfile(profile);
-  const holidayCalendar =
-    pickProfileField(profile, ["holiday_calendar_name", "holidayCalendarName"]) ??
-    pickProfileField(profile, ["holiday_calendar_id", "holidayCalendarId"]);
 
   const information: ProfileDisplayEntry[] = [
     profileEntry("Name", cleanEmployeeName(profile) || pickProfileField(profile, ["name"])),
@@ -426,7 +423,6 @@ export function buildGroupedProfileSections(
           ),
         ]),
     profileEntry("Reporting Manager", formatReportingManagerForProfile(profile)),
-    profileEntry("Holiday Calendar", holidayCalendar),
     profileEntry("Primary Skills", formatPrimarySkills(profile)),
     profileEntry("Secondary Skills", formatSecondarySkills(profile)),
     profileEntry(
@@ -484,7 +480,6 @@ const PROFILE_VIEW_WORK_LABELS = new Set([
   "Date of Internship",
   "Internship Duration (Months)",
   "Reporting Manager",
-  "Holiday Calendar",
   "User Type",
   "User Type History",
   "Work Mode",
