@@ -73,10 +73,11 @@ async function fetchEmployeeEntriesRange(params: {
 }): Promise<DayTimelogEntry[]> {
   const { email, startDmy, endDmy, startIso, endIso, viewerRoles } = params;
   const roles = viewerRoles.length ? viewerRoles : undefined;
+  const batches: DayTimelogEntry[][] = [];
 
   for (const [startDate, endDate] of [
-    [startDmy, endDmy],
     [startIso, endIso],
+    [startDmy, endDmy],
   ] as const) {
     try {
       const response = await hrmsService.getTimelogEmployeeEntries({
@@ -86,27 +87,35 @@ async function fetchEmployeeEntriesRange(params: {
         viewerRoles: roles,
       });
       const entries = normalizeDayTimelogEntries(unwrapData(response));
-      if (entries.length) return entries;
+      if (entries.length) batches.push(entries);
     } catch {
       // try next
     }
   }
 
-  try {
-    const response = await hrmsService.getTimelogs({
-      page: "0",
-      size: "200",
-      employeeEmail: email,
-      employee_email: email,
-      startDate: startDmy,
-      start_date: startDmy,
-      endDate: endDmy,
-      end_date: endDmy,
-    });
-    return entriesFromTimelogList(response);
-  } catch {
-    return [];
+  for (const [startDate, endDate] of [
+    [startIso, endIso],
+    [startDmy, endDmy],
+  ] as const) {
+    try {
+      const response = await hrmsService.getTimelogs({
+        page: "0",
+        size: "200",
+        employeeEmail: email,
+        employee_email: email,
+        startDate,
+        start_date: startDate,
+        endDate,
+        end_date: endDate,
+      });
+      const entries = entriesFromTimelogList(response);
+      if (entries.length) batches.push(entries);
+    } catch {
+      // try next
+    }
   }
+
+  return mergeTimelogEntries(...batches);
 }
 
 function filterEntriesToRange(
@@ -117,6 +126,40 @@ function filterEntriesToRange(
   return entries.filter((entry) => {
     const key = toIsoDateKey(entry.log_date);
     return key >= startIso && key <= endIso;
+  });
+}
+
+function entryDedupeKey(entry: DayTimelogEntry): string {
+  if (entry.id > 0) return `id:${entry.id}`;
+  return [
+    entry.employee_email,
+    entry.project_code,
+    entry.task_category,
+    entry.sub_category ?? "",
+    toIsoDateKey(entry.log_date),
+    String(entry.hours),
+    entry.status,
+  ].join("|");
+}
+
+function mergeTimelogEntries(...groups: DayTimelogEntry[][]): DayTimelogEntry[] {
+  const byKey = new Map<string, DayTimelogEntry>();
+  for (const group of groups) {
+    for (const entry of group) {
+      byKey.set(entryDedupeKey(entry), entry);
+    }
+  }
+  return sortTimelogEntriesByDateDesc(Array.from(byKey.values()));
+}
+
+function sortTimelogEntriesByDateDesc(entries: DayTimelogEntry[]): DayTimelogEntry[] {
+  return [...entries].sort((a, b) => {
+    const aDate = parseApiDate(toIsoDateKey(a.log_date));
+    const bDate = parseApiDate(toIsoDateKey(b.log_date));
+    const aTime = aDate?.getTime() ?? 0;
+    const bTime = bDate?.getTime() ?? 0;
+    if (aTime !== bTime) return bTime - aTime;
+    return b.id - a.id;
   });
 }
 
@@ -146,43 +189,7 @@ async function fetchProjectApprovedTotals(params: {
   const { projectCode, employees, range, viewerRoles } = params;
   const code = projectCode.trim().toUpperCase();
 
-  try {
-    const response = await hrmsService.getTimelogs({
-      page: "0",
-      size: "500",
-      projectCode: code,
-      project_code: code,
-      startDate: range.startDmy,
-      start_date: range.startDmy,
-      endDate: range.endDmy,
-      end_date: range.endDmy,
-      status: "APPROVED",
-    });
-    const entries = filterEntriesToRange(
-      entriesFromTimelogList(response),
-      range.startIso,
-      range.endIso
-    );
-    if (entries.length) {
-      const byEmail = new Map<string, number>();
-      for (const entry of entries) {
-        if (!isApprovedStatus(entry.status)) continue;
-        if (entry.project_code.trim().toUpperCase() !== code) continue;
-        const email = entry.employee_email.trim().toLowerCase();
-        const hours = Number(entry.hours);
-        if (!email || !Number.isFinite(hours)) continue;
-        byEmail.set(email, (byEmail.get(email) ?? 0) + hours);
-      }
-      return employees.map((emp) => ({
-        email: emp.email,
-        name: emp.name,
-        week_total: byEmail.get(emp.email.trim().toLowerCase()) ?? 0,
-      }));
-    }
-  } catch {
-    // fall through to per-employee
-  }
-
+  // Use the same merged entry fetch as employee detail so approved hours stay in sync.
   return Promise.all(
     employees.map(async (emp) => {
       const entries = await fetchEmployeeEntriesRange({
@@ -222,9 +229,9 @@ export function useProjectTimelogs(enabled: boolean) {
   const projectsQuery = useQuery({
     queryKey: ["project-timelogs-projects"],
     enabled,
-    staleTime: 30_000,
-    refetchOnMount: true,
-    refetchOnWindowFocus: false,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const response = await hrmsService.getTimelogProjects();
       return normalizeProjectTimelogsData(unwrapData(response));
@@ -252,9 +259,9 @@ export function useProjectTimelogs(enabled: boolean) {
       viewerRoles.join(","),
     ],
     enabled: enabled && !!expandedProject && expandedEmployees.length > 0,
-    staleTime: 15_000,
-    refetchOnMount: true,
-    refetchOnWindowFocus: false,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     queryFn: async () =>
       fetchProjectApprovedTotals({
         projectCode: expandedProject!,
@@ -277,9 +284,9 @@ export function useProjectTimelogs(enabled: boolean) {
       viewerRoles.join(","),
     ],
     enabled: enabled && !!selectedEmployee,
-    staleTime: 15_000,
-    refetchOnMount: true,
-    refetchOnWindowFocus: false,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     retry: 1,
     queryFn: async () => {
       const email = selectedEmployee!.trim().toLowerCase();
@@ -291,7 +298,7 @@ export function useProjectTimelogs(enabled: boolean) {
       const filtered = hasDateFilter
         ? filterEntriesToRange(entries, activeRange.startIso, activeRange.endIso)
         : entries;
-      return { mode: "all" as const, entries: filtered, snapshot: null };
+      return { mode: "all" as const, entries: sortTimelogEntriesByDateDesc(filtered), snapshot: null };
     },
   });
 
