@@ -11,34 +11,47 @@ export function isHrCreatedProjectCode(code: string): boolean {
   return Boolean(normalized) && !SYSTEM_PROJECT_CODES.has(normalized);
 }
 
+export type ProjectPickerRow = {
+  code: string;
+  name: string;
+  project_type: string;
+  id?: number;
+  client_id?: number | null;
+};
+
 /** Normalize GET /projects/all (or paginated /projects) rows for pickers. */
 export function parseProjectPickerRows(
   rows: Array<Record<string, unknown>>
-): Array<{ code: string; name: string; project_type: string; id?: number }> {
-  return Array.from(
-    new Map(
-      rows
-        .map((row) => {
-          const code = String(row.project_code ?? row.projectCode ?? "").trim();
-          const name = String(row.project_name ?? row.projectName ?? code).trim();
-          if (!code) return null;
-          const project_type = String(row.project_type ?? row.projectType ?? "").trim();
-          const idRaw = row.id ?? row.project_id ?? row.projectId;
-          const idNum = idRaw !== undefined && idRaw !== null && idRaw !== "" ? Number(idRaw) : NaN;
-          return [
-            code,
-            {
-              code,
-              name,
-              project_type,
-              ...(Number.isFinite(idNum) ? { id: idNum } : {}),
-            },
-          ] as const;
-        })
-        .filter(
-          (x): x is readonly [string, { code: string; name: string; project_type: string; id?: number }] =>
-            x != null
-        )
-    ).values()
-  ).sort((a, b) => a.name.localeCompare(b.name));
+): ProjectPickerRow[] {
+  const mapped: Array<[string, ProjectPickerRow]> = [];
+
+  for (const row of rows) {
+    const code = String(row.project_code ?? row.projectCode ?? "").trim();
+    const name = String(row.project_name ?? row.projectName ?? code).trim();
+    if (!code) continue;
+
+    const project_type = String(row.project_type ?? row.projectType ?? "").trim();
+    const idRaw = row.id ?? row.project_id ?? row.projectId;
+    const idNum = idRaw !== undefined && idRaw !== null && idRaw !== "" ? Number(idRaw) : NaN;
+    const clientRaw = row.client_id ?? row.clientId;
+    const clientNum =
+      clientRaw !== undefined && clientRaw !== null && clientRaw !== ""
+        ? Number(clientRaw)
+        : NaN;
+
+    mapped.push([
+      code,
+      {
+        code,
+        name,
+        project_type,
+        ...(Number.isFinite(idNum) ? { id: idNum } : {}),
+        client_id: Number.isFinite(clientNum) ? clientNum : null,
+      },
+    ]);
+  }
+
+  return Array.from(new Map(mapped).values()).sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
 }

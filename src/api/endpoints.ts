@@ -78,6 +78,7 @@ export const endpoints = {
     list: `${api}/projects`,
     listAll: `${api}/projects/all`,
     getOne: `${api}/project`,
+    byCode: (projectCode: string) => `${api}/project/${encodeURIComponent(projectCode)}`,
     managerEmailsByProjectName: `${api}/project/manager-emails`,
     managerProjects: `${api}/manager-projects`,
     managerProjectsWithRoles: `${api}/manager-projects-with-roles`,
@@ -201,6 +202,8 @@ export const endpoints = {
     clients: `${api}/masters/clients`,
     clientById: (clientId: string | number) =>
       `${api}/masters/clients/${encodeURIComponent(String(clientId))}`,
+    allocateProjectToClient: (projectId: string | number, clientId: string | number) =>
+      `${api}/clients/allocate/${encodeURIComponent(String(projectId))}/client/${encodeURIComponent(String(clientId))}`,
   },
 
   roleAdmin: {

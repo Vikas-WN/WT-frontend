@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { UI_COPY } from "@/constants/uiCopy";
 import {
@@ -39,9 +40,23 @@ export function WtFormDialog({
   loading?: boolean;
   maxWidthClass?: string;
 }) {
-  if (!open) return null;
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, onClose]);
 
-  return (
+  if (!open || typeof document === "undefined") return null;
+
+  return createPortal(
     <div className={MODAL_OVERLAY_CLASS} role="presentation" onClick={onClose}>
       <div
         role="dialog"
@@ -75,6 +90,7 @@ export function WtFormDialog({
           ) : null}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

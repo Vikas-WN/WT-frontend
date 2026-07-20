@@ -43,8 +43,8 @@ export function CurrentAllocationHint({ email }: { email: string }) {
       {loading
         ? "Loading current allocation…"
         : percent != null
-          ? `Current allocation: ${percent}%`
-          : "Current allocation: —"}
+          ? `Allocated to projects: ${percent}%`
+          : "Allocated to projects: —"}
     </p>
   );
 }

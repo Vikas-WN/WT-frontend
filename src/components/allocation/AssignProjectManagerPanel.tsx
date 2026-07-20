@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { useAllocationProjectEmployees } from "@/hooks/useAllocationProjectEmployees";
 import { hrmsService } from "@/services/hrms.service";
+import { uniqueAllocationProjectEmployeesByEmail } from "@/utils/allocationProjectEmployees";
 import { normalizePickerEmail } from "@/utils/learning/onboardOptions";
 import { isHrCreatedProjectCode } from "@/utils/projectPicker";
 
@@ -45,7 +46,11 @@ export function AssignProjectManagerPanel({
     isFetching: employeesFetching,
   } = useAllocationProjectEmployees(projectKey, !benchOrGlobal);
 
-  const projectEmployees = projectEmployeesResult?.employees ?? [];
+  // Endpoint returns one row per allocation; PM picker needs distinct employees.
+  const projectEmployees = useMemo(
+    () => uniqueAllocationProjectEmployeesByEmail(projectEmployeesResult?.employees ?? []),
+    [projectEmployeesResult?.employees]
+  );
 
   useEffect(() => {
     const code = projectEmployeesResult?.meta.projectCode?.trim();

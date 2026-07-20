@@ -11,6 +11,7 @@ import {
   toApiDateParam,
 } from "@/utils/apiDate";
 import { timelogViewerRolesQueryValue } from "@/utils/timelog/viewerRoles";
+import type { BandListItem, DepartmentListItem, Designation } from "@/types/masters";
 
 export type { OnboardListData, OnboardListItem, OnboardUserResponse } from "@/types/onboard";
 
@@ -615,6 +616,37 @@ export const hrmsService = {
     });
   },
 
+  /** PUT /project/{projectCode} — HR/Admin */
+  updateProject(projectCode: string, payload: Record<string, unknown>) {
+    const body = applyApiDateFields(
+      {
+        project_name: payload.project_name ?? payload.projectName,
+        project_type: payload.project_type ?? payload.projectType,
+        client_id: payload.client_id ?? payload.clientId ?? null,
+        client_name: payload.client_name ?? payload.clientName ?? null,
+        account_manager_email: payload.account_manager_email ?? payload.accountManagerEmail,
+        start_date: payload.start_date ?? payload.startDate,
+        end_date: payload.end_date ?? payload.endDate,
+        is_active: payload.is_active ?? payload.isActive,
+      },
+      ["start_date", "end_date"]
+    );
+    if (body.start_date == null || body.start_date === "") delete body.start_date;
+    if (body.end_date == null || body.end_date === "") delete body.end_date;
+    if (body.client_id == null) delete body.client_id;
+    if (body.client_name == null || body.client_name === "") delete body.client_name;
+    if (body.is_active === undefined) delete body.is_active;
+    return apiClient.put<ApiEnvelope<unknown>>(endpoints.project.byCode(projectCode), {
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+  },
+
+  /** DELETE /project/{projectCode} — soft-delete (HR/Admin) */
+  deleteProject(projectCode: string) {
+    return apiClient.delete<ApiEnvelope<unknown>>(endpoints.project.byCode(projectCode));
+  },
+
   /** GET /project/manager-emails?projectName= */
   getProjectManagerEmails(projectName: string) {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.project.managerEmailsByProjectName, {
@@ -696,14 +728,11 @@ export const hrmsService = {
       query.week_start = `${iso[3]}/${iso[2]}/${iso[1]}`;
     }
     if (params.employeeEmail?.trim()) {
-      const email = params.employeeEmail.trim().toLowerCase();
-      query.employeeEmail = email;
-      query.employee_email = email;
+      query.employee_email = params.employeeEmail.trim().toLowerCase();
     }
     const viewerRoles = timelogViewerRolesQueryValue(params.viewerRoles ?? []);
     if (viewerRoles) {
       query.viewer_roles = viewerRoles;
-      query.viewerRoles = viewerRoles;
     }
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.week, { query });
   },
@@ -718,7 +747,6 @@ export const hrmsService = {
     const startDate = params.startDate.trim();
     const endDate = params.endDate.trim();
     const query: Record<string, string> = {
-      employeeEmail: email,
       employee_email: email,
       startDate,
       start_date: startDate,
@@ -736,7 +764,6 @@ export const hrmsService = {
     const viewerRoles = timelogViewerRolesQueryValue(params.viewerRoles ?? []);
     if (viewerRoles) {
       query.viewer_roles = viewerRoles;
-      query.viewerRoles = viewerRoles;
     }
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.employeeEntries, { query });
   },
@@ -1030,16 +1057,16 @@ export const hrmsService = {
   },
 
   getBands() {
-    return apiClient.get<unknown>(endpoints.masters.bands);
+    return apiClient.get<ApiEnvelope<BandListItem[]>>(endpoints.masters.bands);
   },
 
   getDepartments() {
-    return apiClient.get<unknown>(endpoints.masters.departments);
+    return apiClient.get<ApiEnvelope<DepartmentListItem[]>>(endpoints.masters.departments);
   },
 
   /** GET /masters/onboard-options — `{ message, data: { categories, ... } }`. */
   getOnboardOptions() {
-    return apiClient.get<unknown>(endpoints.masters.onboardOptions);
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.masters.onboardOptions);
   },
 
   /** GET /masters/designations — bare array, optional `search`. */
@@ -1049,12 +1076,12 @@ export const hrmsService = {
       department: params.department,
     };
     if (params.search?.trim()) query.search = params.search.trim();
-    return apiClient.get<unknown>(endpoints.masters.designations, { query });
+    return apiClient.get<ApiEnvelope<Designation[]>>(endpoints.masters.designations, { query });
   },
 
   /** POST /masters/designations — bare object (HR/Admin). */
   createDesignation(body: { band_id: number; department: string; name: string }) {
-    return apiClient.post<unknown>(endpoints.masters.designations, {
+    return apiClient.post<ApiEnvelope<Designation>>(endpoints.masters.designations, {
       contentType: "application/json",
       body: JSON.stringify(body),
     });
@@ -1098,6 +1125,10 @@ export const hrmsService = {
       contentType: "application/json",
       body: JSON.stringify(payload),
     });
+  },
+
+  allocateProjectToClient(projectId: number, clientId: number) {
+    return apiClient.post<unknown>(endpoints.masters.allocateProjectToClient(projectId, clientId));
   },
 
   assignRole(payload: {
