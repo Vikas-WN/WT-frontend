@@ -41,6 +41,8 @@ import { timelogViewerRoles } from "@/utils/timelog/viewerRoles";
 import { normalizeProjectTimelogsData } from "@/utils/timelog/normalizeProjectTimelogs";
 import { normalizeDayTimelogEntries } from "@/utils/timelog/normalizeWeekSnapshot";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { useTeamTimelogAccess } from "@/hooks/timelog/useTeamTimelogAccess";
 
 function unwrapPayload<T>(response: unknown): T {
   return ((response as { data?: T }).data ?? response) as T;
@@ -74,8 +76,8 @@ export function TimelogPageClient() {
     : pathname.endsWith("/dashboard/timelog/projects")
       ? "projects"
       : "my";
-  // Primary managers may only have ROLE_EMPLOYEE; inbox comes from GET /timelog/projects.
-  const canSeeTeamTab = true;
+  const { canViewTeamTimelogs, isCheckingAccess } = useTeamTimelogAccess();
+  const canSeeTeamTab = canViewTeamTimelogs;
   const isTeamView = subTab === "team";
   const isProjectView = subTab === "projects";
   const canManagerApprove = isTeamView || isProjectView;
@@ -232,10 +234,11 @@ export function TimelogPageClient() {
   }, [isTeamView, isHrTeamView, router]);
 
   useEffect(() => {
+    if (isCheckingAccess) return;
     if ((isTeamView || isProjectView) && !canSeeTeamTab) {
       router.replace("/dashboard/timelog");
     }
-  }, [isTeamView, isProjectView, canSeeTeamTab, router]);
+  }, [isTeamView, isProjectView, canSeeTeamTab, isCheckingAccess, router]);
 
   const timelogTabItems = useMemo(
     () => [
@@ -249,6 +252,14 @@ export function TimelogPageClient() {
     return (
       <DashboardPageShell>
         <p className="text-sm text-wt-text-muted">Time Log access is not available for offboarded users.</p>
+      </DashboardPageShell>
+    );
+  }
+
+  if ((isTeamView || isProjectView) && isCheckingAccess) {
+    return (
+      <DashboardPageShell>
+        <SectionLoading label="Loading Time Logs…" />
       </DashboardPageShell>
     );
   }

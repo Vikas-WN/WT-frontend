@@ -382,6 +382,9 @@ export function AllocationExtensionPanel() {
             {canCreateRequest ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
           <h3 className="font-semibold">Request Allocation End-Date Extension</h3>
+          <p className="mt-1 text-xs text-wt-text-muted">
+            Project Managers raise extension requests here. HR reviews and approves them below.
+          </p>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <SelectField
@@ -531,10 +534,15 @@ export function AllocationExtensionPanel() {
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[220px]">
             <h3 className="font-semibold">
-              {visibleMode === "hr" ? "Allocation extension requests" : "My allocation extension requests"}
+              {visibleMode === "hr"
+                ? "Allocation Extension Requests"
+                : "My Allocation Extension Requests"}
             </h3>
             <p className="text-xs text-wt-text-muted">
-              {loading ? "Loading…" : `${totalElements} total`}
+              {loading ? "Loading…" : `${totalElements} Total`}
+              {visibleMode === "hr" && !loading
+                ? " · Approve Or Reject Pending Requests From Project Managers"
+                : ""}
             </p>
           </div>
 

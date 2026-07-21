@@ -87,6 +87,8 @@ export interface NotificationItem {
   message: string;
   is_read: boolean;
   created_at: string;
+  sender_id?: number | null;
+  sender_email?: string | null;
 }
 
 export type AllocationExtensionRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
@@ -474,6 +476,14 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.allocation.user);
   },
 
+  getMyAllocationsDetail() {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.userDetail);
+  },
+
+  getColleagueProfile(empId: string) {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.colleagueProfile(empId));
+  },
+
   getAllocationRoles(params: Record<string, string> = {}) {
     return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.allocation.roles, { query: params });
   },
@@ -697,10 +707,13 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.timelog.options);
   },
 
-  /** GET /timelog/manager-options — ACTIVE employees for the project-manager picker. */
-  getTimelogManagerOptions(params?: { search?: string }) {
+  /** GET /timelog/manager-options — Managers (ROLE_MANAGER) on the selected project. */
+  getTimelogManagerOptions(params?: { search?: string; projectCode?: string }) {
     const query: Record<string, string> = {};
     if (params?.search?.trim()) query.search = params.search.trim();
+    if (params?.projectCode?.trim()) {
+      query.projectCode = params.projectCode.trim().toUpperCase();
+    }
     return apiClient.get<ApiEnvelope<Array<{ employee_id?: string | null; name: string; email: string }>>>(
       endpoints.timelog.managerOptions,
       { query }

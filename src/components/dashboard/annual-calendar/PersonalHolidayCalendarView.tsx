@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ArrowDownToLine } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
@@ -22,14 +24,17 @@ import {
   INFO_BANNER_CLASS,
   INFO_BANNER_TITLE_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
+import { ApiError } from "@/api/error";
 import { useHolidayCalendarStorage } from "@/hooks/holiday-calendars/useHolidayCalendarStorage";
 import { showErrorToast } from "@/lib/toast";
 import {
   filterHolidayRowsByYear,
+  HOLIDAY_CALENDAR_COLUMNS,
   holidayRowsTomorrow,
   parseHolidayCalendarDate,
   type HolidayCalendarRow,
 } from "@/utils/holidayCalendarTable";
+import { downloadCsvFile } from "@/utils/parseSpreadsheetFile";
 
 const YEAR_LOOKBACK = 15;
 
@@ -70,8 +75,8 @@ export function PersonalHolidayCalendarView() {
     const error = storageQuery.error;
     const message =
       error instanceof Error ? error.message : "Failed to load holiday calendar.";
-    // Missing calendar files are an empty state, not a toast-worthy failure.
     if (/file not found|nosuchkey|not found/i.test(message)) return;
+    if (error instanceof ApiError && error.status === 503) return;
     showErrorToast(message);
   }, [storageQuery.isError, storageQuery.error]);
 
@@ -85,6 +90,19 @@ export function PersonalHolidayCalendarView() {
     [rowsInYear, yearNumber]
   );
 
+  function handleDownload() {
+    if (!displayRows.length) return;
+
+    const exportColumns = HOLIDAY_CALENDAR_COLUMNS.map((column) => column.label);
+    const exportRows = displayRows.map((row) =>
+      Object.fromEntries(
+        HOLIDAY_CALENDAR_COLUMNS.map(({ key, label }) => [label, row[key]?.trim() ?? ""])
+      )
+    );
+
+    downloadCsvFile(`holiday_calendar_${selectedYear}.csv`, exportColumns, exportRows);
+  }
+
   const tomorrowHolidays = useMemo(() => {
     if (yearNumber !== currentYear) return [];
     return holidayRowsTomorrow(rowsInYear, yearNumber);
@@ -97,8 +115,13 @@ export function PersonalHolidayCalendarView() {
   );
 
   const isLoading = storageQuery.isFetching;
+  const isServiceUnavailable =
+    storageQuery.isError &&
+    storageQuery.error instanceof ApiError &&
+    storageQuery.error.status === 503;
   const missingCalendar =
     !storageQuery.isFetching &&
+    !isServiceUnavailable &&
     (storageQuery.data == null ||
       (storageQuery.isError &&
         /file not found|nosuchkey|not found/i.test(
@@ -115,15 +138,23 @@ export function PersonalHolidayCalendarView() {
           title="Holiday Calendar"
           description={`View organization holidays for ${selectedYear}.`}
           action={
-            <ToolbarFilterSelect
-              id="personal-holiday-calendar-year"
-              value={selectedYear}
-              onChange={setSelectedYear}
-              options={yearSelectItems}
-              aria-label="Year"
-              className="w-32 min-w-32"
-              contentClassName="min-w-[8rem] w-max z-[260]"
-            />
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {displayRows.length > 0 ? (
+                <Button type="button" variant="outline" size="sm" onClick={handleDownload}>
+                  <ArrowDownToLine className="size-4" aria-hidden />
+                  Download CSV
+                </Button>
+              ) : null}
+              <ToolbarFilterSelect
+                id="personal-holiday-calendar-year"
+                value={selectedYear}
+                onChange={setSelectedYear}
+                options={yearSelectItems}
+                aria-label="Year"
+                className="w-32 min-w-32"
+                contentClassName="min-w-[8rem] w-max z-[260]"
+              />
+            </div>
           }
         />
 
@@ -137,6 +168,11 @@ export function PersonalHolidayCalendarView() {
         <div className="mt-6">
           {isLoading ? (
             <TableRowsSkeleton rows={5} columns={4} />
+          ) : isServiceUnavailable ? (
+            <EmptyState
+              title="Holiday Calendar Unavailable"
+              description="The holiday calendar could not be loaded right now. Please try again in a few minutes."
+            />
           ) : missingCalendar || !hasCalendarFile ? (
             <EmptyState
               title="There is no holiday calendar configured"

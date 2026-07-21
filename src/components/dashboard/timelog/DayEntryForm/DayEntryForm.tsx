@@ -57,11 +57,11 @@ export function DayEntryForm({
   const [pendingSave, setPendingSave] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState(false);
   const isNew = !entry;
-  const activeEmployeesQ = useTimelogManagerOptions();
+  const activeEmployeesQ = useTimelogManagerOptions(form.project_code || null);
   const managerOptions = useMemo(() => {
     const fetched = activeEmployeesQ.data ?? [];
     const current = form.project_manager.trim().toLowerCase();
-    // Keep the entry's saved manager selectable even if they are no longer active.
+    // Keep the entry's saved manager selectable even if no longer on the project.
     if (current && !fetched.some((emp) => emp.email === current)) {
       return [{ email: current, name: current }, ...fetched];
     }
@@ -72,6 +72,28 @@ export function DayEntryForm({
     setForm(formForEntry(entry));
     setLocalError(null);
   }, [entry]);
+
+  // When project changes, clear an invalid manager; autofill when exactly one manager exists.
+  useEffect(() => {
+    if (!form.project_code) return;
+    if (activeEmployeesQ.isLoading || activeEmployeesQ.isFetching) return;
+    const fetched = activeEmployeesQ.data ?? [];
+    const current = form.project_manager.trim().toLowerCase();
+    if (current && fetched.some((emp) => emp.email === current)) return;
+    if (fetched.length === 1) {
+      setForm((prev) => ({ ...prev, project_manager: fetched[0].email }));
+      return;
+    }
+    if (current) {
+      setForm((prev) => ({ ...prev, project_manager: "" }));
+    }
+  }, [
+    form.project_code,
+    form.project_manager,
+    activeEmployeesQ.data,
+    activeEmployeesQ.isLoading,
+    activeEmployeesQ.isFetching,
+  ]);
 
   const taskOptions = form.project_code
     ? taskCategoriesForProject(form.project_code).map((t) => ({
@@ -197,6 +219,7 @@ export function DayEntryForm({
                   ...prev,
                   project_code,
                   project_name: selected?.project_name ?? "",
+                  project_manager: "",
                 }));
               }}
               options={projectOptions.map((p) => ({
@@ -249,7 +272,13 @@ export function DayEntryForm({
                   value: employee.email,
                   label: employee.name,
                 }))}
-                placeholder="Search project managers…"
+                placeholder={
+                  activeEmployeesQ.isError
+                    ? "Could not load managers"
+                    : managerOptions.length
+                      ? "Search project managers…"
+                      : "No managers assigned to this project"
+                }
                 inputClassName="day-entry-form-select"
                 showChevron
               />

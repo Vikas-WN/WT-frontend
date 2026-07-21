@@ -46,7 +46,7 @@ export const dashboardNavigation: NavItem[] = [
       {
         id: "employee",
         label: "Onboarding",
-        roles: ["ROLE_EMPLOYEE", "ROLE_HR", "ROLE_ADMIN"],
+        roles: ["ROLE_HR", "ROLE_ADMIN"],
         icon: "userPlus",
       },
       {
@@ -76,7 +76,7 @@ export const dashboardNavigation: NavItem[] = [
       {
         id: "timelog-team",
         label: "Time Logs",
-        roles: ["ROLE_EMPLOYEE", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+        roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
         icon: "clock",
       },
     ],
@@ -130,6 +130,12 @@ export const dashboardNavigation: NavItem[] = [
         label: "Leave Requests",
         roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
+      },
+      {
+        id: "my-allocations",
+        label: "My Allocations",
+        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
+        icon: "layoutGrid",
       },
       {
         id: "annual-calendar",
@@ -274,6 +280,7 @@ const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   offboarding: "Offboarding",
   timelog: "Time Logs",
   leave: "Leave Request",
+  "my-allocations": "My Allocations",
   "leave-team": "Leave Requests",
   "exit-interview": "Exit Survey",
 };

@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { hrmsService } from "@/services/hrms.service";
 import { parseClientList, parseClientRow } from "@/utils/client";
+import { invalidateAllocationDependentQueries } from "@/utils/allocationQueryInvalidation";
 import type { ClientRecord } from "@/types/client";
 
 type UseClientsOptions = {
@@ -29,7 +30,10 @@ export function useClients({
       });
       return parseClientList(res);
     },
-    staleTime: includeProjects ? 15_000 : 60_000,
+    staleTime: includeProjects ? 0 : 15_000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 }
 
@@ -52,5 +56,6 @@ export function useInvalidateClients() {
   const queryClient = useQueryClient();
   return () => {
     void queryClient.invalidateQueries({ queryKey: ["clients"] });
+    invalidateAllocationDependentQueries(queryClient);
   };
 }

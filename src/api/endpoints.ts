@@ -60,6 +60,9 @@ export const endpoints = {
     employees: `${api}/allocation/employees`,
     projectEmployees: `${api}/allocation/project-employees`,
     user: `${api}/allocation/user`,
+    userDetail: `${api}/allocation/user/detail`,
+    colleagueProfile: (empId: string) =>
+      `${api}/allocation/user/colleague/${encodeURIComponent(empId)}`,
     forecasting: `${api}/allocation/forecasting`,
     talentPool: `${api}/allocation/talent-pool`,
     talentPoolUnallocated: `${api}/allocation/talent-pool/unallocated`,

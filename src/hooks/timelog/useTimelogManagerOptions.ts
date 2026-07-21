@@ -10,14 +10,18 @@ export type TimelogManagerOption = {
   employeeId?: string;
 };
 
-/** ACTIVE employees from GET /timelog/manager-options — visible to every timelog role. */
-export function useTimelogManagerOptions(enabled = true) {
+/**
+ * Project managers for the Add Time Log picker.
+ * GET /timelog/manager-options?projectCode=… — ROLE_MANAGER users assigned to that project.
+ */
+export function useTimelogManagerOptions(projectCode?: string | null, enabled = true) {
+  const code = String(projectCode ?? "").trim().toUpperCase();
   return useQuery({
-    queryKey: ["timelog", "manager-options"],
-    enabled,
-    staleTime: 300_000,
+    queryKey: ["timelog", "manager-options", code],
+    enabled: enabled && Boolean(code),
+    staleTime: 60_000,
     queryFn: async (): Promise<TimelogManagerOption[]> => {
-      const res = await hrmsService.getTimelogManagerOptions();
+      const res = await hrmsService.getTimelogManagerOptions({ projectCode: code });
       const rows = toRows((res as { data?: unknown }).data ?? res);
       const seen = new Set<string>();
       const out: TimelogManagerOption[] = [];

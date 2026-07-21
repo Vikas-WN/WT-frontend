@@ -11,6 +11,8 @@ export const DASHBOARD_ROUTES: Record<string, string> = {
   clients: "/dashboard/clients",
   "talent-pool": "/dashboard/allocation/talent-pool",
   "allocation-extension": "/dashboard/allocation-extension",
+  "my-allocations": "/dashboard/my-allocations",
+  colleague: "/dashboard/colleague",
   offboarding: "/dashboard/offboarding",
   "background-verification": "/dashboard/background-verification",
   timelog: "/dashboard/timelog",
@@ -55,6 +57,8 @@ const PATH_TO_NAV_ID: Array<{ prefix: string; id: string }> = [
   { prefix: "/dashboard/clients", id: "clients" },
   { prefix: "/dashboard/allocation/talent-pool", id: "talent-pool" },
   { prefix: "/dashboard/allocation-extension", id: "allocation-extension" },
+  { prefix: "/dashboard/my-allocations", id: "my-allocations" },
+  { prefix: "/dashboard/colleague", id: "my-allocations" },
   { prefix: "/dashboard/allocation", id: "allocation" },
   { prefix: "/dashboard/offboarding", id: "offboarding" },
   { prefix: "/dashboard/background-verification", id: "background-verification" },
@@ -104,6 +108,11 @@ export function dashboardHref(navId: string): string {
 export function employeeDirectoryProfilePath(empId: string): string {
   const id = encodeURIComponent(String(empId).trim());
   return `/dashboard/employee-directory/${id}`;
+}
+
+export function colleagueProfilePath(empId: string): string {
+  const id = encodeURIComponent(String(empId).trim());
+  return `/dashboard/colleague/${id}`;
 }
 
 /** Landing route after login based on the user's roles. */

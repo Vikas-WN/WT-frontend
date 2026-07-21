@@ -155,7 +155,7 @@ import {
   sortAllocationListForDisplay,
   sortAllocationListRows,
 } from "@/utils/allocationList";
-import { TALENT_POOL_QUERY_KEY } from "@/hooks/allocation/useTalentPool";
+import { invalidateAllocationDependentQueries } from "@/utils/allocationQueryInvalidation";
 import {
   fetchAllocationOnboardDirectory,
   ALLOCATION_ONBOARD_DIRECTORY_QUERY_KEY,
@@ -3982,6 +3982,7 @@ export function AllocationPageClient() {
                                                                 allocationRowId(r) !== allocationId
                                                             )
                                                           );
+                                                          invalidateAllocationDependentQueries(queryClient);
                                                         });
                                                       }}
                                                     >
@@ -4197,6 +4198,7 @@ export function AllocationPageClient() {
                                 }}
                                 onCreated={() => {
                                   refreshHrProjects();
+                                  invalidateAllocationDependentQueries(queryClient);
                                   void loadAllocationsForHr();
                                 }}
                                 activeProjectTypes={activeProjectTypes}
@@ -4212,13 +4214,7 @@ export function AllocationPageClient() {
                                 projectName={projectDetail?.name}
                                 onClose={() => {
                                   setProjectDetail(null);
-                                  // Viewing may expire ended allocations → refresh bench + list.
-                                  void queryClient.invalidateQueries({
-                                    queryKey: TALENT_POOL_QUERY_KEY,
-                                  });
-                                  void queryClient.invalidateQueries({
-                                    queryKey: ["allocation", "project-employees"],
-                                  });
+                                  invalidateAllocationDependentQueries(queryClient);
                                   void loadAllocationsForHr();
                                 }}
                               />
@@ -4234,7 +4230,7 @@ export function AllocationPageClient() {
                                 onSaved={async () => {
                                   setEditingAllocationId("");
                                   setAllocationForm(createEmptyAllocationForm());
-                                  void queryClient.invalidateQueries({ queryKey: TALENT_POOL_QUERY_KEY });
+                                  invalidateAllocationDependentQueries(queryClient);
                                   await loadAllocationsForHr();
                                   setAllocationHrSubTab("list");
                                 }}

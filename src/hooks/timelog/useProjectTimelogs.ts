@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
 import { formatApiDate as formatApiDateDmy, parseApiDate } from "@/utils/apiDate";
@@ -209,6 +210,10 @@ async function fetchProjectApprovedTotals(params: {
 
 export function useProjectTimelogs(enabled: boolean) {
   const { user } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const appliedEmployeeParam = useRef<string | null>(null);
   const viewerRoles = useMemo(
     () => timelogViewerRoles(user?.roles ?? []),
     [user?.roles]
@@ -218,6 +223,19 @@ export function useProjectTimelogs(enabled: boolean) {
   const [toDate, setToDateState] = useState("");
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
+
+  // Deep-link from timelog approval notifications: ?employee=email
+  useEffect(() => {
+    if (!enabled) return;
+    const email = (searchParams.get("employee") ?? "").trim().toLowerCase();
+    if (!email) {
+      appliedEmployeeParam.current = null;
+      return;
+    }
+    if (appliedEmployeeParam.current === email) return;
+    appliedEmployeeParam.current = email;
+    setSelectedEmployee(email);
+  }, [enabled, searchParams]);
 
   const filterRange = useMemo(() => rangeFromDates(fromDate, toDate), [fromDate, toDate]);
   const hasDateFilter = filterRange != null;
@@ -307,14 +325,33 @@ export function useProjectTimelogs(enabled: boolean) {
     [employeeDetailQuery.data]
   );
 
-  const toggleProject = useCallback((code: string) => {
-    setExpandedProject((prev) => (prev === code ? null : code));
-    setSelectedEmployee(null);
-  }, []);
+  const clearEmployeeQueryParam = useCallback(() => {
+    if (!searchParams.has("employee")) return;
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("employee");
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
 
-  const selectEmployee = useCallback((email: string | null) => {
-    setSelectedEmployee(email ? email.trim().toLowerCase() : null);
-  }, []);
+  const selectEmployee = useCallback(
+    (email: string | null) => {
+      const next = email ? email.trim().toLowerCase() : null;
+      setSelectedEmployee(next);
+      if (!next) {
+        appliedEmployeeParam.current = null;
+        clearEmployeeQueryParam();
+      }
+    },
+    [clearEmployeeQueryParam]
+  );
+
+  const toggleProject = useCallback(
+    (code: string) => {
+      setExpandedProject((prev) => (prev === code ? null : code));
+      selectEmployee(null);
+    },
+    [selectEmployee]
+  );
 
   const setFromDate = useCallback((value: string) => {
     setFromDateState(value);

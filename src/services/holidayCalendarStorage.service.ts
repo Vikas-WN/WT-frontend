@@ -1,3 +1,6 @@
+import { endpoints } from "@/api/endpoints";
+import { ApiError } from "@/api/error";
+import { apiClient } from "@/api/httpClient";
 import type { HolidayCalendarRow } from "@/utils/holidayCalendarTable";
 import { normalizeHolidayCalendarRows } from "@/utils/holidayCalendarTable";
 import {
@@ -6,8 +9,6 @@ import {
 } from "@/utils/buildHolidayCalendarFile";
 import { parseSpreadsheetFile } from "@/utils/parseSpreadsheetFile";
 import {
-  HOLIDAY_CALENDAR_FILE_EXTENSIONS,
-  holidayCalendarObjectKey,
   holidayCalendarStorageFileName,
   resolveHolidayCalendarExtension,
   resolveHolidayCalendarUploadYear,
@@ -19,51 +20,6 @@ export type StoredHolidayCalendarResponse = {
   rows: HolidayCalendarRow[];
   uploadedAt: string | null;
 };
-
-async function readErrorMessage(response: Response): Promise<string> {
-  try {
-    const payload = (await response.json()) as { error?: string; message?: string };
-    return payload.error ?? payload.message ?? response.statusText;
-  } catch {
-    return response.statusText || "Request failed.";
-  }
-}
-
-function fileApiPath(objectKey: string): string {
-  return `/api/files/${objectKey.split("/").map(encodeURIComponent).join("/")}`;
-}
-
-async function fetchObject(objectKey: string): Promise<Response> {
-  return fetch(fileApiPath(objectKey), {
-    method: "GET",
-    credentials: "include",
-  });
-}
-
-async function deleteObject(objectKey: string): Promise<void> {
-  const response = await fetch(fileApiPath(objectKey), {
-    method: "DELETE",
-    credentials: "include",
-  });
-
-  if (response.status === 404) {
-    return;
-  }
-
-  if (!response.ok) {
-    throw new Error(await readErrorMessage(response));
-  }
-}
-
-function pickLatestStoredCalendar(
-  storedCalendars: StoredHolidayCalendarResponse[]
-): StoredHolidayCalendarResponse {
-  return storedCalendars.reduce((latest, current) => {
-    const latestUploadedAt = latest.uploadedAt ? Date.parse(latest.uploadedAt) : 0;
-    const currentUploadedAt = current.uploadedAt ? Date.parse(current.uploadedAt) : 0;
-    return currentUploadedAt >= latestUploadedAt ? current : latest;
-  });
-}
 
 async function parseStoredFileResponse(
   response: Response,
@@ -95,67 +51,36 @@ export const holidayCalendarStorageService = {
   },
 
   async fetchByYear(year: number): Promise<StoredHolidayCalendarResponse | null> {
-    const errors: string[] = [];
-    const storedCalendars = await Promise.all(
-      HOLIDAY_CALENDAR_FILE_EXTENSIONS.map(async (extension) => {
-        const objectKey = holidayCalendarObjectKey(year, extension);
-        const response = await fetchObject(objectKey);
-
-        if (response.status === 404) {
-          return null;
-        }
-
-        if (!response.ok) {
-          errors.push(await readErrorMessage(response));
-          return null;
-        }
-
-        return parseStoredFileResponse(response, year);
-      })
-    );
-
-    const availableCalendars = storedCalendars.filter(
-      (calendar): calendar is StoredHolidayCalendarResponse => calendar != null
-    );
-
-    if (!availableCalendars.length) {
-      if (errors.length) {
-        throw new Error(errors[0]);
+    try {
+      const response = await apiClient.get<Response>(
+        endpoints.holidayCalendarStorage.byYear(year),
+        { responseType: "raw" }
+      );
+      return parseStoredFileResponse(response, year);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        return null;
       }
-      return null;
+      throw error instanceof Error ? error : new Error("Failed to load holiday calendar.");
     }
-
-    return pickLatestStoredCalendar(availableCalendars);
   },
 
   async uploadFile(file: File, year: number, cleanedRows?: HolidayCalendarRow[]): Promise<void> {
     const extension = resolveHolidayCalendarExtension(file.name);
-    const storageFileName = holidayCalendarStorageFileName(year, extension);
-    const objectKey = holidayCalendarObjectKey(year, extension);
+    let uploadFile = file;
 
-    let uploadBody: Blob = file;
     if (cleanedRows?.length) {
-      uploadBody = await buildHolidayCalendarFile(cleanedRows, extension);
+      const blob = await buildHolidayCalendarFile(cleanedRows, extension);
+      uploadFile = new File([blob], holidayCalendarStorageFileName(year, extension), {
+        type: holidayCalendarFileMimeType(extension),
+      });
     }
 
-    const response = await fetch(fileApiPath(objectKey), {
-      method: "PUT",
-      credentials: "include",
-      headers: {
-        "Content-Type": holidayCalendarFileMimeType(extension),
-        "X-Original-Filename": storageFileName,
-      },
-      body: uploadBody,
+    const formData = new FormData();
+    formData.append("file", uploadFile);
+
+    await apiClient.put(endpoints.holidayCalendarStorage.byYear(year), {
+      body: formData,
     });
-
-    if (!response.ok) {
-      throw new Error(await readErrorMessage(response));
-    }
-
-    await Promise.all(
-      HOLIDAY_CALENDAR_FILE_EXTENSIONS.filter((storedExtension) => storedExtension !== extension).map(
-        (storedExtension) => deleteObject(holidayCalendarObjectKey(year, storedExtension))
-      )
-    );
   },
 };

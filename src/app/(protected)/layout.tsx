@@ -24,10 +24,10 @@ export default function ProtectedLayout({
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60_000,
+            staleTime: 30_000,
             gcTime: 10 * 60_000,
-            refetchOnWindowFocus: false,
-            refetchOnReconnect: false,
+            refetchOnWindowFocus: true,
+            refetchOnReconnect: true,
           },
         },
       })

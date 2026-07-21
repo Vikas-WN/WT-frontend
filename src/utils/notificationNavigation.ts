@@ -29,6 +29,23 @@ function isHrOrAdmin(roles: string[]): boolean {
   return hasAnyRole(roles, ["ROLE_HR", "ROLE_ADMIN"]);
 }
 
+function notificationSenderEmail(
+  row: NotificationItem | Record<string, unknown>
+): string | null {
+  const raw =
+    (row as NotificationItem).sender_email ??
+    (row as Record<string, unknown>).senderEmail ??
+    (row as Record<string, unknown>).sender_email;
+  const email = String(raw ?? "").trim().toLowerCase();
+  return email || null;
+}
+
+function timelogTeamHrefForEmployee(employeeEmail: string | null): string {
+  const base = DASHBOARD_ROUTES["timelog-team"];
+  if (!employeeEmail) return base;
+  return `${base}?employee=${encodeURIComponent(employeeEmail)}`;
+}
+
 /** Human-readable category for the notification badge. */
 export function notificationCategoryLabel(
   row: NotificationItem | Record<string, unknown>
@@ -145,13 +162,15 @@ export function resolveNotificationHref(
     case "ALLOCATION_EXTENSION_REJECTED":
       return DASHBOARD_ROUTES["allocation-extension"];
 
+    case "TIMELOG_SUBMITTED":
+    case "TIMELOG_REQUEST":
+      // Open Team Time Logs for the employee who submitted (sender).
+      return timelogTeamHrefForEmployee(notificationSenderEmail(row));
+
     case "NO_TIME_LOGS":
     case "TIMELOG_APPROVED":
     case "TIMELOG_REJECTED":
-    case "TIMELOG_SUBMITTED":
-    case "TIMELOG_REQUEST":
-      // Primary managers may only have ROLE_EMPLOYEE; always open the projects inbox.
-      return DASHBOARD_ROUTES["timelog-team"];
+      return DASHBOARD_ROUTES.timelog;
 
     case "TRAINING_MARKS_PUBLISHED":
       return LEARNING_SCORES;

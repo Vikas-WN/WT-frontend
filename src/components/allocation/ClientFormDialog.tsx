@@ -16,18 +16,25 @@ import {
 import { clientToFormState } from "@/utils/client";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 
-function buildClientPayload(form: ClientFormState) {
-  return {
+function buildClientPayload(form: ClientFormState, editing: boolean) {
+  const payload: Record<string, unknown> = {
     name: form.name.trim(),
     address: form.address.trim() || null,
     spoc_external_name: form.spoc_external_name.trim() || null,
     spoc_external_email: form.spoc_external_email.trim() || null,
     spoc_external_phone: form.spoc_external_phone.trim() || null,
-    poc_internal_email: form.poc_internal_email.trim() || null,
-    account_manager_email: form.account_manager_email.trim() || null,
-    delivery_manager_email: form.delivery_manager_email.trim() || null,
     is_active: form.is_active,
   };
+
+  const accountManager = form.account_manager_email.trim();
+  const deliveryManager = form.delivery_manager_email.trim();
+  if (accountManager) payload.account_manager_email = accountManager;
+  else if (!editing) payload.account_manager_email = null;
+
+  if (deliveryManager) payload.delivery_manager_email = deliveryManager;
+  else if (!editing) payload.delivery_manager_email = null;
+
+  return payload;
 }
 
 export function ClientFormDialog({
@@ -62,7 +69,7 @@ export function ClientFormDialog({
 
     setLoading(true);
     try {
-      const payload = buildClientPayload(form);
+      const payload = buildClientPayload(form, Boolean(editingClient));
 
       if (editingClient) {
         await hrmsService.updateClient(editingClient.id, payload);
@@ -84,7 +91,7 @@ export function ClientFormDialog({
     <WtFormDialog
       open={open}
       title={editingClient ? "Edit Client" : "Create Client"}
-      description="Capture client details, external SPOC, internal POC, and assigned managers."
+      description="Capture client details, external SPOC, and assigned managers."
       onClose={onClose}
       onSubmit={() => void handleSubmit()}
       submitLabel={editingClient ? UI_COPY.saveChanges : "Create Client"}
@@ -136,6 +143,7 @@ export function ClientFormDialog({
               label="SPOC Name"
               value={form.spoc_external_name}
               onChange={(value) => setForm((prev) => ({ ...prev, spoc_external_name: value }))}
+              required
             />
             <InputField
               label="SPOC Email"
@@ -148,19 +156,6 @@ export function ClientFormDialog({
               type="tel"
               value={form.spoc_external_phone}
               onChange={(value) => setForm((prev) => ({ ...prev, spoc_external_phone: value }))}
-            />
-          </div>
-        </FormSection>
-
-        <FormSection
-          title="Internal POC"
-          description="Your company employee mapped as the internal point of contact."
-        >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <InternalEmployeeSelect
-              label="POC"
-              value={form.poc_internal_email}
-              onChange={(value) => setForm((prev) => ({ ...prev, poc_internal_email: value }))}
             />
           </div>
         </FormSection>

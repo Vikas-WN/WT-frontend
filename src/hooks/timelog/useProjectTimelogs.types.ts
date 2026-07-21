@@ -11,8 +11,21 @@ export interface ProjectTimelogProject {
   employees: ProjectEmployee[];
 }
 
+export interface PendingTimelogApproval {
+  timelog_id: number;
+  employee_email: string;
+  employee_name: string;
+  project_code: string;
+  project_name: string;
+  log_date: string;
+  hours: number;
+  status: string;
+  description: string | null;
+}
+
 export interface ProjectTimelogsData {
   projects: ProjectTimelogProject[];
+  pendingApprovals: PendingTimelogApproval[];
 }
 
 export interface ProjectWeekEmployeeTotal {

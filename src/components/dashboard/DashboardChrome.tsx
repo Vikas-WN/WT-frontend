@@ -38,6 +38,7 @@ import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { applyResolvedTheme, readStoredTheme } from "@/utils/dashboard/theme";
 import { readSidebarCollapsed, writeSidebarCollapsed } from "@/utils/dashboard/sidebarPrefs";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
 import {
   DASHBOARD_HEADER_CLASS,
@@ -184,6 +185,8 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">(readStoredTheme);
   const [actionLoading, setActionLoading] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const notificationsPanelRef = useRef<HTMLDetailsElement>(null);
 
   const toggleTheme = useCallback(() => {
@@ -197,6 +200,26 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       return next;
     });
   }, []);
+
+  const requestLogout = useCallback(() => {
+    setLogoutConfirmOpen(true);
+  }, []);
+
+  const cancelLogout = useCallback(() => {
+    if (logoutLoading) return;
+    setLogoutConfirmOpen(false);
+  }, [logoutLoading]);
+
+  const confirmLogout = useCallback(async () => {
+    if (logoutLoading) return;
+    setLogoutLoading(true);
+    try {
+      await logout();
+    } finally {
+      setLogoutLoading(false);
+      setLogoutConfirmOpen(false);
+    }
+  }, [logout, logoutLoading]);
 
   useEffect(() => {
     setSidebarCollapsed(readSidebarCollapsed());
@@ -377,7 +400,14 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         sidebarDisplayName={sidebarDisplayName}
         canAccessProfile={canAccessProfile}
         isOffboarded={isOffboarded}
-        onLogout={logout}
+        onLogout={requestLogout}
+      />
+
+      <LogoutConfirmDialog
+        open={logoutConfirmOpen}
+        loading={logoutLoading}
+        onCancel={cancelLogout}
+        onConfirm={() => void confirmLogout()}
       />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-wt-page-bg dark:bg-black">
