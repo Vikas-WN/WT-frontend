@@ -198,6 +198,26 @@ export type CompOffProjectCatalog = {
   userIdToEmail: Map<string, string>;
 };
 
+function mergeCompOffProjectOptions(
+  ...lists: CompOffProjectOption[][]
+): CompOffProjectOption[] {
+  const map = new Map<string, CompOffProjectOption>();
+  for (const list of lists) {
+    for (const option of list) {
+      const key = option.code.trim().toLowerCase();
+      if (!key) continue;
+      const existing = map.get(key);
+      map.set(key, {
+        code: option.code,
+        name: option.name || existing?.name || option.code,
+        label: option.label || existing?.label || option.name || option.code,
+        managerEmail: option.managerEmail || existing?.managerEmail || "",
+      });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+}
+
 function buildOptionsFromEarnProjects(
   rows: Array<Record<string, unknown>>
 ): CompOffProjectOption[] {
@@ -254,13 +274,24 @@ export async function loadCompOffProjectCatalog(): Promise<CompOffProjectCatalog
   }
   userMap = await resolveEmailsForUserIds([...userIdsToResolve], userMap);
 
-  // Primary source: GET /comp-off/earn/projects (active allocations for the actor).
-  let options = buildOptionsFromEarnProjects(earnProjectRows);
+  // Merge every source so assigned projects appear even when one API shape/payload differs.
+  let options = mergeCompOffProjectOptions(
+    buildOptionsFromEarnProjects(earnProjectRows),
+    buildCompOffProjectOptionsFromAssignedProjects(assignedRows, userMap),
+    buildCompOffProjectOptions(assignedRows, allocationRows, userMap)
+  );
+
   if (!options.length) {
-    options = buildCompOffProjectOptionsFromAssignedProjects(assignedRows, userMap);
-  }
-  if (!options.length) {
-    options = buildCompOffProjectOptions(assignedRows, allocationRows, userMap);
+    try {
+      const assignedOnly = await hrmsService.getAssignedProjects();
+      const assignedOnlyRows = toPagedRows(assignedOnly.data ?? assignedOnly);
+      options = mergeCompOffProjectOptions(
+        options,
+        buildCompOffProjectOptionsFromAssignedProjects(assignedOnlyRows, userMap)
+      );
+    } catch {
+      /* optional fallback */
+    }
   }
 
   const enriched = await Promise.allSettled(

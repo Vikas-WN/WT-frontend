@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { useTimelogManagerOptions } from "@/hooks/timelog/useTimelogManagerOptions";
 import { showErrorToast } from "@/lib/toast";
@@ -10,6 +11,15 @@ import {
   taskCategoriesForProject,
   TASK_CATEGORY_LABELS,
 } from "@/utils/timelog/categories";
+import {
+  MODAL_BODY_CLASS,
+  MODAL_FOOTER_CLASS,
+  MODAL_HEADER_CLASS,
+  MODAL_OVERLAY_CLASS,
+  MODAL_PANEL_CLASS,
+  SECTION_TITLE_CLASS,
+} from "@/components/dashboard/ui/uiLayout";
+import { cn } from "@/lib/utils";
 import "./DayEntryForm.css";
 import type { DayEntryFormProps } from "./DayEntryForm.types";
 import type { DayTimelogEntry, DayTimelogEntryForm } from "@/hooks/timelog/useDayTimelog.types";
@@ -72,6 +82,21 @@ export function DayEntryForm({
     setForm(formForEntry(entry));
     setLocalError(null);
   }, [entry]);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !pendingSave && !pendingSubmit && !actionLoading) {
+        onCancel();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onCancel, pendingSave, pendingSubmit, actionLoading]);
 
   // When project changes, clear an invalid manager; autofill when exactly one manager exists.
   useEffect(() => {
@@ -143,7 +168,6 @@ export function DayEntryForm({
 
   const validate = useCallback((): string | null => {
     if (!form.project_code) return "Select a project.";
-    if (!form.project_name.trim()) return "Project name is required.";
     if (!form.project_manager.trim()) return "Select a project manager.";
     if (!form.task_category) return "Select a task category.";
     if (isSubRequired && !form.sub_category) return "Select a sub category.";
@@ -184,25 +208,30 @@ export function DayEntryForm({
     Promise.resolve(action).finally(() => setPendingSave(false));
   }, [form, validate, isNew, onSave, onUpdate, entry]);
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div
-      className="day-entry-form-overlay"
+      className={MODAL_OVERLAY_CLASS}
       role="presentation"
-      onClick={onCancel}
+      onClick={() => {
+        if (!pendingSave && !pendingSubmit && !actionLoading) onCancel();
+      }}
     >
       <div
         role="dialog"
         aria-modal="true"
-        className="day-entry-form-panel"
+        aria-labelledby="day-entry-form-title"
+        className={cn(MODAL_PANEL_CLASS, "wt-soft-in max-w-lg")}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="day-entry-form-header">
-          <h2 className="day-entry-form-title">
+        <div className={MODAL_HEADER_CLASS}>
+          <h2 id="day-entry-form-title" className={SECTION_TITLE_CLASS}>
             {isNew ? "Add entry" : "Edit entry"}
           </h2>
         </div>
 
-        <div className="day-entry-form-body">
+        <div className={cn(MODAL_BODY_CLASS, "day-entry-form-body")}>
           {localError ? (
             <div className="day-entry-form-error">{localError}</div>
           ) : null}
@@ -218,7 +247,7 @@ export function DayEntryForm({
                 setForm((prev) => ({
                   ...prev,
                   project_code,
-                  project_name: selected?.project_name ?? "",
+                  project_name: selected?.project_name ?? project_code,
                   project_manager: "",
                 }));
               }}
@@ -231,26 +260,6 @@ export function DayEntryForm({
               showChevron
             />
           </label>
-
-          {form.project_code ? (
-            <label className="day-entry-form-field">
-              <span className="day-entry-form-label">
-                Project Name <span className="day-entry-form-required">*</span>
-              </span>
-              <textarea
-                className="day-entry-form-textarea"
-                value={form.project_name}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    project_name: e.target.value,
-                  }))
-                }
-                placeholder="Enter project name"
-                rows={2}
-              />
-            </label>
-          ) : null}
 
           {form.project_code ? (
             <label className="day-entry-form-field">
@@ -334,7 +343,9 @@ export function DayEntryForm({
 
           {form.project_code && form.task_category ? (
             <label className="day-entry-form-field">
-              <span className="day-entry-form-label">Description <span className="day-entry-form-required">*</span></span>
+              <span className="day-entry-form-label">
+                Description <span className="day-entry-form-required">*</span>
+              </span>
               <textarea
                 className="day-entry-form-textarea"
                 value={form.description}
@@ -371,7 +382,7 @@ export function DayEntryForm({
           ) : null}
         </div>
 
-        <div className="day-entry-form-footer">
+        <div className={cn(MODAL_FOOTER_CLASS, "flex-wrap sm:flex-nowrap")}>
           <Button
             variant="outline"
             size="sm"
@@ -394,13 +405,14 @@ export function DayEntryForm({
             variant="outline"
             size="sm"
             type="button"
-            disabled={actionLoading}
+            disabled={actionLoading || pendingSave || pendingSubmit}
             onClick={onCancel}
           >
             Cancel
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

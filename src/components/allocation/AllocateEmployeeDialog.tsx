@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { InputField, SelectField } from "@/components/dashboard/ui/forms";
 import { AllocatedPercentSelect } from "@/components/allocation/AllocatedPercentSelect";
 import { CurrentAllocationHint } from "@/components/allocation/CurrentAllocationHint";
+import { EmployeeCurrentAllocationsPanel } from "@/components/allocation/EmployeeCurrentAllocationsPanel";
 import { InternalEmployeeSelect } from "@/components/allocation/InternalEmployeeSelect";
 import { InternalEmployeesMultiSelect } from "@/components/allocation/InternalEmployeesMultiSelect";
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
@@ -32,6 +33,8 @@ import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { UI_COPY } from "@/constants/uiCopy";
 
 const CUSTOM_ROLE_VALUE = "__custom_role__";
+const ALLOCATE_STEPS = ["Employee", "Project", "Details"] as const;
+type AllocateStep = (typeof ALLOCATE_STEPS)[number];
 
 type ProjectOption = { code: string; name: string };
 
@@ -62,6 +65,11 @@ export function AllocateEmployeeDialog({
   const [customRole, setCustomRole] = useState("");
   const [assignProjectManagers, setAssignProjectManagers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<AllocateStep>("Employee");
+  const [allocationVersion, setAllocationVersion] = useState(0);
+
+  const isEditMode = Boolean(editingAllocationId);
+  const stepIndex = ALLOCATE_STEPS.indexOf(step);
 
   const roleOptions = useMemo(
     () => [...allocationRoles, CUSTOM_ROLE_VALUE],
@@ -77,6 +85,8 @@ export function AllocateEmployeeDialog({
       setCustomRole("");
       setAssignProjectManagers([]);
       setLoading(false);
+      setStep("Employee");
+      setAllocationVersion(0);
       return;
     }
     if (initialForm) {
@@ -97,18 +107,48 @@ export function AllocateEmployeeDialog({
     : ALLOCATION_TYPE_SELECT_OPTIONS;
   const showLockedInDate = !staffing && form.allocation_type === "LOCKED";
 
+  function validateEmployeeStep(): boolean {
+    if (!form.employee_email.trim()) {
+      showErrorToast("Please select an employee.");
+      return false;
+    }
+    return true;
+  }
+
+  function validateProjectStep(): boolean {
+    if (!form.project_code.trim()) {
+      showErrorToast("Please select a project.");
+      return false;
+    }
+    return true;
+  }
+
+  function goToNextStep() {
+    if (isEditMode) {
+      void handleSubmit();
+      return;
+    }
+    if (step === "Employee") {
+      if (!validateEmployeeStep()) return;
+      setStep("Project");
+      return;
+    }
+    if (step === "Project") {
+      if (!validateProjectStep()) return;
+      setStep("Details");
+    }
+  }
+
+  function goToPreviousStep() {
+    if (step === "Project") setStep("Employee");
+    if (step === "Details") setStep("Project");
+  }
+
   async function handleSubmit() {
     const employeeEmail = form.employee_email.trim();
     const projectCode = form.project_code.trim();
     const role = resolvedRole;
-    if (!employeeEmail) {
-      showErrorToast("Please select an employee.");
-      return;
-    }
-    if (!projectCode) {
-      showErrorToast("Please select a project.");
-      return;
-    }
+    if (!validateEmployeeStep() || !validateProjectStep()) return;
     if (!role) {
       showErrorToast("Please select or enter a project role.");
       return;
@@ -219,39 +259,121 @@ export function AllocateEmployeeDialog({
       description={
         editingAllocationId
           ? "Update allocation details for this employee."
-          : "Assign an employee to a project with role, type, status, and dates."
+          : `Step ${stepIndex + 1} of ${ALLOCATE_STEPS.length}: ${
+              step === "Employee"
+                ? "Choose the employee and review their current allocations."
+                : step === "Project"
+                  ? "Select the project to assign."
+                  : "Set role, allocation %, type, status, and dates."
+            }`
       }
       onClose={onClose}
-      onSubmit={() => void handleSubmit()}
-      submitLabel={editingAllocationId ? UI_COPY.saveChanges : "Allocate Employee"}
+      onSubmit={() => void (step === "Details" || isEditMode ? handleSubmit() : goToNextStep())}
+      submitLabel={
+        editingAllocationId
+          ? UI_COPY.saveChanges
+          : step === "Details"
+            ? "Allocate Employee"
+            : "Next"
+      }
+      secondaryAction={
+        !isEditMode && step !== "Employee"
+          ? { label: "Back", onClick: goToPreviousStep, disabled: loading }
+          : undefined
+      }
       loading={loading}
       maxWidthClass="max-w-3xl"
     >
-      <FormSection title="People Allocation">
+      {!isEditMode ? (
+        <ol className="mb-4 flex flex-wrap gap-2 text-xs font-medium">
+          {ALLOCATE_STEPS.map((label, index) => (
+            <li
+              key={label}
+              className={`rounded-full px-3 py-1 ${
+                index === stepIndex
+                  ? "bg-wt-brand text-white"
+                  : index < stepIndex
+                    ? "bg-wt-surface-2 text-wt-text"
+                    : "bg-wt-surface-1 text-wt-text-muted"
+              }`}
+            >
+              {index + 1}. {label}
+            </li>
+          ))}
+        </ol>
+      ) : null}
+      <FormSection title={isEditMode ? "People Allocation" : step}>
+        {isEditMode || step === "Employee" ? (
+          <div className="space-y-4">
+            <InternalEmployeeSelect
+              label="Name"
+              required
+              value={form.employee_email}
+              onChange={(value) => setForm((prev) => ({ ...prev, employee_email: value }))}
+            />
+            <EmployeeCurrentAllocationsPanel
+              email={form.employee_email}
+              onChanged={() => setAllocationVersion((value) => value + 1)}
+            />
+          </div>
+        ) : null}
+
+        {!isEditMode && step === "Project" ? (
+          <div className="space-y-4">
+            <SelectField
+              label="Project"
+              required
+              value={form.project_code}
+              placeholder="Select project"
+              options={projects.map((project) => ({
+                value: project.code,
+                label: project.name,
+              }))}
+              onChange={(projectCode) =>
+                setForm((prev) => ({
+                  ...prev,
+                  project_code: projectCode,
+                  allocation_type: isStaffingProject(projectCode) ? "STAFFING" : prev.allocation_type,
+                }))
+              }
+            />
+            <CurrentAllocationHint
+              key={`${form.employee_email}-${allocationVersion}`}
+              email={form.employee_email}
+              detailed
+            />
+          </div>
+        ) : null}
+
+        {isEditMode || step === "Details" ? (
         <div className="grid gap-4 sm:grid-cols-2">
-          <InternalEmployeeSelect
-            label="Name"
-            required
-            value={form.employee_email}
-            onChange={(value) => setForm((prev) => ({ ...prev, employee_email: value }))}
-          />
-          <SelectField
-            label="Project"
-            required
-            value={form.project_code}
-            placeholder="Select project"
-            options={projects.map((project) => ({
-              value: project.code,
-              label: project.name,
-            }))}
-            onChange={(projectCode) =>
-              setForm((prev) => ({
-                ...prev,
-                project_code: projectCode,
-                allocation_type: isStaffingProject(projectCode) ? "STAFFING" : prev.allocation_type,
-              }))
-            }
-          />
+          {isEditMode ? (
+            <>
+              <InternalEmployeeSelect
+                label="Name"
+                required
+                value={form.employee_email}
+                onChange={(value) => setForm((prev) => ({ ...prev, employee_email: value }))}
+              />
+              <SelectField
+                label="Project"
+                required
+                value={form.project_code}
+                placeholder="Select project"
+                options={projects.map((project) => ({
+                  value: project.code,
+                  label: project.name,
+                }))}
+                onChange={(projectCode) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    project_code: projectCode,
+                    allocation_type: isStaffingProject(projectCode) ? "STAFFING" : prev.allocation_type,
+                  }))
+                }
+              />
+            </>
+          ) : null}
           <SelectField
             label="Role"
             required
@@ -280,9 +402,22 @@ export function AllocateEmployeeDialog({
             value={form.allocated_percent}
             onChange={(value) => setForm((prev) => ({ ...prev, allocated_percent: value }))}
           />
-          <div className="sm:col-span-2">
-            <CurrentAllocationHint email={form.employee_email} />
-          </div>
+          {!isEditMode ? (
+            <div className="sm:col-span-2">
+              <CurrentAllocationHint
+                key={`${form.employee_email}-${allocationVersion}`}
+                email={form.employee_email}
+                detailed
+              />
+            </div>
+          ) : (
+            <div className="sm:col-span-2">
+              <CurrentAllocationHint
+                key={`${form.employee_email}-${allocationVersion}`}
+                email={form.employee_email}
+              />
+            </div>
+          )}
           <SelectField
             label="Allocation Type"
             placeholder={staffing ? "Staffing (required for staffing projects)" : "Select allocation type"}
@@ -375,6 +510,7 @@ export function AllocateEmployeeDialog({
             )}
           </div>
         </div>
+        ) : null}
       </FormSection>
     </WtFormDialog>
   );

@@ -41,17 +41,15 @@ function yearSelectOptions(anchorYear: number): string[] {
 }
 
 const HOLIDAY_COLUMN_WIDTHS: Record<HolidayCalendarColumnKey, string> = {
-  sl_no: "8%",
-  date: "14%",
-  day: "16%",
-  holiday: "24%",
+  date: "16%",
+  day: "18%",
+  holiday: "28%",
   optional: "38%",
 };
 
 function cellClassName(key: HolidayCalendarColumnKey): string {
   const base = "px-3 py-2 text-left text-sm align-middle";
   if (key === "optional") return `${base} whitespace-normal`;
-  if (key === "sl_no") return `${base} whitespace-nowrap tabular-nums`;
   return `${base} whitespace-nowrap`;
 }
 
@@ -100,7 +98,7 @@ export function HolidayCalendarsPageClient() {
       const normalizedRows = normalizeHolidayCalendarRows(parsed);
       if (!normalizedRows.length) {
         throw new Error(
-          "No holiday rows were found. Use columns Sl. No., Date, Day, Holiday, and Optional."
+          "No holiday rows were found. Use columns Date, Day, Holiday, and Optional."
         );
       }
 

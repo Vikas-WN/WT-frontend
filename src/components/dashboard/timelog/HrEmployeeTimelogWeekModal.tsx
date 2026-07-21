@@ -7,7 +7,7 @@ import { SelectField } from "@/components/dashboard/ui/forms";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { WeeklyTimelogGrid } from "@/components/dashboard/timelog/WeeklyTimelogGrid";
 import { hrmsService } from "@/services/hrms.service";
-import { projectOptionsFromPayload, type TimelogOptionsPayload } from "@/utils/timelog/categories";
+import { projectOptionsFromPayload, normalizeTimelogOptionsPayload, type TimelogOptionsPayload } from "@/utils/timelog/categories";
 import { gridRowsFromWeekSnapshot, type TimelogWeekSnapshot } from "@/utils/timelog/gridState";
 import { weekColumnLabel } from "@/utils/timelog/monthWeeks";
 import { timelogViewerRoles } from "@/utils/timelog/viewerRoles";
@@ -91,7 +91,7 @@ export function HrEmployeeTimelogWeekModal({
           viewerRoles,
         }),
       ]);
-      setOptions(unwrapPayload<TimelogOptionsPayload>(optionsRes));
+      setOptions(normalizeTimelogOptionsPayload(optionsRes));
       setSnapshot(unwrapPayload<TimelogWeekSnapshot>(weekRes));
     } catch (err) {
       setSnapshot(null);

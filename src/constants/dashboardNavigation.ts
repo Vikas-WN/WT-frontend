@@ -139,10 +139,11 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "annual-calendar",
-        label: "Annual Calendar",
+        label: "Holiday Calendar",
         roles: [
           "ROLE_EMPLOYEE",
           "ROLE_MANAGER",
+          "ROLE_DM",
           "ROLE_HR",
           "ROLE_ADMIN",
           "ROLE_FINANCE",

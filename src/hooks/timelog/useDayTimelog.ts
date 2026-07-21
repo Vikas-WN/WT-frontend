@@ -8,6 +8,7 @@ import { showSuccessToast } from "@/lib/toast";
 import { formatApiDate, parseTimelogDate, toIsoDateKey } from "@/utils/timelog/weekDates";
 import {
   projectOptionsFromPayload,
+  normalizeTimelogOptionsPayload,
   type TimelogOptionsPayload,
 } from "@/utils/timelog/categories";
 import type {
@@ -125,7 +126,7 @@ export function useDayTimelog() {
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const res = await hrmsService.getTimelogOptions();
-      return parseApiEnvelope<TimelogOptionsPayload>(res);
+      return normalizeTimelogOptionsPayload(res);
     },
   });
 
