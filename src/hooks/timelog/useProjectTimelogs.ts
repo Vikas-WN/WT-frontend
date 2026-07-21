@@ -23,18 +23,6 @@ function unwrapData(response: unknown): unknown {
   return response;
 }
 
-function entriesFromTimelogList(payload: unknown): DayTimelogEntry[] {
-  const data = unwrapData(payload);
-  if (Array.isArray(data)) return normalizeDayTimelogEntries(data);
-  if (data && typeof data === "object") {
-    const root = data as Record<string, unknown>;
-    return normalizeDayTimelogEntries(
-      root.items ?? root.entries ?? root.content ?? root.timelogs ?? data
-    );
-  }
-  return normalizeDayTimelogEntries(data);
-}
-
 function fullDataRange(): { startDmy: string; endDmy: string; startIso: string; endIso: string } {
   const end = new Date();
   end.setHours(0, 0, 0, 0);
@@ -75,7 +63,10 @@ async function fetchEmployeeEntriesRange(params: {
   const { email, startDmy, endDmy, startIso, endIso, viewerRoles } = params;
   const roles = viewerRoles.length ? viewerRoles : undefined;
   const batches: DayTimelogEntry[][] = [];
+  let lastError: unknown = null;
 
+  // Only use the manager employee-entries API — never fall back to GET /timelog
+  // (that returns the actor's own logs and hides pending employee submissions).
   for (const [startDate, endDate] of [
     [startIso, endIso],
     [startDmy, endDmy],
@@ -88,35 +79,16 @@ async function fetchEmployeeEntriesRange(params: {
         viewerRoles: roles,
       });
       const entries = normalizeDayTimelogEntries(unwrapData(response));
-      if (entries.length) batches.push(entries);
-    } catch {
-      // try next
+      batches.push(entries);
+      if (entries.length) break;
+    } catch (error) {
+      lastError = error;
     }
   }
 
-  for (const [startDate, endDate] of [
-    [startIso, endIso],
-    [startDmy, endDmy],
-  ] as const) {
-    try {
-      const response = await hrmsService.getTimelogs({
-        page: "0",
-        size: "200",
-        employeeEmail: email,
-        employee_email: email,
-        startDate,
-        start_date: startDate,
-        endDate,
-        end_date: endDate,
-      });
-      const entries = entriesFromTimelogList(response);
-      if (entries.length) batches.push(entries);
-    } catch {
-      // try next
-    }
-  }
-
-  return mergeTimelogEntries(...batches);
+  if (batches.length) return mergeTimelogEntries(...batches);
+  if (lastError) throw lastError;
+  return [];
 }
 
 function filterEntriesToRange(
@@ -261,6 +233,11 @@ export function useProjectTimelogs(enabled: boolean) {
     [projectsQuery.data]
   );
 
+  const pendingApprovals = useMemo(
+    () => projectsQuery.data?.pendingApprovals ?? [],
+    [projectsQuery.data]
+  );
+
   const expandedEmployees = useMemo(() => {
     if (!expandedProject) return [];
     const code = expandedProject.trim().toUpperCase();
@@ -375,6 +352,7 @@ export function useProjectTimelogs(enabled: boolean) {
 
   return {
     projects,
+    pendingApprovals,
     projectsLoading: projectsQuery.isLoading,
     projectsError: projectsQuery.error
       ? projectsQuery.error instanceof Error

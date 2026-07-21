@@ -106,6 +106,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
   const queryClient = useQueryClient();
   const {
     projects,
+    pendingApprovals,
     projectsLoading,
     projectsError,
     weekTotals,
@@ -353,6 +354,84 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
       <CardContent className="space-y-4">
         {projectsError ? (
           <p className="text-sm text-rose-400">{projectsError}</p>
+        ) : null}
+        {pendingApprovals.length ? (
+          <div className="space-y-2 rounded-lg border border-[var(--wt-brand)]/30 bg-[var(--wt-brand-soft)]/40 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-wt-text">
+                Pending Approvals ({pendingApprovals.length})
+              </h3>
+              <span className="text-xs text-wt-text-muted">
+                Submitted time logs waiting for your review
+              </span>
+            </div>
+            <div className="overflow-x-auto rounded-md border border-wt-border bg-wt-surface-1">
+              <table className="w-full border-collapse text-sm">
+                <thead className="bg-wt-surface-2 text-wt-text-muted">
+                  <tr>
+                    <th className="px-2 py-2 text-left font-medium">Employee</th>
+                    <th className="px-2 py-2 text-left font-medium">Project</th>
+                    <th className="px-2 py-2 text-left font-medium whitespace-nowrap">Date</th>
+                    <th className="px-2 py-2 text-center font-medium">Hours</th>
+                    <th className="px-2 py-2 text-center font-medium">Status</th>
+                    <th className="px-2 py-2 text-center font-medium">Approve / Reject</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingApprovals.map((item) => (
+                    <tr
+                      key={item.timelog_id}
+                      className="border-t border-wt-border hover:bg-wt-surface-2/50"
+                    >
+                      <td className="px-2 py-2">
+                        <div className="font-medium text-wt-text">{item.employee_name}</div>
+                        <div className="text-xs text-wt-text-muted">{item.employee_email}</div>
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap">
+                        <div>{item.project_name}</div>
+                        <div className="text-xs text-wt-text-muted">{item.project_code}</div>
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap tabular-nums">{item.log_date}</td>
+                      <td className="px-2 py-2 text-center tabular-nums">{item.hours}h</td>
+                      <td className="px-2 py-2 text-center">
+                        <span className={entryStatusClass(item.status)}>
+                          {formatUiStatusLabel(item.status)}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2 text-center whitespace-nowrap">
+                        <div className="flex justify-center gap-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="xs"
+                            disabled={actionLoading}
+                            className="border-emerald-300 px-1.5 py-0.5 text-[10px] text-emerald-700 hover:bg-emerald-50"
+                            onClick={() =>
+                              setRemarkAction({ entryId: item.timelog_id, action: "APPROVED" })
+                            }
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="xs"
+                            disabled={actionLoading}
+                            className="px-1.5 py-0.5 text-[10px]"
+                            onClick={() =>
+                              setRemarkAction({ entryId: item.timelog_id, action: "REJECTED" })
+                            }
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         ) : null}
         <ProjectTimelogCardList
           projects={projects}
