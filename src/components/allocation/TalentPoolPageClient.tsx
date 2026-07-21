@@ -91,7 +91,7 @@ export function TalentPoolPageClient() {
             <TableRowsSkeleton rows={6} columns={4} />
           ) : unallocated ? (
             <TalentPoolSection
-              title={unallocated.label}
+              title={unallocated.label ?? "Talent Pool"}
               loading={loading}
               page={pages.unallocated}
               totalPages={unallocated.total_pages}
