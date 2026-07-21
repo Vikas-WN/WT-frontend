@@ -335,6 +335,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
   }
 
   return (
+    <>
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle>Team Time Logs</CardTitle>
@@ -444,5 +445,19 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
         />
       </CardContent>
     </Card>
+    <ApprovalRemarkModal
+      open={remarkAction !== null}
+      title={
+        remarkAction?.action === "APPROVED" ? "Approve Time Log Entry" : "Reject Time Log Entry"
+      }
+      actionLabel={remarkAction?.action === "APPROVED" ? "Approve" : "Reject"}
+      actionVariant={remarkAction?.action === "REJECTED" ? "destructive" : "brand"}
+      loading={actionLoading}
+      onConfirm={handleEntryRemarkConfirm}
+      onCancel={() => {
+        if (!actionLoading) setRemarkAction(null);
+      }}
+    />
+    </>
   );
 }
