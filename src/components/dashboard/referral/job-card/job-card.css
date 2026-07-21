@@ -1,0 +1,22 @@
+@layer components {
+  .job-card {
+    transition-duration: var(--wt-duration);
+    transition-timing-function: var(--wt-ease);
+  }
+
+  .job-card--selected {
+    border-color: var(--wt-brand);
+    background: color-mix(in srgb, var(--wt-brand) 6%, transparent);
+    box-shadow: 0 0 0 1px var(--wt-brand);
+  }
+
+  .job-card--default {
+    border-color: var(--wt-border);
+    background: var(--wt-surface-1);
+  }
+
+  .job-card--default:hover {
+    border-color: var(--wt-border-md);
+    background: var(--wt-surface-2);
+  }
+}

@@ -193,6 +193,21 @@ export const dashboardNavigation: NavItem[] = [
   { kind: "link", id: "uploads", label: "Uploads", roles: ["ROLE_HR", "ROLE_ADMIN"], icon: "upload" },
   {
     kind: "link",
+    id: "referral",
+    label: "Referral",
+    roles: [
+      "ROLE_EMPLOYEE",
+      "ROLE_AM",
+      "ROLE_MANAGER",
+      "ROLE_DM",
+      "ROLE_HR",
+      "ROLE_ADMIN",
+      "ROLE_FINANCE",
+    ],
+    icon: "referral",
+  },
+  {
+    kind: "link",
     id: "pulse",
     label: "Pulse",
     roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],

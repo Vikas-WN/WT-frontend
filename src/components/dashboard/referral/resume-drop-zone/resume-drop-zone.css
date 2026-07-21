@@ -1,0 +1,31 @@
+@layer components {
+  .drop-zone {
+    transition-duration: var(--wt-duration);
+    transition-timing-function: var(--wt-ease);
+  }
+
+  .drop-zone--empty {
+    border-color: var(--wt-border-md);
+    background: color-mix(in srgb, var(--wt-surface-2) 50%, transparent);
+  }
+
+  .drop-zone--empty:hover {
+    border-color: var(--wt-border);
+    background: var(--wt-surface-2);
+  }
+
+  .drop-zone--dragging {
+    border-color: var(--wt-brand);
+    background: color-mix(in srgb, var(--wt-brand) 6%, transparent);
+  }
+
+  .drop-zone--file {
+    border-color: color-mix(in srgb, var(--success, #10b981) 40%, transparent);
+    background: color-mix(in srgb, var(--success, #10b981) 5%, transparent);
+  }
+
+  .drop-zone--error {
+    border-color: color-mix(in srgb, var(--danger, #ef4444) 40%, transparent);
+    background: color-mix(in srgb, var(--danger, #ef4444) 5%, transparent);
+  }
+}

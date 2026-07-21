@@ -1,0 +1,59 @@
+"use client";
+
+import { useEffect } from "react";
+import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { MOBILE_DRAWER_COPY } from "@/components/dashboard/referral/mobile-drawer/mobile-drawer.constants";
+import type { MobileDrawerProps } from "@/components/dashboard/referral/mobile-drawer/mobile-drawer.types";
+import "./mobile-drawer.css";
+
+export function MobileDrawer({ open, onClose, children }: MobileDrawerProps) {
+  /*
+   * Prevent body scroll while drawer is open.
+   * Rule 6: useEffect allowed ONLY for event listeners / cleanup.
+   */
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
+  /* Close on Escape key */
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] lg:hidden">
+      <div className="drawer-overlay absolute inset-0" onClick={onClose} />
+      <div
+        className={cn(
+          "drawer-panel absolute right-0 top-0 bottom-0 flex w-full max-w-sm flex-col overflow-hidden",
+          "animate-in slide-in-from-right duration-300 ease-[var(--wt-ease)]"
+        )}
+      >
+        <div className="flex items-center justify-between border-b border-wt-border px-5 py-4">
+          <h3 className="text-base font-semibold text-wt-text">{MOBILE_DRAWER_COPY.referCandidate}</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex size-8 items-center justify-center rounded-lg text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto overscroll-contain p-5">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}

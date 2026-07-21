@@ -276,6 +276,10 @@ export const endpoints = {
     bgvDashboard: `${api}/reports/bgv`,
     bgvByEmployee: (empId: string) => `${api}/reports/bgv/${encodeURIComponent(empId)}`,
   },
+  referral: {
+    jobs: `${api}/jobs`,
+    root: `${api}/referrals`,
+  },
 } as const;
 
 export type EndpointRegistry = typeof endpoints;

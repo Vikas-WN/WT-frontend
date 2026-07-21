@@ -32,6 +32,7 @@ export const DASHBOARD_ROUTES: Record<string, string> = {
   "reports-section-7": "/dashboard/reports/bgv-dashboard",
   uploads: "/dashboard/uploads",
   pulse: "/dashboard/pulse",
+  referral: "/dashboard/referral",
   masters: "/dashboard/masters",
   profile: "/dashboard/profile",
   "exit-interview": "/dashboard/exit-interview",
@@ -71,6 +72,7 @@ const PATH_TO_NAV_ID: Array<{ prefix: string; id: string }> = [
   { prefix: "/dashboard/holiday-calendars", id: "holiday-calendars" },
   { prefix: "/dashboard/uploads", id: "uploads" },
   { prefix: "/dashboard/masters", id: "masters" },
+  { prefix: "/dashboard/referral", id: "referral" },
   { prefix: "/dashboard/profile", id: "profile" },
   { prefix: "/dashboard/exit-interview", id: "exit-interview" },
 ];

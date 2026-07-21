@@ -51,6 +51,12 @@ export const LazyBackgroundVerificationPageClient = lazyPage(
   "Loading background verification…"
 );
 
+export const LazyReferralPageClient = lazyPage(
+  () => import("@/components/dashboard/referral/ReferralPageClient"),
+  "ReferralPageClient",
+  "Loading referral…"
+);
+
 export const LazyLeavePageClient = lazyPage(
   () => import("@/components/dashboard/leave/LeavePageClient"),
   "LeavePageClient",
