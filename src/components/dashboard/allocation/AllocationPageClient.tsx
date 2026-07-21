@@ -151,6 +151,7 @@ import {
   parseDeallocatedAllocationListRows,
   ALLOCATION_LIST_DEFAULT_SORT_ID,
   filterAllocationListBySearch,
+  groupAllocationsByProject,
   isSystemProjectAllocationRow,
   mergeUniqueAllocationListRows,
   sortAllocationListForDisplay,
@@ -434,6 +435,9 @@ export function AllocationPageClient() {
   const [projectSortId, setProjectSortId] = useState(PROJECT_SORT_OPTIONS[0].id);
   const [allocationListSearch, setAllocationListSearch] = useState("");
   const [allocationListSortId, setAllocationListSortId] = useState(ALLOCATION_LIST_DEFAULT_SORT_ID);
+  const [expandedAllocationProjects, setExpandedAllocationProjects] = useState<Set<string>>(
+    () => new Set()
+  );
   const [managerProjects, setManagerProjects] = useState<Array<Record<string, unknown>>>([]);
   const [managerPortfolioRows, setManagerPortfolioRows] = useState<Array<Record<string, unknown>>>([]);
   const [selectedManagerProjectCode, setSelectedManagerProjectCode] = useState("");
@@ -2556,9 +2560,23 @@ export function AllocationPageClient() {
     [filteredAllocations, allocationListSortId]
   );
 
-  const allocationPagination = useClientPagination(sortedAllocations, {
+  const allocationProjectGroups = useMemo(
+    () => groupAllocationsByProject(sortedAllocations),
+    [sortedAllocations]
+  );
+
+  const allocationPagination = useClientPagination(allocationProjectGroups, {
     resetKeys: [allocationListSearch, allocationListSortId],
   });
+
+  function toggleAllocationProjectExpanded(projectKey: string) {
+    setExpandedAllocationProjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(projectKey)) next.delete(projectKey);
+      else next.add(projectKey);
+      return next;
+    });
+  }
   const normalizedManagerProjects = useMemo(() => {
     const sourceRows = managerProjects.length ? managerProjects : managerPortfolioRows;
     return Array.from(
@@ -3589,12 +3607,39 @@ export function AllocationPageClient() {
                                                         void (async () => {
                                                           let payload: Record<string, unknown> =
                                                             row as Record<string, unknown>;
+                                                          let projectManagerEmails: string[] = [];
                                                           try {
                                                             const res = await hrmsService.getProjectByCode(code);
                                                             const data = (res.data ?? res) as Record<string, unknown>;
                                                             if (data && typeof data === "object") payload = data;
                                                           } catch {
                                                             /* fall back to list row */
+                                                          }
+                                                          try {
+                                                            const mgrRes = await hrmsService.getTimelogManagerOptions({
+                                                              projectCode: code,
+                                                            });
+                                                            const mgrData = (mgrRes.data ?? mgrRes) as unknown;
+                                                            const rows = Array.isArray(mgrData)
+                                                              ? mgrData
+                                                              : Array.isArray(
+                                                                    (mgrData as { items?: unknown })?.items
+                                                                  )
+                                                                ? ((mgrData as { items: unknown[] }).items)
+                                                                : [];
+                                                            projectManagerEmails = rows
+                                                              .map((item) => {
+                                                                if (!item || typeof item !== "object") return "";
+                                                                const email = String(
+                                                                  (item as { email?: unknown }).email ?? ""
+                                                                )
+                                                                  .trim()
+                                                                  .toLowerCase();
+                                                                return email.includes("@") ? email : "";
+                                                              })
+                                                              .filter(Boolean);
+                                                          } catch {
+                                                            /* optional — PM field starts empty */
                                                           }
                                                           const nextForm: ProjectFormState = {
                                                             ...createEmptyProjectForm(),
@@ -3615,6 +3660,7 @@ export function AllocationPageClient() {
                                                             )
                                                               .trim()
                                                               .toLowerCase(),
+                                                            project_manager_emails: projectManagerEmails,
                                                             start_date: apiDateToInputValue(
                                                               String(payload.start_date ?? payload.startDate ?? "")
                                                             ),
@@ -3717,7 +3763,13 @@ export function AllocationPageClient() {
                                   className="rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-2"
                                 >
                                   <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <p className="text-sm font-medium">Allocation records</p>
+                                    <div>
+                                      <p className="text-sm font-medium">Allocation records</p>
+                                      <p className="text-xs text-wt-text-muted">
+                                        Grouped by project · {allocationProjectGroups.length} project
+                                        {allocationProjectGroups.length === 1 ? "" : "s"}
+                                      </p>
+                                    </div>
                                     <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[200px] justify-end">
                                       <label className="sr-only" htmlFor="allocation-list-search">
                                         Search allocations
@@ -3738,268 +3790,331 @@ export function AllocationPageClient() {
                                   ) : null}
                                   {allocationsLoading && !allocations.length ? (
                                     <SectionLoading label="Loading allocations…" />
-                                  ) : sortedAllocations.length ? (
+                                  ) : allocationPagination.pageItems.length ? (
                                     <>
-                                    <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
-                                      <WtTable>
-                                        <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                                          <TableRow className="hover:bg-transparent">
-                                            <TableHead>
-                                              <TableSortHeader
-                                                label="Allocated Project"
-                                                activeDirection={activeSortDirectionForColumn(
-                                                  "allocated_project",
-                                                  allocationListSortId,
-                                                  ALLOCATION_LIST_SORT_OPTIONS
-                                                )}
-                                                sortable
-                                                onSort={() =>
-                                                  setAllocationListSortId(
-                                                    toggleColumnSort(
-                                                      "allocated_project",
-                                                      allocationListSortId,
-                                                      ALLOCATION_LIST_SORT_OPTIONS
-                                                    )
-                                                  )
-                                                }
-                                              />
-                                            </TableHead>
-                                            <TableHead>Employee Name</TableHead>
-                                            <TableHead>Project Role</TableHead>
-                                            <TableHead>
-                                              ALLOCATION %
-                                            </TableHead>
-                                            <TableHead>
-                                              <TableSortHeader
-                                                label="ALLOCATION TYPE"
-                                                activeDirection={activeSortDirectionForColumn(
-                                                  "allocation_type",
-                                                  allocationListSortId,
-                                                  ALLOCATION_LIST_SORT_OPTIONS
-                                                )}
-                                                sortable
-                                                onSort={() =>
-                                                  setAllocationListSortId(
-                                                    toggleColumnSort(
-                                                      "allocation_type",
-                                                      allocationListSortId,
-                                                      ALLOCATION_LIST_SORT_OPTIONS
-                                                    )
-                                                  )
-                                                }
-                                              />
-                                            </TableHead>
-                                            <TableHead>
-                                              <TableSortHeader
-                                                label="Billing Status"
-                                                activeDirection={activeSortDirectionForColumn(
-                                                  "billing_status",
-                                                  allocationListSortId,
-                                                  ALLOCATION_LIST_SORT_OPTIONS
-                                                )}
-                                                sortable
-                                                onSort={() =>
-                                                  setAllocationListSortId(
-                                                    toggleColumnSort(
-                                                      "billing_status",
-                                                      allocationListSortId,
-                                                      ALLOCATION_LIST_SORT_OPTIONS
-                                                    )
-                                                  )
-                                                }
-                                              />
-                                            </TableHead>
-                                            <TableHead>Start Date</TableHead>
-                                            <TableHead>End Date</TableHead>
-                                            <TableHead className="text-right">ACTIONS</TableHead>
-                                          </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                          {allocationPagination.pageItems.map((row, idx) => {
-                                            const allocationId = String(
-                                              row.id ?? row.allocation_id ?? row.allocationId ?? ""
-                                            ).trim();
-                                            const allocatedProjectText = String(row.allocated_project ?? "").trim();
-                                            const derivedProjectCode = allocatedProjectText.includes("—")
-                                              ? (allocatedProjectText.split("—")[0] ?? "").trim()
-                                              : allocatedProjectText;
-                                            const projectCode = String(
-                                              row.project_code ??
-                                                row.projectCode ??
-                                                row.project_id ??
-                                                row.projectId ??
-                                                derivedProjectCode
-                                            ).trim();
-                                            const employeeEmail = String(
-                                              row.employee_email ?? row.employeeEmail ?? row.email ?? ""
-                                            ).trim();
-                                            const role = String(row.role ?? "").trim();
-                                            const allocatedPercentCode = resolveAllocatedPercentFromRow(
-                                              row as Record<string, unknown>
-                                            );
-                                            const startDate = String(row.start_date ?? row.startDate ?? "").trim();
-                                            const endDate = String(row.end_date ?? row.endDate ?? "").trim();
-                                            const allocationType = String(
-                                              row.allocation_type ?? row.allocationType ?? "DEPLOYABLE"
-                                            ).trim();
-                                            const billingStatus = String(
-                                              row.billing_status ?? row.billingStatus ?? "BILLED"
-                                            ).trim();
-                                            const superseded = isSupersededAllocationRow(row);
-                                            const editable = isEditableAllocationRow(row);
-                                            const isSelectedEmployee =
-                                              Boolean(employeeEmail) &&
-                                              selectedEmployeeAllocations?.employeeEmail ===
-                                                employeeEmail.toLowerCase();
-                                            const isHighlightedRow =
-                                              isSelectedEmployee &&
-                                              selectedEmployeeAllocations?.highlightedAllocationId ===
-                                                allocationId;
-                                            return (
-                                              <TableRow
-                                                key={`${allocationId || "alloc"}-${idx}`}
-                                                role="button"
-                                                tabIndex={0}
-                                                className={`border-t border-wt-border cursor-pointer transition hover:bg-wt-surface-1/80 ${
-                                                  superseded
-                                                    ? "bg-wt-surface-2/60 text-wt-text-muted opacity-75"
-                                                    : ""
-                                                } ${
-                                                  isHighlightedRow
-                                                    ? "bg-[var(--wt-brand-soft)]0/10"
-                                                    : isSelectedEmployee
-                                                      ? "bg-[var(--wt-brand-soft)]0/5"
-                                                      : ""
-                                                }`}
-                                                onClick={() => void loadEmployeeAllocationsForRow(row)}
-                                                onKeyDown={(e) => {
-                                                  if (e.key === "Enter" || e.key === " ") {
-                                                    e.preventDefault();
-                                                    void loadEmployeeAllocationsForRow(row);
-                                                  }
-                                                }}
-                                              >
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">
-                                                  {allocationProjectDisplayName(row)}
-                                                </TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.employee_name ?? "—")}</TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.role ?? "—")}</TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">
-                                                  {formatAllocatedPercentDisplay(
-                                                    row as Record<string, unknown>,
-                                                    allocationPercentLabels
-                                                  )}
-                                                </TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.allocation_type ?? "—")}</TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">
-                                                  {formatUiStatusLabel(
-                                                    row.billing_status ?? row.billingStatus ?? ""
-                                                  )}
-                                                </TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.start_date ?? "—")}</TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{String(row.end_date ?? "—")}</TableCell>
-                                                <TableCell className="px-3 py-2 text-right">
-                                                  <div className="inline-flex items-center justify-end gap-1">
-                                                    <Button variant="brand" size="icon-sm" type="button" className="disabled:opacity-40 disabled:pointer-events-none" aria-label={`Edit allocation ${allocationId || idx}`} title={ editable ? "Edit allocation" : "Superseded — edit the active row" } disabled={actionLoading || !editable} onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setAllocationForm((prev) => ({
-                                                          ...prev,
-                                                          allocation_id: allocationId,
-                                                          employee_email: employeeEmail,
-                                                          project_code: projectCode,
-                                                          role,
-                                                          allocated_percent:
-                                                            allocatedPercentCode != null
-                                                              ? String(allocatedPercentCode)
-                                                              : "",
-                                                          start_date: startDate,
-                                                          end_date: endDate,
-                                                          allocation_type: (() => {
-                                                            const pt = resolveProjectTypeForProjectCode(
-                                                              projectCode,
-                                                              { projects: hrProjectRawRows, allocationProjects }
-                                                            );
-                                                            if (isStaffingProjectTypeCode(pt)) {
-                                                              return "STAFFING";
-                                                            }
-                                                            const upper = allocationType.toUpperCase();
-                                                            const allowed = [
-                                                              "DEPLOYABLE",
-                                                              "STAFFING",
-                                                              "LOCKED",
-                                                              "NONBILLABLE",
-                                                              "NONDEPLOYABLE",
-                                                              "OFFBOARDED",
-                                                            ];
-                                                            return allowed.includes(upper) ? upper : "DEPLOYABLE";
-                                                          })(),
-                                                          billing_status: (() => {
-                                                            const upper = billingStatus.toUpperCase();
-                                                            if (
-                                                              ["BILLED", "BUFFER", "INVESTMENT", "TALENT_POOL"].includes(
-                                                                upper
+                                    <div className="max-h-[min(70vh,520px)] space-y-2 overflow-y-auto pr-1">
+                                      {allocationPagination.pageItems.map((group) => {
+                                        const isExpanded = expandedAllocationProjects.has(group.projectKey);
+                                        return (
+                                          <div
+                                            key={group.projectKey}
+                                            className="overflow-hidden rounded-xl border border-wt-border bg-wt-surface-1"
+                                          >
+                                            <button
+                                              type="button"
+                                              className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition hover:bg-wt-surface-2/60"
+                                              onClick={() => toggleAllocationProjectExpanded(group.projectKey)}
+                                              aria-expanded={isExpanded}
+                                            >
+                                              <span className="min-w-0">
+                                                <span className="block truncate text-sm font-semibold text-wt-text">
+                                                  {group.projectName}
+                                                </span>
+                                                {group.projectCode ? (
+                                                  <span className="text-xs text-wt-text-muted">
+                                                    {group.projectCode}
+                                                  </span>
+                                                ) : null}
+                                              </span>
+                                              <span className="shrink-0 text-xs font-medium text-wt-text-muted">
+                                                {group.rows.length} allocation
+                                                {group.rows.length === 1 ? "" : "s"}
+                                                {isExpanded ? " ▲" : " ▼"}
+                                              </span>
+                                            </button>
+                                            {isExpanded ? (
+                                              <ScrollableTable maxHeightClass="max-h-[min(40vh,320px)]">
+                                                <WtTable>
+                                                  <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                                                    <TableRow className="hover:bg-transparent">
+                                                      <TableHead>Employee Name</TableHead>
+                                                      <TableHead>Project Role</TableHead>
+                                                      <TableHead>ALLOCATION %</TableHead>
+                                                      <TableHead>
+                                                        <TableSortHeader
+                                                          label="ALLOCATION TYPE"
+                                                          activeDirection={activeSortDirectionForColumn(
+                                                            "allocation_type",
+                                                            allocationListSortId,
+                                                            ALLOCATION_LIST_SORT_OPTIONS
+                                                          )}
+                                                          sortable
+                                                          onSort={() =>
+                                                            setAllocationListSortId(
+                                                              toggleColumnSort(
+                                                                "allocation_type",
+                                                                allocationListSortId,
+                                                                ALLOCATION_LIST_SORT_OPTIONS
                                                               )
-                                                            ) {
-                                                              return upper as
-                                                                | "BILLED"
-                                                                | "BUFFER"
-                                                                | "INVESTMENT"
-                                                                | "TALENT_POOL";
-                                                            }
-                                                            return "BILLED";
-                                                          })(),
-                                                          locked_in_date: String(
-                                                            row.locked_in_date ?? row.lockedInDate ?? ""
-                                                          ),
-                                                        }));
-                                                        setEditingAllocationId(allocationId);
-                                                        setAllocationHrSubTab("allocate");
-                                                        setAllocateDialogOpen(true);
-                                                      }}
-                                                    >
-                                                      <IconPencil />
-                                                    </Button>
-                                                    <Button
-                                                      type="button"
-                                                      variant="ghost"
-                                                      size="icon-sm"
-                                                      className="text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-40 disabled:pointer-events-none"
-                                                      aria-label={`Deallocate ${allocationId || idx}`}
-                                                      title={
-                                                        editable
-                                                          ? "Deallocate from project"
-                                                          : "Superseded row cannot be deallocated here"
-                                                      }
-                                                      disabled={actionLoading || !allocationId || !editable}
-                                                      onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        runAction("Deallocate", async () => {
-                                                          await hrmsService.deleteAllocation(
-                                                            allocationId
-                                                          );
-                                                          showSuccessToast(
-                                                            "Employee deallocated. Capacity returned to the talent pool."
-                                                          );
-                                                          setAllocations((prev) =>
-                                                            prev.filter(
-                                                              (r) =>
-                                                                allocationRowId(r) !== allocationId
                                                             )
-                                                          );
-                                                          invalidateAllocationDependentQueries(queryClient);
-                                                        });
-                                                      }}
-                                                    >
-                                                      <IconTrash />
-                                                    </Button>
-                                                  </div>
-                                                </TableCell>
-                                              </TableRow>
-                                            );
-                                          })}
-                                        </TableBody>
-                                      </WtTable>
-                                    </ScrollableTable>
+                                                          }
+                                                        />
+                                                      </TableHead>
+                                                      <TableHead>
+                                                        <TableSortHeader
+                                                          label="Billing Status"
+                                                          activeDirection={activeSortDirectionForColumn(
+                                                            "billing_status",
+                                                            allocationListSortId,
+                                                            ALLOCATION_LIST_SORT_OPTIONS
+                                                          )}
+                                                          sortable
+                                                          onSort={() =>
+                                                            setAllocationListSortId(
+                                                              toggleColumnSort(
+                                                                "billing_status",
+                                                                allocationListSortId,
+                                                                ALLOCATION_LIST_SORT_OPTIONS
+                                                              )
+                                                            )
+                                                          }
+                                                        />
+                                                      </TableHead>
+                                                      <TableHead>Start Date</TableHead>
+                                                      <TableHead>End Date</TableHead>
+                                                      <TableHead className="text-right">ACTIONS</TableHead>
+                                                    </TableRow>
+                                                  </TableHeader>
+                                                  <TableBody>
+                                                    {group.rows.map((row, idx) => {
+                                                      const allocationId = String(
+                                                        row.id ?? row.allocation_id ?? row.allocationId ?? ""
+                                                      ).trim();
+                                                      const projectCode =
+                                                        group.projectCode ||
+                                                        String(
+                                                          row.project_code ?? row.projectCode ?? ""
+                                                        ).trim();
+                                                      const employeeEmail = String(
+                                                        row.employee_email ??
+                                                          row.employeeEmail ??
+                                                          row.email ??
+                                                          ""
+                                                      ).trim();
+                                                      const role = String(row.role ?? "").trim();
+                                                      const allocatedPercentCode =
+                                                        resolveAllocatedPercentFromRow(
+                                                          row as Record<string, unknown>
+                                                        );
+                                                      const startDate = String(
+                                                        row.start_date ?? row.startDate ?? ""
+                                                      ).trim();
+                                                      const endDate = String(
+                                                        row.end_date ?? row.endDate ?? ""
+                                                      ).trim();
+                                                      const allocationType = String(
+                                                        row.allocation_type ??
+                                                          row.allocationType ??
+                                                          "DEPLOYABLE"
+                                                      ).trim();
+                                                      const billingStatus = String(
+                                                        row.billing_status ??
+                                                          row.billingStatus ??
+                                                          "BILLED"
+                                                      ).trim();
+                                                      const superseded = isSupersededAllocationRow(row);
+                                                      const editable = isEditableAllocationRow(row);
+                                                      const isSelectedEmployee =
+                                                        Boolean(employeeEmail) &&
+                                                        selectedEmployeeAllocations?.employeeEmail ===
+                                                          employeeEmail.toLowerCase();
+                                                      const isHighlightedRow =
+                                                        isSelectedEmployee &&
+                                                        selectedEmployeeAllocations?.highlightedAllocationId ===
+                                                          allocationId;
+                                                      return (
+                                                        <TableRow
+                                                          key={`${allocationId || "alloc"}-${idx}`}
+                                                          role="button"
+                                                          tabIndex={0}
+                                                          className={`border-t border-wt-border cursor-pointer transition hover:bg-wt-surface-1/80 ${
+                                                            superseded
+                                                              ? "bg-wt-surface-2/60 text-wt-text-muted opacity-75"
+                                                              : ""
+                                                          } ${
+                                                            isHighlightedRow
+                                                              ? "bg-[var(--wt-brand-soft)]0/10"
+                                                              : isSelectedEmployee
+                                                                ? "bg-[var(--wt-brand-soft)]0/5"
+                                                                : ""
+                                                          }`}
+                                                          onClick={() =>
+                                                            void loadEmployeeAllocationsForRow(row)
+                                                          }
+                                                          onKeyDown={(e) => {
+                                                            if (e.key === "Enter" || e.key === " ") {
+                                                              e.preventDefault();
+                                                              void loadEmployeeAllocationsForRow(row);
+                                                            }
+                                                          }}
+                                                        >
+                                                          <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                            {String(row.employee_name ?? "—")}
+                                                          </TableCell>
+                                                          <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                            {String(row.role ?? "—")}
+                                                          </TableCell>
+                                                          <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                            {formatAllocatedPercentDisplay(
+                                                              row as Record<string, unknown>,
+                                                              allocationPercentLabels
+                                                            )}
+                                                          </TableCell>
+                                                          <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                            {String(row.allocation_type ?? "—")}
+                                                          </TableCell>
+                                                          <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                            {formatUiStatusLabel(
+                                                              row.billing_status ??
+                                                                row.billingStatus ??
+                                                                ""
+                                                            )}
+                                                          </TableCell>
+                                                          <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                            {String(row.start_date ?? "—")}
+                                                          </TableCell>
+                                                          <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                            {String(row.end_date ?? "—")}
+                                                          </TableCell>
+                                                          <TableCell className="px-3 py-2 text-right">
+                                                            <div className="inline-flex items-center justify-end gap-1">
+                                                              <Button
+                                                                variant="brand"
+                                                                size="icon-sm"
+                                                                type="button"
+                                                                className="disabled:opacity-40 disabled:pointer-events-none"
+                                                                aria-label={`Edit allocation ${allocationId || idx}`}
+                                                                title={
+                                                                  editable
+                                                                    ? "Edit allocation"
+                                                                    : "Superseded — edit the active row"
+                                                                }
+                                                                disabled={actionLoading || !editable}
+                                                                onClick={(e) => {
+                                                                  e.stopPropagation();
+                                                                  setAllocationForm((prev) => ({
+                                                                    ...prev,
+                                                                    allocation_id: allocationId,
+                                                                    employee_email: employeeEmail,
+                                                                    project_code: projectCode,
+                                                                    role,
+                                                                    allocated_percent:
+                                                                      allocatedPercentCode != null
+                                                                        ? String(allocatedPercentCode)
+                                                                        : "",
+                                                                    start_date: startDate,
+                                                                    end_date: endDate,
+                                                                    allocation_type: (() => {
+                                                                      const pt =
+                                                                        resolveProjectTypeForProjectCode(
+                                                                          projectCode,
+                                                                          {
+                                                                            projects: hrProjectRawRows,
+                                                                            allocationProjects,
+                                                                          }
+                                                                        );
+                                                                      if (isStaffingProjectTypeCode(pt)) {
+                                                                        return "STAFFING";
+                                                                      }
+                                                                      const upper =
+                                                                        allocationType.toUpperCase();
+                                                                      const allowed = [
+                                                                        "DEPLOYABLE",
+                                                                        "STAFFING",
+                                                                        "LOCKED",
+                                                                        "NONBILLABLE",
+                                                                        "NONDEPLOYABLE",
+                                                                        "OFFBOARDED",
+                                                                      ];
+                                                                      return allowed.includes(upper)
+                                                                        ? upper
+                                                                        : "DEPLOYABLE";
+                                                                    })(),
+                                                                    billing_status: (() => {
+                                                                      const upper =
+                                                                        billingStatus.toUpperCase();
+                                                                      if (
+                                                                        [
+                                                                          "BILLED",
+                                                                          "BUFFER",
+                                                                          "INVESTMENT",
+                                                                          "TALENT_POOL",
+                                                                        ].includes(upper)
+                                                                      ) {
+                                                                        return upper as
+                                                                          | "BILLED"
+                                                                          | "BUFFER"
+                                                                          | "INVESTMENT"
+                                                                          | "TALENT_POOL";
+                                                                      }
+                                                                      return "BILLED";
+                                                                    })(),
+                                                                    locked_in_date: String(
+                                                                      row.locked_in_date ??
+                                                                        row.lockedInDate ??
+                                                                        ""
+                                                                    ),
+                                                                  }));
+                                                                  setEditingAllocationId(allocationId);
+                                                                  setAllocationHrSubTab("allocate");
+                                                                  setAllocateDialogOpen(true);
+                                                                }}
+                                                              >
+                                                                <IconPencil />
+                                                              </Button>
+                                                              <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon-sm"
+                                                                className="text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-40 disabled:pointer-events-none"
+                                                                aria-label={`Deallocate ${allocationId || idx}`}
+                                                                title={
+                                                                  editable
+                                                                    ? "Deallocate from project"
+                                                                    : "Superseded row cannot be deallocated here"
+                                                                }
+                                                                disabled={
+                                                                  actionLoading ||
+                                                                  !allocationId ||
+                                                                  !editable
+                                                                }
+                                                                onClick={(e) => {
+                                                                  e.stopPropagation();
+                                                                  runAction("Deallocate", async () => {
+                                                                    await hrmsService.deleteAllocation(
+                                                                      allocationId
+                                                                    );
+                                                                    showSuccessToast(
+                                                                      "Employee deallocated. Capacity returned to the talent pool."
+                                                                    );
+                                                                    setAllocations((prev) =>
+                                                                      prev.filter(
+                                                                        (r) =>
+                                                                          allocationRowId(r) !==
+                                                                          allocationId
+                                                                      )
+                                                                    );
+                                                                    invalidateAllocationDependentQueries(
+                                                                      queryClient
+                                                                    );
+                                                                  });
+                                                                }}
+                                                              >
+                                                                <IconTrash />
+                                                              </Button>
+                                                            </div>
+                                                          </TableCell>
+                                                        </TableRow>
+                                                      );
+                                                    })}
+                                                  </TableBody>
+                                                </WtTable>
+                                              </ScrollableTable>
+                                            ) : null}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
                                     <ListPagination
                                       className="mt-3 px-1"
                                       page={allocationPagination.page}

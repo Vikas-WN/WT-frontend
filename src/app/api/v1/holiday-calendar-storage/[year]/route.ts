@@ -10,7 +10,6 @@ import {
   deleteHolidayCalendarObjectsForYear,
   getHolidayCalendarObjectForYear,
   holidayCalendarStorageUnavailableMessage,
-  putHolidayCalendarObjectForYear,
 } from "@/lib/holidayCalendarStorageServer";
 import { isMissingObjectError } from "@/lib/s3Errors";
 
@@ -87,7 +86,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const stored = await getHolidayCalendarObjectForYear(year);
     if (!stored) {
-      return NextResponse.json({ error: "Holiday calendar file not found." }, { status: 404 });
+      // Object missing in Linode — fall back to backend DB-backed calendar CSV.
+      return proxyToBackend(request, yearRaw);
     }
 
     const headers = new Headers({
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return new NextResponse(Buffer.from(stored.body), { headers });
   } catch (error) {
     if (isMissingObjectError(error)) {
-      return NextResponse.json({ error: "Holiday calendar file not found." }, { status: 404 });
+      return proxyToBackend(request, yearRaw);
     }
     return storageUnavailableResponse(error);
   }
@@ -118,44 +118,9 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Invalid year." }, { status: 400 });
   }
 
-  if (!isLinodeObjectStorageConfigured()) {
-    return proxyToBackend(request, yearRaw);
-  }
-
-  try {
-    const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
-    let body: ArrayBuffer;
-    let fileName = `holiday_calendar_${year}.csv`;
-
-    if (contentType.includes("multipart/form-data")) {
-      const formData = await request.formData();
-      const uploaded = formData.get("file");
-      if (!(uploaded instanceof File)) {
-        return NextResponse.json({ error: "File body is required." }, { status: 400 });
-      }
-      body = await uploaded.arrayBuffer();
-      if (!body.byteLength) {
-        return NextResponse.json({ error: "File body is required." }, { status: 400 });
-      }
-      if (uploaded.name.trim()) {
-        fileName = uploaded.name.trim();
-      }
-    } else {
-      body = await request.arrayBuffer();
-      if (!body.byteLength) {
-        return NextResponse.json({ error: "File body is required." }, { status: 400 });
-      }
-    }
-
-    const objectKey = await putHolidayCalendarObjectForYear(year, fileName, new Uint8Array(body));
-
-    return NextResponse.json({
-      message: "Holiday calendar uploaded successfully",
-      data: { key: objectKey, year },
-    });
-  } catch (error) {
-    return storageUnavailableResponse(error);
-  }
+  // Always proxy writes to the backend so holidays are persisted in DB (and Linode when configured).
+  // Frontend Linode credentials are used for reads; writes go through FastAPI for a single source of truth.
+  return proxyToBackend(request, yearRaw);
 }
 
 export async function DELETE(request: NextRequest, context: RouteContext) {

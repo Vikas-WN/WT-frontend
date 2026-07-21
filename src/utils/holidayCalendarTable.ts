@@ -112,6 +112,42 @@ function parseHolidayDate(value: string, contextYear?: number): Date | null {
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
+  // Prefer day-first numeric dates used across the app (dd/mm/yyyy, dd-mm-yyyy).
+  const numericDmy = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (numericDmy) {
+    const day = Number(numericDmy[1]);
+    const month = Number(numericDmy[2]) - 1;
+    const year = Number(numericDmy[3]);
+    if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+      const date = new Date(year, month, day);
+      if (
+        !Number.isNaN(date.getTime()) &&
+        date.getFullYear() === year &&
+        date.getMonth() === month &&
+        date.getDate() === day
+      ) {
+        return date;
+      }
+    }
+  }
+
+  // ISO-style yyyy-mm-dd
+  const iso = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) {
+    const year = Number(iso[1]);
+    const month = Number(iso[2]) - 1;
+    const day = Number(iso[3]);
+    const date = new Date(year, month, day);
+    if (
+      !Number.isNaN(date.getTime()) &&
+      date.getFullYear() === year &&
+      date.getMonth() === month &&
+      date.getDate() === day
+    ) {
+      return date;
+    }
+  }
+
   if (/\b(19|20)\d{2}\b/.test(trimmed)) {
     const parsed = Date.parse(trimmed);
     if (!Number.isNaN(parsed)) {

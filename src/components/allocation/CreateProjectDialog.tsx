@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { InputField } from "@/components/dashboard/ui/forms";
-import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
 import { ClientSelect } from "@/components/allocation/ClientSelect";
 import { ProjectTypeSelect } from "@/components/allocation/ProjectTypeSelect";
 import {
@@ -156,7 +155,15 @@ export function CreateProjectDialog({
       return;
     }
     if (initialForm) {
-      setForm({ ...createEmptyProjectForm(), ...initialForm });
+      const next = { ...createEmptyProjectForm(), ...initialForm };
+      setForm(next);
+      const pmEmail = (initialForm.project_manager_emails?.[0] ?? "").trim().toLowerCase();
+      setPmFields({
+        ...createEmptyManagerAllocationFields("Project Manager"),
+        email: pmEmail,
+        start_date: next.start_date || "",
+        end_date: next.end_date || "",
+      });
       return;
     }
     const prefillsName = initialProjectName?.trim() ?? "";
@@ -184,8 +191,11 @@ export function CreateProjectDialog({
       return;
     }
     const accountManagerEmail = normalizePickerEmail(form.account_manager_email);
-    if (!accountManagerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountManagerEmail)) {
-      showErrorToast("Select a valid account manager.");
+    if (
+      !isEditing &&
+      (!accountManagerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountManagerEmail))
+    ) {
+      showErrorToast("Select a client with a valid account manager.");
       return;
     }
     const startDate = normalizeToApiDate(form.start_date);
@@ -203,7 +213,8 @@ export function CreateProjectDialog({
       return;
     }
 
-    const pmEmail = !isEditing ? pmFields.email.trim() : "";
+    // Create and edit both manage Project Manager here (Account Manager stays on the client).
+    const pmEmail = pmFields.email.trim();
     if (pmEmail) {
       const pmStartDate = normalizeToApiDate(pmFields.start_date || form.start_date);
       const pmEndDate = normalizeToApiDate(pmFields.end_date || form.end_date);
@@ -233,14 +244,43 @@ export function CreateProjectDialog({
     setLoading(true);
     try {
       if (isEditing) {
-        await hrmsService.updateProject(editingProjectCode.trim(), {
+        const code = editingProjectCode.trim();
+        await hrmsService.updateProject(code, {
           project_name: name,
           project_type: form.project_type,
           client_id: clientId,
-          account_manager_email: accountManagerEmail,
           start_date: startDate,
           end_date: endDate,
         });
+
+        if (pmEmail) {
+          const previousPm = (initialForm?.project_manager_emails?.[0] ?? "").trim().toLowerCase();
+          const nextPm = normalizePickerEmail(pmEmail);
+          if (nextPm && nextPm !== previousPm) {
+            try {
+              await hrmsService.assignProjectManager({
+                userEmail: nextPm,
+                projectCode: code,
+              });
+            } catch {
+              await allocateManagerOnProject({
+                email: nextPm,
+                fields: {
+                  ...pmFields,
+                  email: nextPm,
+                  role: "Project Manager",
+                  start_date: pmFields.start_date || form.start_date,
+                  end_date: pmFields.end_date || form.end_date,
+                },
+                projectCode: code,
+                projectStart: startDate,
+                projectEnd: endDate,
+                isManager: true,
+              });
+            }
+          }
+        }
+
         showSuccessToast("Project updated successfully.");
         onCreated();
         onClose();
@@ -298,8 +338,8 @@ export function CreateProjectDialog({
       title={isEditing ? "Edit Project" : "Create Project"}
       description={
         isEditing
-          ? "Update project details. Manager allocations are managed from Project Allocation."
-          : "Set project details, then assign managers."
+          ? "Update project details and project manager. Account manager comes from the client."
+          : "Set project details, then assign managers. Account manager is taken from the client."
       }
       onClose={onClose}
       onSubmit={() => void handleSubmit()}
@@ -322,11 +362,12 @@ export function CreateProjectDialog({
               onChange={(value) => setForm((prev) => ({ ...prev, client_id: value }))}
               onClientSelected={(client) => {
                 const dmEmail = client.deliveryManagerEmail?.trim() || "";
+                const amEmail = client.accountManagerEmail?.trim() || "";
                 setForm((prev) => ({
                   ...prev,
                   client_id: String(client.id),
                   client_name: client.name,
-                  account_manager_email: client.accountManagerEmail || prev.account_manager_email,
+                  account_manager_email: amEmail,
                   delivery_manager_email: dmEmail || prev.delivery_manager_email,
                 }));
                 if (dmEmail) {
@@ -354,11 +395,15 @@ export function CreateProjectDialog({
                 setPmFields((prev) => ({ ...prev, end_date: value }));
               }}
             />
-            <AccountManagerSelect
-              required
-              value={form.account_manager_email}
-              onChange={(value) => setForm((prev) => ({ ...prev, account_manager_email: value }))}
-            />
+            {!isEditing ? (
+              <InputField
+                label="Account Manager"
+                value={form.account_manager_email}
+                onChange={() => {}}
+                disabled
+                placeholder="Filled from selected client"
+              />
+            ) : null}
             {isEditing ? (
               <ProjectTypeSelect
                 required
@@ -372,33 +417,31 @@ export function CreateProjectDialog({
         </FormSection>
 
         {!isEditing ? (
-          <>
-            <ManagerAllocationFields
-              title="Delivery Manager"
-              state={dmFields}
-              onChange={(next) => {
-                setDmFields(next);
-                setForm((prev) => ({
-                  ...prev,
-                  delivery_manager_email: next.email,
-                }));
-              }}
-              allocationPercentOptions={allocationPercentOptions}
-              enabled={enabled}
-              percentDesignation="Delivery Manager"
-              managerContactOnly
-            />
-
-            <ManagerAllocationFields
-              title="Project Manager"
-              state={pmFields}
-              onChange={setPmFields}
-              allocationPercentOptions={allocationPercentOptions}
-              enabled={enabled}
-              percentDesignation="Project Manager"
-            />
-          </>
+          <ManagerAllocationFields
+            title="Delivery Manager"
+            state={dmFields}
+            onChange={(next) => {
+              setDmFields(next);
+              setForm((prev) => ({
+                ...prev,
+                delivery_manager_email: next.email,
+              }));
+            }}
+            allocationPercentOptions={allocationPercentOptions}
+            enabled={enabled}
+            percentDesignation="Delivery Manager"
+            managerContactOnly
+          />
         ) : null}
+
+        <ManagerAllocationFields
+          title="Project Manager"
+          state={pmFields}
+          onChange={setPmFields}
+          allocationPercentOptions={allocationPercentOptions}
+          enabled={enabled}
+          percentDesignation="Project Manager"
+        />
       </div>
     </WtFormDialog>
   );

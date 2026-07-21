@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -132,15 +132,9 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
   const { actionLoading, runAction } = useDashboardAction();
   const [rejectAction, setRejectAction] = useState<{ entryId: number } | null>(null);
 
-  const filteredAllEntries = useMemo(() => {
-    if (!employeeEntries.length) return [];
-    const projectCode = expandedProject?.trim().toUpperCase() ?? "";
-    if (!projectCode) return employeeEntries;
-    const filtered = employeeEntries.filter(
-      (entry) => entry.project_code.trim().toUpperCase() === projectCode
-    );
-    return filtered.length ? filtered : employeeEntries;
-  }, [employeeEntries, expandedProject]);
+  // Employee detail always shows every project for that person (not only the
+  // accordion project they were opened from).
+  const filteredAllEntries = employeeEntries;
 
   const refreshAfterStatusChange = useCallback(async () => {
     if (selectedEmployee) {

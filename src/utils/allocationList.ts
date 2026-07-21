@@ -244,6 +244,72 @@ export function filterAllocationListBySearch(
   });
 }
 
+export type AllocationProjectGroup = {
+  projectKey: string;
+  projectCode: string;
+  projectName: string;
+  rows: Array<Record<string, unknown>>;
+};
+
+/** Group allocation rows under their project (preserves row order within each group). */
+export function groupAllocationsByProject(
+  rows: Array<Record<string, unknown>>
+): AllocationProjectGroup[] {
+  const groups = new Map<string, AllocationProjectGroup>();
+
+  for (const row of rows) {
+    const nested =
+      row.project && typeof row.project === "object" && !Array.isArray(row.project)
+        ? (row.project as Record<string, unknown>)
+        : null;
+    let projectCode = String(
+      row.project_code ?? row.projectCode ?? nested?.project_code ?? nested?.projectCode ?? ""
+    )
+      .trim()
+      .toUpperCase();
+    const projectNameFromRow = String(
+      row.project_name ?? row.projectName ?? nested?.project_name ?? nested?.projectName ?? ""
+    ).trim();
+    const allocated = String(row.allocated_project ?? "").trim();
+    if (!projectCode && allocated.includes("—")) {
+      projectCode = (allocated.split("—")[0] ?? "").trim().toUpperCase();
+    }
+    const projectName =
+      projectNameFromRow ||
+      (allocated.includes("—")
+        ? allocated.split("—").slice(1).join("—").trim()
+        : allocated && allocated.toUpperCase() !== projectCode
+          ? allocated
+          : "") ||
+      projectCode ||
+      "Unknown project";
+    const projectKey = projectCode || projectName.toLowerCase() || "unknown";
+
+    const existing = groups.get(projectKey);
+    if (existing) {
+      existing.rows.push(row);
+      if (!existing.projectCode && projectCode) existing.projectCode = projectCode;
+      if (
+        existing.projectName === "Unknown project" ||
+        (projectNameFromRow && existing.projectName === existing.projectCode)
+      ) {
+        existing.projectName = projectName;
+      }
+    } else {
+      groups.set(projectKey, {
+        projectKey,
+        projectCode,
+        projectName,
+        rows: [row],
+      });
+    }
+  }
+
+  return Array.from(groups.values()).sort((a, b) =>
+    a.projectName.localeCompare(b.projectName, undefined, { sensitivity: "base" })
+  );
+}
+
 export function mergeUniqueAllocationListRows(
   rows: Array<Record<string, unknown>>
 ): Array<Record<string, unknown>> {
