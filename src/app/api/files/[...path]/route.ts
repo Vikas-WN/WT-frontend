@@ -21,8 +21,12 @@ function objectKeyFromPath(path: string[]): string {
 
 function configurationErrorMessage(error: unknown): string | null {
   if (!(error instanceof Error)) return null;
-  if (/Missing required environment variable|Missing LINODE_OBJECT_STORAGE_REGION/i.test(error.message)) {
-    return `${error.message} Holiday calendar files are stored in Linode Object Storage.`;
+  if (
+    /Missing required environment variable|Missing LINODE_OBJECT_STORAGE|Linode Object Storage is not configured|LINODE_OBJECT_STORAGE_/i.test(
+      error.message
+    )
+  ) {
+    return "File storage is temporarily unavailable. Please try again later or contact support.";
   }
   return null;
 }

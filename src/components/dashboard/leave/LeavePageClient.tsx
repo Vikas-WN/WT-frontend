@@ -1421,7 +1421,7 @@ export function LeavePageClient() {
                                       </div>
                                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 max-w-xl">
                                         <DatePicker
-                                          label="From"
+                                          label="From Date"
                                           required
                                           value={leaveRequestForm.request_from_date}
                                           onChange={(v) =>
@@ -1436,7 +1436,7 @@ export function LeavePageClient() {
                                           disabled={actionLoading}
                                         />
                                         <DatePicker
-                                          label="To"
+                                          label="To Date"
                                           required
                                           value={
                                             leaveRequestForm.is_half_day
@@ -1496,6 +1496,7 @@ export function LeavePageClient() {
                                     <div className="rounded-xl bg-muted/40 p-5 space-y-5 shadow-sm border border-border/40">
                                       <LeaveManagerSelector
                                         label="Select Managers"
+                                        required
                                         selectedEmails={selectedWfhManagerEmails}
                                         onChange={setSelectedWfhManagerEmails}
                                         disabled={actionLoading}
@@ -1924,7 +1925,14 @@ export function LeavePageClient() {
                                 <DatePicker
                                   label="From Date"
                                   value={employeeRequestFilters.fromDate}
-                                  onChange={(v) => setEmployeeRequestFilters((p) => ({ ...p, fromDate: v }))}
+                                  onChange={(v) =>
+                                    setEmployeeRequestFilters((p) => ({
+                                      ...p,
+                                      fromDate: v,
+                                      // Default To Date to the same day; user can widen the range after.
+                                      toDate: v,
+                                    }))
+                                  }
                                 />
                               </div>
                               <div className="w-full sm:min-w-[140px] sm:flex-1">

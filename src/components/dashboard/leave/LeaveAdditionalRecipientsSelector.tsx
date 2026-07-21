@@ -1,32 +1,32 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { hrmsService, type LeaveRecipientOption } from "@/services/hrms.service";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { FieldLabel } from "@/components/ui/field";
-import { unwrapLeaveOptionItems } from "@/utils/leaveApiOptions";
+import { useEmployeeManagers } from "@/hooks/leave/useEmployeeManagers";
+import type { LeaveManagerOption } from "@/services/hrms.service";
 import { ChevronsUpDown, X, Check, Search, Loader2 } from "lucide-react";
 
-function optionLabel(option: LeaveRecipientOption): string {
+function optionLabel(option: LeaveManagerOption): string {
   const name = option.name?.trim() || option.email;
-  const empId = option.emp_id?.trim();
+  const empId = option.employee_id?.trim();
   return empId ? `${name} (${empId})` : name;
 }
 
-function matchesQuery(option: LeaveRecipientOption, query: string): boolean {
+function matchesQuery(option: LeaveManagerOption, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
   return (
     option.email.toLowerCase().includes(q) ||
     (option.name ?? "").toLowerCase().includes(q) ||
-    (option.emp_id ?? "").toLowerCase().includes(q)
+    (option.employee_id ?? "").toLowerCase().includes(q)
   );
 }
 
 function SecondaryManagersLabel() {
   return (
     <FieldLabel>
-      Secondary managers
+      Secondary Managers
       <span className="text-destructive" aria-hidden>
         *
       </span>
@@ -46,42 +46,24 @@ export function LeaveAdditionalRecipientsSelector({
   disabled?: boolean;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [options, setOptions] = useState<LeaveRecipientOption[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [searching, setSearching] = useState(false);
-
-  const loadOptions = useCallback(async (search?: string) => {
-    setSearching(true);
-    setError(null);
-    try {
-      const res = await hrmsService.getLeaveRecipientOptions(
-        search?.trim() ? { search: search.trim() } : undefined
-      );
-      const items = unwrapLeaveOptionItems<LeaveRecipientOption>(res);
-      setOptions(items);
-    } catch (err) {
-      setOptions([]);
-      setError(err instanceof Error ? err.message : "Could not load employees.");
-    } finally {
-      setSearching(false);
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadOptions();
-  }, [loadOptions]);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
   useEffect(() => {
     if (!open) return;
     const timer = window.setTimeout(() => {
-      void loadOptions(query);
-    }, 250);
+      setDebouncedQuery(query.trim());
+    }, 300);
     return () => window.clearTimeout(timer);
-  }, [open, query, loadOptions]);
+  }, [open, query]);
+
+  const managersQ = useEmployeeManagers(debouncedQuery, true);
+  const options = managersQ.data ?? [];
+  const loading = managersQ.isLoading && !managersQ.data;
+  const searching = managersQ.isFetching && Boolean(managersQ.data);
+  const error =
+    managersQ.error instanceof Error ? managersQ.error.message : null;
 
   useEffect(() => {
     const onDocClick = (event: MouseEvent) => {
@@ -130,11 +112,16 @@ export function LeaveAdditionalRecipientsSelector({
     const next = new Set(selectedSet);
     if (checked) next.add(normalized);
     else next.delete(normalized);
-    const ordered = options
-      .map((row) => String(row.email ?? "").trim().toLowerCase())
+    const ordered = selectedEmails
+      .map((value) => value.trim().toLowerCase())
       .filter((value) => next.has(value));
     for (const value of next) {
-      if (!ordered.includes(value)) ordered.push(value);
+      if (!ordered.includes(value)) {
+        const match = options.find(
+          (row) => String(row.email ?? "").trim().toLowerCase() === value
+        );
+        ordered.push(String(match?.email ?? value).trim());
+      }
     }
     onChange(ordered);
   };
@@ -151,7 +138,7 @@ export function LeaveAdditionalRecipientsSelector({
         <button
           type="button"
           disabled={disabled}
-          onClick={() => void loadOptions()}
+          onClick={() => void managersQ.refetch()}
           className="text-xs text-primary underline underline-offset-2 hover:text-primary/80 cursor-pointer"
         >
           Retry
@@ -177,7 +164,7 @@ export function LeaveAdditionalRecipientsSelector({
             {loading && !selectedOptions.length ? (
               <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                 <Loader2 className="size-3.5 animate-spin" />
-                Loading employees…
+                Loading Managers…
               </span>
             ) : selectedOptions.length ? (
               selectedOptions.map(({ email, label: optionName }) => (
@@ -209,7 +196,7 @@ export function LeaveAdditionalRecipientsSelector({
                 </Badge>
               ))
             ) : (
-              <span className="text-muted-foreground">Select managers…</span>
+              <span className="text-muted-foreground">Select Managers…</span>
             )}
           </div>
           <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
@@ -221,7 +208,7 @@ export function LeaveAdditionalRecipientsSelector({
               <Search className="size-4 shrink-0 text-muted-foreground" />
               <input
                 type="search"
-                placeholder="Search employees…"
+                placeholder="Search Managers…"
                 value={query}
                 disabled={disabled}
                 autoComplete="off"
@@ -231,7 +218,7 @@ export function LeaveAdditionalRecipientsSelector({
               />
             </div>
             <div className="max-h-52 overflow-y-auto p-1">
-              {searching ? (
+              {loading || (searching && !filteredOptions.length) ? (
                 <div className="flex items-center justify-center gap-2 px-2 py-4 text-sm text-muted-foreground">
                   <Loader2 className="size-4 animate-spin" />
                   <span>Searching</span>
@@ -267,13 +254,17 @@ export function LeaveAdditionalRecipientsSelector({
                 })
               ) : (
                 <p className="px-2 py-4 text-center text-sm text-muted-foreground">
-                  No employees match your search.
+                  No Managers Match Your Search.
                 </p>
               )}
             </div>
           </div>
         ) : null}
       </div>
+
+      {error && options.length ? (
+        <p className="text-xs text-destructive">{error}</p>
+      ) : null}
     </div>
   );
 }

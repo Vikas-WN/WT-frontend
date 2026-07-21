@@ -12,7 +12,7 @@ interface CompOffCredit {
   daysUntilExpiry: number;
   status: string;
   remainingUnits: number;
-  projectCode: string;
+  projectName: string;
   workDescription: string;
 }
 
@@ -31,15 +31,19 @@ export function CompOffCreditsDialog({
     setLoading(true);
     compOffService.getExpiry().then((res) => {
       const parsed = compOffService.parseExpiryResponse(res);
-      const mapped: CompOffCredit[] = parsed.rows.map((r) => ({
-        workedDate: String(r.worked_date ?? r.workedDate ?? ""),
-        expiryDate: String(r.expiry_date ?? r.expiryDate ?? ""),
-        daysUntilExpiry: Number(r.days_until_expiry ?? r.daysUntilExpiry ?? 0),
-        status: String(r.status ?? "PENDING"),
-        remainingUnits: Number(r.remaining_units ?? r.remainingUnits ?? 0),
-        projectCode: String(r.project_code ?? r.projectCode ?? ""),
-        workDescription: String(r.work_description ?? r.workDescription ?? ""),
-      }));
+      const mapped: CompOffCredit[] = parsed.rows.map((r) => {
+        const projectCode = String(r.project_code ?? r.projectCode ?? "").trim();
+        const projectName = String(r.project_name ?? r.projectName ?? "").trim();
+        return {
+          workedDate: String(r.worked_date ?? r.workedDate ?? ""),
+          expiryDate: String(r.expiry_date ?? r.expiryDate ?? ""),
+          daysUntilExpiry: Number(r.days_until_expiry ?? r.daysUntilExpiry ?? 0),
+          status: String(r.status ?? "PENDING"),
+          remainingUnits: Number(r.remaining_units ?? r.remainingUnits ?? 0),
+          projectName: projectName || projectCode || "—",
+          workDescription: String(r.work_description ?? r.workDescription ?? ""),
+        };
+      });
       setCredits(mapped);
     }).catch(() => {
       setCredits([]);
@@ -97,7 +101,7 @@ export function CompOffCreditsDialog({
                   const isExpiring = c.daysUntilExpiry > 0 && c.daysUntilExpiry <= 60;
                   const isExpired = c.daysUntilExpiry <= 0;
                   return (
-                    <tr key={`${c.workedDate}-${c.projectCode}`} className={i % 2 === 1 ? "bg-muted/20" : ""}>
+                    <tr key={`${c.workedDate}-${c.projectName}`} className={i % 2 === 1 ? "bg-muted/20" : ""}>
                       <td className="px-3 py-2.5 whitespace-nowrap">{c.workedDate}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">{c.expiryDate}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap">
@@ -113,7 +117,7 @@ export function CompOffCreditsDialog({
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         <RequestStatusBadge status={c.status} />
                       </td>
-                      <td className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">{c.projectCode}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">{c.projectName}</td>
                     </tr>
                   );
                 })}

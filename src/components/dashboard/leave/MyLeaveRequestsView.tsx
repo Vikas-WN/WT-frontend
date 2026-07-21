@@ -80,11 +80,11 @@ export function MyLeaveRequestsView({
         <div className="flex items-end gap-2">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div className="space-y-1">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">From</span>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">From Date</span>
               <DatePicker value={fromDate ?? ""} onChange={(v) => onFromDateChange?.(v)} />
             </div>
             <div className="space-y-1">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">To</span>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">To Date</span>
               <DatePicker value={toDate ?? ""} onChange={(v) => onToDateChange?.(v)} />
             </div>
           </div>

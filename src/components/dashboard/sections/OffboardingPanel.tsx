@@ -533,7 +533,7 @@ export function OffboardingPanel() {
                 <div className="text-xs text-wt-text-muted flex flex-col gap-1">
                   <span>Exit Type</span>
                   <p className="rounded-lg border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm text-wt-text">
-                    Contractual (applied automatically for consultants)
+                    Contractual
                   </p>
                 </div>
               )}
@@ -612,13 +612,13 @@ export function OffboardingPanel() {
         filters={
           <>
             <DatePickerField
-              label="From LWD"
+              label="From Date"
               value={filterFromDate}
               onChange={setFilterFromDate}
               className="w-[10.5rem] shrink-0"
             />
             <DatePickerField
-              label="To LWD"
+              label="To Date"
               value={filterToDate}
               onChange={setFilterToDate}
               className="w-[10.5rem] shrink-0"
@@ -681,7 +681,7 @@ export function OffboardingPanel() {
         ) : null}
 
         {loadingList && !listCache.loaded ? (
-          <TableRowsSkeleton rows={8} columns={10} />
+          <TableRowsSkeleton rows={8} columns={11} />
         ) : listFetched && !loadingList && !displayRows.length ? (
           <EmptyState
             title="No Offboarded Employees Found"
@@ -725,6 +725,7 @@ export function OffboardingPanel() {
                         Notice (days)
                       </TableHead>
                       <TableHead>Designation</TableHead>
+                      <TableHead>Department</TableHead>
                       <TableHead>Band</TableHead>
                       <TableHead>Regretted</TableHead>
                       <TableHead>Actions</TableHead>
@@ -807,6 +808,9 @@ export function OffboardingPanel() {
                         </TableCell>
                         <TableCell className="px-3 py-2 whitespace-nowrap max-w-[200px] truncate">
                           {row.designation ?? "—"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 whitespace-nowrap max-w-[160px] truncate">
+                          {row.department ?? "—"}
                         </TableCell>
                         <TableCell className="px-3 py-2 whitespace-nowrap max-w-[160px] truncate">
                           {row.band_name ?? "—"}

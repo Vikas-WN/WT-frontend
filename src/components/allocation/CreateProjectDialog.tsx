@@ -13,7 +13,7 @@ import {
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { hrmsService } from "@/services/hrms.service";
-import { normalizeToApiDate } from "@/utils/apiDate";
+import { normalizeToApiDate, compareApiDates } from "@/utils/apiDate";
 import {
   createEmptyProjectForm,
   type ProjectFormState,
@@ -27,6 +27,9 @@ import { UI_COPY } from "@/constants/uiCopy";
 
 import type { ProjectTypeRow } from "@/types/projectType";
 import type { AllocationPercentRow } from "@/types/allocationPercent";
+
+/** Backend default when create UI omits project type. */
+const DEFAULT_CREATE_PROJECT_TYPE = "IN_HOUSE";
 
 async function readCurrentAllocationPercent(email: string): Promise<number> {
   const normalized = email.trim().toLowerCase();
@@ -66,11 +69,29 @@ async function allocateManagerOnProject({
   const normalized = normalizePickerEmail(email);
   if (!normalized) return;
   const percent = Number(fields.allocated_percent);
-  if (!Number.isFinite(percent) || percent <= 0) return;
+  if (!Number.isFinite(percent) || percent <= 0) {
+    throw new Error("Project Manager allocation % is required.");
+  }
   await assertAllocationWithinCap(normalized, percent);
   const startDate = normalizeToApiDate(fields.start_date || projectStart);
-  if (!startDate) return;
-  const endDate = normalizeToApiDate(fields.end_date || projectEnd) || null;
+  if (!startDate) {
+    throw new Error("Project Manager start date is required.");
+  }
+  const endDate = normalizeToApiDate(fields.end_date || projectEnd);
+  if (!endDate) {
+    throw new Error("Project Manager end date is required.");
+  }
+  if (compareApiDates(startDate, endDate) > 0) {
+    throw new Error("Project Manager start date must be on or before end date.");
+  }
+  if (
+    compareApiDates(startDate, projectStart) < 0 ||
+    compareApiDates(endDate, projectEnd) > 0
+  ) {
+    throw new Error(
+      "Project Manager dates must fall within the project start and end dates."
+    );
+  }
   const allocationType = fields.allocation_type || "DEPLOYABLE";
   const lockedInDate =
     allocationType === "LOCKED"
@@ -155,7 +176,10 @@ export function CreateProjectDialog({
       showErrorToast("Client is required.");
       return;
     }
-    if (!form.project_type || !isKnownProjectTypeCode(form.project_type, activeProjectTypes)) {
+    if (
+      isEditing &&
+      (!form.project_type || !isKnownProjectTypeCode(form.project_type, activeProjectTypes))
+    ) {
       showErrorToast("Please select a valid project type.");
       return;
     }
@@ -167,16 +191,43 @@ export function CreateProjectDialog({
     const startDate = normalizeToApiDate(form.start_date);
     const endDate = normalizeToApiDate(form.end_date);
     if (!startDate) {
-      showErrorToast("Start date is required.");
+      showErrorToast("Project start date is required.");
       return;
     }
     if (!endDate) {
-      showErrorToast("End date is required.");
+      showErrorToast("Project end date is required.");
       return;
     }
-    if (startDate > endDate) {
-      showErrorToast("Start date must be on or before end date.");
+    if (compareApiDates(startDate, endDate) > 0) {
+      showErrorToast("Project start date must be on or before end date.");
       return;
+    }
+
+    const pmEmail = !isEditing ? pmFields.email.trim() : "";
+    if (pmEmail) {
+      const pmStartDate = normalizeToApiDate(pmFields.start_date || form.start_date);
+      const pmEndDate = normalizeToApiDate(pmFields.end_date || form.end_date);
+      if (!pmStartDate) {
+        showErrorToast("Project Manager start date is required.");
+        return;
+      }
+      if (!pmEndDate) {
+        showErrorToast("Project Manager end date is required.");
+        return;
+      }
+      if (compareApiDates(pmStartDate, pmEndDate) > 0) {
+        showErrorToast("Project Manager start date must be on or before end date.");
+        return;
+      }
+      if (
+        compareApiDates(pmStartDate, startDate) < 0 ||
+        compareApiDates(pmEndDate, endDate) > 0
+      ) {
+        showErrorToast(
+          "Project Manager dates must fall within the project start and end dates."
+        );
+        return;
+      }
     }
 
     setLoading(true);
@@ -200,42 +251,24 @@ export function CreateProjectDialog({
       await hrmsService.createProject({
         project_code: projectCode,
         project_name: name,
-        project_type: form.project_type,
+        project_type: DEFAULT_CREATE_PROJECT_TYPE,
         client_id: clientId,
         account_manager_email: accountManagerEmail,
         start_date: startDate,
         end_date: endDate,
       });
 
-      setDmFields((prev) => ({
-        ...prev,
-        start_date: prev.start_date || form.start_date,
-        end_date: prev.end_date || form.end_date,
-      }));
-      setPmFields((prev) => ({
-        ...prev,
-        start_date: prev.start_date || form.start_date,
-        end_date: prev.end_date || form.end_date,
-      }));
-
-      const pmEmail = pmFields.email.trim();
-      const dmEmail = dmFields.email.trim();
-
-      if (dmEmail) {
-        await allocateManagerOnProject({
-          email: dmEmail,
-          fields: { ...dmFields, email: dmEmail, role: "Delivery Manager" },
-          projectCode,
-          projectStart: startDate,
-          projectEnd: endDate,
-          isManager: false,
-        });
-      }
-
+      // Delivery Manager is contact-only on create (no allocation). PM is allocated.
       if (pmEmail) {
         await allocateManagerOnProject({
           email: pmEmail,
-          fields: { ...pmFields, email: pmEmail, role: "Project Manager" },
+          fields: {
+            ...pmFields,
+            email: pmEmail,
+            role: "Project Manager",
+            start_date: pmFields.start_date || form.start_date,
+            end_date: pmFields.end_date || form.end_date,
+          },
           projectCode,
           projectStart: startDate,
           projectEnd: endDate,
@@ -266,7 +299,7 @@ export function CreateProjectDialog({
       description={
         isEditing
           ? "Update project details. Manager allocations are managed from Project Allocation."
-          : "Set project details, then assign delivery and project managers."
+          : "Set project details, then assign managers."
       }
       onClose={onClose}
       onSubmit={() => void handleSubmit()}
@@ -308,8 +341,7 @@ export function CreateProjectDialog({
               value={form.start_date}
               onChange={(value) => {
                 setForm((prev) => ({ ...prev, start_date: value }));
-                setDmFields((prev) => ({ ...prev, start_date: prev.start_date || value }));
-                setPmFields((prev) => ({ ...prev, start_date: prev.start_date || value }));
+                setPmFields((prev) => ({ ...prev, start_date: value }));
               }}
             />
             <InputField
@@ -319,8 +351,7 @@ export function CreateProjectDialog({
               value={form.end_date}
               onChange={(value) => {
                 setForm((prev) => ({ ...prev, end_date: value }));
-                setDmFields((prev) => ({ ...prev, end_date: prev.end_date || value }));
-                setPmFields((prev) => ({ ...prev, end_date: prev.end_date || value }));
+                setPmFields((prev) => ({ ...prev, end_date: value }));
               }}
             />
             <AccountManagerSelect
@@ -328,13 +359,15 @@ export function CreateProjectDialog({
               value={form.account_manager_email}
               onChange={(value) => setForm((prev) => ({ ...prev, account_manager_email: value }))}
             />
-            <ProjectTypeSelect
-              required
-              activeOnly
-              enabled={enabled}
-              value={form.project_type}
-              onChange={(value) => setForm((prev) => ({ ...prev, project_type: value }))}
-            />
+            {isEditing ? (
+              <ProjectTypeSelect
+                required
+                activeOnly
+                enabled={enabled}
+                value={form.project_type}
+                onChange={(value) => setForm((prev) => ({ ...prev, project_type: value }))}
+              />
+            ) : null}
           </div>
         </FormSection>
 
@@ -343,10 +376,17 @@ export function CreateProjectDialog({
             <ManagerAllocationFields
               title="Delivery Manager"
               state={dmFields}
-              onChange={setDmFields}
+              onChange={(next) => {
+                setDmFields(next);
+                setForm((prev) => ({
+                  ...prev,
+                  delivery_manager_email: next.email,
+                }));
+              }}
               allocationPercentOptions={allocationPercentOptions}
               enabled={enabled}
               percentDesignation="Delivery Manager"
+              managerContactOnly
             />
 
             <ManagerAllocationFields

@@ -64,7 +64,6 @@ export function ManagerAllocationFields({
         <div className="grid gap-4 sm:grid-cols-2">
           <InternalEmployeeSelect
             label="Name"
-            required
             value={state.email}
             onChange={(email) => onChange({ ...state, email })}
           />

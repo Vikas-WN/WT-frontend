@@ -15,10 +15,6 @@
   color: var(--wt-text-muted, #888);
 }
 
-.day-entry-form-required {
-  color: var(--destructive, #e11d48);
-}
-
 .day-entry-form-select {
   width: 100%;
   padding: 0.5rem 0.75rem;

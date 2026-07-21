@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type ApprovalRemarkModalProps = {
   open: boolean;
@@ -10,6 +10,10 @@ type ApprovalRemarkModalProps = {
   actionLabel: string;
   actionVariant?: "brand" | "destructive";
   loading?: boolean;
+  /** When false, only a confirmation is shown (no remarks textarea). */
+  showRemarkField?: boolean;
+  remarkPlaceholder?: string;
+  description?: string;
   onConfirm: (remark: string) => void;
   onCancel: () => void;
 };
@@ -20,10 +24,17 @@ export function ApprovalRemarkModal({
   actionLabel,
   actionVariant = "brand",
   loading = false,
+  showRemarkField = true,
+  remarkPlaceholder = "Optional remark…",
+  description,
   onConfirm,
   onCancel,
 }: ApprovalRemarkModalProps) {
   const [remark, setRemark] = useState("");
+
+  useEffect(() => {
+    if (open) setRemark("");
+  }, [open]);
 
   if (!open) return null;
 
@@ -47,14 +58,17 @@ export function ApprovalRemarkModal({
           </div>
         ) : null}
         <h2 className="text-lg font-semibold">{title}</h2>
-        <textarea
-          className="min-h-[80px] w-full resize-y rounded-lg border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-wt-brand"
-          placeholder="Optional remark..."
-          value={remark}
-          onChange={(e) => setRemark(e.target.value)}
-          disabled={loading}
-          autoFocus
-        />
+        {description ? <p className="text-sm text-wt-text-muted">{description}</p> : null}
+        {showRemarkField ? (
+          <textarea
+            className="min-h-[80px] w-full resize-y rounded-lg border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-wt-brand"
+            placeholder={remarkPlaceholder}
+            value={remark}
+            onChange={(e) => setRemark(e.target.value)}
+            disabled={loading}
+            autoFocus
+          />
+        ) : null}
         <div className="flex justify-end gap-2">
           <Button variant="outline" size="sm" type="button" onClick={onCancel} disabled={loading}>
             Cancel

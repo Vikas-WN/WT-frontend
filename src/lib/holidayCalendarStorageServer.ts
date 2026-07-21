@@ -18,11 +18,12 @@ type StoredHolidayCalendarObject = {
   uploadedAt: string | null;
 };
 
-function configurationErrorMessage(error: unknown): string {
-  if (error instanceof Error && /Missing required environment variable|Missing LINODE_OBJECT_STORAGE_REGION/i.test(error.message)) {
-    return `${error.message} Holiday calendar files are stored in Linode Object Storage.`;
-  }
-  return error instanceof Error ? error.message : "Holiday calendar storage is unavailable.";
+const STORAGE_UNAVAILABLE_USER_MESSAGE =
+  "File storage is temporarily unavailable. Please try again later or contact support.";
+
+function configurationErrorMessage(_error: unknown): string {
+  // Never surface vendor names, env var names, or operator setup hints to clients.
+  return STORAGE_UNAVAILABLE_USER_MESSAGE;
 }
 
 function objectTimestamp(response: GetObjectCommandOutput): number {

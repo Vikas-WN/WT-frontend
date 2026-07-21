@@ -45,6 +45,9 @@ export function DropdownSelect({
   variant = "default",
   id,
   "aria-label": ariaLabel,
+  sanitizeInput,
+  inputMode,
+  clearSelectionOnEmptyInput = true,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -60,6 +63,9 @@ export function DropdownSelect({
   variant?: DropdownSelectVariant;
   id?: string;
   "aria-label"?: string;
+  sanitizeInput?: (next: string) => string;
+  inputMode?: "text" | "numeric" | "decimal" | "tel" | "search" | "email" | "url" | "none";
+  clearSelectionOnEmptyInput?: boolean;
 }) {
   return (
     <SearchableSelectCombobox
@@ -74,6 +80,9 @@ export function DropdownSelect({
       id={id}
       aria-label={ariaLabel}
       showChevron
+      sanitizeInput={sanitizeInput}
+      inputMode={inputMode}
+      clearSelectionOnEmptyInput={clearSelectionOnEmptyInput}
       className={className}
       contentClassName={contentClassName}
       inputClassName={cn(

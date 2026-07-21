@@ -1,7 +1,7 @@
 import { endpoints } from "@/api/endpoints";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
 import { parseAllocationExtensionListResponse } from "@/utils/allocationExtension";
-import type { OnboardListData, OnboardListItem, OnboardUserResponse } from "@/types/onboard";
+import type { OnboardListData, OnboardListItem } from "@/types/onboard";
 import type { OffboardListData, OffboardListQuery } from "@/types/offboard";
 import { parseAllocationListRows } from "@/utils/allocationList";
 import {
@@ -113,6 +113,7 @@ export interface ActiveNonBenchAllocationsPage {
 export interface LeaveManagerOption {
   email: string;
   name: string;
+  status?: string | null;
   employee_id?: string | null;
   project_code?: string | null;
   project_name?: string | null;
@@ -121,6 +122,7 @@ export interface LeaveManagerOption {
 export interface LeaveRecipientOption {
   email: string;
   name: string;
+  status?: string | null;
   emp_id?: string | null;
 }
 
@@ -1074,8 +1076,11 @@ export const hrmsService = {
     return apiClient.post<ApiEnvelope<unknown>>(url, { body: fd });
   },
 
-  getBands() {
-    return apiClient.get<ApiEnvelope<BandListItem[]>>(endpoints.masters.bands);
+  getBands(params: { search?: string; userType?: string } = {}) {
+    const query: Record<string, string> = {};
+    if (params.search?.trim()) query.search = params.search.trim();
+    if (params.userType?.trim()) query.user_type = params.userType.trim();
+    return apiClient.get<ApiEnvelope<BandListItem[]>>(endpoints.masters.bands, { query });
   },
 
   getDepartments() {

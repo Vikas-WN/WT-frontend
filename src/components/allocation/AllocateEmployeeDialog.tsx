@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { InputField, SelectField } from "@/components/dashboard/ui/forms";
 import { AllocatedPercentSelect } from "@/components/allocation/AllocatedPercentSelect";
 import { CurrentAllocationHint } from "@/components/allocation/CurrentAllocationHint";
 import { EmployeeCurrentAllocationsPanel } from "@/components/allocation/EmployeeCurrentAllocationsPanel";
 import { InternalEmployeeSelect } from "@/components/allocation/InternalEmployeeSelect";
-import { InternalEmployeesMultiSelect } from "@/components/allocation/InternalEmployeesMultiSelect";
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { hrmsService } from "@/services/hrms.service";
@@ -18,8 +15,10 @@ import {
   type AllocationFormState,
 } from "@/utils/allocationFormState";
 import type { AllocationPercentRow } from "@/types/allocationPercent";
-import { isValidAllocationPercentForDesignation } from "@/utils/allocationPercent";
-import { parseEmployeeAllocationsResponse } from "@/utils/allocationList";
+import {
+  parseEmployeeAllocationsResponse,
+  sumOverlappingProjectAllocatedPercent,
+} from "@/utils/allocationList";
 import {
   ALLOCATION_STATUS_OPTIONS,
   type AllocationBillingStatus,
@@ -63,7 +62,6 @@ export function AllocateEmployeeDialog({
 }) {
   const [form, setForm] = useState<AllocationFormState>(createEmptyAllocationForm());
   const [customRole, setCustomRole] = useState("");
-  const [assignProjectManagers, setAssignProjectManagers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<AllocateStep>("Employee");
   const [allocationVersion, setAllocationVersion] = useState(0);
@@ -83,7 +81,6 @@ export function AllocateEmployeeDialog({
     if (!open) {
       setForm(createEmptyAllocationForm());
       setCustomRole("");
-      setAssignProjectManagers([]);
       setLoading(false);
       setStep("Employee");
       setAllocationVersion(0);
@@ -185,17 +182,23 @@ export function AllocateEmployeeDialog({
     const nextPercent = Number(form.allocated_percent);
     try {
       const res = await hrmsService.getEmployeeAllocations({ userEmail: employeeEmail });
-      let current = parseEmployeeAllocationsResponse(res.data ?? res)?.totalAllocatedPercent ?? 0;
+      const parsed = parseEmployeeAllocationsResponse(res.data ?? res);
+      let current = sumOverlappingProjectAllocatedPercent(
+        parsed?.allocations ?? [],
+        startDate,
+        endDate
+      );
       if (editingAllocationId && initialForm?.allocated_percent) {
         const previous = Number(initialForm.allocated_percent);
         if (Number.isFinite(previous)) {
           current = Math.max(0, current - previous);
         }
       }
-      if (current + nextPercent > 100) {
-        showErrorToast(
-          `Total allocation cannot exceed 100% (current ${current}%, adding ${nextPercent}%).`
-        );
+      const available = Math.max(0, 100 - current);
+      if (nextPercent > available) {
+          showErrorToast(
+            `Only ${available}% is available to allocate (projects use ${current}%; talent pool is free capacity).`
+          );
         return;
       }
     } catch {
@@ -230,16 +233,6 @@ export function AllocateEmployeeDialog({
         await hrmsService.updateAllocation(editingAllocationId, payload);
       } else {
         await hrmsService.createAllocation(payload);
-        for (const email of assignProjectManagers) {
-          try {
-            await hrmsService.assignProjectManager({
-              userEmail: email.trim().toLowerCase(),
-              projectCode,
-            });
-          } catch {
-            /* Requires active allocation on the project */
-          }
-        }
       }
 
       showSuccessToast(editingAllocationId ? "Allocation updated." : "Employee allocated successfully.");
@@ -474,41 +467,6 @@ export function AllocateEmployeeDialog({
             value={form.end_date}
             onChange={(value) => setForm((prev) => ({ ...prev, end_date: value }))}
           />
-          <div className="sm:col-span-2 space-y-3 rounded-xl border border-wt-border bg-wt-surface-2/60 p-4">
-            {!editingAllocationId ? (
-              <>
-                <InternalEmployeesMultiSelect
-                  label="Assign Project Managers"
-                  value={assignProjectManagers}
-                  onChange={setAssignProjectManagers}
-                  placeholder="Select project managers for this project…"
-                />
-                <Label className="flex items-start gap-2 text-sm font-normal text-wt-text">
-                  <Checkbox
-                    className="mt-0.5"
-                    checked={assignProjectManagers.includes(form.employee_email)}
-                    disabled={!form.employee_email.trim()}
-                    onCheckedChange={(checked) => {
-                      const email = form.employee_email.trim();
-                      if (!email) return;
-                      setAssignProjectManagers((prev) =>
-                        checked
-                          ? prev.includes(email)
-                            ? prev
-                            : [...prev, email]
-                          : prev.filter((item) => item !== email)
-                      );
-                    }}
-                  />
-                  <span>Also assign the selected employee as a project manager</span>
-                </Label>
-              </>
-            ) : (
-              <p className="text-sm text-wt-text-muted">
-                Project manager assignment is available when creating a new allocation.
-              </p>
-            )}
-          </div>
         </div>
         ) : null}
       </FormSection>

@@ -136,7 +136,7 @@ export function HolidayCalendarsPageClient() {
 
   const description = storageQuery.data
     ? `Showing holidays for ${selectedYear}. Loaded file: ${storageLabel}`
-    : `Upload a CSV or XLSX file to store holidays by year as holiday_calendar_${selectedYear} in Linode Object Storage.`;
+    : `Upload a CSV or XLSX file to store holidays for ${selectedYear}.`;
 
   return (
     <DashboardPageShell>
@@ -179,10 +179,11 @@ export function HolidayCalendarsPageClient() {
             </Button>
             <ToolbarFilterSelect
               id="holiday-calendar-year"
+              label="Year"
               value={selectedYear}
               onChange={setSelectedYear}
               options={yearSelectItems}
-              aria-label="Year"
+              digitsOnly
               className="w-32 min-w-32"
               contentClassName="min-w-[9rem] w-max"
             />

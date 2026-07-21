@@ -541,6 +541,7 @@ export function ProfilePageLeanClient() {
                     />
                     <ProfileSectionsView
                       profile={employeeProfile ?? {}}
+                      includeDateOfBirth
                       resumeShareHref={
                         readProfileField(
                           employeeProfile,

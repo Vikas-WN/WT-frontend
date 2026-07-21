@@ -250,6 +250,8 @@ export function EmployeeLeaveRequestsPanel({
 
               {showLeaveFields ? (
                 <LeaveManagerSelector
+                  label="Primary Managers"
+                  required
                   selectedEmails={selectedLeaveManagerEmails}
                   onChange={onManagersChange}
                   disabled={actionLoading}

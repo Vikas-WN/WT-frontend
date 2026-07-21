@@ -194,7 +194,7 @@ export function LeaveRequestForm({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-1.5 min-w-0">
               <LeaveManagerSelector
-                label="Primary managers"
+                label="Primary Managers"
                 required
                 selectedEmails={selectedManagerEmails}
                 onChange={(emails) => {

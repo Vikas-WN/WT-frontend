@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { useTimelogManagerOptions } from "@/hooks/timelog/useTimelogManagerOptions";
-import { showErrorToast } from "@/lib/toast";
 import {
   subCategoriesFor,
   subCategoryRequired,
@@ -24,6 +23,8 @@ import "./DayEntryForm.css";
 import type { DayEntryFormProps } from "./DayEntryForm.types";
 import type { DayTimelogEntry, DayTimelogEntryForm } from "@/hooks/timelog/useDayTimelog.types";
 import { projectManagerEmailFromEntry } from "@/utils/timelog/entryManager";
+import { formatEmployeePickerLabel } from "@/utils/employeePickerLabel";
+import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
 
 function emptyForm(): DayTimelogEntryForm {
@@ -67,16 +68,16 @@ export function DayEntryForm({
   const [pendingSave, setPendingSave] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState(false);
   const isNew = !entry;
-  const activeEmployeesQ = useTimelogManagerOptions(form.project_code || null);
+  const managersQ = useTimelogManagerOptions(form.project_code || null);
   const managerOptions = useMemo(() => {
-    const fetched = activeEmployeesQ.data ?? [];
+    const fetched = managersQ.data ?? [];
     const current = form.project_manager.trim().toLowerCase();
     // Keep the entry's saved manager selectable even if no longer on the project.
     if (current && !fetched.some((emp) => emp.email === current)) {
       return [{ email: current, name: current }, ...fetched];
     }
     return fetched;
-  }, [activeEmployeesQ.data, form.project_manager]);
+  }, [managersQ.data, form.project_manager]);
 
   useEffect(() => {
     setForm(formForEntry(entry));
@@ -101,8 +102,8 @@ export function DayEntryForm({
   // When project changes, clear an invalid manager; autofill when exactly one manager exists.
   useEffect(() => {
     if (!form.project_code) return;
-    if (activeEmployeesQ.isLoading || activeEmployeesQ.isFetching) return;
-    const fetched = activeEmployeesQ.data ?? [];
+    if (managersQ.isLoading || managersQ.isFetching) return;
+    const fetched = managersQ.data ?? [];
     const current = form.project_manager.trim().toLowerCase();
     if (current && fetched.some((emp) => emp.email === current)) return;
     if (fetched.length === 1) {
@@ -115,9 +116,9 @@ export function DayEntryForm({
   }, [
     form.project_code,
     form.project_manager,
-    activeEmployeesQ.data,
-    activeEmployeesQ.isLoading,
-    activeEmployeesQ.isFetching,
+    managersQ.data,
+    managersQ.isLoading,
+    managersQ.isFetching,
   ]);
 
   const taskOptions = form.project_code
@@ -187,7 +188,6 @@ export function DayEntryForm({
     const error = validate();
     if (error) {
       setLocalError(error);
-      showErrorToast(error);
       return;
     }
     setLocalError(null);
@@ -199,7 +199,6 @@ export function DayEntryForm({
     const error = validate();
     if (error) {
       setLocalError(error);
-      showErrorToast(error);
       return;
     }
     setLocalError(null);
@@ -237,9 +236,7 @@ export function DayEntryForm({
           ) : null}
 
           <label className="day-entry-form-field">
-            <span className="day-entry-form-label">
-              Project <span className="day-entry-form-required">*</span>
-            </span>
+            <FieldLabel label="Project" required className="day-entry-form-label" />
             <SearchableSelectCombobox
               value={form.project_code}
               onChange={(project_code) => {
@@ -263,9 +260,7 @@ export function DayEntryForm({
 
           {form.project_code ? (
             <label className="day-entry-form-field">
-              <span className="day-entry-form-label">
-                Project Manager <span className="day-entry-form-required">*</span>
-              </span>
+              <FieldLabel label="Project Manager" required className="day-entry-form-label" />
               <SearchableSelectCombobox
                 value={form.project_manager}
                 onChange={(project_manager) =>
@@ -274,15 +269,19 @@ export function DayEntryForm({
                     project_manager,
                   }))
                 }
-                disabled={activeEmployeesQ.isLoading}
-                loading={activeEmployeesQ.isLoading}
+                disabled={managersQ.isLoading}
+                loading={managersQ.isLoading}
                 loadingLabel="Loading managers…"
                 options={managerOptions.map((employee) => ({
                   value: employee.email,
-                  label: employee.name,
+                  label: formatEmployeePickerLabel({
+                    employeeName: employee.name,
+                    employeeEmail: employee.email,
+                    empId: employee.employeeId,
+                  }),
                 }))}
                 placeholder={
-                  activeEmployeesQ.isError
+                  managersQ.isError
                     ? "Could not load managers"
                     : managerOptions.length
                       ? "Search project managers…"
@@ -296,9 +295,7 @@ export function DayEntryForm({
 
           {form.project_code ? (
             <label className="day-entry-form-field">
-              <span className="day-entry-form-label">
-                Task category <span className="day-entry-form-required">*</span>
-              </span>
+              <FieldLabel label="Task Category" required className="day-entry-form-label" />
               <SearchableSelectCombobox
                 value={form.task_category}
                 onChange={(task_category) => {
@@ -319,12 +316,11 @@ export function DayEntryForm({
 
           {form.project_code && form.task_category && subOptions.length > 0 ? (
             <label className="day-entry-form-field">
-              <span className="day-entry-form-label">
-                Sub category
-                {isSubRequired ? (
-                  <span className="day-entry-form-required"> *</span>
-                ) : null}
-              </span>
+              <FieldLabel
+                label="Sub Category"
+                required={isSubRequired}
+                className="day-entry-form-label"
+              />
               <SearchableSelectCombobox
                 value={form.sub_category}
                 onChange={(sub_category) =>
@@ -343,9 +339,7 @@ export function DayEntryForm({
 
           {form.project_code && form.task_category ? (
             <label className="day-entry-form-field">
-              <span className="day-entry-form-label">
-                Description <span className="day-entry-form-required">*</span>
-              </span>
+              <FieldLabel label="Description" required className="day-entry-form-label" />
               <textarea
                 className="day-entry-form-textarea"
                 value={form.description}
@@ -363,9 +357,7 @@ export function DayEntryForm({
 
           {form.project_code && form.task_category ? (
             <label className="day-entry-form-field">
-              <span className="day-entry-form-label">
-                Hours <span className="day-entry-form-required">*</span>
-              </span>
+              <FieldLabel label="Hours" required className="day-entry-form-label" />
               <input
                 type="text"
                 inputMode="decimal"

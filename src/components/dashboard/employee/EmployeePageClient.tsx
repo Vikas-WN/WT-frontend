@@ -84,14 +84,16 @@ export function EmployeePageClient() {
 
   const onboardOptionsQ = useOnboardOptions(hasHrAccess);
   const bandsQ = useQuery({
-    queryKey: ["masters", "bands"],
+    queryKey: ["masters", "bands", onboardForm.user_type],
     enabled: hasHrAccess,
     staleTime: 30 * 60_000,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     queryFn: async () => {
-      const res = await hrmsService.getBands();
+      const res = await hrmsService.getBands({
+        userType: onboardForm.user_type || undefined,
+      });
       return parseBandsList(res);
     },
   });
@@ -362,12 +364,13 @@ export function EmployeePageClient() {
                         variant="brand"
                         type="button"
                         className="h-10 shrink-0 px-3 text-sm"
-                        onClick={() =>
+                        onClick={(event) => {
+                          event.currentTarget.blur();
                           void refreshInvitedList({
                             from: invitedListFromDateRef.current,
                             to: invitedListToDateRef.current,
-                          })
-                        }
+                          });
+                        }}
                         disabled={invitedListLoading}
                       >
                         Apply Dates
@@ -379,7 +382,8 @@ export function EmployeePageClient() {
                         variant="outline"
                         type="button"
                         className="h-10 shrink-0 border-wt-border bg-wt-surface-1 px-3 text-sm font-medium text-wt-text shadow-sm hover:bg-wt-surface-2"
-                        onClick={() => {
+                        onClick={(event) => {
+                          event.currentTarget.blur();
                           const { from, to } = lastSevenDaysInvitedEmployeesDateRange();
                           setInvitedListFromDate(from);
                           setInvitedListToDate(to);

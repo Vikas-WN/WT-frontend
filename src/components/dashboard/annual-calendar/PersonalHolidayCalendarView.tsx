@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDownToLine } from "lucide-react";
+import { ArrowUpFromLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
@@ -26,7 +26,7 @@ import {
 } from "@/components/dashboard/ui/uiLayout";
 import { ApiError } from "@/api/error";
 import { useHolidayCalendarStorage } from "@/hooks/holiday-calendars/useHolidayCalendarStorage";
-import { showErrorToast } from "@/lib/toast";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { holidayCalendarStorageService } from "@/services/holidayCalendarStorage.service";
 import {
   filterHolidayRowsByYear,
@@ -120,20 +120,24 @@ export function PersonalHolidayCalendarView() {
     downloadCsvFile(`holiday_calendar_${selectedYear}.csv`, exportColumns, exportRows);
   }
 
-  async function handleDownload() {
-    if (!hasCalendarFile || !displayRows.length) return;
+  async function handleExport() {
+    if (!displayRows.length) {
+      showErrorToast("No holidays available to export for the selected year.");
+      return;
+    }
 
     setDownloading(true);
     try {
-      await holidayCalendarStorageService.downloadStoredFile(yearNumber);
-    } catch (error) {
       try {
-        downloadParsedRowsAsCsv();
+        await holidayCalendarStorageService.downloadStoredFile(yearNumber);
       } catch {
-        showErrorToast(
-          error instanceof Error ? error.message : "Could not download the holiday calendar."
-        );
+        downloadParsedRowsAsCsv();
       }
+      showSuccessToast(`Holiday calendar for ${selectedYear} downloaded.`);
+    } catch (error) {
+      showErrorToast(
+        error instanceof Error ? error.message : "Could not export the holiday calendar."
+      );
     } finally {
       setDownloading(false);
     }
@@ -149,31 +153,39 @@ export function PersonalHolidayCalendarView() {
     () => yearOptions.map((year) => ({ value: year, label: year })),
     [yearOptions]
   );
+  const canExport = displayRows.length > 0 && !isLoading && !downloading;
 
   return (
     <ContentCard>
       <div className={CARD_CONTENT_CLASS}>
         <PageSectionHeader
           title="Holiday Calendar"
-          description={`View organization holidays for ${selectedYear}.`}
+          description={`View and export organization holidays for ${selectedYear}.`}
           action={
             <div className="flex flex-wrap items-center justify-end gap-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="brand"
                 className="h-10 shrink-0 gap-2 px-4"
-                disabled={!hasCalendarFile || !displayRows.length || downloading || isLoading}
-                onClick={() => void handleDownload()}
+                disabled={!canExport}
+                title={
+                  canExport
+                    ? "Download the holiday calendar for offline reference"
+                    : "Load a year with holidays to enable export"
+                }
+                aria-label="Export holiday calendar"
+                onClick={() => void handleExport()}
               >
-                <ArrowDownToLine className="size-4" aria-hidden />
-                {downloading ? "Downloading…" : "Download"}
+                <ArrowUpFromLine className="size-4" aria-hidden />
+                {downloading ? "Exporting…" : "Export"}
               </Button>
               <ToolbarFilterSelect
                 id="personal-holiday-calendar-year"
+                label="Year"
                 value={selectedYear}
                 onChange={setSelectedYear}
                 options={yearSelectItems}
-                aria-label="Year"
+                digitsOnly
                 className="w-32 min-w-32"
                 contentClassName="min-w-[8rem] w-max z-[260]"
               />

@@ -26,8 +26,8 @@ import { EmployeePortalRoleSelect } from "@/components/employee-directory/Employ
 import { EmployeeUserTypeSelect } from "@/components/employee-directory/EmployeeUserTypeSelect";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { ManagementListCard, ManagementListContent } from "@/components/dashboard/ui/ManagementListCard";
+import { SelectField } from "@/components/dashboard/ui/forms";
 import { SearchInput } from "@/components/dashboard/ui/SearchInput";
-import { ToolbarFilterSelect } from "@/components/dashboard/ui/ToolbarFilterSelect";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   cleanEmployeeName,
@@ -232,23 +232,14 @@ export function EmployeeDirectoryPageClient() {
           />
         }
         filters={
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="employee-directory-user-type"
-              className="text-sm text-muted-foreground whitespace-nowrap"
-            >
-              User type
-            </label>
-            <ToolbarFilterSelect
-              id="employee-directory-user-type"
-              value={userTypeFilter}
-              onChange={setUserTypeFilter}
-              options={userTypeSelectOptions}
-              placeholder="All User Types"
-              aria-label="User Type"
-              compact
-            />
-          </div>
+          <SelectField
+            label="User Type"
+            className="w-[11rem] shrink-0"
+            value={userTypeFilter}
+            onChange={setUserTypeFilter}
+            options={userTypeSelectOptions}
+            placeholder="All User Types"
+          />
         }
       >
         {isError ? (
@@ -276,11 +267,9 @@ export function EmployeeDirectoryPageClient() {
             <div className="wt-detail-scroll-section min-h-0">
               <ScrollableTable
                 scrollChain
-                axis="y"
                 maxHeightClass="max-h-[min(68vh,640px)]"
-                className="overflow-x-hidden"
               >
-                <WtTable className="w-full table-fixed text-xs">
+                <WtTable className="w-full min-w-[1120px] text-xs">
                   <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
                     <TableRow className="hover:bg-transparent">
                       {LIST_COLUMNS.map((col) => {
@@ -300,16 +289,16 @@ export function EmployeeDirectoryPageClient() {
                             key={col.key}
                             className={cn(
                               WT_TABLE_HEAD_COMPACT_CLASS,
-                              "overflow-hidden",
-                              col.key === "name" && "w-[14%]",
-                              col.key === "email" && "w-[18%]",
-                              col.key === "phone_number" && "w-[11%]",
-                              col.key === "portal_role" && "w-[12%]",
-                              col.key === "band" && "w-[7%]",
-                              col.key === "user_type" && "w-[11%]",
-                              col.key === "work_mode" && "w-[9%]",
-                              col.key === "date_of_joining" && "w-[10%]",
-                              col.key === "status" && "w-[8%]"
+                              "whitespace-nowrap",
+                              col.key === "name" && "min-w-[9rem]",
+                              col.key === "email" && "min-w-[12rem]",
+                              col.key === "phone_number" && "min-w-[8rem]",
+                              col.key === "portal_role" && "min-w-[8.5rem]",
+                              col.key === "band" && "min-w-[4.5rem]",
+                              col.key === "user_type" && "min-w-[8rem]",
+                              col.key === "work_mode" && "min-w-[7rem]",
+                              col.key === "date_of_joining" && "min-w-[8rem]",
+                              col.key === "status" && "min-w-[9.5rem]"
                             )}
                           >
                             <TableSortHeader
@@ -357,7 +346,10 @@ export function EmployeeDirectoryPageClient() {
                               key={col.key}
                               className={cn(
                                 WT_TABLE_CELL_COMPACT_CLASS,
-                                "max-w-0 overflow-hidden whitespace-nowrap"
+                                "whitespace-nowrap",
+                                col.key === "status"
+                                  ? "overflow-visible"
+                                  : "max-w-[16rem] overflow-hidden"
                               )}
                               title={
                                 col.key === "status" ||

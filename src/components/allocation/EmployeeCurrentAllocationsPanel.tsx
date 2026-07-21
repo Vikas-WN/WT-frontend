@@ -88,7 +88,7 @@ export function EmployeeCurrentAllocationsPanel({
     setDeallocatingId(allocationId);
     try {
       await hrmsService.deleteAllocation(allocationId);
-      showSuccessToast("Employee deallocated from project.");
+      showSuccessToast("Employee deallocated. Capacity returned to the talent pool.");
       await loadAllocations();
       await onChanged?.();
     } catch (error) {
@@ -106,12 +106,12 @@ export function EmployeeCurrentAllocationsPanel({
         <div>
           <p className="text-sm font-medium text-wt-text">Current project allocations</p>
           <p className="mt-1 text-xs text-wt-text-muted">
-            Review active assignments before allocating to a new project. Bench is auto-calculated
-            after changes.
+            Review active assignments before allocating to a new project. Freed capacity returns to
+            the talent pool automatically after deallocation.
           </p>
         </div>
         <p className="text-xs text-wt-text-muted">
-          Projects: {summary.projectTotal}% · Bench: {summary.benchTotal}%
+          Projects: {summary.projectTotal}% · Talent Pool: {summary.benchTotal}%
         </p>
       </div>
 
@@ -119,7 +119,7 @@ export function EmployeeCurrentAllocationsPanel({
         <p className="text-sm text-wt-text-muted">Loading current allocations…</p>
       ) : !rows.length ? (
         <p className="text-sm text-wt-text-muted">
-          No active project allocations. This employee is fully on bench (100%).
+          No active project allocations. This employee is fully in the talent pool (100%).
         </p>
       ) : (
         <ScrollableTable maxHeightClass="max-h-[min(40vh,320px)]">
@@ -145,16 +145,13 @@ export function EmployeeCurrentAllocationsPanel({
                 return (
                   <TableRow key={allocationId || `${projectCode}-${String(row.start_date ?? row.startDate ?? "")}`}>
                     <TableCell className="whitespace-nowrap">
-                      <p className="font-medium text-wt-text">{projectName || projectCode || "—"}</p>
-                      {projectCode ? (
-                        <p className="text-xs text-wt-text-muted">{projectCode}</p>
-                      ) : null}
+                      <p className="font-medium text-wt-text">{projectName || "—"}</p>
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
                       {formatRoleDisplayValue(row.role)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums">
-                      {formatAllocatedPercentDisplay(percent)}
+                      {formatAllocatedPercentDisplay(row)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
                       {formatDateLabel(row.start_date ?? row.startDate)}

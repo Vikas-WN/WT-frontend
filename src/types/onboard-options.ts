@@ -15,4 +15,5 @@ export interface OnboardOptionsResponse {
   blood_groups: OnboardOptionItem[];
   holiday_calendars: OnboardOptionItem[];
   reporting_managers: OnboardOptionItem[];
+  primary_skills: OnboardOptionItem[];
 }

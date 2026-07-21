@@ -15,6 +15,7 @@ export interface HrOffboardListItem {
   designation: string | null;
   band_name: string | null;
   band_role: string | null;
+  department: string | null;
   project_manager: string | null;
   exit_survey_submitted?: boolean;
   can_resend_exit_survey?: boolean;

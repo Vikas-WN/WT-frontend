@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
 import { SearchInput } from "@/components/dashboard/ui/SearchInput";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
@@ -16,10 +17,13 @@ import {
 import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { useAllocationProjectEmployees } from "@/hooks/useAllocationProjectEmployees";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { hrmsService } from "@/services/hrms.service";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import { Users } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -36,6 +40,7 @@ export function ProjectEmployeesDetailDialog({
   onClose: () => void;
 }) {
   const [search, setSearch] = useState("");
+  const [deallocatingId, setDeallocatingId] = useState<number | null>(null);
   const debouncedSearch = useDebouncedValue(search, 250);
   const code = projectCode.trim();
   const employeesQ = useAllocationProjectEmployees(
@@ -45,7 +50,10 @@ export function ProjectEmployeesDetailDialog({
   );
 
   useEffect(() => {
-    if (!open) setSearch("");
+    if (!open) {
+      setSearch("");
+      setDeallocatingId(null);
+    }
   }, [open, code]);
 
   const employees = employeesQ.data?.employees ?? [];
@@ -53,11 +61,25 @@ export function ProjectEmployeesDetailDialog({
   const titleName = projectName?.trim() || metaName || code;
   const rows = useMemo(() => employees, [employees]);
 
+  async function handleDeallocate(allocationId: number | null | undefined) {
+    if (allocationId == null || deallocatingId != null) return;
+    setDeallocatingId(allocationId);
+    try {
+      await hrmsService.deleteAllocation(String(allocationId));
+      showSuccessToast("Employee deallocated. Capacity returned to the talent pool.");
+      await employeesQ.refetch();
+    } catch (error) {
+      showErrorToast(error instanceof Error ? error.message : "Could not deallocate employee.");
+    } finally {
+      setDeallocatingId(null);
+    }
+  }
+
   return (
     <WtFormDialog
       open={open && Boolean(code)}
       title={titleName}
-      description="Active employees on this project with allocation dates. Ended allocations are removed automatically and freed capacity returns to BENCH."
+      description="Active employees on this project. Deallocating returns freed capacity to the talent pool."
       onClose={() => {
         setSearch("");
         onClose();
@@ -89,7 +111,7 @@ export function ProjectEmployeesDetailDialog({
         </div>
 
         {employeesQ.isLoading ? (
-          <TableRowsSkeleton rows={5} columns={5} />
+          <TableRowsSkeleton rows={5} columns={6} />
         ) : employeesQ.isError ? (
           <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
             Could not load employees for this project.
@@ -110,6 +132,7 @@ export function ProjectEmployeesDetailDialog({
                   <TableHead>Allocation %</TableHead>
                   <TableHead>From</TableHead>
                   <TableHead>To</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -148,6 +171,20 @@ export function ProjectEmployeesDetailDialog({
                     </TableCell>
                     <TableCell className="align-top whitespace-nowrap">
                       {row.endDate ? formatApiDateDisplay(row.endDate) || "—" : "Open"}
+                    </TableCell>
+                    <TableCell className="align-top text-right">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-rose-600 hover:bg-rose-500/10 hover:text-rose-700"
+                        disabled={row.allocationId == null || deallocatingId === row.allocationId}
+                        title="Deallocate from project (returns to talent pool)"
+                        onClick={() => void handleDeallocate(row.allocationId)}
+                      >
+                        <Trash2 className="size-4" aria-hidden />
+                        Deallocate
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

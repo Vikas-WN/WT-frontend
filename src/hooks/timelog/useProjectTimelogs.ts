@@ -191,8 +191,8 @@ export function useProjectTimelogs(enabled: boolean) {
     [user?.roles]
   );
 
-  const [fromDate, setFromDateState] = useState("");
-  const [toDate, setToDateState] = useState("");
+  const [fromDate, setFromDateState] = useState(() => fullDataRange().startDmy);
+  const [toDate, setToDateState] = useState(() => fullDataRange().endDmy);
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
 

@@ -142,6 +142,7 @@ import {
   allocationRowId,
   isEditableAllocationRow,
   isSupersededAllocationRow,
+  isDeallocatedAllocationRow,
   mergeAllocationListAfterUpdate,
   parseAllocationForecastRows,
   parseAllocationListRows,
@@ -3690,7 +3691,7 @@ export function AllocationPageClient() {
                                   <div>
                                     <h3 className="font-semibold">Project Allocation</h3>
                                     <p className="text-sm text-wt-text-muted">
-                                      Allocate employees to projects and assign project managers in a guided dialog.
+                                      Allocate employees to projects in a guided dialog.
                                     </p>
                                   </div>
                                   <Button
@@ -3976,6 +3977,9 @@ export function AllocationPageClient() {
                                                           await hrmsService.deleteAllocation(
                                                             allocationId
                                                           );
+                                                          showSuccessToast(
+                                                            "Employee deallocated. Capacity returned to the talent pool."
+                                                          );
                                                           setAllocations((prev) =>
                                                             prev.filter(
                                                               (r) =>
@@ -4068,6 +4072,9 @@ export function AllocationPageClient() {
                                                 <TableHead>
                                                   END DATE
                                                 </TableHead>
+                                                <TableHead className="text-right">
+                                                  ACTIONS
+                                                </TableHead>
                                               </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -4080,6 +4087,10 @@ export function AllocationPageClient() {
                                                     detailId &&
                                                     detailId ===
                                                       selectedEmployeeAllocations.highlightedAllocationId;
+                                                  const canDeallocate =
+                                                    Boolean(detailId) &&
+                                                    !isSupersededAllocationRow(detailRow) &&
+                                                    !isDeallocatedAllocationRow(detailRow);
                                                   return (
                                                     <TableRow
                                                       key={`${detailId || "emp-alloc"}-${detailIdx}`}
@@ -4114,6 +4125,49 @@ export function AllocationPageClient() {
                                                       </TableCell>
                                                       <TableCell className="px-3 py-2 whitespace-nowrap">
                                                         {String(detailRow.end_date ?? "—")}
+                                                      </TableCell>
+                                                      <TableCell className="px-3 py-2 text-right">
+                                                        <Button
+                                                          type="button"
+                                                          variant="ghost"
+                                                          size="icon-sm"
+                                                          className="text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-40"
+                                                          aria-label={`Deallocate ${detailId || detailIdx}`}
+                                                          title={
+                                                            canDeallocate
+                                                              ? "Deallocate from project (returns to talent pool)"
+                                                              : "This allocation cannot be deallocated"
+                                                          }
+                                                          disabled={actionLoading || !canDeallocate}
+                                                          onClick={() => {
+                                                            if (!detailId) return;
+                                                            runAction("Deallocate", async () => {
+                                                              await hrmsService.deleteAllocation(detailId);
+                                                              showSuccessToast(
+                                                                "Employee deallocated. Capacity returned to the talent pool."
+                                                              );
+                                                              setSelectedEmployeeAllocations((prev) =>
+                                                                prev
+                                                                  ? {
+                                                                      ...prev,
+                                                                      allocations: prev.allocations.filter(
+                                                                        (r) => allocationRowId(r) !== detailId
+                                                                      ),
+                                                                    }
+                                                                  : null
+                                                              );
+                                                              setAllocations((prev) =>
+                                                                prev.filter(
+                                                                  (r) => allocationRowId(r) !== detailId
+                                                                )
+                                                              );
+                                                              invalidateAllocationDependentQueries(queryClient);
+                                                              await loadAllocationsForHr();
+                                                            });
+                                                          }}
+                                                        >
+                                                          <IconTrash />
+                                                        </Button>
                                                       </TableCell>
                                                     </TableRow>
                                                   );

@@ -30,8 +30,8 @@ export function formatS3Error(error: unknown): string {
   }
 
   return status
-    ? `Object storage request failed (HTTP ${status}). Check bucket, credentials, and region in .env.local.`
-    : "Object storage request failed. Check bucket, credentials, and region in .env.local.";
+    ? `File storage request failed (HTTP ${status}).`
+    : "File storage request failed. Please try again later or contact support.";
 }
 
 export function isMissingObjectError(error: unknown): boolean {

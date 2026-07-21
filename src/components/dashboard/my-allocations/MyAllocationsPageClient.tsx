@@ -68,8 +68,7 @@ function HistoryTable({
             <TableRow key={row.id}>
               <TableCell className="whitespace-nowrap">
                 <div className="min-w-0">
-                  <p className="font-medium text-wt-text">{row.projectName}</p>
-                  <p className="text-xs text-wt-text-muted">{row.projectCode}</p>
+                  <p className="font-medium text-wt-text">{row.projectName || "—"}</p>
                 </div>
               </TableCell>
               <TableCell className="whitespace-nowrap">{formatRoleDisplayValue(row.role)}</TableCell>
@@ -129,10 +128,9 @@ function ProjectAllocationCard({
               {capacityLabel(capacity)}
             </span>
           </div>
-          <p className="mt-1 pl-6 text-xs text-wt-text-muted">
-            {project.projectCode}
-            {project.clientName ? ` · ${project.clientName}` : ""}
-          </p>
+          {project.clientName ? (
+            <p className="mt-1 pl-6 text-xs text-wt-text-muted">{project.clientName}</p>
+          ) : null}
           {myAllocation ? (
             <p className="mt-2 pl-6 text-sm text-wt-text-muted">
               Your Role: {formatRoleDisplayValue(myAllocation.role)}

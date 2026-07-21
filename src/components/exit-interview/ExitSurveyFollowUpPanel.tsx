@@ -27,7 +27,7 @@ import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { useExitSurveyFollowUpList } from "@/hooks/exit-interview/useExitSurveyFollowUpList";
-import { formatApiDateDisplay } from "@/utils/apiDate";
+import { formatApiDate, formatApiDateDisplay } from "@/utils/apiDate";
 import {
   activeSortDirectionForColumn,
   toggleColumnSort,
@@ -67,6 +67,18 @@ function bulkResendResultClassName(
   return "border-amber-200 bg-amber-50 text-amber-900";
 }
 
+/** Matches backend `exit_survey_follow_up_window` (±60 days around today). */
+const EXIT_SURVEY_FOLLOW_UP_DAYS = 60;
+
+function defaultExitSurveyFollowUpDateRange(): { from: string; to: string } {
+  const today = new Date();
+  const from = new Date(today);
+  from.setDate(from.getDate() - EXIT_SURVEY_FOLLOW_UP_DAYS);
+  const to = new Date(today);
+  to.setDate(to.getDate() + EXIT_SURVEY_FOLLOW_UP_DAYS);
+  return { from: formatApiDate(from), to: formatApiDate(to) };
+}
+
 export function ExitSurveyFollowUpPanel() {
   const router = useRouter();
   const [listPage, setListPage] = useState(0);
@@ -75,8 +87,12 @@ export function ExitSurveyFollowUpPanel() {
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
-  const [filterFromDate, setFilterFromDate] = useState("");
-  const [filterToDate, setFilterToDate] = useState("");
+  const [filterFromDate, setFilterFromDate] = useState(
+    () => defaultExitSurveyFollowUpDateRange().from,
+  );
+  const [filterToDate, setFilterToDate] = useState(
+    () => defaultExitSurveyFollowUpDateRange().to,
+  );
   const [filterType, setFilterType] = useState("");
   const [filterSurveyStatus, setFilterSurveyStatus] =
     useState<ExitSurveyStatusFilter>(DEFAULT_EXIT_SURVEY_STATUS_FILTER);
@@ -287,7 +303,7 @@ export function ExitSurveyFollowUpPanel() {
           aria-label="Search"
         />
         <DatePickerField
-          label="From"
+          label="From Date"
           value={filterFromDate}
           onChange={(v) => {
             setFilterFromDate(v);
@@ -296,7 +312,7 @@ export function ExitSurveyFollowUpPanel() {
           className="w-[10.5rem] shrink-0"
         />
         <DatePickerField
-          label="To"
+          label="To Date"
           value={filterToDate}
           onChange={(v) => {
             setFilterToDate(v);
@@ -305,7 +321,7 @@ export function ExitSurveyFollowUpPanel() {
           className="w-[10.5rem] shrink-0"
         />
         <SelectField
-          label="User type"
+          label="User Type"
           className="w-[10.5rem] shrink-0"
           value={filterType}
           onChange={(v) => {

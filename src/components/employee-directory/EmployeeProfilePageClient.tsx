@@ -29,7 +29,14 @@ import {
   type EmployeeProfileEditForm,
 } from "@/utils/employeeDirectory";
 import { validatePersonalEmail, validateWorkEmail } from "@/utils/personalEmail";
-import { isInternOnlyBand } from "@/utils/dashboard/validation";
+import { useDesignationSelectOptions } from "@/hooks/useDesignationSelectOptions";
+import { useOnboardOptions } from "@/hooks/useOnboardOptions";
+import {
+  bandDisplayLabel,
+  bandSelectOptions,
+  bandsForDepartment,
+  isInternOnlyBand,
+} from "@/utils/dashboard/validation";
 import {
   PHONE_COUNTRY_OPTIONS,
   defaultPhoneCountryIso,
@@ -43,7 +50,9 @@ import {
 import { canFetchEmployeeResumeApi, pickPortalRoles } from "@/utils/roles";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { AdaptiveSelectField, InputField, DatePickerField } from "@/components/dashboard/ui/forms";
+import { AdaptiveSelectField, InputField } from "@/components/dashboard/ui/forms";
+import { SkillsMultiSelectField } from "@/components/dashboard/ui/SkillsMultiSelectField";
+import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
 import { FormActionBar } from "@/components/dashboard/ui/FormActionBar";
 import { FormSection, FormSubsection } from "@/components/dashboard/ui/FormSection";
 import { EmployeeProfileHeaderCard } from "@/components/employee-directory/EmployeeProfileHeaderCard";
@@ -55,7 +64,7 @@ const WORK_LOCATIONS = ["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"];
 const USER_STATUSES = ["ACTIVE", "INACTIVE", "PENDING", "ONBOARDING"];
 const SKILL_RATINGS = ["1", "2", "3", "4", "5"];
 
-type BandOption = { id: string; label: string };
+type BandOption = { value: string; label: string };
 
 export function EmployeeProfilePageClient() {
   const params = useParams();
@@ -83,8 +92,23 @@ export function EmployeeProfilePageClient() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<EmployeeProfileEditForm | null>(null);
-  const [bandOptions, setBandOptions] = useState<BandOption[]>([]);
+  const [bandRows, setBandRows] = useState<Array<Record<string, unknown>>>([]);
   const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
+  const { data: onboardOptions, isLoading: onboardOptionsLoading } = useOnboardOptions(
+    queriesEnabled && isEditing && canEditProfile
+  );
+
+  const criticalSkillOptions = useMemo(() => {
+    const options = onboardOptions?.primary_skills?.length
+      ? onboardOptions.primary_skills
+      : FALLBACK_ONBOARD_OPTIONS.primary_skills;
+    return options.map((option) => ({ value: option.value, label: option.label }));
+  }, [onboardOptions?.primary_skills]);
+
+  const allowedCriticalSkills = useMemo(
+    () => new Set(criticalSkillOptions.map((option) => option.value)),
+    [criticalSkillOptions]
+  );
   const profileRecord = profile ?? {};
   const displayName = cleanEmployeeName(profileRecord) || "Employee";
   const department = String(pickProfileField(profileRecord, ["department"]) ?? "").trim();
@@ -124,15 +148,7 @@ export function EmployeeProfilePageClient() {
         ]);
         if (cancelled) return;
         const rows = toRows((bandsRes as { data?: unknown }).data ?? bandsRes);
-        const bands = rows
-          .map((row) => {
-            const id = String(row.id ?? row.band_id ?? row.bandId ?? "").trim();
-            const name = String(row.name ?? row.band_name ?? row.bandName ?? "").trim();
-            if (!id && !name) return null;
-            return { id: id || name, label: name || id };
-          })
-          .filter((band): band is BandOption => band !== null);
-        setBandOptions(bands);
+        setBandRows(rows);
 
         let departments = Array.from(
           new Set(
@@ -166,7 +182,7 @@ export function EmployeeProfilePageClient() {
         );
       } catch {
         if (!cancelled) {
-          setBandOptions([]);
+          setBandRows([]);
           setDepartmentOptions([...HARDCODED_DEPARTMENT_OPTIONS]);
         }
       }
@@ -176,22 +192,66 @@ export function EmployeeProfilePageClient() {
     };
   }, [isEditing, canEditProfile]);
 
-  const bandSelectOptions = useMemo(() => {
-    // Full-time employees must never be offered intern-only bands (B8, B8 - Intern).
-    const options = isFulltimeEmployee
-      ? bandOptions.filter((band) => !isInternOnlyBand(band.label))
-      : [...bandOptions];
+  const bandSelectOptionsList = useMemo(() => {
+    const dept = editForm?.department?.trim() ?? "";
+    let filtered = bandsForDepartment(bandRows, dept);
+    if (isFulltimeEmployee) {
+      filtered = filtered.filter((row) => !isInternOnlyBand(bandDisplayLabel(row)));
+    }
+    const options: BandOption[] = bandSelectOptions(filtered);
     const currentId = editForm?.band_id?.trim();
-    if (currentId && !options.some((band) => band.id === currentId)) {
+    if (currentId && !options.some((band) => band.value === currentId)) {
       const bandName = String(
         pickProfileField(profileRecord, ["band", "band_name", "bandName"]) ?? ""
       ).trim();
-      options.unshift({ id: currentId, label: bandName || currentId });
+      options.unshift({ value: currentId, label: bandName || currentId });
     }
     return options;
-  }, [bandOptions, editForm?.band_id, profileRecord, isFulltimeEmployee]);
+  }, [bandRows, editForm?.band_id, editForm?.department, profileRecord, isFulltimeEmployee]);
 
   const bandSelectValue = editForm?.band_id?.trim() ?? "";
+  const designationBandId = Number(bandSelectValue) || 0;
+  const departmentForDesignations = editForm?.department?.trim() ?? "";
+  const {
+    options: designationOptions,
+    loading: designationLoading,
+  } = useDesignationSelectOptions(departmentForDesignations, designationBandId);
+
+  useEffect(() => {
+    if (!isEditing || !editForm) return;
+    const dept = editForm.department.trim();
+    if (!dept) return;
+    const currentBandId = editForm.band_id.trim();
+    if (!currentBandId) return;
+    const stillValid = bandSelectOptionsList.some((option) => option.value === currentBandId);
+    if (!stillValid) {
+      setEditForm((prev) => (prev ? { ...prev, band_id: "", role: "" } : prev));
+    }
+  }, [bandSelectOptionsList, editForm, isEditing]);
+
+  useEffect(() => {
+    if (!isEditing || !editForm || designationLoading) return;
+    if (designationOptions.length === 1) {
+      const onlyRole = designationOptions[0]?.value ?? "";
+      if (onlyRole && editForm.role !== onlyRole) {
+        setEditForm((prev) => (prev ? { ...prev, role: onlyRole } : prev));
+      }
+      return;
+    }
+    if (!editForm.role) return;
+    const validRoles = new Set(designationOptions.map((option) => option.value).filter(Boolean));
+    if (designationOptions.length > 0 && !validRoles.has(editForm.role)) {
+      setEditForm((prev) => (prev ? { ...prev, role: "" } : prev));
+    }
+  }, [designationOptions, designationLoading, editForm, isEditing]);
+
+  useEffect(() => {
+    if (!isEditing || !editForm || onboardOptionsLoading || !allowedCriticalSkills.size) return;
+    const filtered = editForm.primary_skills.filter((skill) => allowedCriticalSkills.has(skill));
+    if (filtered.length !== editForm.primary_skills.length) {
+      setEditForm((prev) => (prev ? { ...prev, primary_skills: filtered } : prev));
+    }
+  }, [allowedCriticalSkills, editForm, isEditing, onboardOptionsLoading]);
 
   const departmentSelectOptions = useMemo(() => {
     const deps = [...departmentOptions];
@@ -237,6 +297,29 @@ export function EmployeeProfilePageClient() {
             editForm.phone_number
           );
           if (phoneError) throw new Error(phoneError);
+          if (designationLoading) {
+            throw new Error("Designations are still loading. Please wait a moment.");
+          }
+          if (!editForm.role.trim()) {
+            throw new Error("Designation is required.");
+          }
+          if (!designationOptions.some((option) => option.value === editForm.role.trim())) {
+            throw new Error(
+              "Selected designation is not valid for the chosen department and band."
+            );
+          }
+          if (onboardOptionsLoading) {
+            throw new Error("Critical skills are still loading. Please wait a moment.");
+          }
+          if (!editForm.primary_skills.length) {
+            throw new Error("At least one critical skill is required.");
+          }
+          const invalidSkills = editForm.primary_skills.filter(
+            (skill) => !allowedCriticalSkills.has(skill)
+          );
+          if (invalidSkills.length) {
+            throw new Error("Selected critical skills must come from the predefined list.");
+          }
         }
         await updateMutation.mutateAsync(
           editFormToUpdatePayload(editForm, { statusOnly: statusOnlyEdit })
@@ -337,6 +420,7 @@ export function EmployeeProfilePageClient() {
                     <div className="max-w-sm">
                       <AdaptiveSelectField
                         label="Status"
+                        required
                         value={editForm.user_status}
                         options={USER_STATUSES}
                         onChange={(v) => setEditForm({ ...editForm, user_status: v })}
@@ -352,6 +436,7 @@ export function EmployeeProfilePageClient() {
                     <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
                       <InputField
                         label="Name"
+                        required
                         value={editForm.name}
                         onChange={(v) => setEditForm({ ...editForm, name: v })}
                         disabled={saving}
@@ -366,6 +451,7 @@ export function EmployeeProfilePageClient() {
                       />
                       <AdaptiveSelectField
                         label="Country Code"
+                        required
                         value={editForm.phone_country ?? defaultPhoneCountryIso()}
                         placeholder="Select Country Code"
                         searchPlaceholder="Search Country Code…"
@@ -376,21 +462,28 @@ export function EmployeeProfilePageClient() {
                       <InputField
                         label="Phone Number"
                         type="tel"
+                        required
                         value={editForm.phone_number}
                         onChange={(v) => setEditForm({ ...editForm, phone_number: digitsOnly(v) })}
                         disabled={saving}
                       />
                       <AdaptiveSelectField
                         label="Department"
+                        required
                         value={editForm.department}
                         placeholder="Select Department"
                         searchPlaceholder="Search Departments…"
                         options={departmentSelectOptions}
-                        onChange={(v) => setEditForm({ ...editForm, department: v })}
+                        onChange={(v) =>
+                          setEditForm((prev) =>
+                            prev ? { ...prev, department: v, band_id: "", role: "" } : prev
+                          )
+                        }
                         disabled={saving}
                       />
                       <AdaptiveSelectField
                         label="Status"
+                        required
                         value={editForm.user_status}
                         options={USER_STATUSES}
                         onChange={(v) => setEditForm({ ...editForm, user_status: v })}
@@ -398,6 +491,7 @@ export function EmployeeProfilePageClient() {
                       />
                       <AdaptiveSelectField
                         label="Work Mode"
+                        required
                         value={editForm.work_mode}
                         options={workModeOptions}
                         onChange={(v) => setEditForm({ ...editForm, work_mode: v })}
@@ -405,6 +499,7 @@ export function EmployeeProfilePageClient() {
                       />
                       <AdaptiveSelectField
                         label="Work Location"
+                        required
                         value={editForm.work_location_type}
                         options={WORK_LOCATIONS}
                         onChange={(v) => setEditForm({ ...editForm, work_location_type: v })}
@@ -412,30 +507,68 @@ export function EmployeeProfilePageClient() {
                       />
                       <AdaptiveSelectField
                         label="Band"
+                        required
                         value={bandSelectValue}
-                        placeholder="Select Band"
+                        placeholder={
+                          !editForm.department.trim()
+                            ? "Select Department First"
+                            : bandSelectOptionsList.length
+                              ? "Select Band"
+                              : "No Bands Available"
+                        }
                         searchPlaceholder="Search Bands…"
-                        options={bandSelectOptions.map((band) => ({
-                          value: band.id,
-                          label: band.label,
-                        }))}
-                        onChange={(id) => setEditForm({ ...editForm, band_id: id })}
-                        disabled={saving}
+                        options={bandSelectOptionsList}
+                        onChange={(id) =>
+                          setEditForm((prev) =>
+                            prev ? { ...prev, band_id: id, role: "" } : prev
+                          )
+                        }
+                        disabled={saving || !editForm.department.trim() || !bandSelectOptionsList.length}
                       />
-                      <DatePickerField
-                        label="Date of Birth"
-                        value={editForm.date_of_birth}
-                        onChange={(v) => setEditForm({ ...editForm, date_of_birth: v })}
-                        disabled={saving}
+                      <AdaptiveSelectField
+                        label="Designation"
+                        required
+                        value={editForm.role}
+                        loading={designationLoading}
+                        loadingLabel="Loading Designations…"
+                        placeholder={
+                          !editForm.department.trim() || designationBandId <= 0
+                            ? "Select Department And Band First"
+                            : designationLoading
+                              ? "Loading Designations…"
+                              : designationOptions.length
+                                ? "Select Designation"
+                                : "No Designations For This Band"
+                        }
+                        searchPlaceholder="Search Designations…"
+                        options={designationOptions}
+                        onChange={(role) =>
+                          setEditForm((prev) => (prev ? { ...prev, role } : prev))
+                        }
+                        disabled={
+                          saving ||
+                          !editForm.department.trim() ||
+                          designationBandId <= 0 ||
+                          designationLoading ||
+                          !designationOptions.length
+                        }
                       />
                     </div>
 
                     <FormSubsection title="Skills">
                       <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
-                        <InputField
-                          label="Primary Skills"
+                        <SkillsMultiSelectField
+                          label="Critical Skills"
+                          required
+                          className="sm:col-span-3"
                           value={editForm.primary_skills}
-                          onChange={(v) => setEditForm({ ...editForm, primary_skills: v })}
+                          options={criticalSkillOptions}
+                          loading={onboardOptionsLoading}
+                          loadingLabel="Loading Critical Skills…"
+                          placeholder="Select Critical Skills"
+                          onChange={(skills) =>
+                            setEditForm((prev) => (prev ? { ...prev, primary_skills: skills } : prev))
+                          }
                           disabled={saving}
                         />
                         <InputField

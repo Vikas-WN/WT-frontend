@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FieldLabel } from "@/components/ui/field";
 import { useEmployeeManagers } from "@/hooks/leave/useEmployeeManagers";
 import { formatEmployeePickerLabel } from "@/utils/employeePickerLabel";
+import { filterEligibleLeaveManagers } from "@/utils/leaveManagerEligibility";
 import { ChevronsUpDown, X, Check, Search, Loader2 } from "lucide-react";
 
 function optionLabel(option: LeaveManagerOption): string {
@@ -70,7 +71,10 @@ export function LeaveManagerSelector({
       ? managersQ.error.message
       : null;
 
-  const options = externalOptions ?? fetchedOptions;
+  const options = useMemo(
+    () => filterEligibleLeaveManagers(externalOptions ?? fetchedOptions),
+    [externalOptions, fetchedOptions]
+  );
   const loading = externalOptions
     ? (externalLoading ?? false)
     : managersQ.isLoading && !managersQ.data;

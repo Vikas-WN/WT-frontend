@@ -94,9 +94,9 @@ export function CurrentAllocationHint({
     const benchTotal = breakdown
       .filter((item) => item.isBench)
       .reduce((sum, item) => sum + item.percent, 0);
-    const assigned = projectTotal + benchTotal;
-    const remaining = Math.max(0, 100 - assigned);
-    return { projectTotal, benchTotal, assigned, remaining };
+    // Talent pool is free capacity — available for new project allocations.
+    const available = Math.max(0, 100 - projectTotal);
+    return { projectTotal, benchTotal, available };
   }, [breakdown]);
 
   if (!email.trim()) return null;
@@ -110,7 +110,7 @@ export function CurrentAllocationHint({
       <p className="text-xs text-wt-text-muted">
         {breakdown.length
           ? `Allocated to projects: ${summary.projectTotal}%${
-              summary.benchTotal > 0 ? ` · Bench: ${summary.benchTotal}%` : ""
+              summary.benchTotal > 0 ? ` · Talent Pool: ${summary.benchTotal}%` : ""
             }`
           : "Allocated to projects: —"}
       </p>
@@ -120,7 +120,7 @@ export function CurrentAllocationHint({
   if (!breakdown.length) {
     return (
       <div className="rounded-xl border border-wt-border bg-wt-surface-2/60 p-3 text-sm text-wt-text-muted">
-        No active allocations found. This employee is fully available (100% unassigned).
+        No active allocations found. This employee is fully available in the talent pool (100%).
       </div>
     );
   }
@@ -130,12 +130,9 @@ export function CurrentAllocationHint({
       <p className="text-sm font-medium text-wt-text">Current allocations</p>
       <ul className="space-y-1 text-sm">
         {breakdown.map((item) => (
-          <li key={`${item.projectCode}-${item.isBench ? "bench" : "project"}`} className="flex justify-between gap-3">
+          <li key={`${item.projectCode}-${item.isBench ? "talent-pool" : "project"}`} className="flex justify-between gap-3">
             <span className="min-w-0 truncate text-wt-text">
-              {item.isBench ? "Bench" : item.projectName}
-              {!item.isBench && item.projectCode ? (
-                <span className="text-wt-text-muted"> · {item.projectCode}</span>
-              ) : null}
+              {item.isBench ? "Talent Pool" : item.projectName}
             </span>
             <span className="shrink-0 tabular-nums text-wt-text-muted">{item.percent}%</span>
           </li>
@@ -143,9 +140,8 @@ export function CurrentAllocationHint({
       </ul>
       <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-wt-border pt-2 text-xs text-wt-text-muted">
         <span>Projects: {summary.projectTotal}%</span>
-        <span>Bench: {summary.benchTotal}%</span>
-        <span>Total assigned: {summary.assigned}%</span>
-        {summary.remaining > 0 ? <span>Available: {summary.remaining}%</span> : null}
+        <span>Talent Pool: {summary.benchTotal}%</span>
+        <span>Available to allocate: {summary.available}%</span>
       </div>
     </div>
   );
