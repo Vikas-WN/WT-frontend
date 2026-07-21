@@ -68,6 +68,11 @@ export function getEmployeeStatusBadgeClassName(status: unknown): string {
   return `wt-status-badge wt-status-badge--${tone.replace("_", "-")}`;
 }
 
+/** Employees who have not yet completed onboarding (Invited / legacy Onboarding). */
+export function isPreActiveEmployeeStatus(status: unknown): boolean {
+  return normalizeEmployeeStatusKey(status) === "INVITED";
+}
+
 export function isActiveUserStatus(status: unknown): boolean {
   return normalizeEmployeeStatusKey(status) === "ACTIVE";
 }

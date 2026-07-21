@@ -364,8 +364,11 @@ export function EmployeePageClient() {
                         variant="brand"
                         type="button"
                         className="h-10 shrink-0 px-3 text-sm"
-                        onClick={(event) => {
-                          event.currentTarget.blur();
+                        onMouseDown={(event) => {
+                          // Avoid sticky mouse focus so no focus outline/glow remains after click.
+                          if (event.button === 0) event.preventDefault();
+                        }}
+                        onClick={() => {
                           void refreshInvitedList({
                             from: invitedListFromDateRef.current,
                             to: invitedListToDateRef.current,
@@ -382,8 +385,10 @@ export function EmployeePageClient() {
                         variant="outline"
                         type="button"
                         className="h-10 shrink-0 border-wt-border bg-wt-surface-1 px-3 text-sm font-medium text-wt-text shadow-sm hover:bg-wt-surface-2"
-                        onClick={(event) => {
-                          event.currentTarget.blur();
+                        onMouseDown={(event) => {
+                          if (event.button === 0) event.preventDefault();
+                        }}
+                        onClick={() => {
                           const { from, to } = lastSevenDaysInvitedEmployeesDateRange();
                           setInvitedListFromDate(from);
                           setInvitedListToDate(to);

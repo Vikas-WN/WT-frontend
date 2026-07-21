@@ -385,6 +385,7 @@ export function EmployeeDirectoryPageClient() {
                                 <EmployeePortalRoleSelect
                                   email={String(record.email ?? display.email ?? "")}
                                   portalRoles={record.portal_roles ?? record.portalRoles}
+                                  employeeStatus={record.status ?? record.user_status ?? display.status}
                                   canEdit={canEditDirectory}
                                   compact
                                 />

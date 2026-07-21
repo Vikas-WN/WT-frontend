@@ -13,11 +13,14 @@ import {
   normalizePortalRoles,
   pickPrimaryPortalRole,
 } from "@/utils/roles";
+import { isPreActiveEmployeeStatus } from "@/utils/userStatus";
 
 type Props = {
   email: string;
   portalRoles: unknown;
   canEdit: boolean;
+  /** Employee lifecycle status — Invited users cannot change portal role. */
+  employeeStatus?: unknown;
   compact?: boolean;
 };
 
@@ -25,10 +28,15 @@ function rolesForPortalSelection(nextRole: string): string[] {
   return nextRole === "ROLE_EMPLOYEE" ? ["ROLE_EMPLOYEE"] : [nextRole];
 }
 
+function isInvitedEmployeeStatus(status: unknown): boolean {
+  return isPreActiveEmployeeStatus(status);
+}
+
 export function EmployeePortalRoleSelect({
   email,
   portalRoles,
   canEdit,
+  employeeStatus,
   compact = false,
 }: Props) {
   const queryClient = useQueryClient();
@@ -44,6 +52,8 @@ export function EmployeePortalRoleSelect({
     () => PORTAL_ROLE_SELECT_OPTIONS.map((option) => ({ value: option.value, label: option.label })),
     []
   );
+  const invited = isInvitedEmployeeStatus(employeeStatus);
+  const editable = canEdit && !invited;
 
   useEffect(() => {
     if (optimisticRole && propRole === optimisticRole) {
@@ -93,6 +103,12 @@ export function EmployeePortalRoleSelect({
   const persistRole = async (nextRole: string) => {
     const targetEmail = email.trim();
     if (!targetEmail || !nextRole || nextRole === currentRole) return;
+    if (invited) {
+      showErrorToast(
+        "Portal role cannot be changed while the employee is Invited. Wait until onboarding is complete."
+      );
+      return;
+    }
     setSaving(true);
     try {
       await hrmsService.setPortalRole({ target_email: targetEmail, role: nextRole });
@@ -114,8 +130,12 @@ export function EmployeePortalRoleSelect({
     }
   };
 
-  if (!canEdit) {
-    return <span className="block truncate text-wt-text">{displayLabel}</span>;
+  if (!editable) {
+    return (
+      <span className="block truncate text-wt-text" title={invited ? "Role is locked until onboarding is complete" : undefined}>
+        {displayLabel}
+      </span>
+    );
   }
 
   if (compact) {
@@ -135,6 +155,8 @@ export function EmployeePortalRoleSelect({
           variant="table-inline"
           className="w-full min-w-0"
           contentClassName="min-w-[14rem] w-max"
+          // Role is required — clearing via Backspace/Delete must not fire onChange("").
+          clearSelectionOnEmptyInput={false}
         />
       </div>
     );
@@ -153,6 +175,7 @@ export function EmployeePortalRoleSelect({
         options={[...PORTAL_ROLE_SELECT_OPTIONS]}
         disabled={saving}
         onChange={(next) => void persistRole(next)}
+        clearSelectionOnEmptyInput={false}
       />
     </div>
   );

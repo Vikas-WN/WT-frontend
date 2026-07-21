@@ -48,6 +48,7 @@ import {
   lookupResumeShareLink,
 } from "@/utils/employeeResume";
 import { canFetchEmployeeResumeApi, pickPortalRoles } from "@/utils/roles";
+import { normalizeEmployeeStatusKey } from "@/utils/userStatus";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { AdaptiveSelectField, InputField } from "@/components/dashboard/ui/forms";
@@ -637,11 +638,24 @@ export function EmployeeProfilePageClient() {
               {canEditDirectory && email ? (
                 <FormSection
                   title="Portal Role"
-                  description="Set this employee's portal access role from user_roles."
+                  description={
+                    normalizeEmployeeStatusKey(
+                      profileRecord.status ??
+                        profileRecord.user_status ??
+                        profileRecord.userStatus
+                    ) === "INVITED"
+                      ? "Portal role is locked while this employee is Invited. It can be changed after onboarding is complete."
+                      : "Set this employee's portal access role from user_roles."
+                  }
                 >
                   <EmployeePortalRoleSelect
                     email={email}
                     portalRoles={pickPortalRoles(profileRecord)}
+                    employeeStatus={
+                      profileRecord.status ??
+                      profileRecord.user_status ??
+                      profileRecord.userStatus
+                    }
                     canEdit
                   />
                 </FormSection>
