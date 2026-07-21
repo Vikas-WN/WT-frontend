@@ -18,7 +18,7 @@ async function fetchHasPrimaryManagerTimelogInbox(): Promise<boolean> {
   const data = normalizeProjectTimelogsData(
     ((res as { data?: unknown }).data ?? res) as unknown
   );
-  return data.projects.length > 0;
+  return data.projects.length > 0 || data.pendingApprovals.length > 0;
 }
 
 /** Whether the signed-in user may open team / project time-log views. */
