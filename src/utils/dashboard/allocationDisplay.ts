@@ -100,7 +100,7 @@ export function allocationProjectDisplayName(row: Record<string, unknown>): stri
   const title = allocationProjectTitleFromRow(row);
   if (title) return title;
   const code = allocationProjectCode(row);
-  if (code.toUpperCase() === "BENCH") return "Bench";
+  if (code.toUpperCase() === "BENCH" || code.toUpperCase() === "GLOBAL") return "Talent Pool";
   const allocated = String(row.allocated_project ?? "").trim();
   if (allocated.includes("—")) {
     const name = allocated.split("—").slice(1).join("—").trim();

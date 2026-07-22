@@ -206,22 +206,24 @@ export type EmployeeProfileEditForm = {
   phone_country?: string;
   phone_number: string;
   department: string;
+  role: string;
   user_status: string;
   work_mode: string;
   work_location_type: string;
   band_id: string;
-  primary_skills: string;
+  primary_skills: string[];
   secondary_skill: string;
   secondary_rating: string;
-  date_of_birth: string;
-  holiday_calendar_id: string;
 };
 
 export function profileToEditForm(profile: Record<string, unknown>): EmployeeProfileEditForm {
   const primarySkillsRaw = pickProfileField(profile, ["primary_skills", "primarySkills"]);
   const primarySkills = Array.isArray(primarySkillsRaw)
-    ? primarySkillsRaw.map((item) => String(item).trim()).filter(Boolean).join(", ")
-    : String(primarySkillsRaw ?? "").trim();
+    ? primarySkillsRaw.map((item) => String(item).trim()).filter(Boolean)
+    : String(primarySkillsRaw ?? "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
 
   const secondarySkillsRaw =
     (profile.secondary_skills as Array<Record<string, unknown>> | undefined) ??
@@ -239,6 +241,7 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
     phone_country: phoneParts.countryIso,
     phone_number: phoneParts.nationalNumber,
     department: String(pickProfileField(profile, ["department"]) ?? "").trim(),
+    role: String(pickProfileField(profile, ["role", "designation"]) ?? "").trim(),
     user_status: String(
       pickProfileField(profile, ["user_status", "status", "userStatus"]) ?? ""
     ).trim(),
@@ -252,12 +255,6 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
     primary_skills: primarySkills,
     secondary_skill: String(firstSecondary?.skill ?? "").trim(),
     secondary_rating: String(firstSecondary?.rating ?? "3").trim() || "3",
-    date_of_birth: String(
-      pickProfileField(profile, ["date_of_birth", "dob", "dateOfBirth"]) ?? ""
-    ).trim(),
-    holiday_calendar_id: String(
-      pickProfileField(profile, ["holiday_calendar_id", "holidayCalendarId"]) ?? ""
-    ).trim(),
   };
 }
 
@@ -269,10 +266,7 @@ export function editFormToUpdatePayload(
     return { user_status: form.user_status.trim() };
   }
 
-  const primary = form.primary_skills
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const primary = form.primary_skills.map((skill) => skill.trim()).filter(Boolean);
 
   const secondarySkill = form.secondary_skill.trim();
   const secondary_skills = secondarySkill
@@ -287,6 +281,7 @@ export function editFormToUpdatePayload(
       form.phone_number
     ),
     department: form.department.trim(),
+    role: form.role.trim(),
     user_status: form.user_status.trim(),
     work_mode: form.work_mode.trim(),
     work_location_type: form.work_location_type.trim(),
@@ -302,17 +297,6 @@ export function editFormToUpdatePayload(
 
   const personalEmail = form.personal_email.trim();
   if (personalEmail) payload.personal_email = personalEmail;
-
-  const dob = form.date_of_birth.trim();
-  if (dob) payload.date_of_birth = dob;
-
-  const holidayCalendarId = form.holiday_calendar_id.trim();
-  if (holidayCalendarId) {
-    const parsed = Number(holidayCalendarId);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      payload.holiday_calendar_id = parsed;
-    }
-  }
 
   return payload;
 }
@@ -492,7 +476,6 @@ const PROFILE_VIEW_WORK_LABELS = new Set([
 
 const PROFILE_VIEW_PERSONAL_LABELS = new Set([
   "Personal Email",
-  "Date of Birth",
   "Gender",
   "Marital Status",
   "Local Address",
@@ -507,13 +490,17 @@ const PROFILE_VIEW_LABEL_OVERRIDES: Record<string, string> = {
 
 function filterProfileViewEntries(
   sectionTitle: string,
-  entries: ProfileDisplayEntry[]
+  entries: ProfileDisplayEntry[],
+  options?: { includeDateOfBirth?: boolean }
 ): ProfileDisplayEntry[] {
   const allowed =
     sectionTitle === "Work Information"
       ? PROFILE_VIEW_WORK_LABELS
       : sectionTitle === "Personal Information"
-        ? PROFILE_VIEW_PERSONAL_LABELS
+        ? new Set([
+            ...PROFILE_VIEW_PERSONAL_LABELS,
+            ...(options?.includeDateOfBirth ? (["Date of Birth"] as const) : []),
+          ])
         : null;
   if (!allowed) return entries;
 
@@ -528,11 +515,12 @@ function filterProfileViewEntries(
 /** Profile sections for the directory profile view (omits header-duplicated fields). */
 export function buildProfileViewSections(
   profile: Record<string, unknown>,
-  resumeShareHref?: string | null
+  resumeShareHref?: string | null,
+  options?: { includeDateOfBirth?: boolean }
 ): ProfileDisplaySection[] {
   return buildGroupedProfileSections(profile, resumeShareHref).map((section) => ({
     ...section,
-    entries: filterProfileViewEntries(section.title, section.entries),
+    entries: filterProfileViewEntries(section.title, section.entries, options),
   }));
 }
 

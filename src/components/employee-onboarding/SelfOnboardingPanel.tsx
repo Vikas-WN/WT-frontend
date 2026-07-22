@@ -106,19 +106,51 @@ export function SelfOnboardingPanel({
         throw new Error("Date of birth cannot be in the future.");
       }
 
-      const resumeShareLink = form.resume_share_link.trim();
-      const resumeLinkError = validateResumeShareLink(resumeShareLink);
-      if (resumeLinkError) throw new Error(resumeLinkError);
-
       const yoeValue = form.yoe.trim() ? Number(form.yoe) : null;
       if (form.yoe.trim() && (!Number.isFinite(yoeValue) || yoeValue! < 0)) {
         throw new Error("Years of experience must be a valid number.");
+      }
+      if (form.yoe.trim() && !Number.isInteger(Number(form.yoe))) {
+        throw new Error("Years of experience must be a whole number.");
       }
 
       const experience = form.experience.trim();
       if (priorEmploymentDocsRequired && !experience) {
         throw new Error("Experience summary is required when years of experience is greater than zero.");
       }
+
+      const primarySkillLookup = new Map(
+        options.primary_skills.map((item) => [item.value.toLowerCase(), item.value]),
+      );
+      const primarySkills: string[] = [];
+      for (const rawSkill of form.primary_skills
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)) {
+        const canonical = primarySkillLookup.get(rawSkill.toLowerCase());
+        if (!canonical) {
+          throw new Error(
+            `Invalid primary skill: ${rawSkill}. Choose values from the onboard Primary Skills list (e.g. Python, React).`,
+          );
+        }
+        if (!primarySkills.includes(canonical)) {
+          primarySkills.push(canonical);
+        }
+      }
+      if (!primarySkills.length) {
+        throw new Error("At least one primary skill is required.");
+      }
+
+      if (form.secondary_skill.trim()) {
+        const rating = Number(form.secondary_rating);
+        if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+          throw new Error("Secondary skill rating must be a whole number from 1 to 5.");
+        }
+      }
+
+      const resumeShareLink = form.resume_share_link.trim();
+      const resumeLinkError = validateResumeShareLink(resumeShareLink);
+      if (resumeLinkError) throw new Error(resumeLinkError);
 
       const emergencyNumber = form.emergency_contact_number.trim();
       if (emergencyNumber && !isValidIndiaMobile(emergencyNumber)) {
@@ -154,25 +186,6 @@ export function SelfOnboardingPanel({
       const totalBytes = selectedFiles.reduce((sum, [, file]) => sum + file.size, 0);
       if (totalBytes > MAX_ONBOARD_TOTAL_BYTES) {
         throw new Error("Total upload size exceeds 40 MB. Compress files and retry.");
-      }
-
-      const primarySkills = form.primary_skills
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean);
-      if (!primarySkills.length) {
-        throw new Error("At least one primary skill is required.");
-      }
-
-      if (form.secondary_skill.trim()) {
-        const rating = Number(form.secondary_rating);
-        if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-          throw new Error("Secondary skill rating must be a whole number from 1 to 5.");
-        }
-      }
-
-      if (form.yoe.trim() && !Number.isInteger(Number(form.yoe))) {
-        throw new Error("Years of experience must be a whole number.");
       }
 
       const userData: Record<string, unknown> = {

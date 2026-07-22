@@ -1550,7 +1550,14 @@ select:focus-visible {
   outline-offset: 0;
 }
 
+/* Buttons keep the generic :focus-visible outline above (design keyboard
+   focus). Do not stack a second soft ring — ui/button no longer uses
+   focus-visible:ring-*. */
+
+/* Mouse/touch focus must not keep an outline after click. */
 button:focus:not(:focus-visible),
+[data-slot="button"]:focus:not(:focus-visible),
+[role="button"]:focus:not(:focus-visible),
 a:focus:not(:focus-visible) {
   outline: none;
 }

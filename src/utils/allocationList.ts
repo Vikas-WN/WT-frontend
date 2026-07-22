@@ -135,19 +135,72 @@ import { resolveAllocatedPercentFromRow } from "@/utils/allocationPercent";
 
 const SYSTEM_PROJECT_CODES = new Set(["BENCH", "GLOBAL"]);
 
-/** True when the row is a bench/global capacity filler, not a client project allocation. */
-export function isSystemProjectAllocationRow(row: Record<string, unknown>): boolean {
-  const code = String(row.project_code ?? row.projectCode ?? row.allocated_project ?? "")
+function allocationProjectCode(row: Record<string, unknown>): string {
+  const nested =
+    row.project && typeof row.project === "object" && !Array.isArray(row.project)
+      ? (row.project as Record<string, unknown>)
+      : null;
+  return String(
+    row.project_code ??
+      row.projectCode ??
+      row.allocated_project ??
+      nested?.project_code ??
+      nested?.projectCode ??
+      ""
+  )
     .trim()
     .toUpperCase();
-  return SYSTEM_PROJECT_CODES.has(code);
+}
+
+/** True when the row is a bench/global capacity filler, not a client project allocation. */
+export function isSystemProjectAllocationRow(row: Record<string, unknown>): boolean {
+  const code = allocationProjectCode(row);
+  if (SYSTEM_PROJECT_CODES.has(code)) return true;
+  const name = String(row.project_name ?? row.projectName ?? "")
+    .trim()
+    .toUpperCase();
+  return name === "BENCH";
+}
+
+function isCountableProjectAllocationRow(row: Record<string, unknown>): boolean {
+  if (isSystemProjectAllocationRow(row)) return false;
+  if (isSupersededAllocationRow(row) || isDeallocatedAllocationRow(row)) return false;
+  return true;
 }
 
 /** Sum allocation % on real projects only (excludes BENCH/GLOBAL filler rows). */
 export function sumProjectAllocatedPercent(rows: Array<Record<string, unknown>>): number {
   let total = 0;
   for (const row of rows) {
-    if (isSystemProjectAllocationRow(row)) continue;
+    if (!isCountableProjectAllocationRow(row)) continue;
+    const pct = resolveAllocatedPercentFromRow(row);
+    if (pct != null && Number.isFinite(pct)) total += pct;
+  }
+  return total;
+}
+
+/**
+ * Project allocation % that overlaps `[rangeStart, rangeEnd]` (inclusive).
+ * Bench/GLOBAL never count — that capacity is free to allocate.
+ */
+export function sumOverlappingProjectAllocatedPercent(
+  rows: Array<Record<string, unknown>>,
+  rangeStart: string,
+  rangeEnd: string
+): number {
+  const start = parseApiDate(rangeStart);
+  const end = parseApiDate(rangeEnd);
+  if (!start || !end) return sumProjectAllocatedPercent(rows);
+
+  let total = 0;
+  for (const row of rows) {
+    if (!isCountableProjectAllocationRow(row)) continue;
+    const rowStart = parseApiDate(String(row.start_date ?? row.startDate ?? ""));
+    if (!rowStart) continue;
+    const rowEndRaw = row.end_date ?? row.endDate;
+    const rowEnd = rowEndRaw ? parseApiDate(String(rowEndRaw)) : null;
+    if (rowStart.getTime() > end.getTime()) continue;
+    if (rowEnd && rowEnd.getTime() < start.getTime()) continue;
     const pct = resolveAllocatedPercentFromRow(row);
     if (pct != null && Number.isFinite(pct)) total += pct;
   }
@@ -189,6 +242,72 @@ export function filterAllocationListBySearch(
       .join(" ");
     return haystack.includes(q);
   });
+}
+
+export type AllocationProjectGroup = {
+  projectKey: string;
+  projectCode: string;
+  projectName: string;
+  rows: Array<Record<string, unknown>>;
+};
+
+/** Group allocation rows under their project (preserves row order within each group). */
+export function groupAllocationsByProject(
+  rows: Array<Record<string, unknown>>
+): AllocationProjectGroup[] {
+  const groups = new Map<string, AllocationProjectGroup>();
+
+  for (const row of rows) {
+    const nested =
+      row.project && typeof row.project === "object" && !Array.isArray(row.project)
+        ? (row.project as Record<string, unknown>)
+        : null;
+    let projectCode = String(
+      row.project_code ?? row.projectCode ?? nested?.project_code ?? nested?.projectCode ?? ""
+    )
+      .trim()
+      .toUpperCase();
+    const projectNameFromRow = String(
+      row.project_name ?? row.projectName ?? nested?.project_name ?? nested?.projectName ?? ""
+    ).trim();
+    const allocated = String(row.allocated_project ?? "").trim();
+    if (!projectCode && allocated.includes("—")) {
+      projectCode = (allocated.split("—")[0] ?? "").trim().toUpperCase();
+    }
+    const projectName =
+      projectNameFromRow ||
+      (allocated.includes("—")
+        ? allocated.split("—").slice(1).join("—").trim()
+        : allocated && allocated.toUpperCase() !== projectCode
+          ? allocated
+          : "") ||
+      projectCode ||
+      "Unknown project";
+    const projectKey = projectCode || projectName.toLowerCase() || "unknown";
+
+    const existing = groups.get(projectKey);
+    if (existing) {
+      existing.rows.push(row);
+      if (!existing.projectCode && projectCode) existing.projectCode = projectCode;
+      if (
+        existing.projectName === "Unknown project" ||
+        (projectNameFromRow && existing.projectName === existing.projectCode)
+      ) {
+        existing.projectName = projectName;
+      }
+    } else {
+      groups.set(projectKey, {
+        projectKey,
+        projectCode,
+        projectName,
+        rows: [row],
+      });
+    }
+  }
+
+  return Array.from(groups.values()).sort((a, b) =>
+    a.projectName.localeCompare(b.projectName, undefined, { sensitivity: "base" })
+  );
 }
 
 export function mergeUniqueAllocationListRows(

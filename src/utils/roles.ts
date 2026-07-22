@@ -135,6 +135,14 @@ export function isDeliveryManagerUser(roles: string[]): boolean {
   return hasDmRole(roles) && !hasHrRole(roles);
 }
 
+/** DM-only users should not see allocation %, type, status, or dates on team views. */
+export function shouldHideAllocationOperationalDetails(roles: string[]): boolean {
+  const normalized = normalizeRoles(roles);
+  const isDm = normalized.includes("ROLE_DM");
+  const isPm = normalized.includes("ROLE_MANAGER");
+  return isDm && !isPm && !hasHrRole(roles);
+}
+
 /** Account manager portal user (not HR/admin). */
 export function isAccountManagerPortalUser(roles: string[]): boolean {
   return hasAccountManagerRole(roles) && !hasHrRole(roles);

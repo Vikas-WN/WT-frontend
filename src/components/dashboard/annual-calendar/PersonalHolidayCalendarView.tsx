@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDownToLine } from "lucide-react";
+import { ArrowUpFromLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
@@ -26,7 +26,8 @@ import {
 } from "@/components/dashboard/ui/uiLayout";
 import { ApiError } from "@/api/error";
 import { useHolidayCalendarStorage } from "@/hooks/holiday-calendars/useHolidayCalendarStorage";
-import { showErrorToast } from "@/lib/toast";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { holidayCalendarStorageService } from "@/services/holidayCalendarStorage.service";
 import {
   filterHolidayRowsByYear,
   HOLIDAY_CALENDAR_COLUMNS,
@@ -67,6 +68,7 @@ function sortHolidayRowsByDate(rows: HolidayCalendarRow[], year: number): Holida
 export function PersonalHolidayCalendarView() {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(String(currentYear));
+  const [downloading, setDownloading] = useState(false);
   const yearNumber = Number(selectedYear);
   const storageQuery = useHolidayCalendarStorage(selectedYear);
 
@@ -90,30 +92,6 @@ export function PersonalHolidayCalendarView() {
     [rowsInYear, yearNumber]
   );
 
-  function handleDownload() {
-    if (!displayRows.length) return;
-
-    const exportColumns = HOLIDAY_CALENDAR_COLUMNS.map((column) => column.label);
-    const exportRows = displayRows.map((row) =>
-      Object.fromEntries(
-        HOLIDAY_CALENDAR_COLUMNS.map(({ key, label }) => [label, row[key]?.trim() ?? ""])
-      )
-    );
-
-    downloadCsvFile(`holiday_calendar_${selectedYear}.csv`, exportColumns, exportRows);
-  }
-
-  const tomorrowHolidays = useMemo(() => {
-    if (yearNumber !== currentYear) return [];
-    return holidayRowsTomorrow(rowsInYear, yearNumber);
-  }, [rowsInYear, yearNumber, currentYear]);
-
-  const yearOptions = useMemo(() => yearSelectOptions(currentYear), [currentYear]);
-  const yearSelectItems = useMemo(
-    () => yearOptions.map((year) => ({ value: year, label: year })),
-    [yearOptions]
-  );
-
   const isLoading = storageQuery.isFetching;
   const isServiceUnavailable =
     storageQuery.isError &&
@@ -131,26 +109,83 @@ export function PersonalHolidayCalendarView() {
         )));
   const hasCalendarFile = storageQuery.data != null;
 
+  function downloadParsedRowsAsCsv() {
+    const exportColumns = HOLIDAY_CALENDAR_COLUMNS.map((column) => column.label);
+    const exportRows = displayRows.map((row) =>
+      Object.fromEntries(
+        HOLIDAY_CALENDAR_COLUMNS.map(({ key, label }) => [label, row[key]?.trim() ?? ""])
+      )
+    );
+
+    downloadCsvFile(`holiday_calendar_${selectedYear}.csv`, exportColumns, exportRows);
+  }
+
+  async function handleExport() {
+    if (!displayRows.length) {
+      showErrorToast("No holidays available to export for the selected year.");
+      return;
+    }
+
+    setDownloading(true);
+    try {
+      try {
+        await holidayCalendarStorageService.downloadStoredFile(yearNumber);
+      } catch {
+        downloadParsedRowsAsCsv();
+      }
+      showSuccessToast(`Holiday calendar for ${selectedYear} downloaded.`);
+    } catch (error) {
+      showErrorToast(
+        error instanceof Error ? error.message : "Could not export the holiday calendar."
+      );
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  const tomorrowHolidays = useMemo(() => {
+    if (yearNumber !== currentYear) return [];
+    return holidayRowsTomorrow(rowsInYear, yearNumber);
+  }, [rowsInYear, yearNumber, currentYear]);
+
+  const yearOptions = useMemo(() => yearSelectOptions(currentYear), [currentYear]);
+  const yearSelectItems = useMemo(
+    () => yearOptions.map((year) => ({ value: year, label: year })),
+    [yearOptions]
+  );
+  const canExport = displayRows.length > 0 && !isLoading && !downloading;
+
   return (
     <ContentCard>
       <div className={CARD_CONTENT_CLASS}>
         <PageSectionHeader
           title="Holiday Calendar"
-          description={`View organization holidays for ${selectedYear}.`}
+          description={`View and export organization holidays for ${selectedYear}.`}
           action={
             <div className="flex flex-wrap items-center justify-end gap-2">
-              {displayRows.length > 0 ? (
-                <Button type="button" variant="outline" size="sm" onClick={handleDownload}>
-                  <ArrowDownToLine className="size-4" aria-hidden />
-                  Download CSV
-                </Button>
-              ) : null}
+              <Button
+                type="button"
+                variant="brand"
+                className="h-10 shrink-0 gap-2 px-4"
+                disabled={!canExport}
+                title={
+                  canExport
+                    ? "Download the holiday calendar for offline reference"
+                    : "Load a year with holidays to enable export"
+                }
+                aria-label="Export holiday calendar"
+                onClick={() => void handleExport()}
+              >
+                <ArrowUpFromLine className="size-4" aria-hidden />
+                {downloading ? "Exporting…" : "Export"}
+              </Button>
               <ToolbarFilterSelect
                 id="personal-holiday-calendar-year"
+                label="Year"
                 value={selectedYear}
                 onChange={setSelectedYear}
                 options={yearSelectItems}
-                aria-label="Year"
+                digitsOnly
                 className="w-32 min-w-32"
                 contentClassName="min-w-[8rem] w-max z-[260]"
               />
@@ -196,7 +231,7 @@ export function PersonalHolidayCalendarView() {
                 </TableHeader>
                 <TableBody>
                   {displayRows.map((row) => (
-                    <TableRow key={`${row.date}|${row.holiday}|${row.sl_no}`}>
+                    <TableRow key={`${row.date}|${row.holiday}`}>
                       <TableCell className="px-3 py-2 whitespace-nowrap">{row.date}</TableCell>
                       <TableCell className="px-3 py-2 whitespace-nowrap">{row.day}</TableCell>
                       <TableCell className="px-3 py-2">{row.holiday}</TableCell>

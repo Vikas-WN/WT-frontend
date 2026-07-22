@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,15 +89,19 @@ function TimelogDateRangeFields({
   onToDateChange: (value: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-      <div className="space-y-1">
-        <span className="whitespace-nowrap text-sm text-muted-foreground">From</span>
-        <DatePicker value={fromDate} onChange={onFromDateChange} max={toDate || undefined} />
-      </div>
-      <div className="space-y-1">
-        <span className="whitespace-nowrap text-sm text-muted-foreground">To</span>
-        <DatePicker value={toDate} onChange={onToDateChange} min={fromDate || undefined} />
-      </div>
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:min-w-[20rem]">
+      <DatePicker
+        label="From Date"
+        value={fromDate}
+        onChange={onFromDateChange}
+        max={toDate || undefined}
+      />
+      <DatePicker
+        label="To Date"
+        value={toDate}
+        onChange={onToDateChange}
+        min={fromDate || undefined}
+      />
     </div>
   );
 }
@@ -106,6 +110,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
   const queryClient = useQueryClient();
   const {
     projects,
+    pendingApprovals,
     projectsLoading,
     projectsError,
     weekTotals,
@@ -125,20 +130,11 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
   } = useProjectTimelogs(enabled);
 
   const { actionLoading, runAction } = useDashboardAction();
-  const [remarkAction, setRemarkAction] = useState<{
-    entryId: number;
-    action: "APPROVED" | "REJECTED";
-  } | null>(null);
+  const [rejectAction, setRejectAction] = useState<{ entryId: number } | null>(null);
 
-  const filteredAllEntries = useMemo(() => {
-    if (!employeeEntries.length) return [];
-    const projectCode = expandedProject?.trim().toUpperCase() ?? "";
-    if (!projectCode) return employeeEntries;
-    const filtered = employeeEntries.filter(
-      (entry) => entry.project_code.trim().toUpperCase() === projectCode
-    );
-    return filtered.length ? filtered : employeeEntries;
-  }, [employeeEntries, expandedProject]);
+  // Employee detail always shows every project for that person (not only the
+  // accordion project they were opened from).
+  const filteredAllEntries = employeeEntries;
 
   const refreshAfterStatusChange = useCallback(async () => {
     if (selectedEmployee) {
@@ -155,54 +151,77 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
     void queryClient.refetchQueries({ queryKey: ["project-timelogs-approved-totals"] });
   }, [selectEmployee, queryClient]);
 
-  const handleEntryRemarkConfirm = async (remark: string) => {
-    const action = remarkAction;
-    if (!action) return;
-    const entry = employeeEntries.find((item) => item.id === action.entryId);
-    const ok = await runAction(
-      action.action === "APPROVED" ? "Approve Time Log" : "Reject Time Log",
-      async () => {
-        await hrmsService.updateTimelogStatus({
-          timelog_id: action.entryId,
-          status: action.action,
-          manager_comment: remark || undefined,
-        });
+  const applyTimelogStatus = useCallback(
+    async (entryId: number, status: "APPROVED" | "REJECTED", remark = "") => {
+      const entry = employeeEntries.find((item) => item.id === entryId);
+      const ok = await runAction(
+        status === "APPROVED" ? "Approve Time Log" : "Reject Time Log",
+        async () => {
+          await hrmsService.updateTimelogStatus({
+            timelog_id: entryId,
+            status,
+            manager_comment: remark || undefined,
+          });
 
-        queryClient.setQueriesData<EmployeeDetailCache>(
-          { queryKey: ["project-timelogs-employee-detail", selectedEmployee] },
-          (old) => {
-            if (!old) return old;
-            return {
-              ...old,
-              entries: patchEntriesStatus(old.entries, [action.entryId], action.action, remark),
-            };
-          }
-        );
-
-        if (entry && expandedProject && selectedEmployee) {
-          queryClient.setQueriesData<ProjectWeekEmployeeTotal[]>(
-            { queryKey: ["project-timelogs-approved-totals", expandedProject] },
+          queryClient.setQueriesData<EmployeeDetailCache>(
+            { queryKey: ["project-timelogs-employee-detail", selectedEmployee] },
             (old) => {
-              const base = old ?? weekTotals[expandedProject] ?? [];
-              return (
-                patchApprovedTotalsForEntry(base, selectedEmployee, entry, action.action) ?? base
-              );
+              if (!old) return old;
+              return {
+                ...old,
+                entries: patchEntriesStatus(old.entries, [entryId], status, remark),
+              };
             }
           );
-        }
 
-        await refreshAfterStatusChange();
-      }
-    );
-    if (ok) setRemarkAction(null);
+          if (entry && expandedProject && selectedEmployee) {
+            queryClient.setQueriesData<ProjectWeekEmployeeTotal[]>(
+              { queryKey: ["project-timelogs-approved-totals", expandedProject] },
+              (old) => {
+                const base = old ?? weekTotals[expandedProject] ?? [];
+                return (
+                  patchApprovedTotalsForEntry(base, selectedEmployee, entry, status) ?? base
+                );
+              }
+            );
+          }
+
+          await refreshAfterStatusChange();
+        }
+      );
+      return ok;
+    },
+    [
+      employeeEntries,
+      runAction,
+      queryClient,
+      selectedEmployee,
+      expandedProject,
+      weekTotals,
+      refreshAfterStatusChange,
+    ]
+  );
+
+  const handleApproveEntry = useCallback(
+    (entryId: number) => {
+      void applyTimelogStatus(entryId, "APPROVED");
+    },
+    [applyTimelogStatus]
+  );
+
+  const handleRejectConfirm = async (remark: string) => {
+    const action = rejectAction;
+    if (!action) return;
+    const ok = await applyTimelogStatus(action.entryId, "REJECTED", remark);
+    if (ok) setRejectAction(null);
   };
 
   if (selectedEmployee) {
     return (
       <>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
+          <CardHeader className="flex flex-row items-end justify-between gap-3">
+            <div className="flex items-center gap-3 self-center">
               <Button variant="outline" size="sm" type="button" onClick={handleBackFromEmployee}>
                 ← Back
               </Button>
@@ -255,7 +274,9 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                           <td className="px-2 py-2 whitespace-nowrap tabular-nums">
                             {entry.log_date}
                           </td>
-                          <td className="px-2 py-2 whitespace-nowrap">{entry.project_code}</td>
+                          <td className="px-2 py-2 whitespace-nowrap">
+                            {entry.project_name?.trim() || entry.project_code}
+                          </td>
                           <td className="px-2 py-2 whitespace-nowrap">
                             {TASK_CATEGORY_LABELS[entry.task_category] ?? entry.task_category}
                           </td>
@@ -274,9 +295,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                                   size="xs"
                                   disabled={actionLoading}
                                   className="border-emerald-300 px-1.5 py-0.5 text-[10px] text-emerald-700 hover:bg-emerald-50"
-                                  onClick={() =>
-                                    setRemarkAction({ entryId: entry.id, action: "APPROVED" })
-                                  }
+                                  onClick={() => handleApproveEntry(entry.id)}
                                 >
                                   Approve
                                 </Button>
@@ -286,9 +305,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                                   size="xs"
                                   disabled={actionLoading}
                                   className="px-1.5 py-0.5 text-[10px]"
-                                  onClick={() =>
-                                    setRemarkAction({ entryId: entry.id, action: "REJECTED" })
-                                  }
+                                  onClick={() => setRejectAction({ entryId: entry.id })}
                                 >
                                   Reject
                                 </Button>
@@ -307,16 +324,15 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
           </CardContent>
         </Card>
         <ApprovalRemarkModal
-          open={remarkAction !== null}
-          title={
-            remarkAction?.action === "APPROVED" ? "Approve Time Log Entry" : "Reject Time Log Entry"
-          }
-          actionLabel={remarkAction?.action === "APPROVED" ? "Approve" : "Reject"}
-          actionVariant={remarkAction?.action === "REJECTED" ? "destructive" : "brand"}
+          open={rejectAction !== null}
+          title="Reject Time Log Entry"
+          actionLabel="Reject"
+          actionVariant="destructive"
           loading={actionLoading}
-          onConfirm={handleEntryRemarkConfirm}
+          remarkPlaceholder="Optional remark…"
+          onConfirm={handleRejectConfirm}
           onCancel={() => {
-            if (!actionLoading) setRemarkAction(null);
+            if (!actionLoading) setRejectAction(null);
           }}
         />
       </>
@@ -334,9 +350,10 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
   }
 
   return (
+    <>
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <CardTitle>Team Time Logs</CardTitle>
+      <CardHeader className="flex flex-row items-end justify-between gap-3">
+        <CardTitle className="self-center">Team Time Logs</CardTitle>
         <div className="flex items-end gap-2">
           <TimelogDateRangeFields
             fromDate={fromDate}
@@ -354,6 +371,79 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
         {projectsError ? (
           <p className="text-sm text-rose-400">{projectsError}</p>
         ) : null}
+        {pendingApprovals.length ? (
+          <div className="space-y-2 rounded-lg border border-[var(--wt-brand)]/30 bg-[var(--wt-brand-soft)]/40 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-wt-text">
+                Pending Approvals ({pendingApprovals.length})
+              </h3>
+              <span className="text-xs text-wt-text-muted">
+                Submitted time logs waiting for your review
+              </span>
+            </div>
+            <div className="overflow-x-auto rounded-md border border-wt-border bg-wt-surface-1">
+              <table className="w-full border-collapse text-sm">
+                <thead className="bg-wt-surface-2 text-wt-text-muted">
+                  <tr>
+                    <th className="px-2 py-2 text-left font-medium">Employee</th>
+                    <th className="px-2 py-2 text-left font-medium">Project</th>
+                    <th className="px-2 py-2 text-left font-medium whitespace-nowrap">Date</th>
+                    <th className="px-2 py-2 text-center font-medium">Hours</th>
+                    <th className="px-2 py-2 text-center font-medium">Status</th>
+                    <th className="px-2 py-2 text-center font-medium">Approve / Reject</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingApprovals.map((item) => (
+                    <tr
+                      key={item.timelog_id}
+                      className="border-t border-wt-border hover:bg-wt-surface-2/50"
+                    >
+                      <td className="px-2 py-2">
+                        <div className="font-medium text-wt-text">{item.employee_name}</div>
+                        <div className="text-xs text-wt-text-muted">{item.employee_email}</div>
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap">
+                        {item.project_name?.trim() || item.project_code}
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap tabular-nums">{item.log_date}</td>
+                      <td className="px-2 py-2 text-center tabular-nums">{item.hours}h</td>
+                      <td className="px-2 py-2 text-center">
+                        <span className={entryStatusClass(item.status)}>
+                          {formatUiStatusLabel(item.status)}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2 text-center whitespace-nowrap">
+                        <div className="flex justify-center gap-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="xs"
+                            disabled={actionLoading}
+                            className="border-emerald-300 px-1.5 py-0.5 text-[10px] text-emerald-700 hover:bg-emerald-50"
+                            onClick={() => handleApproveEntry(item.timelog_id)}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="xs"
+                            disabled={actionLoading}
+                            className="px-1.5 py-0.5 text-[10px]"
+                            onClick={() => setRejectAction({ entryId: item.timelog_id })}
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
         <ProjectTimelogCardList
           projects={projects}
           weekTotals={weekTotals}
@@ -365,5 +455,18 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
         />
       </CardContent>
     </Card>
+    <ApprovalRemarkModal
+      open={rejectAction !== null}
+      title="Reject Time Log Entry"
+      actionLabel="Reject"
+      actionVariant="destructive"
+      loading={actionLoading}
+      remarkPlaceholder="Optional remark…"
+      onConfirm={handleRejectConfirm}
+      onCancel={() => {
+        if (!actionLoading) setRejectAction(null);
+      }}
+    />
+    </>
   );
 }

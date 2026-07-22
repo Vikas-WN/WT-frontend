@@ -60,8 +60,6 @@ export function normalizeSelfProfile(
     category: profile.category ?? profile.delivery_status ?? profile.deliveryStatus,
     work_location_type:
       profile.work_location_type ?? profile.work_location ?? profile.workLocationType,
-    holiday_calendar_name:
-      profile.holiday_calendar_name ?? profile.holidayCalendarName ?? null,
     portal_roles: profile.portal_roles ?? profile.portalRoles ?? [],
   };
 }

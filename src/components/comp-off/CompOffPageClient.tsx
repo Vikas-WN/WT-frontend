@@ -79,7 +79,12 @@ import {
   requestHrStatus,
   requestManagerStatus,
 } from "@/utils/userRequest";
-import { compareApiDates, formatApiDateDisplay, normalizeToApiDate } from "@/utils/apiDate";
+import {
+  compareApiDates,
+  formatApiDate,
+  formatApiDateDisplay,
+  normalizeToApiDate,
+} from "@/utils/apiDate";
 import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
 import {
   compOffEarnActionLabel,
@@ -92,14 +97,14 @@ import {
 } from "@/utils/compOff/resolveEmployeeDisplayNames";
 
 function todayYmd(): string {
-  return new Date().toISOString().slice(0, 10);
+  return formatApiDate(new Date());
 }
 
 function defaultRequestRange(): { from: string; to: string } {
   const now = new Date();
   const from = new Date(now.getFullYear(), now.getMonth(), 1);
   const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+  return { from: formatApiDate(from), to: formatApiDate(to) };
 }
 
 function requestTypeLabel(type: unknown): string {
@@ -975,6 +980,7 @@ export function CompOffPageClient({
                 <div className="bg-muted/40 rounded-xl p-6 space-y-4 shadow-sm">
                   <LeaveManagerSelector
                     label="Primary Managers"
+                    required
                     selectedEmails={selectedManagerEmails}
                     onChange={setSelectedManagerEmails}
                     disabled={actionLoading}
@@ -1013,11 +1019,11 @@ export function CompOffPageClient({
                 <h3 className="text-base font-semibold tracking-tight">History</h3>
                 <div className="flex items-end gap-3">
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">From</span>
+                    <span className="text-xs text-muted-foreground">From Date</span>
                     <DatePicker label="" value={myRequestsFrom} onChange={(v) => { setMyRequestsFrom(v); myRequestsCacheRef.current.clear(); }} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">To</span>
+                    <span className="text-xs text-muted-foreground">To Date</span>
                     <DatePicker label="" value={myRequestsTo} onChange={(v) => { setMyRequestsTo(v); myRequestsCacheRef.current.clear(); }} />
                   </div>
                   <RefreshIconButton
@@ -1134,11 +1140,11 @@ export function CompOffPageClient({
             <h3 className="text-base font-semibold tracking-tight">Applications</h3>
             <div className="flex items-end gap-3">
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">From</span>
+                <span className="text-xs text-muted-foreground">From Date</span>
                 <DatePicker label="" value={teamFilters.from} onChange={(v) => { setTeamFilters((p) => ({ ...p, from: v })); teamRequestsCacheRef.current.clear(); }} />
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">To</span>
+                <span className="text-xs text-muted-foreground">To Date</span>
                 <DatePicker label="" value={teamFilters.to} onChange={(v) => { setTeamFilters((p) => ({ ...p, to: v })); teamRequestsCacheRef.current.clear(); }} />
               </div>
               {(managerOnlyReview || hasHrAccess) && !earnOnly ? (

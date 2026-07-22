@@ -363,6 +363,7 @@ export function AdaptiveSelectField({
   loadingLabel = "Loading…",
   className,
   searchPlaceholder = "Search…",
+  clearSelectionOnEmptyInput = true,
 }: {
   label: string;
   value: string;
@@ -375,6 +376,8 @@ export function AdaptiveSelectField({
   loadingLabel?: string;
   className?: string;
   searchPlaceholder?: string;
+  /** When false, Backspace/Delete/clear only resets the filter — selection stays. */
+  clearSelectionOnEmptyInput?: boolean;
 }) {
   const fieldId = useId();
   const items = withPlaceholderOption(normalizeSelectOptions(options), placeholder, required);
@@ -394,6 +397,7 @@ export function AdaptiveSelectField({
         loadingLabel={loadingLabel}
         aria-label={label}
         showChevron
+        clearSelectionOnEmptyInput={clearSelectionOnEmptyInput}
       />
     </Field>
   );

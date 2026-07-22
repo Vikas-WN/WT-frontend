@@ -17,6 +17,7 @@ import {
 } from "@/utils/timelog/weekDates";
 import {
   projectOptionsFromPayload,
+  normalizeTimelogOptionsPayload,
   type TimelogOptionsPayload,
 } from "@/utils/timelog/categories";
 
@@ -36,7 +37,7 @@ export function useMyWeeklyTimesheet() {
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const res = await hrmsService.getTimelogOptions();
-      return ((res as { data?: TimelogOptionsPayload }).data ?? res) as TimelogOptionsPayload;
+      return normalizeTimelogOptionsPayload(res);
     },
   });
 

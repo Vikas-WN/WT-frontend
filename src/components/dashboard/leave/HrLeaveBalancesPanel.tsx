@@ -63,7 +63,7 @@ export function HrLeaveBalancesPanel({
   const [year, setYear] = useState(String(currentYear));
   const [month, setMonth] = useState(String(currentMonth));
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(25);
 
@@ -77,16 +77,8 @@ export function HrLeaveBalancesPanel({
     month,
     page,
     pageSize,
-    search: debouncedSearch,
+    search: appliedSearch,
   });
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDebouncedSearch(search);
-      setPage(0);
-    }, 400);
-    return () => window.clearTimeout(timer);
-  }, [search]);
 
   useEffect(() => {
     if (Number(year) === currentYear && Number(month) > currentMonth) {
@@ -116,6 +108,18 @@ export function HrLeaveBalancesPanel({
   const rangeStart = totalElements ? page * pageSize + 1 : 0;
   const rangeEnd = Math.min(totalElements, (page + 1) * pageSize);
 
+  function applySearch() {
+    const next = search.trim();
+    if (next === appliedSearch.trim() && page === 0) {
+      runAction("Load leave balances", async () => {
+        await balancesQ.refetch();
+      });
+      return;
+    }
+    setAppliedSearch(next);
+    setPage(0);
+  }
+
   return (
     <FormSection
       title="Leave Balances"
@@ -123,7 +127,13 @@ export function HrLeaveBalancesPanel({
       className="rounded-2xl shadow-sm"
     >
       <div className="space-y-6">
-        <div className={cn(FILTER_BAR_CLASS)}>
+        <form
+          className={cn(FILTER_BAR_CLASS)}
+          onSubmit={(event) => {
+            event.preventDefault();
+            applySearch();
+          }}
+        >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
             <div className="min-w-0 flex-1 lg:flex-[2]">
               <InputField
@@ -156,24 +166,15 @@ export function HrLeaveBalancesPanel({
             </div>
             <Button
               variant="brand"
-              type="button"
+              type="submit"
               className="h-10 w-full shrink-0 gap-2 px-5 lg:w-auto"
               disabled={actionLoading || balancesQ.isFetching}
-              onClick={() =>
-                runAction("Load leave balances", async () => {
-                  if (page !== 0) {
-                    setPage(0);
-                    return;
-                  }
-                  await balancesQ.refetch();
-                })
-              }
             >
               <Search className="size-4" />
               Search
             </Button>
           </div>
-        </div>
+        </form>
 
         {loadError ? (
           <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900 dark:bg-red-950/20">

@@ -91,6 +91,7 @@ function parseOffboardListItem(row: Record<string, unknown>): HrOffboardListItem
     designation: (pickRowField(row, "designation") as string | null | undefined) ?? null,
     band_name: (pickRowField(row, "band_name", "bandName") as string | null | undefined) ?? null,
     band_role: (pickRowField(row, "band_role", "bandRole") as string | null | undefined) ?? null,
+    department: (pickRowField(row, "department") as string | null | undefined) ?? null,
     project_manager:
       (pickRowField(row, "project_manager", "projectManager") as string | null | undefined) ?? null,
     exit_survey_submitted: Boolean(
@@ -169,8 +170,12 @@ export function useOffboardingPanelQueries() {
   const [listPage, setListPage] = useState(0);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
-  const [filterFromDate, setFilterFromDate] = useState("");
-  const [filterToDate, setFilterToDate] = useState("");
+  const [filterFromDate, setFilterFromDate] = useState(
+    () => defaultOffboardingLwdWindow().from,
+  );
+  const [filterToDate, setFilterToDate] = useState(
+    () => defaultOffboardingLwdWindow().to,
+  );
   const [filterType, setFilterType] = useState("");
   const [fyStartYear, setFyStartYear] = useState(() => defaultFinancialYearStart());
 
@@ -198,12 +203,26 @@ export function useOffboardingPanelQueries() {
   const attritionQ = useQuery({
     queryKey: ["offboarding", "attrition", fyYear],
     queryFn: async () => {
-      const [overallRes, viRes] = await Promise.all([
+      const [overallResult, viResult] = await Promise.allSettled([
         hrmsService.getAttritionOverallPercent({ fy_start_year: fyYear }),
         hrmsService.getAttritionVoluntaryInvoluntary({ fy_start_year: fyYear }),
       ]);
-      const overall = ((overallRes as { data?: unknown }).data ?? {}) as Record<string, unknown>;
-      const vi = ((viRes as { data?: unknown }).data ?? {}) as Record<string, unknown>;
+
+      if (overallResult.status === "rejected" && viResult.status === "rejected") {
+        const overallError = overallResult.reason;
+        throw overallError instanceof Error
+          ? overallError
+          : new Error("Failed to load attrition metrics.");
+      }
+
+      const overall =
+        overallResult.status === "fulfilled"
+          ? (((overallResult.value as { data?: unknown }).data ?? {}) as Record<string, unknown>)
+          : {};
+      const vi =
+        viResult.status === "fulfilled"
+          ? (((viResult.value as { data?: unknown }).data ?? {}) as Record<string, unknown>)
+          : {};
       const voluntaryCount = Number(vi.voluntary_count ?? 0);
       const involuntaryCount = Number(vi.involuntary_count ?? 0);
       const totalCount = Number(vi.total_count ?? voluntaryCount + involuntaryCount);
@@ -224,12 +243,24 @@ export function useOffboardingPanelQueries() {
   const candidatesQ = useQuery({
     queryKey: ["offboarding", "candidates"],
     queryFn: async () => {
-      const [onboardRes, offboardRes] = await Promise.all([
+      const [onboardResult, offboardResult] = await Promise.allSettled([
         hrmsService.getOnboardList({ page: "0", size: "500" }),
         hrmsService.getOffboardList({ page: 0, size: 200 }),
       ]);
-      const onboardRows = toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes);
-      const offboardedItems = parseOffboardListPayload(offboardRes).items;
+
+      if (onboardResult.status === "rejected") {
+        throw onboardResult.reason instanceof Error
+          ? onboardResult.reason
+          : new Error("Failed to load employees for offboarding.");
+      }
+
+      const onboardRows = toPagedRows(
+        (onboardResult.value as { data?: unknown }).data ?? onboardResult.value
+      );
+      const offboardedItems =
+        offboardResult.status === "fulfilled"
+          ? parseOffboardListPayload(offboardResult.value).items
+          : [];
       return buildOffboardCandidates(onboardRows, offboardedItems);
     },
     staleTime: OFFBOARDING_STALE_MS,
@@ -291,8 +322,19 @@ export function useOffboardingPanelQueries() {
 
   useEffect(() => {
     if (!candidatesQ.isError) return;
-    showErrorToast("Failed to load employees for offboarding.");
-  }, [candidatesQ.isError]);
+    const error = candidatesQ.error;
+    const msg =
+      error instanceof Error ? error.message : "Failed to load employees for offboarding.";
+    showErrorToast(msg);
+  }, [candidatesQ.isError, candidatesQ.error]);
+
+  useEffect(() => {
+    if (!attritionQ.isError) return;
+    const error = attritionQ.error;
+    const msg =
+      error instanceof Error ? error.message : "Failed to load attrition metrics.";
+    showErrorToast(msg);
+  }, [attritionQ.isError, attritionQ.error]);
 
   return {
     listPage,

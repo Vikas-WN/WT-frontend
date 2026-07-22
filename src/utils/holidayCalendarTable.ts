@@ -1,7 +1,6 @@
 import type { ParsedSpreadsheet, SpreadsheetRow } from "@/utils/parseSpreadsheetFile";
 
 export const HOLIDAY_CALENDAR_COLUMNS = [
-  { key: "sl_no", label: "Sl. No." },
   { key: "date", label: "Date" },
   { key: "day", label: "Day" },
   { key: "holiday", label: "Holiday" },
@@ -28,7 +27,6 @@ const MONTHS: Record<string, number> = {
 };
 
 const HEADER_ALIASES: Record<HolidayCalendarColumnKey, string[]> = {
-  sl_no: ["sl. no.", "sl no", "sl.no.", "slno", "sl no.", "serial no", "serial number", "sno", "sr no", "sl. no"],
   date: ["date", "holiday date", "holiday_date"],
   day: ["day", "weekday", "day of week"],
   holiday: ["holiday", "name", "holiday name"],
@@ -36,15 +34,22 @@ const HEADER_ALIASES: Record<HolidayCalendarColumnKey, string[]> = {
 };
 
 const HEADER_MATCHERS: Record<HolidayCalendarColumnKey, (header: string) => boolean> = {
-  sl_no: (header) => /\bsl\.?\s*no\b/.test(header) || header.includes("serial") || header === "sno",
   date: (header) => header.includes("date"),
   day: (header) => header === "day" || header.includes("weekday") || header.includes("day of week"),
   holiday: (header) => header.includes("holiday") || header === "name" || header === "holiday name",
   optional: (header) => header.includes("optional"),
 };
 
+const SL_NO_HEADER_MATCHER = (header: string) =>
+  /\bsl\.?\s*no\b/.test(header) || header.includes("serial") || header === "sno";
+
 function normalizeHeader(header: string): string {
   return header.trim().toLowerCase().replace(/[._]+/g, " ").replace(/\s+/g, " ");
+}
+
+function isSlNoHeader(header: string): boolean {
+  const normalized = normalizeHeader(header);
+  return SL_NO_HEADER_MATCHER(normalized);
 }
 
 function resolveSourceColumn(
@@ -70,8 +75,8 @@ function resolveSourceColumns(columns: string[]): Record<HolidayCalendarColumnKe
   const missingRequired = !sourceByKey.date || !sourceByKey.holiday;
 
   if (missingRequired && usableColumns.length >= 4) {
-    if (usableColumns.length >= 5) {
-      sourceByKey.sl_no = sourceByKey.sl_no ?? usableColumns[0];
+    const firstIsSlNo = isSlNoHeader(usableColumns[0] ?? "");
+    if (usableColumns.length >= 5 && firstIsSlNo) {
       sourceByKey.date = sourceByKey.date ?? usableColumns[1];
       sourceByKey.day = sourceByKey.day ?? usableColumns[2];
       sourceByKey.holiday = sourceByKey.holiday ?? usableColumns[3];
@@ -105,6 +110,42 @@ function parseHolidayDate(value: string, contextYear?: number): Date | null {
     if (month == null) return null;
     const date = new Date(contextYear, month, Number(dm[1]));
     return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  // Prefer day-first numeric dates used across the app (dd/mm/yyyy, dd-mm-yyyy).
+  const numericDmy = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (numericDmy) {
+    const day = Number(numericDmy[1]);
+    const month = Number(numericDmy[2]) - 1;
+    const year = Number(numericDmy[3]);
+    if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+      const date = new Date(year, month, day);
+      if (
+        !Number.isNaN(date.getTime()) &&
+        date.getFullYear() === year &&
+        date.getMonth() === month &&
+        date.getDate() === day
+      ) {
+        return date;
+      }
+    }
+  }
+
+  // ISO-style yyyy-mm-dd
+  const iso = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) {
+    const year = Number(iso[1]);
+    const month = Number(iso[2]) - 1;
+    const day = Number(iso[3]);
+    const date = new Date(year, month, day);
+    if (
+      !Number.isNaN(date.getTime()) &&
+      date.getFullYear() === year &&
+      date.getMonth() === month &&
+      date.getDate() === day
+    ) {
+      return date;
+    }
   }
 
   if (/\b(19|20)\d{2}\b/.test(trimmed)) {
@@ -210,14 +251,9 @@ export function normalizeHolidayCalendarRows(parsed: ParsedSpreadsheet): Holiday
   const normalized: HolidayCalendarRow[] = [];
 
   for (let index = 0; index < parsed.rows.length; index += 1) {
-    const row = normalizeHolidayCalendarRow(parsed.rows[index], sourceByKey, index);
+    const row = normalizeHolidayCalendarRow(parsed.rows[index], sourceByKey);
 
-    if (
-      normalized.length > 0 &&
-      !row.holiday.trim() &&
-      !row.date.trim() &&
-      !row.sl_no.trim()
-    ) {
+    if (normalized.length > 0 && !row.holiday.trim() && !row.date.trim()) {
       break;
     }
 
@@ -228,33 +264,23 @@ export function normalizeHolidayCalendarRows(parsed: ParsedSpreadsheet): Holiday
   return dedupeHolidayCalendarRows(normalized);
 }
 
-/** Excel edits often leave stale rows in the file. Keep the last row per Sl. No. */
+/** Excel edits often leave stale rows in the file. Keep the last row per date + holiday. */
 export function dedupeHolidayCalendarRows(rows: HolidayCalendarRow[]): HolidayCalendarRow[] {
-  const bySerial = new Map<string, HolidayCalendarRow>();
-  const withoutSerial: HolidayCalendarRow[] = [];
+  const byKey = new Map<string, HolidayCalendarRow>();
 
   for (const row of rows) {
-    const serial = row.sl_no.trim();
-    if (/^\d+$/.test(serial)) {
-      bySerial.set(serial, row);
-      continue;
-    }
-    withoutSerial.push(row);
+    const key = `${row.date.trim().toLowerCase()}|${row.holiday.trim().toLowerCase()}`;
+    byKey.set(key, row);
   }
 
-  const deduped = [...bySerial.entries()]
-    .sort(([left], [right]) => Number(left) - Number(right))
-    .map(([, row]) => row);
-
-  const seen = new Set(deduped.map((row) => `${row.date}|${row.holiday}`));
-  for (const row of withoutSerial) {
-    const key = `${row.date}|${row.holiday}`;
-    if (seen.has(key)) continue;
-    deduped.push(row);
-    seen.add(key);
-  }
-
-  return deduped;
+  return Array.from(byKey.values()).sort((left, right) => {
+    const leftDate = parseHolidayCalendarDate(left.date);
+    const rightDate = parseHolidayCalendarDate(right.date);
+    if (!leftDate && !rightDate) return 0;
+    if (!leftDate) return 1;
+    if (!rightDate) return -1;
+    return leftDate.getTime() - rightDate.getTime();
+  });
 }
 
 function isHolidayDataRow(row: HolidayCalendarRow): boolean {
@@ -267,8 +293,7 @@ function isHolidayDataRow(row: HolidayCalendarRow): boolean {
 
 function normalizeHolidayCalendarRow(
   row: SpreadsheetRow,
-  sourceByKey: Record<HolidayCalendarColumnKey, string | null>,
-  index: number
+  sourceByKey: Record<HolidayCalendarColumnKey, string | null>
 ): HolidayCalendarRow {
   const read = (key: HolidayCalendarColumnKey) => {
     const source = sourceByKey[key];
@@ -277,10 +302,8 @@ function normalizeHolidayCalendarRow(
 
   const date = read("date");
   const day = read("day") || formatDayName(date);
-  const slNo = read("sl_no") || String(index + 1);
 
   return {
-    sl_no: slNo,
     date,
     day,
     holiday: read("holiday"),

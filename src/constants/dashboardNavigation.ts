@@ -143,6 +143,7 @@ export const dashboardNavigation: NavItem[] = [
         roles: [
           "ROLE_EMPLOYEE",
           "ROLE_MANAGER",
+          "ROLE_DM",
           "ROLE_HR",
           "ROLE_ADMIN",
           "ROLE_FINANCE",

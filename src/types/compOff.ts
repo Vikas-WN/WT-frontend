@@ -44,6 +44,8 @@ export interface CompOffExpiryItem {
   status?: CompOffExpiryStatus;
   project_code?: string;
   projectCode?: string;
+  project_name?: string;
+  projectName?: string;
   work_description?: string;
   workDescription?: string;
 }

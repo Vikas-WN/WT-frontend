@@ -73,7 +73,7 @@ export function validateResumeShareLink(url: string): string | null {
     host === "drive.google.com" ||
     host.endsWith(".drive.google.com");
   if (!isGoogleDoc) {
-    return "Enter a Google Docs or Google Drive share link.";
+    return "Enter a Google Docs document link or a Google Drive file share link.";
   }
   return null;
 }

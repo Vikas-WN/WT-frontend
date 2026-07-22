@@ -83,9 +83,19 @@ export function TimelogPageClient() {
   const canManagerApprove = isTeamView || isProjectView;
   const isHrTeamView = isTeamView && hasHrAccess && !hasManagerAccess && !hasAdminAccess;
 
-  // Empty = show full data; both set = filter to that range (no default 7-day range).
-  const [teamFromDate, setTeamFromDate] = useState("");
-  const [teamToDate, setTeamToDate] = useState("");
+  // Default to last 6 months (same range used when filters were empty).
+  const [teamFromDate, setTeamFromDate] = useState(() => {
+    const end = new Date();
+    end.setHours(0, 0, 0, 0);
+    const start = new Date(end);
+    start.setMonth(start.getMonth() - 6);
+    return formatApiDate(start);
+  });
+  const [teamToDate, setTeamToDate] = useState(() => {
+    const end = new Date();
+    end.setHours(0, 0, 0, 0);
+    return formatApiDate(end);
+  });
   const [employeeEntries, setEmployeeEntries] = useState<DayTimelogEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [teamEmployeeEmail, setTeamEmployeeEmail] = useState("");
@@ -96,10 +106,7 @@ export function TimelogPageClient() {
     label: string;
     weekStart: string;
   } | null>(null);
-  const [remarkAction, setRemarkAction] = useState<{
-    entryId: number;
-    action: "APPROVED" | "REJECTED";
-  } | null>(null);
+  const [rejectAction, setRejectAction] = useState<{ entryId: number } | null>(null);
 
   const teamDateRange = useMemo(() => {
     if (teamFromDate.trim() && teamToDate.trim()) {
@@ -198,32 +205,47 @@ export function TimelogPageClient() {
     void loadTeamEmployees().catch(() => setEmployeeOptions([]));
   }, [loadTeamEmployees, isTeamView, isProjectView]);
 
-  const handleEntryRemarkConfirm = async (remark: string) => {
-    const action = remarkAction;
+  const applyTimelogStatus = useCallback(
+    async (entryId: number, status: "APPROVED" | "REJECTED", remark = "") => {
+      const ok = await runAction(
+        status === "APPROVED" ? "Approve Time Log" : "Reject Time Log",
+        async () => {
+          await hrmsService.updateTimelogStatus({
+            timelog_id: entryId,
+            status,
+            manager_comment: remark || undefined,
+          });
+          setEmployeeEntries((prev) =>
+            prev.map((entry) =>
+              entry.id === entryId
+                ? {
+                    ...entry,
+                    status,
+                    manager_comment: remark || entry.manager_comment,
+                  }
+                : entry
+            )
+          );
+          await loadEmployeeEntries();
+        }
+      );
+      return ok;
+    },
+    [runAction, loadEmployeeEntries]
+  );
+
+  const handleApproveEntry = useCallback(
+    (entryId: number) => {
+      void applyTimelogStatus(entryId, "APPROVED");
+    },
+    [applyTimelogStatus]
+  );
+
+  const handleRejectConfirm = async (remark: string) => {
+    const action = rejectAction;
     if (!action) return;
-    const ok = await runAction(
-      action.action === "APPROVED" ? "Approve Time Log" : "Reject Time Log",
-      async () => {
-        await hrmsService.updateTimelogStatus({
-          timelog_id: action.entryId,
-          status: action.action,
-          manager_comment: remark || undefined,
-        });
-        setEmployeeEntries((prev) =>
-          prev.map((entry) =>
-            entry.id === action.entryId
-              ? {
-                  ...entry,
-                  status: action.action,
-                  manager_comment: remark || entry.manager_comment,
-                }
-              : entry
-          )
-        );
-        await loadEmployeeEntries();
-      }
-    );
-    if (ok) setRemarkAction(null);
+    const ok = await applyTimelogStatus(action.entryId, "REJECTED", remark);
+    if (ok) setRejectAction(null);
   };
 
   useEffect(() => {
@@ -324,23 +346,19 @@ export function TimelogPageClient() {
                   title="Team Time Logs"
                   action={
                     <div className="flex flex-wrap items-end gap-2">
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        <div className="space-y-1">
-                          <span className="whitespace-nowrap text-sm text-muted-foreground">From</span>
-                          <DatePicker
-                            value={teamFromDate}
-                            onChange={setTeamFromDate}
-                            max={teamToDate || undefined}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <span className="whitespace-nowrap text-sm text-muted-foreground">To</span>
-                          <DatePicker
-                            value={teamToDate}
-                            onChange={setTeamToDate}
-                            min={teamFromDate || undefined}
-                          />
-                        </div>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:min-w-[20rem]">
+                        <DatePicker
+                          label="From Date"
+                          value={teamFromDate}
+                          onChange={setTeamFromDate}
+                          max={teamToDate || undefined}
+                        />
+                        <DatePicker
+                          label="To Date"
+                          value={teamToDate}
+                          onChange={setTeamToDate}
+                          min={teamFromDate || undefined}
+                        />
                       </div>
                       <RefreshIconButton
                         onClick={() => void loadEmployeeEntries()}
@@ -405,7 +423,9 @@ export function TimelogPageClient() {
                           return (
                             <tr key={entry.id} className="border-t border-wt-border hover:bg-wt-surface-2/50">
                               <td className="px-2 py-2 whitespace-nowrap tabular-nums">{entry.log_date}</td>
-                              <td className="px-2 py-2 whitespace-nowrap">{entry.project_code}</td>
+                              <td className="px-2 py-2 whitespace-nowrap">
+                                {entry.project_name?.trim() || entry.project_code}
+                              </td>
                               <td className="px-2 py-2 whitespace-nowrap">{taskLabel}</td>
                               <td className="px-2 py-2 whitespace-nowrap">{entry.sub_category || "—"}</td>
                               <td className="px-2 py-2 max-w-[200px] truncate">{entry.description || "—"}</td>
@@ -429,7 +449,7 @@ export function TimelogPageClient() {
                                         variant="outline"
                                         size="xs"
                                         className="border-emerald-300 px-1.5 py-0.5 text-[10px] text-emerald-700 hover:bg-emerald-50"
-                                        onClick={() => setRemarkAction({ entryId: entry.id, action: "APPROVED" })}
+                                        onClick={() => handleApproveEntry(entry.id)}
                                       >
                                         Approve
                                       </Button>
@@ -438,7 +458,7 @@ export function TimelogPageClient() {
                                         variant="destructive"
                                         size="xs"
                                         className="px-1.5 py-0.5 text-[10px]"
-                                        onClick={() => setRemarkAction({ entryId: entry.id, action: "REJECTED" })}
+                                        onClick={() => setRejectAction({ entryId: entry.id })}
                                       >
                                         Reject
                                       </Button>
@@ -473,18 +493,15 @@ export function TimelogPageClient() {
           />
         ) : null}
         <ApprovalRemarkModal
-          open={remarkAction !== null}
-          title={
-            remarkAction?.action === "APPROVED" ? "Approve Time Log entry" : "Reject Time Log entry"
-          }
-          actionLabel={
-            remarkAction?.action === "APPROVED" ? "Approve" : "Reject"
-          }
-          actionVariant={remarkAction?.action === "REJECTED" ? "destructive" : "brand"}
+          open={rejectAction !== null}
+          title="Reject Time Log entry"
+          actionLabel="Reject"
+          actionVariant="destructive"
           loading={actionLoading}
-          onConfirm={handleEntryRemarkConfirm}
+          remarkPlaceholder="Optional remark…"
+          onConfirm={handleRejectConfirm}
           onCancel={() => {
-            if (!actionLoading) setRemarkAction(null);
+            if (!actionLoading) setRejectAction(null);
           }}
         />
       </DashboardPageShell>

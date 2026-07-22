@@ -4,14 +4,24 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="277eea37-5920-433d-98e6-176d094caf49" name="Changes" comment="" />
+    <list default="true" id="277eea37-5920-433d-98e6-176d094caf49" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.cursor/debug-4198e7.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.cursor/rules/no-git-attribution.mdc" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.cursor/rules/ui-title-case-layout.mdc" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/allocation/EmployeeCurrentAllocationsPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/allocation/EmployeeCurrentAllocationsPanel.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/employee/EmployeePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/employee/EmployeePageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/employee-onboarding/HrOnboardForm.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/employee-onboarding/HrOnboardForm.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/hrms.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/hrms.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/talentPool.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/talentPool.ts" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="355" />
+    <option name="cachedIndexableFilesCount" value="556" />
     <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
   </component>
   <component name="Git.Settings">
@@ -35,6 +45,13 @@
         &quot;number&quot;: 13
       },
       &quot;lastSeen&quot;: 1781716622788
+    },
+    {
+      &quot;id&quot;: {
+        &quot;id&quot;: &quot;PR_kwDOSnPUms7vnMiU&quot;,
+        &quot;number&quot;: 42
+      },
+      &quot;lastSeen&quot;: 1784623527463
     }
   ]
 }</component>
@@ -48,6 +65,65 @@
     <commands />
     <urls />
   </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.732577663444901" />
+      <entry key="MS500" value="4.581176197271115" />
+      <entry key="S2" value="15.310220823389496" />
+      <entry key="S5" value="26.488266711805082" />
+      <entry key="S10" value="33.30732799041561" />
+      <entry key="S30" value="39.375095680558026" />
+      <entry key="S60" value="41.18642182933409" />
+      <entry key="M2" value="42.28899265605983" />
+      <entry key="M5" value="44.06823159508937" />
+      <entry key="M10" value="55.21386384459577" />
+      <entry key="M15" value="75.09666852780886" />
+      <entry key="M30" value="135.48201420544785" />
+      <entry key="H1" value="205.16107072180722" />
+      <entry key="H2" value="259.34512340220255" />
+      <entry key="H4" value="293.33531503920597" />
+      <entry key="D1" value="325.9552398416973" />
+      <entry key="W1" value="331.9824136260707" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="0.0" />
+      <entry key="M2" value="0.0" />
+      <entry key="M5" value="0.0" />
+      <entry key="M10" value="0.0" />
+      <entry key="M15" value="0.0" />
+      <entry key="M30" value="0.0" />
+      <entry key="H1" value="0.0" />
+      <entry key="H2" value="0.0" />
+      <entry key="H4" value="0.0" />
+      <entry key="D1" value="0.0" />
+      <entry key="W1" value="0.0" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="1.6735929631654216" />
+      <entry key="MS500" value="4.550074273491111" />
+      <entry key="S2" value="15.283593365057781" />
+      <entry key="S5" value="26.46952059132707" />
+      <entry key="S10" value="33.295454029265905" />
+      <entry key="S30" value="39.37032522223649" />
+      <entry key="S60" value="41.183366486787726" />
+      <entry key="M2" value="42.2864740879012" />
+      <entry key="M5" value="44.066506198803296" />
+      <entry key="M10" value="55.21267608446886" />
+      <entry key="M15" value="75.0956716405909" />
+      <entry key="M30" value="135.48126525237228" />
+      <entry key="H1" value="205.16056594723284" />
+      <entry key="H2" value="259.3448225578362" />
+      <entry key="H4" value="293.335149734874" />
+      <entry key="D1" value="325.95520994051685" />
+      <entry key="W1" value="331.9824092928351" />
+    </decayedShown>
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 6,
   &quot;fromUser&quot;: false
@@ -57,30 +133,31 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "develop",
-    "js.debugger.nextJs.config.created.client": "true",
-    "js.debugger.nextJs.config.created.server": "true",
-    "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "/home/likhithrajup/Developer/WT-frontend",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "pnpm",
-    "to.speed.mode.migration.done": "true",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;develop&quot;,
+    &quot;js.debugger.nextJs.config.created.client&quot;: &quot;true&quot;,
+    &quot;js.debugger.nextJs.config.created.server&quot;: &quot;true&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/likhithrajup/Developer/WT-frontend&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;pnpm&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;/home/likhithrajup/Developer/WT-frontend/node_modules/typescript/lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="npm.Next.js: server-side">
     <configuration name="Next.js: debug client-side" type="JavascriptDebugType" uri="http://localhost:3000/">
       <method v="2" />
@@ -99,7 +176,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-WS-261.26222.58" />
+        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-WS-262.8665.259" />
       </set>
     </attachedChunks>
   </component>
@@ -112,6 +189,7 @@
       <updated>1781716561904</updated>
       <workItem from="1781716563016" duration="1730000" />
       <workItem from="1784525191135" duration="13000" />
+      <workItem from="1784623349362" duration="5667000" />
     </task>
     <servers />
   </component>

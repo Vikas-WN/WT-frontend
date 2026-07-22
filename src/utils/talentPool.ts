@@ -22,7 +22,7 @@ export type UnallocatedTalentPoolItem = AllocateTarget & {
 };
 
 export type TalentPoolTablePage<T> = {
-  label: string;
+  label?: string;
   table_key: string;
   current_page: number;
   total_pages: number;
@@ -102,7 +102,6 @@ function parseUnallocatedTablePage(data: Record<string, unknown>): TalentPoolTab
   const keyRaw = String(data.table_key ?? data.tableKey ?? "unallocated").trim();
 
   return {
-    label: String(data.label ?? "Not allocated to project").trim() || "Not allocated to project",
     table_key: keyRaw || "unallocated",
     ...meta,
     items: itemsRaw

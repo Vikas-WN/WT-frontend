@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState, type InputHTMLAttributes } from "react";
 import {
   Combobox,
   ComboboxContent,
@@ -29,6 +29,11 @@ export function SearchableSelectCombobox({
   "aria-label": ariaLabel,
   dropdownAttached = false,
   showChevron = false,
+  /** Transform typed input (e.g. strip non-digits for year fields). */
+  sanitizeInput,
+  inputMode,
+  /** When false, emptying the input only resets the filter — selection stays. */
+  clearSelectionOnEmptyInput = true,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -45,6 +50,9 @@ export function SearchableSelectCombobox({
   "aria-label"?: string;
   dropdownAttached?: boolean;
   showChevron?: boolean;
+  sanitizeInput?: (next: string) => string;
+  inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"];
+  clearSelectionOnEmptyInput?: boolean;
 }) {
   // Empty-value entries are legacy placeholder rows (e.g. { value: "", label: "Select…" }).
   // They must never render as selectable items: with an empty selection they would match
@@ -60,14 +68,71 @@ export function SearchableSelectCombobox({
     "Search…";
 
   const selected = value ? items.find((opt) => opt.value === value) ?? null : null;
+  const selectedLabel = selected?.label ?? "";
   const isDisabled = disabled || loading;
+
+  const [isFiltering, setIsFiltering] = useState(false);
+  const [filterText, setFilterText] = useState("");
+
+  useEffect(() => {
+    setIsFiltering(false);
+    setFilterText("");
+  }, [value]);
+
+  const inputValue = isFiltering ? filterText : selectedLabel;
+
+  const handleInputValueChange = useCallback(
+    (next: string, eventDetails?: { reason?: string }) => {
+      const reason = eventDetails?.reason ?? "";
+      const sanitized = sanitizeInput ? sanitizeInput(next) : next;
+
+      // Clearing the input (Backspace/Delete to empty, or the clear button) must clear the
+      // selection once. Snapping back to selectedLabel while the library keeps emitting ""
+      // causes an infinite controlled-input loop.
+      if (reason === "clear-press" || sanitized === "") {
+        if (clearSelectionOnEmptyInput) {
+          setIsFiltering(false);
+          setFilterText("");
+          if (value) onChange("");
+          return;
+        }
+        // Keep selection; empty filter shows the full option list.
+        setIsFiltering(true);
+        setFilterText("");
+        return;
+      }
+
+      setIsFiltering(true);
+      setFilterText(sanitized);
+    },
+    [onChange, value, sanitizeInput, clearSelectionOnEmptyInput]
+  );
+
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setIsFiltering(false);
+      setFilterText("");
+    }
+  }, []);
+
+  const handleValueChange = useCallback(
+    (item: SearchableSelectOption | null) => {
+      onChange(item?.value ?? "");
+      setIsFiltering(false);
+      setFilterText("");
+    },
+    [onChange]
+  );
 
   return (
     <div className={cn("w-full", className)}>
       <Combobox
         items={items}
         value={selected}
-        onValueChange={(item) => onChange(item?.value ?? "")}
+        onValueChange={handleValueChange}
+        inputValue={inputValue}
+        onInputValueChange={handleInputValueChange}
+        onOpenChange={handleOpenChange}
         itemToStringValue={(item) => item.label}
         disabled={isDisabled}
       >
@@ -79,8 +144,9 @@ export function SearchableSelectCombobox({
         aria-required={required || undefined}
         aria-busy={loading || undefined}
         aria-label={ariaLabel}
+        inputMode={inputMode}
         showTrigger={showChevron}
-        showClear={Boolean(selected) && !isDisabled}
+        showClear={clearSelectionOnEmptyInput && Boolean(selected) && !isDisabled}
         className={cn("w-full", inputClassName)}
       />
       <ComboboxContent

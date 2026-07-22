@@ -43,6 +43,7 @@ export function useUpdateEmployeeProfile(empId: string) {
       await queryClient.invalidateQueries({ queryKey: ["employee-profile", empId] });
       await queryClient.invalidateQueries({ queryKey: ["employee-profile", empId, "balances"] });
       await queryClient.invalidateQueries({ queryKey: ["employee-directory", "onboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["offboarding"] });
     },
   });
 }

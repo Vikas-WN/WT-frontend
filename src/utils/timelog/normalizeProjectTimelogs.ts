@@ -1,4 +1,5 @@
 import type {
+  PendingTimelogApproval,
   ProjectEmployee,
   ProjectTimelogProject,
   ProjectTimelogsData,
@@ -6,6 +7,8 @@ import type {
   ProjectWeekTotalsData,
 } from "@/hooks/timelog/useProjectTimelogs.types";
 import { extractFirstObjectArray, toPagedRows } from "@/utils/apiRows";
+import { formatApiDate as formatIsoDate } from "@/utils/timelog/weekDates";
+import { parseApiDate } from "@/utils/apiDate";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -108,13 +111,60 @@ function collectProjects(payload: unknown): unknown[] {
   return extractFirstObjectArray(payload);
 }
 
+function normalizePendingApproval(raw: unknown): PendingTimelogApproval | null {
+  const row = asRecord(raw);
+  if (!row) return null;
+  const timelog_id = Number(row.timelog_id ?? row.timelogId ?? 0);
+  const employee_email = readString(
+    row.employee_email,
+    row.employeeEmail,
+    row.email
+  ).toLowerCase();
+  const project_code = readString(row.project_code, row.projectCode).toUpperCase();
+  if (!Number.isFinite(timelog_id) || timelog_id <= 0 || !employee_email || !project_code) {
+    return null;
+  }
+  const rawDate = row.log_date ?? row.logDate ?? row.date;
+  let log_date = readString(rawDate);
+  const parsed = parseApiDate(log_date);
+  if (parsed) log_date = formatIsoDate(parsed);
+  const hours = Number(row.hours ?? row.logged_hours ?? row.loggedHours ?? 0);
+  return {
+    timelog_id,
+    employee_email,
+    employee_name: readString(row.employee_name, row.employeeName, employee_email) || employee_email,
+    project_code,
+    project_name: readString(row.project_name, row.projectName, project_code) || project_code,
+    log_date,
+    hours: Number.isFinite(hours) ? hours : 0,
+    status: readString(row.status, "SUBMITTED").toUpperCase() || "SUBMITTED",
+    description: readString(row.description) || null,
+  };
+}
+
+function collectPendingApprovals(payload: unknown): PendingTimelogApproval[] {
+  const root = asRecord(payload);
+  const nested = asRecord(root?.data);
+  const deep = asRecord(nested?.data);
+  for (const candidate of [root, nested, deep]) {
+    if (!candidate) continue;
+    const list = asArray(candidate.pending_approvals ?? candidate.pendingApprovals);
+    if (list.length) {
+      return list
+        .map(normalizePendingApproval)
+        .filter((item): item is PendingTimelogApproval => Boolean(item));
+    }
+  }
+  return [];
+}
+
 /** Normalize GET /timelog/projects (camelCase or snake_case). */
 export function normalizeProjectTimelogsData(payload: unknown): ProjectTimelogsData {
   return {
     projects: collectProjects(payload)
       .map(normalizeProject)
       .filter((project): project is ProjectTimelogProject => Boolean(project)),
-    pendingApprovals: [],
+    pendingApprovals: collectPendingApprovals(payload),
   };
 }
 

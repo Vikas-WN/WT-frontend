@@ -7,7 +7,7 @@ import {
   buildHolidayCalendarFile,
   holidayCalendarFileMimeType,
 } from "@/utils/buildHolidayCalendarFile";
-import { parseSpreadsheetFile } from "@/utils/parseSpreadsheetFile";
+import { downloadBlobFile, parseSpreadsheetFile } from "@/utils/parseSpreadsheetFile";
 import {
   holidayCalendarStorageFileName,
   resolveHolidayCalendarExtension,
@@ -63,6 +63,18 @@ export const holidayCalendarStorageService = {
       }
       throw error instanceof Error ? error : new Error("Failed to load holiday calendar.");
     }
+  },
+
+  async downloadStoredFile(year: number): Promise<void> {
+    const response = await apiClient.get<Response>(
+      endpoints.holidayCalendarStorage.byYear(year),
+      { responseType: "raw" }
+    );
+    const fileName =
+      response.headers.get("x-original-filename")?.trim() ||
+      holidayCalendarStorageFileName(year, resolveHolidayCalendarExtension("holiday_calendar.csv"));
+    const blob = await response.blob();
+    downloadBlobFile(fileName, blob);
   },
 
   async uploadFile(file: File, year: number, cleanedRows?: HolidayCalendarRow[]): Promise<void> {

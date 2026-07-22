@@ -10,6 +10,7 @@ import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
+import { useAuth } from "@/context/AuthContext";
 import {
   TableBody,
   TableCell,
@@ -26,7 +27,7 @@ import {
   type MyAllocationRow,
 } from "@/hooks/allocation/useMyAllocationsDetail";
 import { formatApiDateDisplay } from "@/utils/apiDate";
-import { formatRoleDisplayValue } from "@/utils/roles";
+import { formatRoleDisplayValue, shouldHideAllocationOperationalDetails } from "@/utils/roles";
 import { cn } from "@/lib/utils";
 
 function formatDateLabel(value: string): string {
@@ -38,10 +39,12 @@ function HistoryTable({
   rows,
   emptyTitle,
   emptyDescription,
+  hideOperationalDetails = false,
 }: {
   rows: MyAllocationRow[];
   emptyTitle: string;
   emptyDescription: string;
+  hideOperationalDetails?: boolean;
 }) {
   if (!rows.length) {
     return <EmptyState title={emptyTitle} description={emptyDescription} className="py-10" />;
@@ -54,10 +57,10 @@ function HistoryTable({
           <TableRow className="hover:bg-transparent">
             <TableHead>Project</TableHead>
             <TableHead>Role</TableHead>
-            <TableHead>Allocation %</TableHead>
-            <TableHead>Start Date</TableHead>
-            <TableHead>End Date</TableHead>
-            <TableHead>Billing Status</TableHead>
+            {!hideOperationalDetails ? <TableHead>Allocation %</TableHead> : null}
+            {!hideOperationalDetails ? <TableHead>Start Date</TableHead> : null}
+            {!hideOperationalDetails ? <TableHead>End Date</TableHead> : null}
+            {!hideOperationalDetails ? <TableHead>Billing Status</TableHead> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -65,15 +68,22 @@ function HistoryTable({
             <TableRow key={row.id}>
               <TableCell className="whitespace-nowrap">
                 <div className="min-w-0">
-                  <p className="font-medium text-wt-text">{row.projectName}</p>
-                  <p className="text-xs text-wt-text-muted">{row.projectCode}</p>
+                  <p className="font-medium text-wt-text">{row.projectName || "—"}</p>
                 </div>
               </TableCell>
               <TableCell className="whitespace-nowrap">{formatRoleDisplayValue(row.role)}</TableCell>
-              <TableCell className="whitespace-nowrap tabular-nums">{row.allocatedPercent}</TableCell>
-              <TableCell className="whitespace-nowrap">{formatDateLabel(row.startDate)}</TableCell>
-              <TableCell className="whitespace-nowrap">{formatDateLabel(row.endDate)}</TableCell>
-              <TableCell className="whitespace-nowrap">{row.billingStatus}</TableCell>
+              {!hideOperationalDetails ? (
+                <TableCell className="whitespace-nowrap tabular-nums">{row.allocatedPercent}</TableCell>
+              ) : null}
+              {!hideOperationalDetails ? (
+                <TableCell className="whitespace-nowrap">{formatDateLabel(row.startDate)}</TableCell>
+              ) : null}
+              {!hideOperationalDetails ? (
+                <TableCell className="whitespace-nowrap">{formatDateLabel(row.endDate)}</TableCell>
+              ) : null}
+              {!hideOperationalDetails ? (
+                <TableCell className="whitespace-nowrap">{row.billingStatus}</TableCell>
+              ) : null}
             </TableRow>
           ))}
         </TableBody>
@@ -88,7 +98,13 @@ function capacityLabel(capacity: MyAllocationProject["capacity"]): string {
   return "Team Member";
 }
 
-function ProjectAllocationCard({ project }: { project: MyAllocationProject }) {
+function ProjectAllocationCard({
+  project,
+  hideOperationalDetails = false,
+}: {
+  project: MyAllocationProject;
+  hideOperationalDetails?: boolean;
+}) {
   const [expanded, setExpanded] = useState(true);
   const { myAllocation, capacity } = project;
 
@@ -112,14 +128,19 @@ function ProjectAllocationCard({ project }: { project: MyAllocationProject }) {
               {capacityLabel(capacity)}
             </span>
           </div>
-          <p className="mt-1 pl-6 text-xs text-wt-text-muted">
-            {project.projectCode}
-            {project.clientName ? ` · ${project.clientName}` : ""}
-          </p>
+          {project.clientName ? (
+            <p className="mt-1 pl-6 text-xs text-wt-text-muted">{project.clientName}</p>
+          ) : null}
           {myAllocation ? (
             <p className="mt-2 pl-6 text-sm text-wt-text-muted">
-              Your Role: {formatRoleDisplayValue(myAllocation.role)} · {myAllocation.allocatedPercent} ·{" "}
-              {formatDateLabel(myAllocation.startDate)} – {formatDateLabel(myAllocation.endDate)}
+              Your Role: {formatRoleDisplayValue(myAllocation.role)}
+              {!hideOperationalDetails ? (
+                <>
+                  {" "}
+                  · {myAllocation.allocatedPercent} · {formatDateLabel(myAllocation.startDate)} –{" "}
+                  {formatDateLabel(myAllocation.endDate)}
+                </>
+              ) : null}
             </p>
           ) : (
             <p className="mt-2 pl-6 text-sm text-wt-text-muted">
@@ -151,7 +172,11 @@ function ProjectAllocationCard({ project }: { project: MyAllocationProject }) {
 
           <FormSection
             title="Team Members"
-            description="Active employees on this project with their allocation dates."
+            description={
+              hideOperationalDetails
+                ? "Active employees on this project."
+                : "Active employees on this project with their allocation dates."
+            }
           >
             {project.teamMembers.length ? (
               <ScrollableTable maxHeightClass="max-h-[min(50vh,420px)]">
@@ -160,9 +185,9 @@ function ProjectAllocationCard({ project }: { project: MyAllocationProject }) {
                     <TableRow className="hover:bg-transparent">
                       <TableHead>Employee</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead>Allocation %</TableHead>
-                      <TableHead>Start Date</TableHead>
-                      <TableHead>End Date</TableHead>
+                      {!hideOperationalDetails ? <TableHead>Allocation %</TableHead> : null}
+                      {!hideOperationalDetails ? <TableHead>Start Date</TableHead> : null}
+                      {!hideOperationalDetails ? <TableHead>End Date</TableHead> : null}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -175,9 +200,21 @@ function ProjectAllocationCard({ project }: { project: MyAllocationProject }) {
                         <TableCell className="whitespace-nowrap">
                           {formatRoleDisplayValue(member.role)}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap tabular-nums">{member.allocatedPercent}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatDateLabel(member.startDate)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatDateLabel(member.endDate)}</TableCell>
+                        {!hideOperationalDetails ? (
+                          <TableCell className="whitespace-nowrap tabular-nums">
+                            {member.allocatedPercent}
+                          </TableCell>
+                        ) : null}
+                        {!hideOperationalDetails ? (
+                          <TableCell className="whitespace-nowrap">
+                            {formatDateLabel(member.startDate)}
+                          </TableCell>
+                        ) : null}
+                        {!hideOperationalDetails ? (
+                          <TableCell className="whitespace-nowrap">
+                            {formatDateLabel(member.endDate)}
+                          </TableCell>
+                        ) : null}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -194,6 +231,8 @@ function ProjectAllocationCard({ project }: { project: MyAllocationProject }) {
 }
 
 export function MyAllocationsPageClient() {
+  const { user } = useAuth();
+  const hideOperationalDetails = shouldHideAllocationOperationalDetails(user?.roles ?? []);
   const { data, isLoading, isError, error, refetch, isFetching } = useMyAllocationsDetail();
   const [tab, setTab] = useState<"current" | "history">("current");
 
@@ -247,7 +286,11 @@ export function MyAllocationsPageClient() {
               {tab === "current" ? (
                 currentProjects.length ? (
                   currentProjects.map((project) => (
-                    <ProjectAllocationCard key={project.projectCode} project={project} />
+                    <ProjectAllocationCard
+                      key={project.projectCode}
+                      project={project}
+                      hideOperationalDetails={hideOperationalDetails}
+                    />
                   ))
                 ) : (
                   <EmptyState
@@ -261,6 +304,7 @@ export function MyAllocationsPageClient() {
                   rows={historyRows}
                   emptyTitle="No Allocation History"
                   emptyDescription="Past project allocations will appear here after they end."
+                  hideOperationalDetails={hideOperationalDetails}
                 />
               )}
             </div>

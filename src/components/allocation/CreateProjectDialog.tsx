@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { InputField } from "@/components/dashboard/ui/forms";
-import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
 import { ClientSelect } from "@/components/allocation/ClientSelect";
 import { ProjectTypeSelect } from "@/components/allocation/ProjectTypeSelect";
 import {
@@ -13,7 +12,7 @@ import {
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { hrmsService } from "@/services/hrms.service";
-import { normalizeToApiDate } from "@/utils/apiDate";
+import { normalizeToApiDate, compareApiDates } from "@/utils/apiDate";
 import {
   createEmptyProjectForm,
   type ProjectFormState,
@@ -27,6 +26,9 @@ import { UI_COPY } from "@/constants/uiCopy";
 
 import type { ProjectTypeRow } from "@/types/projectType";
 import type { AllocationPercentRow } from "@/types/allocationPercent";
+
+/** Backend default when create UI omits project type. */
+const DEFAULT_CREATE_PROJECT_TYPE = "IN_HOUSE";
 
 async function readCurrentAllocationPercent(email: string): Promise<number> {
   const normalized = email.trim().toLowerCase();
@@ -66,11 +68,29 @@ async function allocateManagerOnProject({
   const normalized = normalizePickerEmail(email);
   if (!normalized) return;
   const percent = Number(fields.allocated_percent);
-  if (!Number.isFinite(percent) || percent <= 0) return;
+  if (!Number.isFinite(percent) || percent <= 0) {
+    throw new Error("Project Manager allocation % is required.");
+  }
   await assertAllocationWithinCap(normalized, percent);
   const startDate = normalizeToApiDate(fields.start_date || projectStart);
-  if (!startDate) return;
-  const endDate = normalizeToApiDate(fields.end_date || projectEnd) || null;
+  if (!startDate) {
+    throw new Error("Project Manager start date is required.");
+  }
+  const endDate = normalizeToApiDate(fields.end_date || projectEnd);
+  if (!endDate) {
+    throw new Error("Project Manager end date is required.");
+  }
+  if (compareApiDates(startDate, endDate) > 0) {
+    throw new Error("Project Manager start date must be on or before end date.");
+  }
+  if (
+    compareApiDates(startDate, projectStart) < 0 ||
+    compareApiDates(endDate, projectEnd) > 0
+  ) {
+    throw new Error(
+      "Project Manager dates must fall within the project start and end dates."
+    );
+  }
   const allocationType = fields.allocation_type || "DEPLOYABLE";
   const lockedInDate =
     allocationType === "LOCKED"
@@ -135,7 +155,15 @@ export function CreateProjectDialog({
       return;
     }
     if (initialForm) {
-      setForm({ ...createEmptyProjectForm(), ...initialForm });
+      const next = { ...createEmptyProjectForm(), ...initialForm };
+      setForm(next);
+      const pmEmail = (initialForm.project_manager_emails?.[0] ?? "").trim().toLowerCase();
+      setPmFields({
+        ...createEmptyManagerAllocationFields("Project Manager"),
+        email: pmEmail,
+        start_date: next.start_date || "",
+        end_date: next.end_date || "",
+      });
       return;
     }
     const prefillsName = initialProjectName?.trim() ?? "";
@@ -155,41 +183,104 @@ export function CreateProjectDialog({
       showErrorToast("Client is required.");
       return;
     }
-    if (!form.project_type || !isKnownProjectTypeCode(form.project_type, activeProjectTypes)) {
+    if (
+      isEditing &&
+      (!form.project_type || !isKnownProjectTypeCode(form.project_type, activeProjectTypes))
+    ) {
       showErrorToast("Please select a valid project type.");
       return;
     }
     const accountManagerEmail = normalizePickerEmail(form.account_manager_email);
-    if (!accountManagerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountManagerEmail)) {
-      showErrorToast("Select a valid account manager.");
+    if (
+      !isEditing &&
+      (!accountManagerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountManagerEmail))
+    ) {
+      showErrorToast("Select a client with a valid account manager.");
       return;
     }
     const startDate = normalizeToApiDate(form.start_date);
     const endDate = normalizeToApiDate(form.end_date);
     if (!startDate) {
-      showErrorToast("Start date is required.");
+      showErrorToast("Project start date is required.");
       return;
     }
     if (!endDate) {
-      showErrorToast("End date is required.");
+      showErrorToast("Project end date is required.");
       return;
     }
-    if (startDate > endDate) {
-      showErrorToast("Start date must be on or before end date.");
+    if (compareApiDates(startDate, endDate) > 0) {
+      showErrorToast("Project start date must be on or before end date.");
       return;
+    }
+
+    // Create and edit both manage Project Manager here (Account Manager stays on the client).
+    const pmEmail = pmFields.email.trim();
+    if (pmEmail) {
+      const pmStartDate = normalizeToApiDate(pmFields.start_date || form.start_date);
+      const pmEndDate = normalizeToApiDate(pmFields.end_date || form.end_date);
+      if (!pmStartDate) {
+        showErrorToast("Project Manager start date is required.");
+        return;
+      }
+      if (!pmEndDate) {
+        showErrorToast("Project Manager end date is required.");
+        return;
+      }
+      if (compareApiDates(pmStartDate, pmEndDate) > 0) {
+        showErrorToast("Project Manager start date must be on or before end date.");
+        return;
+      }
+      if (
+        compareApiDates(pmStartDate, startDate) < 0 ||
+        compareApiDates(pmEndDate, endDate) > 0
+      ) {
+        showErrorToast(
+          "Project Manager dates must fall within the project start and end dates."
+        );
+        return;
+      }
     }
 
     setLoading(true);
     try {
       if (isEditing) {
-        await hrmsService.updateProject(editingProjectCode.trim(), {
+        const code = editingProjectCode.trim();
+        await hrmsService.updateProject(code, {
           project_name: name,
           project_type: form.project_type,
           client_id: clientId,
-          account_manager_email: accountManagerEmail,
           start_date: startDate,
           end_date: endDate,
         });
+
+        if (pmEmail) {
+          const previousPm = (initialForm?.project_manager_emails?.[0] ?? "").trim().toLowerCase();
+          const nextPm = normalizePickerEmail(pmEmail);
+          if (nextPm && nextPm !== previousPm) {
+            try {
+              await hrmsService.assignProjectManager({
+                userEmail: nextPm,
+                projectCode: code,
+              });
+            } catch {
+              await allocateManagerOnProject({
+                email: nextPm,
+                fields: {
+                  ...pmFields,
+                  email: nextPm,
+                  role: "Project Manager",
+                  start_date: pmFields.start_date || form.start_date,
+                  end_date: pmFields.end_date || form.end_date,
+                },
+                projectCode: code,
+                projectStart: startDate,
+                projectEnd: endDate,
+                isManager: true,
+              });
+            }
+          }
+        }
+
         showSuccessToast("Project updated successfully.");
         onCreated();
         onClose();
@@ -200,42 +291,24 @@ export function CreateProjectDialog({
       await hrmsService.createProject({
         project_code: projectCode,
         project_name: name,
-        project_type: form.project_type,
+        project_type: DEFAULT_CREATE_PROJECT_TYPE,
         client_id: clientId,
         account_manager_email: accountManagerEmail,
         start_date: startDate,
         end_date: endDate,
       });
 
-      setDmFields((prev) => ({
-        ...prev,
-        start_date: prev.start_date || form.start_date,
-        end_date: prev.end_date || form.end_date,
-      }));
-      setPmFields((prev) => ({
-        ...prev,
-        start_date: prev.start_date || form.start_date,
-        end_date: prev.end_date || form.end_date,
-      }));
-
-      const pmEmail = pmFields.email.trim();
-      const dmEmail = dmFields.email.trim();
-
-      if (dmEmail) {
-        await allocateManagerOnProject({
-          email: dmEmail,
-          fields: { ...dmFields, email: dmEmail, role: "Delivery Manager" },
-          projectCode,
-          projectStart: startDate,
-          projectEnd: endDate,
-          isManager: false,
-        });
-      }
-
+      // Delivery Manager is contact-only on create (no allocation). PM is allocated.
       if (pmEmail) {
         await allocateManagerOnProject({
           email: pmEmail,
-          fields: { ...pmFields, email: pmEmail, role: "Project Manager" },
+          fields: {
+            ...pmFields,
+            email: pmEmail,
+            role: "Project Manager",
+            start_date: pmFields.start_date || form.start_date,
+            end_date: pmFields.end_date || form.end_date,
+          },
           projectCode,
           projectStart: startDate,
           projectEnd: endDate,
@@ -265,8 +338,8 @@ export function CreateProjectDialog({
       title={isEditing ? "Edit Project" : "Create Project"}
       description={
         isEditing
-          ? "Update project details. Manager allocations are managed from Project Allocation."
-          : "Set project details, then assign delivery and project managers."
+          ? "Update project details and project manager. Account manager comes from the client."
+          : "Set project details, then assign managers. Account manager is taken from the client."
       }
       onClose={onClose}
       onSubmit={() => void handleSubmit()}
@@ -289,11 +362,12 @@ export function CreateProjectDialog({
               onChange={(value) => setForm((prev) => ({ ...prev, client_id: value }))}
               onClientSelected={(client) => {
                 const dmEmail = client.deliveryManagerEmail?.trim() || "";
+                const amEmail = client.accountManagerEmail?.trim() || "";
                 setForm((prev) => ({
                   ...prev,
                   client_id: String(client.id),
                   client_name: client.name,
-                  account_manager_email: client.accountManagerEmail || prev.account_manager_email,
+                  account_manager_email: amEmail,
                   delivery_manager_email: dmEmail || prev.delivery_manager_email,
                 }));
                 if (dmEmail) {
@@ -308,8 +382,7 @@ export function CreateProjectDialog({
               value={form.start_date}
               onChange={(value) => {
                 setForm((prev) => ({ ...prev, start_date: value }));
-                setDmFields((prev) => ({ ...prev, start_date: prev.start_date || value }));
-                setPmFields((prev) => ({ ...prev, start_date: prev.start_date || value }));
+                setPmFields((prev) => ({ ...prev, start_date: value }));
               }}
             />
             <InputField
@@ -319,46 +392,56 @@ export function CreateProjectDialog({
               value={form.end_date}
               onChange={(value) => {
                 setForm((prev) => ({ ...prev, end_date: value }));
-                setDmFields((prev) => ({ ...prev, end_date: prev.end_date || value }));
-                setPmFields((prev) => ({ ...prev, end_date: prev.end_date || value }));
+                setPmFields((prev) => ({ ...prev, end_date: value }));
               }}
             />
-            <AccountManagerSelect
-              required
-              value={form.account_manager_email}
-              onChange={(value) => setForm((prev) => ({ ...prev, account_manager_email: value }))}
-            />
-            <ProjectTypeSelect
-              required
-              activeOnly
-              enabled={enabled}
-              value={form.project_type}
-              onChange={(value) => setForm((prev) => ({ ...prev, project_type: value }))}
-            />
+            {!isEditing ? (
+              <InputField
+                label="Account Manager"
+                value={form.account_manager_email}
+                onChange={() => {}}
+                disabled
+                placeholder="Filled from selected client"
+              />
+            ) : null}
+            {isEditing ? (
+              <ProjectTypeSelect
+                required
+                activeOnly
+                enabled={enabled}
+                value={form.project_type}
+                onChange={(value) => setForm((prev) => ({ ...prev, project_type: value }))}
+              />
+            ) : null}
           </div>
         </FormSection>
 
         {!isEditing ? (
-          <>
-            <ManagerAllocationFields
-              title="Delivery Manager"
-              state={dmFields}
-              onChange={setDmFields}
-              allocationPercentOptions={allocationPercentOptions}
-              enabled={enabled}
-              percentDesignation="Delivery Manager"
-            />
-
-            <ManagerAllocationFields
-              title="Project Manager"
-              state={pmFields}
-              onChange={setPmFields}
-              allocationPercentOptions={allocationPercentOptions}
-              enabled={enabled}
-              percentDesignation="Project Manager"
-            />
-          </>
+          <ManagerAllocationFields
+            title="Delivery Manager"
+            state={dmFields}
+            onChange={(next) => {
+              setDmFields(next);
+              setForm((prev) => ({
+                ...prev,
+                delivery_manager_email: next.email,
+              }));
+            }}
+            allocationPercentOptions={allocationPercentOptions}
+            enabled={enabled}
+            percentDesignation="Delivery Manager"
+            managerContactOnly
+          />
         ) : null}
+
+        <ManagerAllocationFields
+          title="Project Manager"
+          state={pmFields}
+          onChange={setPmFields}
+          allocationPercentOptions={allocationPercentOptions}
+          enabled={enabled}
+          percentDesignation="Project Manager"
+        />
       </div>
     </WtFormDialog>
   );

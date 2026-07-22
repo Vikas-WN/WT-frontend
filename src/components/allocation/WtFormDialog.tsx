@@ -27,6 +27,7 @@ export function WtFormDialog({
   submitDisabled = false,
   loading = false,
   maxWidthClass = "max-w-2xl",
+  secondaryAction,
 }: {
   open: boolean;
   title: string;
@@ -39,6 +40,7 @@ export function WtFormDialog({
   submitDisabled?: boolean;
   loading?: boolean;
   maxWidthClass?: string;
+  secondaryAction?: { label: string; onClick: () => void; disabled?: boolean };
 }) {
   useEffect(() => {
     if (!open) return;
@@ -78,6 +80,16 @@ export function WtFormDialog({
           <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
             {UI_COPY.cancel}
           </Button>
+          {secondaryAction ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={secondaryAction.onClick}
+              disabled={loading || secondaryAction.disabled}
+            >
+              {secondaryAction.label}
+            </Button>
+          ) : null}
           {onSubmit && submitLabel ? (
             <Button
               type="button"

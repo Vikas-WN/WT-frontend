@@ -31,14 +31,13 @@ function findHeaderRowIndex(matrix: string[][]): number {
         .replace(/[._]+/g, " ")
         .replace(/\s+/g, " ")
     );
-    const hasSlNo = normalized.some((cell) => /\bsl\.?\s*no\b/.test(cell));
     const hasDate = normalized.some((cell) => /\bdate\b/.test(cell));
     const hasHoliday = normalized.some(
       (cell) =>
         (/\bholiday\b/.test(cell) || cell === "name" || cell === "holiday name") &&
         !/\bcalendar\b/.test(cell)
     );
-    if (hasSlNo && hasDate && hasHoliday) return i;
+    if (hasDate && hasHoliday) return i;
   }
   return 0;
 }
@@ -238,12 +237,18 @@ export function rowsToCsv(columns: string[], rows: SpreadsheetRow[]): string {
   ].join("\n");
 }
 
-export function downloadCsvFile(filename: string, columns: string[], rows: SpreadsheetRow[]) {
-  const blob = new Blob([rowsToCsv(columns, rows)], { type: "text/csv;charset=utf-8" });
+export function downloadBlobFile(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+export function downloadCsvFile(filename: string, columns: string[], rows: SpreadsheetRow[]) {
+  downloadBlobFile(
+    filename,
+    new Blob([rowsToCsv(columns, rows)], { type: "text/csv;charset=utf-8" })
+  );
 }

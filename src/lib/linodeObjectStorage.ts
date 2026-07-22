@@ -128,6 +128,15 @@ export function getLinodeObjectStorageConfig(): LinodeObjectStorageConfig {
   };
 }
 
+export function isLinodeObjectStorageConfigured(): boolean {
+  try {
+    getLinodeObjectStorageConfig();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function buildS3Client(config: LinodeObjectStorageConfig, forcePathStyle: boolean): S3Client {
   return new S3Client({
     endpoint: config.endpoint,
