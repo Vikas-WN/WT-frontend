@@ -9,22 +9,36 @@ export function ReferralFormSkeleton() {
           <Skeleton className="h-5 w-40" />
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6 pt-0">
+      <CardContent className="space-y-5 pt-0">
+        <div className="flex items-center gap-2">
+          <Skeleton className="size-6 rounded-full" />
+          <Skeleton className="h-3 flex-1" />
+          <Skeleton className="size-6 rounded-full" />
+          <Skeleton className="h-3 flex-1" />
+        </div>
+
         <div className="space-y-2">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-10 w-full rounded-lg" />
         </div>
+
         <div className="space-y-2">
-          <Skeleton className="h-4 w-16" />
-          <div className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-wt-border-md p-8">
-            <Skeleton className="size-12 rounded-full" />
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-3 w-44" />
-            <Skeleton className="h-3 w-32" />
+          <Skeleton className="h-4 w-28" />
+          <div className="relative">
+            <Skeleton className="absolute left-3 top-1/2 size-4 -translate-y-1/2 rounded-full" />
+            <Skeleton className="h-10 w-full rounded-lg" />
           </div>
         </div>
+
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-28" />
+          <div className="relative">
+            <Skeleton className="absolute left-3 top-1/2 size-4 -translate-y-1/2 rounded-full" />
+            <Skeleton className="h-10 w-full rounded-lg" />
+          </div>
+        </div>
+
         <Skeleton className="h-11 w-full rounded-lg" />
-        <Skeleton className="mx-auto h-3 w-56" />
       </CardContent>
     </Card>
   );

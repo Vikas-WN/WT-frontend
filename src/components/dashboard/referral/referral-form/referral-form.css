@@ -5,4 +5,54 @@
     line-height: 1rem;
     text-align: center;
   }
+
+  .step-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .step-dot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    transition: background var(--wt-duration) var(--wt-ease), color var(--wt-duration) var(--wt-ease);
+  }
+
+  .step-dot--active {
+    background: var(--wt-brand);
+    color: var(--wt-brand-text);
+  }
+
+  .step-dot--inactive {
+    background: var(--wt-surface-2);
+    color: var(--wt-text-faint);
+  }
+
+  .step-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    transition: color var(--wt-duration) var(--wt-ease);
+  }
+
+  .step-label--active {
+    color: var(--wt-text);
+  }
+
+  .step-label--inactive {
+    color: var(--wt-text-faint);
+  }
+
+  .step-separator {
+    flex: 1;
+    height: 1px;
+    background: var(--wt-border-md);
+    margin: 0 0.25rem;
+  }
 }

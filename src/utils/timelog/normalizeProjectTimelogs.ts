@@ -114,6 +114,7 @@ export function normalizeProjectTimelogsData(payload: unknown): ProjectTimelogsD
     projects: collectProjects(payload)
       .map(normalizeProject)
       .filter((project): project is ProjectTimelogProject => Boolean(project)),
+    pendingApprovals: [],
   };
 }
 

@@ -16,4 +16,5 @@ export const RESUME_ERROR_MESSAGES = {
 export const REFERRAL_QUERY_KEYS = {
   all: ["referral"] as const,
   jobs: (q?: string, page?: number) => ["referral", "jobs", q ?? "", page ?? 1] as const,
+  list: (email: string) => ["referral", "list", email] as const,
 } as const;

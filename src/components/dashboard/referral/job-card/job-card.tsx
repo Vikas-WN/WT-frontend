@@ -27,7 +27,7 @@ function JobIdChip({ id }: { id: string }) {
       )}
       title={JOB_CARD_COPY.copyTitle}
     >
-      #{id.split("-")[0]}
+      Job ID : #{id.split("-")[0]}
     </span>
   );
 }
