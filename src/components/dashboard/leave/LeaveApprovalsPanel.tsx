@@ -36,7 +36,6 @@ import {
 } from "@/utils/leaveManagerDisplay";
 import {
   applyLeaveTeamRequestDecisions,
-  extractStatusUpdateData,
   patchLeaveTeamRequestStatus,
   requestFinalStatus,
   requestManagerStatus,
@@ -44,7 +43,6 @@ import {
   updateUserRequestStatus,
   type UserRequestStatusValue,
 } from "@/utils/userRequest";
-import { normalizeRequestStatus } from "@/utils/compOff";
 
 function employeeDisplayName(row: Record<string, unknown>): string {
   return (
@@ -177,19 +175,11 @@ export function LeaveApprovalsPanel({
       throw new Error("Reason is required when rejecting a request.");
     }
     const requestId = pendingReject.requestId;
-    const res = await updateUserRequestStatus(Number(requestId), "REJECTED", {
+    await updateUserRequestStatus(Number(requestId), "REJECTED", {
       reason,
       requireReasonOnReject: true,
     });
-    const updated = extractStatusUpdateData(res);
-    const serverStatusRaw = normalizeRequestStatus(
-      updated?.status ?? updated?.user_request_status ?? updated?.userRequestStatus ?? "REJECTED"
-    );
-    const serverStatus: UserRequestStatusValue =
-      serverStatusRaw === "APPROVED" || serverStatusRaw === "REJECTED" || serverStatusRaw === "PENDING"
-        ? serverStatusRaw
-        : "REJECTED";
-    applyLocalDecision(requestId, serverStatus, reason);
+    applyLocalDecision(requestId, "REJECTED", reason);
     closeRejectDialog();
     void refreshInbox();
   }
@@ -331,23 +321,10 @@ export function LeaveApprovalsPanel({
                                     async () => {
                                       setStatusUpdatingId(requestId);
                                       try {
-                                        const res = await updateUserRequestStatus(Number(requestId), "APPROVED", {
+                                        await updateUserRequestStatus(Number(requestId), "APPROVED", {
                                           requireReasonOnReject: false,
                                         });
-                                        const updated = extractStatusUpdateData(res);
-                                        const serverStatusRaw = normalizeRequestStatus(
-                                          updated?.status ??
-                                            updated?.user_request_status ??
-                                            updated?.userRequestStatus ??
-                                            "APPROVED"
-                                        );
-                                        const serverStatus: UserRequestStatusValue =
-                                          serverStatusRaw === "APPROVED" ||
-                                          serverStatusRaw === "REJECTED" ||
-                                          serverStatusRaw === "PENDING"
-                                            ? serverStatusRaw
-                                            : "APPROVED";
-                                        applyLocalDecision(requestId, serverStatus);
+                                        applyLocalDecision(requestId, "APPROVED");
                                         void refreshInbox();
                                       } finally {
                                         setStatusUpdatingId(null);
