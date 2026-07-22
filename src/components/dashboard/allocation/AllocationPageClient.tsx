@@ -2571,9 +2571,19 @@ export function AllocationPageClient() {
 
   function toggleAllocationProjectExpanded(projectKey: string) {
     setExpandedAllocationProjects((prev) => {
+      const willExpand = !prev.has(projectKey);
       const next = new Set(prev);
-      if (next.has(projectKey)) next.delete(projectKey);
-      else next.add(projectKey);
+      if (willExpand) next.add(projectKey);
+      else next.delete(projectKey);
+      if (willExpand) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            document
+              .getElementById(`allocation-accordion-${projectKey}`)
+              ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+          });
+        });
+      }
       return next;
     });
   }
@@ -3792,13 +3802,16 @@ export function AllocationPageClient() {
                                     <SectionLoading label="Loading allocations…" />
                                   ) : allocationPagination.pageItems.length ? (
                                     <>
-                                    <div className="max-h-[min(70vh,520px)] space-y-2 overflow-y-auto pr-1">
+                                    <div className="space-y-2">
                                       {allocationPagination.pageItems.map((group) => {
                                         const isExpanded = expandedAllocationProjects.has(group.projectKey);
                                         return (
                                           <div
                                             key={group.projectKey}
-                                            className="overflow-hidden rounded-xl border border-wt-border bg-wt-surface-1"
+                                            id={`allocation-accordion-${group.projectKey}`}
+                                            className={`rounded-xl border border-wt-border bg-wt-surface-1${
+                                              isExpanded ? "" : " overflow-hidden"
+                                            }`}
                                           >
                                             <button
                                               type="button"
@@ -3823,7 +3836,15 @@ export function AllocationPageClient() {
                                               </span>
                                             </button>
                                             {isExpanded ? (
-                                              <ScrollableTable maxHeightClass="max-h-[min(40vh,320px)]">
+                                              <ScrollableTable
+                                                maxHeightClass={
+                                                  group.rows.length > 12
+                                                    ? "max-h-[min(40vh,320px)]"
+                                                    : "max-h-none"
+                                                }
+                                                scrollChain={group.rows.length > 12}
+                                                className="rounded-none border-x-0 border-b-0 border-t border-wt-border"
+                                              >
                                                 <WtTable>
                                                   <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
                                                     <TableRow className="hover:bg-transparent">

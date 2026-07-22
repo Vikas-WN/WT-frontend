@@ -108,6 +108,14 @@ function validateWorkStep(
     throw new Error("Name should be 2–120 characters and contain letters (and spaces) only.");
   }
   if (!form.user_type) throw new Error("User Type is required.");
+  const portalRole = form.portal_role.trim();
+  if (!portalRole) throw new Error("Portal Role is required.");
+  const allowedPortalRoles = new Set(
+    PORTAL_ROLE_SELECT_OPTIONS.map((option) => option.value)
+  );
+  if (!allowedPortalRoles.has(portalRole as (typeof PORTAL_ROLE_SELECT_OPTIONS)[number]["value"])) {
+    throw new Error("Please select a valid Portal Role.");
+  }
   if (!department) throw new Error("Department is required.");
 
   const bandId =
@@ -157,7 +165,7 @@ function validateWorkStep(
   }
   if (!role) throw new Error("Designation is required.");
 
-  return { empId, email, name, department, role, bandId, reportingManagerId };
+  return { empId, email, name, department, role, bandId, reportingManagerId, portalRole };
 }
 
 export function HrOnboardForm({
@@ -257,7 +265,8 @@ export function HrOnboardForm({
 
   function submit() {
     void runAction("Create And Invite Employee", async () => {
-      const { empId, email, name, department, role, bandId, reportingManagerId } = validateWorkStep(
+      const { empId, email, name, department, role, bandId, reportingManagerId, portalRole } =
+        validateWorkStep(
         form,
         internBandId,
         defaultConsultantBandId,
@@ -274,7 +283,7 @@ export function HrOnboardForm({
         user_type: form.user_type,
         department,
         role,
-        portal_role: form.portal_role || "ROLE_EMPLOYEE",
+        portal_role: portalRole,
         band_id: bandId,
         work_mode: form.work_mode,
         work_location_type: form.work_location_type,

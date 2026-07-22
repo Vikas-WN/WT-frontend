@@ -99,16 +99,16 @@ export function EmployeeProfilePageClient() {
     queriesEnabled && isEditing && canEditProfile
   );
 
-  const criticalSkillOptions = useMemo(() => {
+  const primarySkillOptions = useMemo(() => {
     const options = onboardOptions?.primary_skills?.length
       ? onboardOptions.primary_skills
       : FALLBACK_ONBOARD_OPTIONS.primary_skills;
     return options.map((option) => ({ value: option.value, label: option.label }));
   }, [onboardOptions?.primary_skills]);
 
-  const allowedCriticalSkills = useMemo(
-    () => new Set(criticalSkillOptions.map((option) => option.value)),
-    [criticalSkillOptions]
+  const allowedPrimarySkills = useMemo(
+    () => new Set(primarySkillOptions.map((option) => option.value)),
+    [primarySkillOptions]
   );
   const profileRecord = profile ?? {};
   const displayName = cleanEmployeeName(profileRecord) || "Employee";
@@ -247,12 +247,12 @@ export function EmployeeProfilePageClient() {
   }, [designationOptions, designationLoading, editForm, isEditing]);
 
   useEffect(() => {
-    if (!isEditing || !editForm || onboardOptionsLoading || !allowedCriticalSkills.size) return;
-    const filtered = editForm.primary_skills.filter((skill) => allowedCriticalSkills.has(skill));
+    if (!isEditing || !editForm || onboardOptionsLoading || !allowedPrimarySkills.size) return;
+    const filtered = editForm.primary_skills.filter((skill) => allowedPrimarySkills.has(skill));
     if (filtered.length !== editForm.primary_skills.length) {
       setEditForm((prev) => (prev ? { ...prev, primary_skills: filtered } : prev));
     }
-  }, [allowedCriticalSkills, editForm, isEditing, onboardOptionsLoading]);
+  }, [allowedPrimarySkills, editForm, isEditing, onboardOptionsLoading]);
 
   const departmentSelectOptions = useMemo(() => {
     const deps = [...departmentOptions];
@@ -310,16 +310,16 @@ export function EmployeeProfilePageClient() {
             );
           }
           if (onboardOptionsLoading) {
-            throw new Error("Critical skills are still loading. Please wait a moment.");
+            throw new Error("Primary skills are still loading. Please wait a moment.");
           }
           if (!editForm.primary_skills.length) {
-            throw new Error("At least one critical skill is required.");
+            throw new Error("At least one primary skill is required.");
           }
           const invalidSkills = editForm.primary_skills.filter(
-            (skill) => !allowedCriticalSkills.has(skill)
+            (skill) => !allowedPrimarySkills.has(skill)
           );
           if (invalidSkills.length) {
-            throw new Error("Selected critical skills must come from the predefined list.");
+            throw new Error("Selected primary skills must come from the predefined list.");
           }
         }
         await updateMutation.mutateAsync(
@@ -559,14 +559,14 @@ export function EmployeeProfilePageClient() {
                     <FormSubsection title="Skills">
                       <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
                         <SkillsMultiSelectField
-                          label="Critical Skills"
+                          label="Primary Skills"
                           required
-                          className="sm:col-span-3"
+                          className="w-full max-w-sm"
                           value={editForm.primary_skills}
-                          options={criticalSkillOptions}
+                          options={primarySkillOptions}
                           loading={onboardOptionsLoading}
-                          loadingLabel="Loading Critical Skills…"
-                          placeholder="Select Critical Skills"
+                          loadingLabel="Loading Primary Skills…"
+                          placeholder="Select Primary Skills"
                           onChange={(skills) =>
                             setEditForm((prev) => (prev ? { ...prev, primary_skills: skills } : prev))
                           }

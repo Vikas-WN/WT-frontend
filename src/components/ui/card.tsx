@@ -55,7 +55,7 @@ function CardToolbar({ className, ...props }: React.ComponentProps<"div">) {
 
 function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div data-slot="card-content" className={cn(CARD_CONTENT_CLASS, className,"mt-[-3rem]")} {...props} />
+    <div data-slot="card-content" className={cn(CARD_CONTENT_CLASS, className)} {...props} />
   );
 }
 

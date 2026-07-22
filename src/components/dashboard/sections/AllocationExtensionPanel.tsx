@@ -531,31 +531,36 @@ export function AllocationExtensionPanel() {
       ) : null}
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[220px]">
-            <h3 className="font-semibold">
-              {visibleMode === "hr"
-                ? "Allocation Extension Requests"
-                : "My Allocation Extension Requests"}
-            </h3>
-            <p className="text-xs text-wt-text-muted">
-              {loading ? "Loading…" : `${totalElements} Total`}
-              {visibleMode === "hr" && !loading
-                ? " · Approve Or Reject Pending Requests From Project Managers"
-                : ""}
-            </p>
-          </div>
+        <div className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h3 className="font-semibold">
+                {visibleMode === "hr"
+                  ? "Allocation Extension Requests"
+                  : "My Allocation Extension Requests"}
+              </h3>
+              <p className="text-xs text-wt-text-muted">
+                {loading ? "Loading…" : `${totalElements} Total`}
+                {visibleMode === "hr" && !loading
+                  ? " · Approve Or Reject Pending Requests From Project Managers"
+                  : ""}
+              </p>
+            </div>
 
-          <input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(0);
-            }}
-            className="w-64 max-w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:border-[var(--wt-brand)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)]"
-            placeholder="Search"
-            aria-label="Search"
-          />
+            <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
+              <input
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(0);
+                }}
+                className="h-10 w-full min-w-[200px] rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:border-[var(--wt-brand)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)] sm:w-64"
+                placeholder="Search"
+                aria-label="Search"
+              />
+              <RefreshIconButton onClick={() => void load()} loading={loading} />
+            </div>
+          </div>
 
           {visibleMode === "hr" ? (
             <SelectField
@@ -574,8 +579,6 @@ export function AllocationExtensionPanel() {
               ]}
             />
           ) : null}
-
-          <RefreshIconButton onClick={() => void load()} />
         </div>
 
         {rows.length ? (

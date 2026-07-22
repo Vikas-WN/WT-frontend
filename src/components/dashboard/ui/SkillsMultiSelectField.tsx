@@ -22,7 +22,12 @@ type SkillsMultiSelectFieldProps = {
   loadingLabel?: string;
   placeholder?: string;
   className?: string;
+  /** Cap dropdown panel width (px). Defaults to trigger width, max 320px. */
+  dropdownMaxWidth?: number;
 };
+
+const DROPDOWN_MAX_HEIGHT = 208;
+const DROPDOWN_GAP = 6;
 
 export function SkillsMultiSelectField({
   label,
@@ -35,6 +40,7 @@ export function SkillsMultiSelectField({
   loadingLabel = "Loading skills…",
   placeholder,
   className,
+  dropdownMaxWidth = 320,
 }: SkillsMultiSelectFieldProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -72,17 +78,44 @@ export function SkillsMultiSelectField({
   }, []);
 
   useEffect(() => {
-    if (open && rootRef.current) {
-      const rect = rootRef.current.getBoundingClientRect();
-      setDropdownStyle({
-        position: "fixed",
-        top: `${rect.bottom + 6}px`,
-        left: `${rect.left}px`,
-        width: `${rect.width}px`,
-        zIndex: 9999,
-      });
-    }
-  }, [open]);
+    if (!open || !rootRef.current) return;
+
+    const updatePosition = () => {
+      const root = rootRef.current;
+      if (!root) return;
+      const rect = root.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom - DROPDOWN_GAP;
+      const spaceAbove = rect.top - DROPDOWN_GAP;
+      const openUpward = spaceBelow < DROPDOWN_MAX_HEIGHT && spaceAbove > spaceBelow;
+      const width = Math.min(rect.width, dropdownMaxWidth);
+
+      setDropdownStyle(
+        openUpward
+          ? {
+              position: "fixed",
+              left: `${rect.left}px`,
+              bottom: `${window.innerHeight - rect.top + DROPDOWN_GAP}px`,
+              width: `${width}px`,
+              zIndex: 9999,
+            }
+          : {
+              position: "fixed",
+              top: `${rect.bottom + DROPDOWN_GAP}px`,
+              left: `${rect.left}px`,
+              width: `${width}px`,
+              zIndex: 9999,
+            }
+      );
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, dropdownMaxWidth]);
 
   const toggleSkill = (skill: string, checked: boolean) => {
     const normalized = skill.trim();

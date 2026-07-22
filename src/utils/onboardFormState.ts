@@ -32,7 +32,7 @@ export function createEmptyOnboardForm(): OnboardFormState {
     work_mode: "",
     work_location_type: "",
     role: "",
-    portal_role: "ROLE_EMPLOYEE",
+    portal_role: "",
     band_id: 0,
     category: "",
     doj: "",
