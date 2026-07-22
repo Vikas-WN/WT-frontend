@@ -11,7 +11,8 @@ import type { JobCardProps } from "@/components/dashboard/referral/job-card/job-
 import "./job-card.css";
 
 function copyJobId(id: string): void {
-  navigator.clipboard.writeText(id).then(() => {
+  const shortId = id.split("-")[0];
+  navigator.clipboard.writeText(shortId).then(() => {
     showSuccessToast(JOB_CARD_COPY.copiedToast);
   });
 }
