@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatApiDate } from "@/utils/apiDate";
 import { listScopedUserRequests } from "@/utils/userRequest";
 import {
-  isAssignedPrimaryLeaveManager,
+  isAssignedLeaveManager,
   isOwnUserRequest,
 } from "@/utils/leaveManagerDisplay";
 
@@ -14,7 +14,7 @@ export function primaryManagerInboxQueryKey(email?: string | null) {
   return [...PRIMARY_MANAGER_INBOX_QUERY_KEY, email ?? "anonymous"] as const;
 }
 
-function filterPrimaryManagerInbox(
+function filterLeaveManagerInbox(
   rows: Array<Record<string, unknown>>,
   actorEmail: string
 ): Array<Record<string, unknown>> {
@@ -23,11 +23,11 @@ function filterPrimaryManagerInbox(
 
   return rows.filter((row) => {
     if (isOwnUserRequest(row, email)) return false;
-    return isAssignedPrimaryLeaveManager(row, email);
+    return isAssignedLeaveManager(row, email);
   });
 }
 
-async function fetchPrimaryManagerInbox(actorEmail: string): Promise<Array<Record<string, unknown>>> {
+async function fetchLeaveManagerInbox(actorEmail: string): Promise<Array<Record<string, unknown>>> {
   const today = new Date();
   const start = new Date(today.getFullYear() - 1, 0, 1);
   const end = new Date(today);
@@ -64,9 +64,10 @@ async function fetchPrimaryManagerInbox(actorEmail: string): Promise<Array<Recor
     ).values()
   );
 
-  return filterPrimaryManagerInbox(merged, actorEmail);
+  return filterLeaveManagerInbox(merged, actorEmail);
 }
 
+/** Inbox for assigned primary or secondary leave/WFH managers. */
 export function usePrimaryManagerLeaveInbox(actorEmail: string, enabled = true) {
   const queryClient = useQueryClient();
   const normalizedEmail = actorEmail.trim();
@@ -79,7 +80,7 @@ export function usePrimaryManagerLeaveInbox(actorEmail: string, enabled = true) 
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    queryFn: () => fetchPrimaryManagerInbox(normalizedEmail),
+    queryFn: () => fetchLeaveManagerInbox(normalizedEmail),
   });
 
   return {

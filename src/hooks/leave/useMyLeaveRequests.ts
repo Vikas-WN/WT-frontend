@@ -11,12 +11,22 @@ export function myLeaveRequestsBaseQueryKey(email?: string | null) {
   return [...MY_LEAVE_REQUESTS_QUERY_KEY, email ?? "anonymous"] as const;
 }
 
-export function defaultMyLeaveRequestRange(): { fromDate: string; toDate: string } {
-  const now = new Date();
+/** Wide range used when From/To filters are empty (backend max span ≈ 730 days). */
+export function unfilteredLeaveRequestRange(): { fromDate: string; toDate: string } {
+  const today = new Date();
+  const to = new Date(today);
+  to.setFullYear(to.getFullYear() + 1);
+  const from = new Date(to);
+  from.setDate(from.getDate() - 730);
   return {
-    fromDate: formatApiDate(new Date(now.getFullYear(), now.getMonth(), 1)),
-    toDate: formatApiDate(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+    fromDate: formatApiDate(from),
+    toDate: formatApiDate(to),
   };
+}
+
+/** @deprecated Prefer unfilteredLeaveRequestRange / empty UI filters. */
+export function defaultMyLeaveRequestRange(): { fromDate: string; toDate: string } {
+  return unfilteredLeaveRequestRange();
 }
 
 function dedupeByRequestId(rows: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
@@ -38,14 +48,20 @@ export function useMyLeaveRequests(
 ) {
   const queryClient = useQueryClient();
   const normalizedEmail = email.trim();
-
-  const defaultRange = useMemo(() => defaultMyLeaveRequestRange(), []);
-  const effectiveFromDate = fromDate ?? defaultRange.fromDate;
-  const effectiveToDate = toDate ?? defaultRange.toDate;
+  const selectedFrom = String(fromDate ?? "").trim();
+  const selectedTo = String(toDate ?? "").trim();
+  const fallbackRange = useMemo(() => unfilteredLeaveRequestRange(), []);
+  const hasDateFilter = Boolean(selectedFrom && selectedTo);
+  const effectiveFromDate = hasDateFilter ? selectedFrom : fallbackRange.fromDate;
+  const effectiveToDate = hasDateFilter ? selectedTo : fallbackRange.toDate;
 
   const queryKey = useMemo(
-    () => [...myLeaveRequestsBaseQueryKey(normalizedEmail), effectiveFromDate, effectiveToDate],
-    [normalizedEmail, effectiveFromDate, effectiveToDate]
+    () => [
+      ...myLeaveRequestsBaseQueryKey(normalizedEmail),
+      hasDateFilter ? selectedFrom : "all",
+      hasDateFilter ? selectedTo : "all",
+    ],
+    [normalizedEmail, hasDateFilter, selectedFrom, selectedTo]
   );
 
   const fetchFn = useCallback(async () => {

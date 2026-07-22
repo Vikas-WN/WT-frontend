@@ -1,5 +1,9 @@
-import { pickRowField } from "@/utils/compOff";
-import { isPendingApprovalStage, requestFinalStatus, requestManagerStatus } from "@/utils/userRequest";
+import { normalizeRequestStatus, pickRowField } from "@/utils/compOff";
+import {
+  isPendingApprovalStage,
+  requestFinalStatus,
+  requestManagerStatus,
+} from "@/utils/userRequest";
 
 export function pickManagerEmailList(row: Record<string, unknown>, kind: "primary" | "secondary"): string[] {
   const keys =
@@ -12,7 +16,12 @@ export function pickManagerEmailList(row: Record<string, unknown>, kind: "primar
           "selected_manager_emails",
           "selectedManagerEmails",
         ]
-      : ["secondary_managers", "secondaryManagers", "secondary_manager_emails", "secondaryManagerEmails"];
+      : [
+          "secondary_managers",
+          "secondaryManagers",
+          "secondary_manager_emails",
+          "secondaryManagerEmails",
+        ];
 
   const raw = pickRowField<unknown>(row, ...keys);
   if (!Array.isArray(raw)) return [];
@@ -55,6 +64,27 @@ export function hasPrimaryLeaveManagers(row: Record<string, unknown>): boolean {
   return isLeaveOrWfhRequestRow(row) && pickManagerEmailList(row, "primary").length > 0;
 }
 
+export function hasSecondaryLeaveManagers(row: Record<string, unknown>): boolean {
+  return isLeaveOrWfhRequestRow(row) && pickManagerEmailList(row, "secondary").length > 0;
+}
+
+/**
+ * Secondary stage for leave approval.
+ * Backend packs secondary stage into `hr_status` for primary-manager leave/WFH rows.
+ */
+export function requestSecondaryManagerStatus(row: Record<string, unknown>): string {
+  if (!hasSecondaryLeaveManagers(row)) return "APPROVED";
+  return normalizeRequestStatus(
+    pickRowField(
+      row,
+      "secondary_status",
+      "secondaryStatus",
+      "hr_status",
+      "hrStatus"
+    ) ?? "PENDING"
+  );
+}
+
 export function isOwnUserRequest(
   row: Record<string, unknown>,
   actorEmail: string | null | undefined
@@ -80,7 +110,28 @@ export function isAssignedPrimaryLeaveManager(
   );
 }
 
-/** Primary-manager leave/WFH workflow: assigned approver who is not the request owner and request is pending. */
+export function isAssignedSecondaryLeaveManager(
+  row: Record<string, unknown>,
+  actorEmail: string | null | undefined
+): boolean {
+  const email = String(actorEmail ?? "").trim().toLowerCase();
+  if (!email || !isLeaveOrWfhRequestRow(row)) return false;
+  return pickManagerEmailList(row, "secondary").some(
+    (managerEmail) => managerEmail.trim().toLowerCase() === email
+  );
+}
+
+export function isAssignedLeaveManager(
+  row: Record<string, unknown>,
+  actorEmail: string | null | undefined
+): boolean {
+  return (
+    isAssignedPrimaryLeaveManager(row, actorEmail) ||
+    isAssignedSecondaryLeaveManager(row, actorEmail)
+  );
+}
+
+/** Primary stage: assigned primary, request still open, primary has not decided yet. */
 export function canPrimaryManagerActOnLeave(
   row: Record<string, unknown>,
   actorEmail: string | null | undefined
@@ -91,9 +142,42 @@ export function canPrimaryManagerActOnLeave(
   return isPendingApprovalStage(requestManagerStatus(row));
 }
 
+/** Secondary can act while overall request is still pending and their stage is open. */
+export function canSecondaryManagerRejectOnLeave(
+  row: Record<string, unknown>,
+  actorEmail: string | null | undefined
+): boolean {
+  if (!isAssignedSecondaryLeaveManager(row, actorEmail)) return false;
+  if (isOwnUserRequest(row, actorEmail)) return false;
+  if (requestFinalStatus(row) !== "PENDING") return false;
+  return isPendingApprovalStage(requestSecondaryManagerStatus(row));
+}
+
+/**
+ * Secondary can approve while their stage is open.
+ * One assigned-manager approval (primary or secondary) fully approves the request.
+ */
+export function canSecondaryManagerApproveOnLeave(
+  row: Record<string, unknown>,
+  actorEmail: string | null | undefined
+): boolean {
+  return canSecondaryManagerRejectOnLeave(row, actorEmail);
+}
+
+/** True when the actor can approve and/or reject as an assigned leave manager. */
+export function canAssignedLeaveManagerActOnLeave(
+  row: Record<string, unknown>,
+  actorEmail: string | null | undefined
+): boolean {
+  return (
+    canPrimaryManagerActOnLeave(row, actorEmail) ||
+    canSecondaryManagerRejectOnLeave(row, actorEmail)
+  );
+}
+
 /**
  * Team Requests visibility: non-HR viewers only see leave/WFH where they are an
- * assigned primary manager. Other request types pass through unchanged.
+ * assigned primary or secondary manager. Other request types pass through unchanged.
  */
 export function filterTeamRequestsForPrimaryManager(
   rows: Array<Record<string, unknown>>,
@@ -104,6 +188,6 @@ export function filterTeamRequestsForPrimaryManager(
   return rows.filter((row) => {
     if (!isLeaveOrWfhRequestRow(row)) return true;
     if (!email) return false;
-    return isAssignedPrimaryLeaveManager(row, email);
+    return isAssignedLeaveManager(row, email);
   });
 }

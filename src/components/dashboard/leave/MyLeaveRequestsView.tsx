@@ -21,7 +21,6 @@ import { DatePicker } from "@/components/ui/date-picker";
 import {
   formatApprovalStageLabel,
   requestFinalStatus,
-  requestManagerStatus,
   requestRejectionReason,
 } from "@/utils/userRequest";
 import {
@@ -117,7 +116,7 @@ export function MyLeaveRequestsView({
               </TableHead>
               <TableHead className="font-semibold px-3">To</TableHead>
               {showRequestType ? <TableHead className="font-semibold px-3">Request Type</TableHead> : null}
-              <TableHead className="font-semibold px-3">Manager status</TableHead>
+              <TableHead className="font-semibold px-3">Status</TableHead>
               <TableHead className="font-semibold px-3">Comments</TableHead>
               <TableHead className="font-semibold px-3 text-right">Actions</TableHead>
             </TableRow>
@@ -145,10 +144,9 @@ export function MyLeaveRequestsView({
                 ).trim();
                 const rowRecord = row as Record<string, unknown>;
                 const finalStatus = requestFinalStatus(rowRecord);
-                const managerStatus = requestManagerStatus(rowRecord);
                 const isPending = finalStatus === "PENDING";
                 const rejectionReason =
-                  managerStatus === "REJECTED" || finalStatus === "REJECTED"
+                  finalStatus === "REJECTED"
                     ? requestRejectionReason(rowRecord)
                     : null;
                 return (
@@ -175,14 +173,14 @@ export function MyLeaveRequestsView({
                       <div className="flex flex-col items-start gap-1">
                         <Badge
                           className={
-                            managerStatus === "APPROVED"
+                            finalStatus === "APPROVED"
                               ? `rounded-full border-0 font-normal ${filledBadgeClass("success")}`
-                              : managerStatus === "REJECTED"
+                              : finalStatus === "REJECTED"
                                 ? `rounded-full border-0 font-normal ${filledBadgeClass("danger")}`
                                 : "rounded-full border-0 font-normal bg-muted/60 text-muted-foreground"
                           }
                         >
-                          {formatApprovalStageLabel(managerStatus)}
+                          {formatApprovalStageLabel(finalStatus)}
                         </Badge>
                         {rejectionReason ? (
                           <p
@@ -198,32 +196,36 @@ export function MyLeaveRequestsView({
                       {String(row.comments ?? "—")}
                     </TableCell>
                     <TableCell className="px-3 py-2.5 text-right">
-                      <div className="inline-flex items-center justify-end gap-0.5">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          type="button"
-                          disabled={actionLoading || !requestId || !isPending}
-                          onClick={() => onEdit(row)}
-                          className="text-muted-foreground hover:text-foreground"
-                          title="Edit"
-                        >
-                          <IconPencil className="size-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          disabled={actionLoading || !requestId || !isPending}
-                          onClick={() =>
-                            onRevoke(requestId, row.request_type ?? row.requestType)
-                          }
-                          className="text-muted-foreground hover:text-destructive"
-                          title="Revoke"
-                        >
-                          <IconTrash className="size-4" />
-                        </Button>
-                      </div>
+                      {isPending ? (
+                        <div className="inline-flex items-center justify-end gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            type="button"
+                            disabled={actionLoading || !requestId}
+                            onClick={() => onEdit(row)}
+                            className="text-muted-foreground hover:text-foreground"
+                            title="Edit"
+                          >
+                            <IconPencil className="size-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            disabled={actionLoading || !requestId}
+                            onClick={() =>
+                              onRevoke(requestId, row.request_type ?? row.requestType)
+                            }
+                            className="text-muted-foreground hover:text-destructive"
+                            title="Revoke"
+                          >
+                            <IconTrash className="size-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground/50">—</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

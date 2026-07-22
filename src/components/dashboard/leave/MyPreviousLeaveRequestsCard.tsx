@@ -155,6 +155,8 @@ export function MyPreviousLeaveRequestsCard({
                   const rejectionReason =
                     finalStatus === "REJECTED" ? requestRejectionReason(rowRecord) : null;
                   const primaryManagers = pickManagerEmailList(rowRecord, "primary");
+                  const secondaryManagers = pickManagerEmailList(rowRecord, "secondary");
+                  const approverEmails = [...primaryManagers, ...secondaryManagers];
                   const fromDate = String(rowRecord.request_from_date ?? rowRecord.requestFromDate ?? "");
                   const toDate = String(rowRecord.request_to_date ?? rowRecord.requestToDate ?? "");
                   const isHalfDay = Boolean(rowRecord.is_half_day ?? rowRecord.isHalfDay ?? false);
@@ -181,7 +183,7 @@ export function MyPreviousLeaveRequestsCard({
                         </div>
                       </TableCell>
                       <TableCell className="px-3 py-2.5 whitespace-nowrap">
-                        <LeaveManagerEmailsCell emails={primaryManagers} />
+                        <LeaveManagerEmailsCell emails={approverEmails} />
                       </TableCell>
                       <TableCell className="px-3 py-2.5 whitespace-nowrap tabular-nums">
                         {formatLeaveDaysCount(fromDate, toDate, isHalfDay)}
@@ -198,47 +200,50 @@ export function MyPreviousLeaveRequestsCard({
                           >
                             <Eye className="size-4" aria-hidden />
                           </Button>
-                          <div className="relative" ref={openMenuId === requestId ? menuRef : undefined}>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              className="text-wt-text-muted hover:text-wt-text"
-                              aria-label="More actions"
-                              aria-expanded={openMenuId === requestId}
-                              onClick={() =>
-                                setOpenMenuId((current) => (current === requestId ? null : requestId))
-                              }
-                            >
-                              <MoreVertical className="size-4" aria-hidden />
-                            </Button>
-                            {openMenuId === requestId ? (
-                              <div className="absolute right-0 top-full z-20 mt-1 min-w-[8.5rem] rounded-lg border border-wt-border bg-wt-surface-1 py-1 shadow-lg">
-                                <button
-                                  type="button"
-                                  className="block w-full px-3 py-2 text-left text-sm hover:bg-wt-surface-2 disabled:opacity-50"
-                                  disabled={actionLoading || !requestId || !isPending}
-                                  onClick={() => {
-                                    setOpenMenuId(null);
-                                    onEdit(rowRecord);
-                                  }}
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  className="block w-full px-3 py-2 text-left text-sm text-rose-700 hover:bg-rose-50 disabled:opacity-50"
-                                  disabled={actionLoading || !requestId || !isPending}
-                                  onClick={() => {
-                                    setOpenMenuId(null);
-                                    onRevoke(rowRecord);
-                                  }}
-                                >
-                                  Revoke
-                                </button>
-                              </div>
-                            ) : null}
-                          </div>
+                          {isPending ? (
+                            <div className="relative" ref={openMenuId === requestId ? menuRef : undefined}>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                className="text-wt-text-muted hover:text-wt-text"
+                                aria-label="More actions"
+                                aria-expanded={openMenuId === requestId}
+                                disabled={actionLoading || !requestId}
+                                onClick={() =>
+                                  setOpenMenuId((current) => (current === requestId ? null : requestId))
+                                }
+                              >
+                                <MoreVertical className="size-4" aria-hidden />
+                              </Button>
+                              {openMenuId === requestId ? (
+                                <div className="absolute right-0 top-full z-20 mt-1 min-w-[8.5rem] rounded-lg border border-wt-border bg-wt-surface-1 py-1 shadow-lg">
+                                  <button
+                                    type="button"
+                                    className="block w-full px-3 py-2 text-left text-sm hover:bg-wt-surface-2 disabled:opacity-50"
+                                    disabled={actionLoading || !requestId}
+                                    onClick={() => {
+                                      setOpenMenuId(null);
+                                      onEdit(rowRecord);
+                                    }}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="block w-full px-3 py-2 text-left text-sm text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                                    disabled={actionLoading || !requestId}
+                                    onClick={() => {
+                                      setOpenMenuId(null);
+                                      onRevoke(rowRecord);
+                                    }}
+                                  >
+                                    Revoke
+                                  </button>
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
                         </div>
                       </TableCell>
                     </TableRow>

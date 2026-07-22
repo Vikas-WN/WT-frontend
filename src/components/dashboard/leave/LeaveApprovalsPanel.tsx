@@ -26,11 +26,19 @@ import {
 import { useClientPagination } from "@/hooks/useClientPagination";
 import { formatUserRequestTypeLabel, userRequestActionLabel } from "@/utils/actionToast";
 import { formatLeaveDateRange, formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
-import { canPrimaryManagerActOnLeave } from "@/utils/leaveManagerDisplay";
+import {
+  canAssignedLeaveManagerActOnLeave,
+  canPrimaryManagerActOnLeave,
+  canSecondaryManagerApproveOnLeave,
+  canSecondaryManagerRejectOnLeave,
+  hasSecondaryLeaveManagers,
+  requestSecondaryManagerStatus,
+} from "@/utils/leaveManagerDisplay";
 import {
   applyLeaveTeamRequestDecisions,
   patchLeaveTeamRequestStatus,
   requestFinalStatus,
+  requestManagerStatus,
   requestRejectionReason,
   updateUserRequestStatus,
   type UserRequestStatusValue,
@@ -86,8 +94,8 @@ export function LeaveApprovalsPanel({
   >(new Map());
 
   const displayRows = useMemo(
-    () => applyLeaveTeamRequestDecisions(inboxQ.rows, decisionsRef.current),
-    [inboxQ.rows, decisionsVersion, inboxQ.dataUpdatedAt]
+    () => applyLeaveTeamRequestDecisions(inboxQ.rows, decisionsRef.current, actorEmail),
+    [inboxQ.rows, decisionsVersion, inboxQ.dataUpdatedAt, actorEmail]
   );
 
   const filteredRows = useMemo(() => {
@@ -120,8 +128,9 @@ export function LeaveApprovalsPanel({
   });
 
   const pendingCount = useMemo(
-    () => displayRows.filter((row) => requestFinalStatus(row) === "PENDING").length,
-    [displayRows]
+    () =>
+      displayRows.filter((row) => canAssignedLeaveManagerActOnLeave(row, actorEmail)).length,
+    [displayRows, actorEmail]
   );
 
   function applyLocalDecision(
@@ -138,7 +147,7 @@ export function LeaveApprovalsPanel({
         return prev.map((row) => {
           const rowId = requestIdFromRow(row);
           return rowId === requestId
-            ? patchLeaveTeamRequestStatus(row, status, { reason })
+            ? patchLeaveTeamRequestStatus(row, status, { reason, actorEmail })
             : row;
         });
       }
@@ -182,7 +191,7 @@ export function LeaveApprovalsPanel({
           <div className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-wt-text-muted">
-                Leave and WFH requests where you are listed as a primary approver.
+                Leave and WFH requests where you are listed as a primary or secondary approver.
                 {pendingCount > 0 ? (
                   <span className="ml-1 font-medium text-amber-800">
                     {pendingCount} pending
@@ -245,9 +254,14 @@ export function LeaveApprovalsPanel({
                       );
                       const isUpdating = statusUpdatingId === requestId;
                       const rowStatus = requestFinalStatus(rowRecord);
-                      const canAct =
-                        rowStatus === "PENDING" &&
-                        canPrimaryManagerActOnLeave(rowRecord, actorEmail);
+                      const primaryStage = requestManagerStatus(rowRecord);
+                      const secondaryStage = requestSecondaryManagerStatus(rowRecord);
+                      const canApprove =
+                        canPrimaryManagerActOnLeave(rowRecord, actorEmail) ||
+                        canSecondaryManagerApproveOnLeave(rowRecord, actorEmail);
+                      const canReject =
+                        canPrimaryManagerActOnLeave(rowRecord, actorEmail) ||
+                        canSecondaryManagerRejectOnLeave(rowRecord, actorEmail);
                       const rejectionReason =
                         rowStatus === "REJECTED" ? requestRejectionReason(rowRecord) : null;
 
@@ -268,6 +282,13 @@ export function LeaveApprovalsPanel({
                           <TableCell className="px-3 py-2.5">
                             <div className="flex flex-col items-start gap-1">
                               <LeaveRequestStatusBadge status={rowStatus} />
+                              {hasSecondaryLeaveManagers(rowRecord) &&
+                              (primaryStage !== "PENDING" || secondaryStage !== "PENDING") ? (
+                                <p className="text-[11px] text-wt-text-muted">
+                                  Primary: {primaryStage || "PENDING"} · Secondary:{" "}
+                                  {secondaryStage || "PENDING"}
+                                </p>
+                              ) : null}
                               {rejectionReason ? (
                                 <p
                                   className="max-w-[14rem] truncate text-xs text-rose-700/90"
@@ -282,8 +303,9 @@ export function LeaveApprovalsPanel({
                             {formatLeaveDaysCount(fromDate, toDate, isHalfDay)}
                           </TableCell>
                           <TableCell className="px-3 py-2.5 text-right">
-                            {canAct ? (
+                            {canApprove || canReject ? (
                             <div className="inline-flex items-center justify-end gap-1">
+                              {canApprove ? (
                               <Button
                                 type="button"
                                 variant="outline"
@@ -313,6 +335,8 @@ export function LeaveApprovalsPanel({
                               >
                                 {isUpdating ? "…" : "Approve"}
                               </Button>
+                              ) : null}
+                              {canReject ? (
                               <Button
                                 type="button"
                                 variant="outline"
@@ -328,6 +352,7 @@ export function LeaveApprovalsPanel({
                               >
                                 Reject
                               </Button>
+                              ) : null}
                             </div>
                             ) : (
                               <span className="text-xs text-wt-text-muted">—</span>

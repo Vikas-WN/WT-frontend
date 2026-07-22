@@ -23,7 +23,7 @@ import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/api/httpClient";
 import { endpoints } from "@/api/endpoints";
 import { hrmsService } from "@/services/hrms.service";
-import { useMyLeaveRequests, defaultMyLeaveRequestRange } from "@/hooks/leave/useMyLeaveRequests";
+import { useMyLeaveRequests, unfilteredLeaveRequestRange } from "@/hooks/leave/useMyLeaveRequests";
 import { ApiError } from "@/api/error";
 import { toRows, toPagedRows } from "@/utils/apiRows";
 import {
@@ -115,7 +115,14 @@ import {
   parseApiDate,
   todayApiDate,
 } from "@/utils/apiDate";
-import { filterTeamRequestsForPrimaryManager } from "@/utils/leaveManagerDisplay";
+import {
+  canSecondaryManagerApproveOnLeave,
+  canSecondaryManagerRejectOnLeave,
+  canPrimaryManagerActOnLeave,
+  filterTeamRequestsForPrimaryManager,
+  hasSecondaryLeaveManagers,
+  requestSecondaryManagerStatus,
+} from "@/utils/leaveManagerDisplay";
 import {
   canHrShowTeamRequestActions,
   canManagerActOnRequest,
@@ -289,8 +296,8 @@ export function LeavePageClient() {
     queryClient.invalidateQueries({ queryKey: ["leave", "my-balance"] });
   }, [queryClient]);
 
-  const [myRequestsFromDate, setMyRequestsFromDate] = useState(() => defaultMyLeaveRequestRange().fromDate);
-  const [myRequestsToDate, setMyRequestsToDate] = useState(() => defaultMyLeaveRequestRange().toDate);
+  const [myRequestsFromDate, setMyRequestsFromDate] = useState("");
+  const [myRequestsToDate, setMyRequestsToDate] = useState("");
   const myLeaveRequestsQ = useMyLeaveRequests(
     userEmail,
     myLeaveTabActive,
@@ -466,13 +473,10 @@ export function LeavePageClient() {
   const [requestViewTab, setRequestViewTab] = useState<"request" | "view">("request");
   const [wfhRequestViewTab, setWfhRequestViewTab] = useState<"request" | "view">("request");
   const [wfhExceptionOpen, setWfhExceptionOpen] = useState(false);
-  const [employeeRequestFilters, setEmployeeRequestFilters] = useState(() => {
-    const now = new Date();
-    return {
-      fromDate: formatApiDate(new Date(now.getFullYear(), now.getMonth(), 1)),
-      toDate: formatApiDate(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
-      requestType: "ALL",
-    };
+  const [employeeRequestFilters, setEmployeeRequestFilters] = useState({
+    fromDate: "",
+    toDate: "",
+    requestType: "ALL",
   });
   const [myLeaveSortId, setMyLeaveSortId] = useState(LEAVE_REQUEST_SORT_OPTIONS[0].id);
   const [teamLeaveSortId, setTeamLeaveSortId] = useState(LEAVE_REQUEST_SORT_OPTIONS[0].id);
@@ -875,11 +879,12 @@ export function LeavePageClient() {
 
   const loadEmployeeRequestsForApprover = useCallback(
     async (scope: "team" | "org" = "team", page: number = 0, size: number = 10, skipScopeLoad = false) => {
-    const today = new Date();
-    const future = new Date(today);
-    future.setFullYear(future.getFullYear() + 2);
-    const from = employeeRequestFilters.fromDate || `${today.getFullYear()}-01-01`;
-    const to = employeeRequestFilters.toDate || future.toISOString().slice(0, 10);
+    const selectedFrom = employeeRequestFilters.fromDate.trim();
+    const selectedTo = employeeRequestFilters.toDate.trim();
+    const fallbackRange = unfilteredLeaveRequestRange();
+    const hasDateFilter = Boolean(selectedFrom && selectedTo);
+    const from = hasDateFilter ? selectedFrom : fallbackRange.fromDate;
+    const to = hasDateFilter ? selectedTo : fallbackRange.toDate;
     const requestType = employeeRequestFilters.requestType || "ALL";
 
     if (!skipScopeLoad) {
@@ -1094,7 +1099,11 @@ export function LeavePageClient() {
         (uid ? `User #${uid}` : "—");
       return { ...row, employee_display };
     });
-    const withDecisions = applyLeaveTeamRequestDecisions(enriched, teamDecisionsRef.current);
+    const withDecisions = applyLeaveTeamRequestDecisions(
+      enriched,
+      teamDecisionsRef.current,
+      userEmail
+    );
     setEmployeeRequests(withDecisions);
     setTeamPage(page);
     setTeamTotalPages(totalPages);
@@ -1122,7 +1131,8 @@ export function LeavePageClient() {
         if (cached) {
           const withDecisions = applyLeaveTeamRequestDecisions(
             cached.rows,
-            teamDecisionsRef.current
+            teamDecisionsRef.current,
+            userEmail
           );
           setEmployeeRequests(withDecisions);
           setTeamPage(page);
@@ -1137,7 +1147,7 @@ export function LeavePageClient() {
         setTeamRequestsLoading(false);
       }
     },
-    [employeeRequestFilters, loadEmployeeRequestsForApprover, teamPageSize]
+    [employeeRequestFilters, loadEmployeeRequestsForApprover, teamPageSize, userEmail]
   );
 
   const invalidateTeamCache = useCallback(() => {
@@ -1162,10 +1172,11 @@ export function LeavePageClient() {
               ""
           ).trim();
           return rowId === requestId
-            ? patchLeaveTeamRequestStatus(row, status, { reason })
+            ? patchLeaveTeamRequestStatus(row, status, { reason, actorEmail: userEmail })
             : row;
         }),
-        teamDecisionsRef.current
+        teamDecisionsRef.current,
+        userEmail
       )
     );
   }
@@ -1192,7 +1203,7 @@ export function LeavePageClient() {
           ).trim();
           if (rowId !== requestId) return row;
           return mergeStatusUpdateIntoRow(
-            patchLeaveTeamRequestStatus(row, status, { reason }),
+            patchLeaveTeamRequestStatus(row, status, { reason, actorEmail: userEmail }),
             updated
           );
         })
@@ -1304,7 +1315,7 @@ export function LeavePageClient() {
     const cached = teamCacheRef.current.get(cacheKey);
     if (cached) {
       setEmployeeRequests(
-        applyLeaveTeamRequestDecisions(cached.rows, teamDecisionsRef.current)
+        applyLeaveTeamRequestDecisions(cached.rows, teamDecisionsRef.current, userEmail)
       );
       setTeamTotalPages(cached.totalPages);
       setTeamTotalElements(cached.totalElements);
@@ -1929,8 +1940,6 @@ export function LeavePageClient() {
                                     setEmployeeRequestFilters((p) => ({
                                       ...p,
                                       fromDate: v,
-                                      // Default To Date to the same day; user can widen the range after.
-                                      toDate: v,
                                     }))
                                   }
                                 />
@@ -2047,22 +2056,49 @@ export function LeavePageClient() {
                                       canHrShowTeamRequestActions(rowRecord, {
                                         hasHrAccess,
                                       });
-                                    // Assigned primary managers can act even without ROLE_MANAGER.
-                                    const showManagerActions =
+                                    // Assigned primary/secondary managers can act even without ROLE_MANAGER.
+                                    const assignedPrimaryAct = canPrimaryManagerActOnLeave(
+                                      rowRecord,
+                                      userEmail
+                                    );
+                                    const assignedSecondaryApprove = canSecondaryManagerApproveOnLeave(
+                                      rowRecord,
+                                      userEmail
+                                    );
+                                    const assignedSecondaryReject = canSecondaryManagerRejectOnLeave(
+                                      rowRecord,
+                                      userEmail
+                                    );
+                                    const legacyManagerAct =
                                       !hrCanActOnRow &&
                                       status === "PENDING" &&
                                       canManagerActOnRequest(rowRecord, {
                                         hasManagerAccess: hasManagerAccess || hasDmAccess,
                                         hasDmAccess,
                                         actorEmail: userEmail,
-                                      });
+                                      }) &&
+                                      !assignedPrimaryAct &&
+                                      !assignedSecondaryReject;
+                                    const showManagerApprove =
+                                      !hrCanActOnRow &&
+                                      status === "PENDING" &&
+                                      (assignedPrimaryAct ||
+                                        assignedSecondaryApprove ||
+                                        legacyManagerAct);
                                     const showManagerReject =
-                                      showManagerActions &&
-                                      canManagerRejectRequest(rowRecord, {
-                                        hasManagerAccess: hasManagerAccess || hasDmAccess,
-                                        hasDmAccess,
-                                        actorEmail: userEmail,
-                                      });
+                                      !hrCanActOnRow &&
+                                      status === "PENDING" &&
+                                      (assignedPrimaryAct ||
+                                        assignedSecondaryReject ||
+                                        (legacyManagerAct &&
+                                          canManagerRejectRequest(rowRecord, {
+                                            hasManagerAccess: hasManagerAccess || hasDmAccess,
+                                            hasDmAccess,
+                                            actorEmail: userEmail,
+                                          })));
+                                    const showManagerActions = showManagerApprove || showManagerReject;
+                                    const secondaryStage = requestSecondaryManagerStatus(rowRecord);
+                                    const hasDualManagers = hasSecondaryLeaveManagers(rowRecord);
                                     const blockedHint = showTeamActionsColumn
                                         ? hrTeamActionBlockedHint(rowRecord, { hasHrAccess })
                                         : null;
@@ -2119,11 +2155,23 @@ export function LeavePageClient() {
                                           {durationDays && durationDays !== "—" ? durationDays : "—"}
                                         </TableCell>
                                         <TableCell className="px-4 py-3 whitespace-nowrap">
-                                          {managerStatus ? (
-                                            <RequestStatusBadge status={managerStatus} />
-                                          ) : (
-                                            <span className="text-xs text-muted-foreground">—</span>
-                                          )}
+                                          <div className="flex flex-col items-start gap-1">
+                                            {status ? (
+                                              <RequestStatusBadge status={status} />
+                                            ) : managerStatus ? (
+                                              <RequestStatusBadge status={managerStatus} />
+                                            ) : (
+                                              <span className="text-xs text-muted-foreground">—</span>
+                                            )}
+                                            {hasDualManagers &&
+                                            (managerStatus !== "PENDING" ||
+                                              secondaryStage !== "PENDING") ? (
+                                              <p className="text-[11px] text-muted-foreground">
+                                                Primary: {managerStatus || "PENDING"} · Secondary:{" "}
+                                                {secondaryStage || "PENDING"}
+                                              </p>
+                                            ) : null}
+                                          </div>
                                         </TableCell>
                                         <TableCell className="px-4 py-3">
                                           {hasDetails ? (
@@ -2199,50 +2247,62 @@ export function LeavePageClient() {
                                                 </Button>
                                               </div>
                                             ) : showManagerActions ? (
-                                              <div className="inline-flex items-center justify-end gap-1">
-                                                <Button
-                                                  type="button"
-                                                  variant="outline"
-                                                  size="xs"
-                                                  className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
-                                                  disabled={actionLoading || !requestId}
-                                                  onClick={() =>
-                                                    runAction(
-                                                      userRequestActionLabel(
-                                                        row.request_type ?? row.requestType,
-                                                        "approve"
-                                                      ),
-                                                      async () => {
-                                                        await updateEmployeeRequestStatus(requestId, "APPROVED", {
-                                                          requireReasonOnReject: false,
-                                                        });
-                                                        // Actions column is team-only (hidden on org / All Employee Requests).
-                                                        invalidateTeamCache();
-                                                        invalidateLeaveBalance();
-                                                        await loadEmployeeRequestsForApprover("team", teamPage, teamPageSize, true);
+                                              <div className="inline-flex flex-col items-end gap-1">
+                                                <div className="inline-flex items-center justify-end gap-1">
+                                                  {showManagerApprove ? (
+                                                    <Button
+                                                      type="button"
+                                                      variant="outline"
+                                                      size="xs"
+                                                      className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
+                                                      disabled={actionLoading || !requestId}
+                                                      onClick={() =>
+                                                        runAction(
+                                                          userRequestActionLabel(
+                                                            row.request_type ?? row.requestType,
+                                                            "approve"
+                                                          ),
+                                                          async () => {
+                                                            await updateEmployeeRequestStatus(
+                                                              requestId,
+                                                              "APPROVED",
+                                                              {
+                                                                requireReasonOnReject: false,
+                                                              }
+                                                            );
+                                                            invalidateTeamCache();
+                                                            invalidateLeaveBalance();
+                                                            await loadEmployeeRequestsForApprover(
+                                                              "team",
+                                                              teamPage,
+                                                              teamPageSize,
+                                                              true
+                                                            );
+                                                          }
+                                                        )
                                                       }
-                                                    )
-                                                  }
-                                                >
-                                                  Approve
-                                                </Button>
-                                                {showManagerReject ? (
-                                                  <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="xs"
-                                                    className="border-rose-600/30 text-rose-700 hover:bg-rose-500/10"
-                                                    disabled={actionLoading || !requestId}
-                                                    onClick={() =>
-                                                      openRejectDialog(
-                                                        requestId,
-                                                        row.request_type ?? row.requestType
-                                                      )
-                                                    }
-                                                  >
-                                                    Reject
-                                                  </Button>
-                                                ) : null}
+                                                    >
+                                                      Approve
+                                                    </Button>
+                                                  ) : null}
+                                                  {showManagerReject ? (
+                                                    <Button
+                                                      type="button"
+                                                      variant="outline"
+                                                      size="xs"
+                                                      className="border-rose-600/30 text-rose-700 hover:bg-rose-500/10"
+                                                      disabled={actionLoading || !requestId}
+                                                      onClick={() =>
+                                                        openRejectDialog(
+                                                          requestId,
+                                                          row.request_type ?? row.requestType
+                                                        )
+                                                      }
+                                                    >
+                                                      Reject
+                                                    </Button>
+                                                  ) : null}
+                                                </div>
                                               </div>
                                             ) : blockedHint ? (
                                               <span className="text-xs text-muted-foreground">{blockedHint}</span>

@@ -22,7 +22,16 @@ import {
 
 } from "@/utils/compOff";
 
-import { canPrimaryManagerActOnLeave, hasPrimaryLeaveManagers } from "@/utils/leaveManagerDisplay";
+import {
+  canPrimaryManagerActOnLeave,
+  canSecondaryManagerApproveOnLeave,
+  canSecondaryManagerRejectOnLeave,
+  hasPrimaryLeaveManagers,
+  hasSecondaryLeaveManagers,
+  isAssignedPrimaryLeaveManager,
+  isAssignedSecondaryLeaveManager,
+  requestSecondaryManagerStatus,
+} from "@/utils/leaveManagerDisplay";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
 
 export type UserRequestStatusValue = ApprovalStage;
@@ -437,6 +446,8 @@ export function canManagerActOnRequest(
   if (requestFinalStatus(row) !== "PENDING") return false;
 
   if (canPrimaryManagerActOnLeave(row, options.actorEmail)) return true;
+  if (canSecondaryManagerApproveOnLeave(row, options.actorEmail)) return true;
+  if (canSecondaryManagerRejectOnLeave(row, options.actorEmail)) return true;
 
   if (hasPrimaryLeaveManagers(row)) return false;
 
@@ -468,6 +479,7 @@ export function canManagerRejectRequest(
 ): boolean {
 
   if (canPrimaryManagerActOnLeave(row, options.actorEmail)) return true;
+  if (canSecondaryManagerRejectOnLeave(row, options.actorEmail)) return true;
 
   if (!canManagerActOnRequest(row, options)) return false;
 
@@ -648,32 +660,99 @@ export function mergeStatusUpdateIntoRow(
 export function patchLeaveTeamRequestStatus(
   row: Record<string, unknown>,
   status: UserRequestStatusValue,
-  options?: { reason?: string }
+  options?: { reason?: string; actorEmail?: string | null }
 ): Record<string, unknown> {
   const reason = options?.reason?.trim();
+  const actorEmail = options?.actorEmail;
+  const isPrimary = isAssignedPrimaryLeaveManager(row, actorEmail);
+  const isSecondary = isAssignedSecondaryLeaveManager(row, actorEmail);
+  const hasSecondary = hasSecondaryLeaveManagers(row);
+
+  if (status === "REJECTED") {
+    return {
+      ...row,
+      status: "REJECTED",
+      user_request_status: "REJECTED",
+      userRequestStatus: "REJECTED",
+      ...(isPrimary
+        ? {
+            manager_status: "REJECTED",
+            managerStatus: "REJECTED",
+            ...(reason
+              ? {
+                  manager_reason: reason,
+                  managerReason: reason,
+                }
+              : {}),
+          }
+        : {}),
+      ...(isSecondary
+        ? {
+            hr_status: "REJECTED",
+            hrStatus: "REJECTED",
+            secondary_status: "REJECTED",
+            secondaryStatus: "REJECTED",
+            ...(reason
+              ? {
+                  hr_reason: reason,
+                  hrReason: reason,
+                }
+              : {}),
+          }
+        : {}),
+      ...(!isPrimary && !isSecondary
+        ? {
+            manager_status: "REJECTED",
+            managerStatus: "REJECTED",
+            hr_status: "REJECTED",
+            hrStatus: "REJECTED",
+          }
+        : {}),
+      ...(reason
+        ? {
+            reason,
+            message: reason,
+          }
+        : {}),
+    };
+  }
+
+  if (status !== "APPROVED") {
+    return row;
+  }
+
+  // One assigned-manager approval is enough — request becomes APPROVED.
+  const primaryApproved =
+    isPrimary || normalizeRequestStatus(requestManagerStatus(row)) === "APPROVED";
+  const secondaryApproved =
+    isSecondary ||
+    (hasSecondary && requestSecondaryManagerStatus(row) === "APPROVED");
+
   return {
     ...row,
-    status,
-    user_request_status: status,
-    userRequestStatus: status,
-    manager_status: status,
-    managerStatus: status,
-    hr_status: status,
-    hrStatus: status,
-    ...(status === "REJECTED" && reason
+    status: "APPROVED",
+    user_request_status: "APPROVED",
+    userRequestStatus: "APPROVED",
+    manager_status: primaryApproved ? "APPROVED" : "PENDING",
+    managerStatus: primaryApproved ? "APPROVED" : "PENDING",
+    ...(hasSecondary
       ? {
-          manager_reason: reason,
-          managerReason: reason,
-          reason,
-          message: reason,
+          hr_status: secondaryApproved ? "APPROVED" : "PENDING",
+          hrStatus: secondaryApproved ? "APPROVED" : "PENDING",
+          secondary_status: secondaryApproved ? "APPROVED" : "PENDING",
+          secondaryStatus: secondaryApproved ? "APPROVED" : "PENDING",
         }
-      : {}),
+      : {
+          hr_status: "APPROVED",
+          hrStatus: "APPROVED",
+        }),
   };
 }
 
 export function applyLeaveTeamRequestDecisions(
   rows: Array<Record<string, unknown>>,
-  decisions: ReadonlyMap<string, { status: UserRequestStatusValue; reason?: string }>
+  decisions: ReadonlyMap<string, { status: UserRequestStatusValue; reason?: string }>,
+  actorEmail?: string | null
 ): Array<Record<string, unknown>> {
   if (!decisions.size) return rows;
   return rows.map((row) => {
@@ -690,7 +769,10 @@ export function applyLeaveTeamRequestDecisions(
     if (!decision) return row;
     const serverStatus = requestFinalStatus(row);
     if (serverStatus === "APPROVED" || serverStatus === "REJECTED") return row;
-    return patchLeaveTeamRequestStatus(row, decision.status, { reason: decision.reason });
+    return patchLeaveTeamRequestStatus(row, decision.status, {
+      reason: decision.reason,
+      actorEmail,
+    });
   });
 }
 

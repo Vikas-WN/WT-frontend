@@ -10,9 +10,18 @@ export function parseNotificationItems(input: unknown): NotificationItem[] {
     if (Array.isArray(record.items)) {
       return record.items as NotificationItem[];
     }
+    if (Array.isArray(record.data)) {
+      return record.data as NotificationItem[];
+    }
     const nested = record.data;
-    if (nested && typeof nested === "object" && Array.isArray((nested as { items?: unknown }).items)) {
-      return (nested as { items: NotificationItem[] }).items;
+    if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+      const nestedRecord = nested as Record<string, unknown>;
+      if (Array.isArray(nestedRecord.items)) {
+        return nestedRecord.items as NotificationItem[];
+      }
+      if (Array.isArray(nestedRecord.data)) {
+        return nestedRecord.data as NotificationItem[];
+      }
     }
   }
   return toRows(input) as unknown as NotificationItem[];

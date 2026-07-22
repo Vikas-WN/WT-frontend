@@ -72,10 +72,18 @@ export function buildUserRequestBody(
           .filter((email) => email && !primarySet.has(email))
       ),
     ];
+    if (!normalizedSecondaryManagers.length) {
+      throw new Error("secondaryManagerEmails is required");
+    }
     body.secondary_manager_emails = normalizedSecondaryManagers;
     body.secondaryManagerEmails = normalizedSecondaryManagers;
     body.secondary_managers = normalizedSecondaryManagers;
     body.secondaryManagers = normalizedSecondaryManagers;
+  } else if (
+    requestType === "LEAVE" ||
+    requestType === "OPTIONAL"
+  ) {
+    throw new Error("secondaryManagerEmails is required");
   }
   if (options?.userRequestId != null) {
     body.user_request_id = options.userRequestId;
