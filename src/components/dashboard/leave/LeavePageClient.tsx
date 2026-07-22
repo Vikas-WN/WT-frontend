@@ -156,6 +156,7 @@ import { LeaveAdditionalRecipientsSelector } from "@/components/dashboard/leave/
 import {
   calendarDaysInclusive,
   normalizeCompOffRequestType,
+  normalizeRequestStatus,
   pickRowField,
 } from "@/utils/compOff";
 import { compOffService } from "@/services/compOff.service";
@@ -1189,7 +1190,14 @@ export function LeavePageClient() {
     const res = await updateUserRequestStatus(Number(requestId), status, options);
     const updated = extractStatusUpdateData(res);
     const reason = options?.reason?.trim();
-    applyLocalTeamRequestStatus(requestId, status, reason);
+    const serverStatusRaw = normalizeRequestStatus(
+      updated?.status ?? updated?.user_request_status ?? updated?.userRequestStatus ?? status
+    );
+    const serverStatus: UserRequestStatusValue =
+      serverStatusRaw === "APPROVED" || serverStatusRaw === "REJECTED" || serverStatusRaw === "PENDING"
+        ? serverStatusRaw
+        : status;
+    applyLocalTeamRequestStatus(requestId, serverStatus, reason);
     if (updated) {
       setEmployeeRequests((prev) =>
         prev.map((row) => {
@@ -1203,7 +1211,7 @@ export function LeavePageClient() {
           ).trim();
           if (rowId !== requestId) return row;
           return mergeStatusUpdateIntoRow(
-            patchLeaveTeamRequestStatus(row, status, { reason, actorEmail: userEmail }),
+            patchLeaveTeamRequestStatus(row, serverStatus, { reason, actorEmail: userEmail }),
             updated
           );
         })
