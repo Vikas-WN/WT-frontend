@@ -1,5 +1,5 @@
 import { pickRowField } from "@/utils/compOff";
-import { requestFinalStatus } from "@/utils/userRequest";
+import { isPendingApprovalStage, requestFinalStatus, requestManagerStatus } from "@/utils/userRequest";
 
 export function pickManagerEmailList(row: Record<string, unknown>, kind: "primary" | "secondary"): string[] {
   const keys =
@@ -87,7 +87,8 @@ export function canPrimaryManagerActOnLeave(
 ): boolean {
   if (!isAssignedPrimaryLeaveManager(row, actorEmail)) return false;
   if (isOwnUserRequest(row, actorEmail)) return false;
-  return requestFinalStatus(row) === "PENDING";
+  if (requestFinalStatus(row) !== "PENDING") return false;
+  return isPendingApprovalStage(requestManagerStatus(row));
 }
 
 /**
