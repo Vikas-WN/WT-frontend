@@ -244,8 +244,10 @@ export function LeaveApprovalsPanel({
                         rowRecord.is_half_day ?? rowRecord.isHalfDay ?? false
                       );
                       const isUpdating = statusUpdatingId === requestId;
-                      const canAct = canPrimaryManagerActOnLeave(rowRecord, actorEmail);
                       const rowStatus = requestFinalStatus(rowRecord);
+                      const canAct =
+                        rowStatus === "PENDING" &&
+                        canPrimaryManagerActOnLeave(rowRecord, actorEmail);
                       const rejectionReason =
                         rowStatus === "REJECTED" ? requestRejectionReason(rowRecord) : null;
 

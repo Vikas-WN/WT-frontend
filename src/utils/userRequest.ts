@@ -433,6 +433,9 @@ export function canManagerActOnRequest(
   row: Record<string, unknown>,
   options: { hasManagerAccess: boolean; hasDmAccess?: boolean; actorEmail?: string | null }
 ): boolean {
+  // Never show Approve/Reject once the request is fully decided.
+  if (requestFinalStatus(row) !== "PENDING") return false;
+
   if (canPrimaryManagerActOnLeave(row, options.actorEmail)) return true;
 
   if (hasPrimaryLeaveManagers(row)) return false;
@@ -444,7 +447,7 @@ export function canManagerActOnRequest(
 
   const requestType = pickRowField(row, "request_type", "requestType");
   if (!isStageUserRequestType(requestType)) {
-    return requestFinalStatus(row) === "PENDING";
+    return true;
   }
   if (!isPendingApprovalStage(requestManagerStatus(row))) {
     return false;

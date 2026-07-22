@@ -2043,12 +2043,14 @@ export function LeavePageClient() {
                                     const rowRecord = row as Record<string, unknown>;
                                     const hrCanActOnRow =
                                       leaveSubTab !== "org" &&
+                                      status === "PENDING" &&
                                       canHrShowTeamRequestActions(rowRecord, {
                                         hasHrAccess,
                                       });
                                     // Assigned primary managers can act even without ROLE_MANAGER.
                                     const showManagerActions =
                                       !hrCanActOnRow &&
+                                      status === "PENDING" &&
                                       canManagerActOnRequest(rowRecord, {
                                         hasManagerAccess: hasManagerAccess || hasDmAccess,
                                         hasDmAccess,
