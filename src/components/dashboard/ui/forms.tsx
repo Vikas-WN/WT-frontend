@@ -365,6 +365,7 @@ export function AdaptiveSelectField({
   searchPlaceholder = "Search…",
   clearSelectionOnEmptyInput = true,
   contentClassName,
+  inputClassName,
 }: {
   label: string;
   value: string;
@@ -381,6 +382,12 @@ export function AdaptiveSelectField({
   clearSelectionOnEmptyInput?: boolean;
   /** Widen/style the dropdown popup independently of the trigger's own width. */
   contentClassName?: string;
+  /**
+   * Styles the trigger's outer wrapper (not the inner <input>, which keeps its own
+   * px-3.5 from FORM_CONTROL_CLASS). Use a `[&>input]:pl-*`/`[&>input]:pr-*` selector
+   * to adjust the actual text inset.
+   */
+  inputClassName?: string;
 }) {
   const fieldId = useId();
   const items = withPlaceholderOption(normalizeSelectOptions(options), placeholder, required);
@@ -402,6 +409,7 @@ export function AdaptiveSelectField({
         showChevron
         clearSelectionOnEmptyInput={clearSelectionOnEmptyInput}
         contentClassName={contentClassName}
+        inputClassName={inputClassName}
       />
     </Field>
   );

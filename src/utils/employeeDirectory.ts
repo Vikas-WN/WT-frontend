@@ -62,6 +62,12 @@ function isInternProfile(profile: Record<string, unknown>): boolean {
     .toUpperCase() === "INTERN";
 }
 
+function isConsultantProfile(profile: Record<string, unknown>): boolean {
+  return String(pickProfileField(profile, ["user_type", "userType"]) ?? "")
+    .trim()
+    .toUpperCase() === "CONSULTANT";
+}
+
 function formatDirectoryDate(value: unknown): string {
   const s = String(value ?? "").trim();
   if (!s) return "—";
@@ -356,6 +362,7 @@ export function buildGroupedProfileSections(
     pickProfileField(profile, ["delivery_status", "deliveryStatus"]);
 
   const internProfile = isInternProfile(profile);
+  const consultantProfile = isConsultantProfile(profile);
 
   const information: ProfileDisplayEntry[] = [
     profileEntry("Name", cleanEmployeeName(profile) || pickProfileField(profile, ["name"])),
@@ -368,7 +375,7 @@ export function buildGroupedProfileSections(
     profileEntry("Work Email", pickProfileField(profile, ["email"])),
     profileEntry("Department", pickProfileField(profile, ["department"])),
     profileEntry("Designation / Role", pickEmployeeRole(profile) || null),
-    profileEntry("Band", formatBandForProfile(profile)),
+    ...(consultantProfile ? [] : [profileEntry("Band", formatBandForProfile(profile))]),
     profileEntry(
       "User Type",
       formatUserTypeLabel(String(pickProfileField(profile, ["user_type", "userType"]) ?? ""))

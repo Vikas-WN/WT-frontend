@@ -121,10 +121,13 @@ export function EmployeeProfilePageClient() {
     profileRecord.user_id ?? profileRecord.userId ?? ""
   ).trim();
   const employeeRole = pickEmployeeRole(profileRecord);
-  const isFulltimeEmployee =
-    String(pickProfileField(profileRecord, ["user_type", "userType"]) ?? "")
-      .toUpperCase()
-      .replace(/[\s\-_]/g, "") === "FULLTIME";
+  const normalizedUserType = String(
+    pickProfileField(profileRecord, ["user_type", "userType"]) ?? ""
+  )
+    .toUpperCase()
+    .replace(/[\s\-_]/g, "");
+  const isFulltimeEmployee = normalizedUserType === "FULLTIME";
+  const isConsultantEmployee = normalizedUserType === "CONSULTANT";
 
   const resumeShareHref = useMemo(() => {
     const index = buildResumeShareLinkIndex(resumePayload?.rows ?? []);
@@ -509,26 +512,28 @@ export function EmployeeProfilePageClient() {
                         onChange={(v) => setEditForm({ ...editForm, work_location_type: v })}
                         disabled={saving}
                       />
-                      <AdaptiveSelectField
-                        label="Band"
-                        required
-                        value={bandSelectValue}
-                        placeholder={
-                          !editForm.department.trim()
-                            ? "Select Department First"
-                            : bandSelectOptionsList.length
-                              ? "Select Band"
-                              : "No Bands Available"
-                        }
-                        searchPlaceholder="Search Bands…"
-                        options={bandSelectOptionsList}
-                        onChange={(id) =>
-                          setEditForm((prev) =>
-                            prev ? { ...prev, band_id: id, role: "" } : prev
-                          )
-                        }
-                        disabled={saving || !editForm.department.trim() || !bandSelectOptionsList.length}
-                      />
+                      {!isConsultantEmployee ? (
+                        <AdaptiveSelectField
+                          label="Band"
+                          required
+                          value={bandSelectValue}
+                          placeholder={
+                            !editForm.department.trim()
+                              ? "Select Department First"
+                              : bandSelectOptionsList.length
+                                ? "Select Band"
+                                : "No Bands Available"
+                          }
+                          searchPlaceholder="Search Bands…"
+                          options={bandSelectOptionsList}
+                          onChange={(id) =>
+                            setEditForm((prev) =>
+                              prev ? { ...prev, band_id: id, role: "" } : prev
+                            )
+                          }
+                          disabled={saving || !editForm.department.trim() || !bandSelectOptionsList.length}
+                        />
+                      ) : null}
                       <AdaptiveSelectField
                         label="Designation"
                         required

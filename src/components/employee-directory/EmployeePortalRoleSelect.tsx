@@ -176,6 +176,7 @@ export function EmployeePortalRoleSelect({
         disabled={saving}
         onChange={(next) => void persistRole(next)}
         clearSelectionOnEmptyInput={false}
+        inputClassName="[&>input]:pl-2.5"
       />
     </div>
   );
