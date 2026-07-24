@@ -33,7 +33,7 @@ export function ImageCropDialog({
     const outputSize = Math.min(size, 1024);
     canvas.width = outputSize;
     canvas.height = outputSize;
-
+    
     ctx.drawImage(
       img,
       x / zoom,

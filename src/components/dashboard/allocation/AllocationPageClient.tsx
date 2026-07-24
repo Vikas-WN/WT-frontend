@@ -3710,7 +3710,7 @@ export function AllocationPageClient() {
                                 </div>
                               </div>
                               ) : null}
-
+          
                               {allocationHrSubTab === "allocate" ? (
                               <div className="space-y-4">
                                 <div className="flex flex-wrap items-center justify-between gap-3">
