@@ -364,6 +364,7 @@ export function AdaptiveSelectField({
   className,
   searchPlaceholder = "Search…",
   clearSelectionOnEmptyInput = true,
+  contentClassName,
 }: {
   label: string;
   value: string;
@@ -378,6 +379,8 @@ export function AdaptiveSelectField({
   searchPlaceholder?: string;
   /** When false, Backspace/Delete/clear only resets the filter — selection stays. */
   clearSelectionOnEmptyInput?: boolean;
+  /** Widen/style the dropdown popup independently of the trigger's own width. */
+  contentClassName?: string;
 }) {
   const fieldId = useId();
   const items = withPlaceholderOption(normalizeSelectOptions(options), placeholder, required);
@@ -398,6 +401,7 @@ export function AdaptiveSelectField({
         aria-label={label}
         showChevron
         clearSelectionOnEmptyInput={clearSelectionOnEmptyInput}
+        contentClassName={contentClassName}
       />
     </Field>
   );
@@ -414,6 +418,7 @@ export function SelectField({
   loading = false,
   loadingLabel = "Loading…",
   className,
+  contentClassName,
 }: {
   label: string;
   value: string;
@@ -425,6 +430,8 @@ export function SelectField({
   loading?: boolean;
   loadingLabel?: string;
   className?: string;
+  /** Widen/style the dropdown popup independently of the trigger's own width. */
+  contentClassName?: string;
 }) {
   return (
     <AdaptiveSelectField
@@ -438,6 +445,7 @@ export function SelectField({
       loading={loading}
       loadingLabel={loadingLabel}
       className={className}
+      contentClassName={contentClassName}
       searchPlaceholder={placeholder ?? "Search…"}
     />
   );

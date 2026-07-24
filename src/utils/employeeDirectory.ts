@@ -254,7 +254,7 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
     ).trim(),
     primary_skills: primarySkills,
     secondary_skill: String(firstSecondary?.skill ?? "").trim(),
-    secondary_rating: String(firstSecondary?.rating ?? "3").trim() || "3",
+    secondary_rating: String(firstSecondary?.rating ?? "").trim(),
   };
 }
 
@@ -270,7 +270,7 @@ export function editFormToUpdatePayload(
 
   const secondarySkill = form.secondary_skill.trim();
   const secondary_skills = secondarySkill
-    ? [{ skill: secondarySkill, rating: Number(form.secondary_rating) || 3 }]
+    ? [{ skill: secondarySkill, rating: Number(form.secondary_rating) }]
     : [];
 
   const payload: Record<string, unknown> = {

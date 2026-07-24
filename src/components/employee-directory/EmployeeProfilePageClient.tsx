@@ -321,6 +321,9 @@ export function EmployeeProfilePageClient() {
           if (invalidSkills.length) {
             throw new Error("Selected primary skills must come from the predefined list.");
           }
+          if (editForm.secondary_skill.trim() && !editForm.secondary_rating.trim()) {
+            throw new Error("Please select a rating for the secondary skill.");
+          }
         }
         await updateMutation.mutateAsync(
           editFormToUpdatePayload(editForm, { statusOnly: statusOnlyEdit })
