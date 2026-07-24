@@ -65,7 +65,8 @@ function isInternProfile(profile: Record<string, unknown>): boolean {
 function isConsultantProfile(profile: Record<string, unknown>): boolean {
   return String(pickProfileField(profile, ["user_type", "userType"]) ?? "")
     .trim()
-    .toUpperCase() === "CONSULTANT";
+    .toUpperCase()
+    .replace(/[\s\-_]/g, "") === "CONSULTANT";
 }
 
 function formatDirectoryDate(value: unknown): string {
@@ -188,7 +189,9 @@ export function onboardRowToListRow(row: OnboardRowInput): Record<string, string
     department: String(record.department ?? "").trim() || "—",
     role: String(record.role ?? "").trim() || "—",
     portal_role: formatPrimaryPortalRoleLabel(record.portal_roles ?? record.portalRoles),
-    band: String(record.band ?? record.band_name ?? record.bandName ?? "").trim() || "—",
+    band: isConsultantProfile(record)
+      ? "—"
+      : String(record.band ?? record.band_name ?? record.bandName ?? "").trim() || "—",
     date_of_joining: formatDirectoryDate(
       record.date_of_joining ?? record.doj ?? record.joining_date ?? record.joiningDate
     ),
@@ -266,7 +269,7 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
 
 export function editFormToUpdatePayload(
   form: EmployeeProfileEditForm,
-  options?: { statusOnly?: boolean }
+  options?: { statusOnly?: boolean; omitBand?: boolean }
 ): Record<string, unknown> {
   if (options?.statusOnly) {
     return { user_status: form.user_status.trim() };
@@ -295,10 +298,13 @@ export function editFormToUpdatePayload(
     secondary_skills,
   };
 
-  const bandId = form.band_id.trim();
-  if (bandId) {
-    const bandNum = Number(bandId);
-    payload.band_id = Number.isFinite(bandNum) ? bandNum : bandId;
+  // Consultants do not use band — never send band_id (API rejects it).
+  if (!options?.omitBand) {
+    const bandId = form.band_id.trim();
+    if (bandId) {
+      const bandNum = Number(bandId);
+      payload.band_id = Number.isFinite(bandNum) ? bandNum : bandId;
+    }
   }
 
   const personalEmail = form.personal_email.trim();

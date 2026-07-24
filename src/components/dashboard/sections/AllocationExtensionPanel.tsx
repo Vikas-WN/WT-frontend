@@ -336,9 +336,19 @@ export function AllocationExtensionPanel() {
   async function updateStatus(requestId: number, next: "APPROVED" | "REJECTED") {
     setUpdatingRequestId(requestId);
     try {
+      let message: string | undefined;
+      if (next === "REJECTED") {
+        const entered = window.prompt("Enter rejection reason (required):", "") ?? "";
+        message = entered.trim();
+        if (!message) {
+          showErrorToast("Rejection reason is required.");
+          return;
+        }
+      }
       const res = await hrmsService.updateAllocationExtensionRequestStatus({
         requestId,
         status: next,
+        message,
       });
       setRows((prev) =>
         prev.map((row) =>
@@ -590,6 +600,7 @@ export function AllocationExtensionPanel() {
                   <TableHead>Project</TableHead>
                   <TableHead>Current end</TableHead>
                   <TableHead>Requested end</TableHead>
+                  <TableHead>Reason</TableHead>
                   <TableHead>Status</TableHead>
                   {visibleMode === "hr" ? (
                     <TableHead>Requested by</TableHead>
@@ -609,6 +620,11 @@ export function AllocationExtensionPanel() {
                       </TableCell>
                       <TableCell className="px-3 py-2 whitespace-nowrap">
                         {asDateDisplayValue(r.requested_end_date)}
+                      </TableCell>
+                      <TableCell className="max-w-[16rem] px-3 py-2">
+                        <span className="line-clamp-2 whitespace-normal break-words text-sm text-wt-text">
+                          {r.reason?.trim() || "—"}
+                        </span>
                       </TableCell>
                       <TableCell className="px-3 py-2 whitespace-nowrap">
                         {visibleMode === "hr" ? (

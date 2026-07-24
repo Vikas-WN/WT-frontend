@@ -1260,6 +1260,7 @@ export const hrmsService = {
   async updateAllocationExtensionRequestStatus(payload: {
     requestId: number;
     status: Exclude<AllocationExtensionRequestStatus, "PENDING">;
+    message?: string;
   }) {
     const res = await apiClient.put<ApiEnvelope<unknown>>(endpoints.allocation.extensionStatus, {
       contentType: "application/json",
@@ -1267,6 +1268,13 @@ export const hrmsService = {
         request_id: payload.requestId,
         requestId: payload.requestId,
         status: payload.status,
+        ...(payload.message?.trim()
+          ? {
+              message: payload.message.trim(),
+              comments: payload.message.trim(),
+              reason: payload.message.trim(),
+            }
+          : {}),
       }),
     });
     return res;
