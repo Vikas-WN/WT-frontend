@@ -125,6 +125,10 @@ export function EmployeeProfilePageClient() {
     String(pickProfileField(profileRecord, ["user_type", "userType"]) ?? "")
       .toUpperCase()
       .replace(/[\s\-_]/g, "") === "FULLTIME";
+  const isConsultantEmployee =
+    String(pickProfileField(profileRecord, ["user_type", "userType"]) ?? "")
+      .toUpperCase()
+      .replace(/[\s\-_]/g, "") === "CONSULTANT";
 
   const resumeShareHref = useMemo(() => {
     const index = buildResumeShareLinkIndex(resumePayload?.rows ?? []);
@@ -219,7 +223,7 @@ export function EmployeeProfilePageClient() {
   } = useDesignationSelectOptions(departmentForDesignations, designationBandId);
 
   useEffect(() => {
-    if (!isEditing || !editForm) return;
+    if (!isEditing || !editForm || isConsultantEmployee) return;
     const dept = editForm.department.trim();
     if (!dept) return;
     const currentBandId = editForm.band_id.trim();
@@ -228,10 +232,10 @@ export function EmployeeProfilePageClient() {
     if (!stillValid) {
       setEditForm((prev) => (prev ? { ...prev, band_id: "", role: "" } : prev));
     }
-  }, [bandSelectOptionsList, editForm, isEditing]);
+  }, [bandSelectOptionsList, editForm, isEditing, isConsultantEmployee]);
 
   useEffect(() => {
-    if (!isEditing || !editForm || designationLoading) return;
+    if (!isEditing || !editForm || designationLoading || isConsultantEmployee) return;
     if (designationOptions.length === 1) {
       const onlyRole = designationOptions[0]?.value ?? "";
       if (onlyRole && editForm.role !== onlyRole) {
@@ -244,7 +248,7 @@ export function EmployeeProfilePageClient() {
     if (designationOptions.length > 0 && !validRoles.has(editForm.role)) {
       setEditForm((prev) => (prev ? { ...prev, role: "" } : prev));
     }
-  }, [designationOptions, designationLoading, editForm, isEditing]);
+  }, [designationOptions, designationLoading, editForm, isEditing, isConsultantEmployee]);
 
   useEffect(() => {
     if (!isEditing || !editForm || onboardOptionsLoading || !allowedPrimarySkills.size) return;
@@ -270,7 +274,10 @@ export function EmployeeProfilePageClient() {
   }, [editForm?.work_mode]);
 
   const openEditor = () => {
-    setEditForm(profileToEditForm(profileRecord));
+    const next = profileToEditForm(profileRecord);
+    // Band is not applicable for consultants — keep the edit form empty for that field.
+    if (isConsultantEmployee) next.band_id = "";
+    setEditForm(next);
     setIsEditing(true);
   };
 
@@ -298,13 +305,16 @@ export function EmployeeProfilePageClient() {
             editForm.phone_number
           );
           if (phoneError) throw new Error(phoneError);
-          if (designationLoading) {
+          if (!isConsultantEmployee && designationLoading) {
             throw new Error("Designations are still loading. Please wait a moment.");
           }
           if (!editForm.role.trim()) {
             throw new Error("Designation is required.");
           }
-          if (!designationOptions.some((option) => option.value === editForm.role.trim())) {
+          if (
+            !isConsultantEmployee &&
+            !designationOptions.some((option) => option.value === editForm.role.trim())
+          ) {
             throw new Error(
               "Selected designation is not valid for the chosen department and band."
             );
@@ -323,7 +333,10 @@ export function EmployeeProfilePageClient() {
           }
         }
         await updateMutation.mutateAsync(
-          editFormToUpdatePayload(editForm, { statusOnly: statusOnlyEdit })
+          editFormToUpdatePayload(editForm, {
+            statusOnly: statusOnlyEdit,
+            omitBand: isConsultantEmployee,
+          })
         );
         await refetch();
         setIsEditing(false);
@@ -392,6 +405,10 @@ export function EmployeeProfilePageClient() {
             </Button>
           </div>
         ) : null}
+        
+        const isConsultantEmployee = String(pickProfileField(profileRecord, ["user_type", "userType"]) ??  "")
+        .toUpperCase()
+        .replace (/[\s-_]/g, "") === "CONSULTANT";
 
         {!isLoading && !isError ? (
           <div className="mt-6 space-y-4">
@@ -506,54 +523,70 @@ export function EmployeeProfilePageClient() {
                         onChange={(v) => setEditForm({ ...editForm, work_location_type: v })}
                         disabled={saving}
                       />
-                      <AdaptiveSelectField
-                        label="Band"
-                        required
-                        value={bandSelectValue}
-                        placeholder={
-                          !editForm.department.trim()
-                            ? "Select Department First"
-                            : bandSelectOptionsList.length
-                              ? "Select Band"
-                              : "No Bands Available"
-                        }
-                        searchPlaceholder="Search Bands…"
-                        options={bandSelectOptionsList}
-                        onChange={(id) =>
-                          setEditForm((prev) =>
-                            prev ? { ...prev, band_id: id, role: "" } : prev
-                          )
-                        }
-                        disabled={saving || !editForm.department.trim() || !bandSelectOptionsList.length}
-                      />
-                      <AdaptiveSelectField
-                        label="Designation"
-                        required
-                        value={editForm.role}
-                        loading={designationLoading}
-                        loadingLabel="Loading Designations…"
-                        placeholder={
-                          !editForm.department.trim() || designationBandId <= 0
-                            ? "Select Department And Band First"
-                            : designationLoading
-                              ? "Loading Designations…"
-                              : designationOptions.length
-                                ? "Select Designation"
-                                : "No Designations For This Band"
-                        }
-                        searchPlaceholder="Search Designations…"
-                        options={designationOptions}
-                        onChange={(role) =>
-                          setEditForm((prev) => (prev ? { ...prev, role } : prev))
-                        }
-                        disabled={
-                          saving ||
-                          !editForm.department.trim() ||
-                          designationBandId <= 0 ||
-                          designationLoading ||
-                          !designationOptions.length
-                        }
-                      />
+                      {!isConsultantEmployee ? (
+                        <AdaptiveSelectField
+                          label="Band"
+                          required
+                          value={bandSelectValue}
+                          placeholder={
+                            !editForm.department.trim()
+                              ? "Select Department First"
+                              : bandSelectOptionsList.length
+                                ? "Select Band"
+                                : "No Bands Available"
+                          }
+                          searchPlaceholder="Search Bands…"
+                          options={bandSelectOptionsList}
+                          onChange={(id) =>
+                            setEditForm((prev) =>
+                              prev ? { ...prev, band_id: id, role: "" } : prev
+                            )
+                          }
+                          disabled={
+                            saving || !editForm.department.trim() || !bandSelectOptionsList.length
+                          }
+                        />
+                      ) : null}
+                      {isConsultantEmployee ? (
+                        <InputField
+                          label="Designation"
+                          required
+                          value={editForm.role}
+                          onChange={(role) =>
+                            setEditForm((prev) => (prev ? { ...prev, role } : prev))
+                          }
+                          disabled={saving}
+                        />
+                      ) : (
+                        <AdaptiveSelectField
+                          label="Designation"
+                          required
+                          value={editForm.role}
+                          loading={designationLoading}
+                          loadingLabel="Loading Designations…"
+                          placeholder={
+                            !editForm.department.trim() || designationBandId <= 0
+                              ? "Select Department And Band First"
+                              : designationLoading
+                                ? "Loading Designations…"
+                                : designationOptions.length
+                                  ? "Select Designation"
+                                  : "No Designations For This Band"
+                          }
+                          searchPlaceholder="Search Designations…"
+                          options={designationOptions}
+                          onChange={(role) =>
+                            setEditForm((prev) => (prev ? { ...prev, role } : prev))
+                          }
+                          disabled={
+                            saving ||
+                            !editForm.department.trim() ||
+                            designationBandId <= 0 ||
+                            designationLoading ||
+                            !designationOptions.length
+                          }
+                        />
+                      )}
                     </div>
 
                     <FormSubsection title="Skills">

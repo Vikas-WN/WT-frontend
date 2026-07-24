@@ -62,6 +62,13 @@ function isInternProfile(profile: Record<string, unknown>): boolean {
     .toUpperCase() === "INTERN";
 }
 
+function isConsultantProfile(profile: Record<string, unknown>): boolean {
+  return String(pickProfileField(profile, ["user_type", "userType"]) ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s\-_]/g, "") === "CONSULTANT";
+}
+
 function formatDirectoryDate(value: unknown): string {
   const s = String(value ?? "").trim();
   if (!s) return "—";
@@ -182,7 +189,9 @@ export function onboardRowToListRow(row: OnboardRowInput): Record<string, string
     department: String(record.department ?? "").trim() || "—",
     role: String(record.role ?? "").trim() || "—",
     portal_role: formatPrimaryPortalRoleLabel(record.portal_roles ?? record.portalRoles),
-    band: String(record.band ?? record.band_name ?? record.bandName ?? "").trim() || "—",
+    band: isConsultantProfile(record)
+      ? "—"
+      : String(record.band ?? record.band_name ?? record.bandName ?? "").trim() || "—",
     date_of_joining: formatDirectoryDate(
       record.date_of_joining ?? record.doj ?? record.joining_date ?? record.joiningDate
     ),
@@ -260,7 +269,7 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
 
 export function editFormToUpdatePayload(
   form: EmployeeProfileEditForm,
-  options?: { statusOnly?: boolean }
+  options?: { statusOnly?: boolean; omitBand?: boolean }
 ): Record<string, unknown> {
   if (options?.statusOnly) {
     return { user_status: form.user_status.trim() };
@@ -289,10 +298,13 @@ export function editFormToUpdatePayload(
     secondary_skills,
   };
 
-  const bandId = form.band_id.trim();
-  if (bandId) {
-    const bandNum = Number(bandId);
-    payload.band_id = Number.isFinite(bandNum) ? bandNum : bandId;
+  // Consultants do not use band — never send band_id (API rejects it).
+  if (!options?.omitBand) {
+    const bandId = form.band_id.trim();
+    if (bandId) {
+      const bandNum = Number(bandId);
+      payload.band_id = Number.isFinite(bandNum) ? bandNum : bandId;
+    }
   }
 
   const personalEmail = form.personal_email.trim();
@@ -356,6 +368,7 @@ export function buildGroupedProfileSections(
     pickProfileField(profile, ["delivery_status", "deliveryStatus"]);
 
   const internProfile = isInternProfile(profile);
+  const consultantProfile = isConsultantProfile(profile);
 
   const information: ProfileDisplayEntry[] = [
     profileEntry("Name", cleanEmployeeName(profile) || pickProfileField(profile, ["name"])),
@@ -368,7 +381,7 @@ export function buildGroupedProfileSections(
     profileEntry("Work Email", pickProfileField(profile, ["email"])),
     profileEntry("Department", pickProfileField(profile, ["department"])),
     profileEntry("Designation / Role", pickEmployeeRole(profile) || null),
-    profileEntry("Band", formatBandForProfile(profile)),
+    ...(consultantProfile ? [] : [profileEntry("Band", formatBandForProfile(profile))]),
     profileEntry(
       "User Type",
       formatUserTypeLabel(String(pickProfileField(profile, ["user_type", "userType"]) ?? ""))

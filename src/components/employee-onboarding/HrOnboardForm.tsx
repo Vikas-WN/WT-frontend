@@ -82,7 +82,6 @@ function EmployeeIdField({
 function validateWorkStep(
   form: OnboardFormState,
   internBandId: number,
-  defaultConsultantBandId: number,
   ctx?: {
     designationLoading?: boolean;
     designationOptionsCount?: number;
@@ -118,13 +117,14 @@ function validateWorkStep(
   }
   if (!department) throw new Error("Department is required.");
 
+  const isConsultant = form.user_type === "CONSULTANT";
   const bandId =
-    form.user_type === "CONSULTANT"
-      ? defaultConsultantBandId
-      : form.user_type === "INTERN"
-        ? internBandId
+    form.user_type === "INTERN"
+      ? internBandId
+      : isConsultant
+        ? null
         : Number(form.band_id);
-  if (!Number.isFinite(bandId) || bandId <= 0) {
+  if (!isConsultant && (!Number.isFinite(bandId) || Number(bandId) <= 0)) {
     throw new Error("Please select a valid Band.");
   }
 
@@ -155,10 +155,10 @@ function validateWorkStep(
     throw new Error("Date of Joining is required.");
   }
 
-  if (ctx?.designationLoading) {
+  if (!isConsultant && ctx?.designationLoading) {
     throw new Error("Designations are still loading. Please wait a moment.");
   }
-  if (ctx?.designationOptionsCount === 0) {
+  if (!isConsultant && ctx?.designationOptionsCount === 0) {
     throw new Error(
       "No designation is configured for the selected band. Please choose a different department or band."
     );
@@ -181,11 +181,6 @@ export function HrOnboardForm({
   runAction,
 }: HrOnboardFormProps) {
   const internBandId = useMemo(() => resolveInternBandId(bands), [bands]);
-  const defaultConsultantBandId = useMemo(() => {
-    const first = bands[0];
-    const id = first?.id != null ? Number(first.id) : NaN;
-    return Number.isFinite(id) && id > 0 ? id : 0;
-  }, [bands]);
 
   const bandOptions = useMemo(
     () => bandSelectOptionsForUserType(bands, form.department, form.user_type, internBandId),
@@ -197,11 +192,13 @@ export function HrOnboardForm({
     [bands, internBandId]
   );
 
+  const isConsultant = form.user_type === "CONSULTANT";
+
   const designationBandId = useMemo(() => {
-    if (form.user_type === "CONSULTANT") return defaultConsultantBandId;
+    if (form.user_type === "CONSULTANT") return 0;
     if (form.user_type === "INTERN") return internBandId;
     return Number(form.band_id);
-  }, [defaultConsultantBandId, form.band_id, form.user_type, internBandId]);
+  }, [form.band_id, form.user_type, internBandId]);
 
   const reportingManagerOptions = useMemo(
     () =>
@@ -237,6 +234,7 @@ export function HrOnboardForm({
   }, [form.user_type, internBandId, setForm]);
 
   useEffect(() => {
+    if (isConsultant) return;
     if (designationLoading) return;
     if (designationOptions.length === 1) {
       const onlyRole = designationOptions[0]?.value ?? "";
@@ -250,11 +248,11 @@ export function HrOnboardForm({
     if (designationOptions.length > 0 && !validRoles.has(form.role)) {
       setForm((prev) => ({ ...prev, role: "" }));
     }
-  }, [designationOptions, designationLoading, form.role, setForm]);
+  }, [designationOptions, designationLoading, form.role, isConsultant, setForm]);
 
   useEffect(() => {
     if (!form.department.trim()) return;
-    if (form.user_type === "INTERN") return;
+    if (form.user_type === "INTERN" || form.user_type === "CONSULTANT") return;
     const currentBandId = Number(form.band_id);
     if (!currentBandId) return;
     const stillValid = bandOptions.some((option) => Number(option.value) === currentBandId);
@@ -266,15 +264,10 @@ export function HrOnboardForm({
   function submit() {
     void runAction("Create And Invite Employee", async () => {
       const { empId, email, name, department, role, bandId, reportingManagerId, portalRole } =
-        validateWorkStep(
-        form,
-        internBandId,
-        defaultConsultantBandId,
-        {
-          designationLoading,
-          designationOptionsCount: designationOptions.length,
-        }
-      );
+        validateWorkStep(form, internBandId, {
+          designationLoading: isConsultant ? false : designationLoading,
+          designationOptionsCount: isConsultant ? undefined : designationOptions.length,
+        });
 
       const basePayload: Record<string, unknown> = {
         emp_id: empId,
@@ -284,12 +277,14 @@ export function HrOnboardForm({
         department,
         role,
         portal_role: portalRole,
-        band_id: bandId,
         work_mode: form.work_mode,
         work_location_type: form.work_location_type,
         category: form.category,
         reporting_manager_id: reportingManagerId,
       };
+      if (bandId != null) {
+        basePayload.band_id = bandId;
+      }
       if (form.user_type === "INTERN") {
         await hrmsService.createOnboard({
           ...basePayload,
@@ -422,30 +417,40 @@ export function HrOnboardForm({
             />
           )
         ) : null}
-        <DropdownSelectField
-          label="Designation"
-          required
-          value={form.role}
-          loading={designationLoading}
-          loadingLabel="Loading designations…"
-          placeholder={
-            !form.department.trim() || designationBandId <= 0
-              ? "Select Department And Band First"
-              : designationLoading
-                ? "Loading Designations…"
-                : designationOptions.length
-                  ? "Select"
-                  : "No Designations For This Band"
-          }
-          disabled={
-            !form.department.trim() ||
-            designationBandId <= 0 ||
-            designationLoading ||
-            !designationOptions.length
-          }
-          options={designationOptions}
-          onChange={(role) => setForm((p) => ({ ...p, role }))}
-        />
+        {isConsultant ? (
+          <InputField
+            label="Designation"
+            required
+            value={form.role}
+            placeholder="Enter Designation"
+            onChange={(role) => setForm((p) => ({ ...p, role }))}
+          />
+        ) : (
+          <DropdownSelectField
+            label="Designation"
+            required
+            value={form.role}
+            loading={designationLoading}
+            loadingLabel="Loading designations…"
+            placeholder={
+              !form.department.trim() || designationBandId <= 0
+                ? "Select Department And Band First"
+                : designationLoading
+                  ? "Loading Designations…"
+                  : designationOptions.length
+                    ? "Select"
+                    : "No Designations For This Band"
+            }
+            disabled={
+              !form.department.trim() ||
+              designationBandId <= 0 ||
+              designationLoading ||
+              !designationOptions.length
+            }
+            options={designationOptions}
+            onChange={(role) => setForm((p) => ({ ...p, role }))}
+          />
+        )}
         <DropdownSelectField
           label="Work Mode"
           required

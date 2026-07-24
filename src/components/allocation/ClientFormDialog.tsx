@@ -168,11 +168,13 @@ export function ClientFormDialog({
             <AccountManagerSelect
               value={form.account_manager_email}
               onChange={(value) => setForm((prev) => ({ ...prev, account_manager_email: value }))}
+              required
             />
             <InternalEmployeeSelect
               label="Delivery Manager"
               value={form.delivery_manager_email}
               onChange={(value) => setForm((prev) => ({ ...prev, delivery_manager_email: value }))}
+              required
             />
           </div>
         </FormSection>

@@ -248,6 +248,11 @@ export function LeavePageClient() {
   const searchParams = useSearchParams();
   const isTeamLeaveRoute = pathname.includes("/dashboard/leave/team");
   const tabFromQuery = String(searchParams.get("tab") ?? "").trim().toLowerCase();
+  const deepLinkRequestId = String(searchParams.get("requestId") ?? "").trim();
+  const deepLinkFrom = String(searchParams.get("from") ?? "").trim();
+  const deepLinkTo = String(searchParams.get("to") ?? "").trim();
+  const [highlightRequestId, setHighlightRequestId] = useState("");
+  const deepLinkAppliedKeyRef = useRef("");
   const [leaveSubTab, setLeaveSubTab] = useState<
     "my" | "team" | "org" | "comp-off" | "wfh" | "balances"
   >(() => {
@@ -493,6 +498,60 @@ export function LeavePageClient() {
   } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [teamStatusUpdatingId, setTeamStatusUpdatingId] = useState<string | null>(null);
+
+  // Notification deep-link: open the matching leave request regardless of prior date filters.
+  useEffect(() => {
+    if (!deepLinkRequestId && !deepLinkFrom && !deepLinkTo) return;
+    const key = `${deepLinkRequestId}|${deepLinkFrom}|${deepLinkTo}|${tabFromQuery}|${pathname}`;
+    if (deepLinkAppliedKeyRef.current === key) return;
+    deepLinkAppliedKeyRef.current = key;
+
+    if (
+      tabFromQuery === "team" ||
+      tabFromQuery === "org" ||
+      tabFromQuery === "my" ||
+      tabFromQuery === "wfh" ||
+      isTeamLeaveRoute
+    ) {
+      if (tabFromQuery === "wfh") setLeaveSubTab("wfh");
+      else if (tabFromQuery === "my") setLeaveSubTab("my");
+      else if (tabFromQuery === "org") setLeaveSubTab("org");
+      else setLeaveSubTab(isTeamLeaveRoute || tabFromQuery === "team" ? "team" : "my");
+    }
+
+    if (deepLinkFrom && deepLinkTo) {
+      setEmployeeRequestFilters((prev) => ({
+        ...prev,
+        fromDate: deepLinkFrom,
+        toDate: deepLinkTo,
+      }));
+      setMyRequestsFromDate(deepLinkFrom);
+      setMyRequestsToDate(deepLinkTo);
+    } else {
+      // Empty UI filters → wide unfiltered API range (see unfilteredLeaveRequestRange).
+      setEmployeeRequestFilters((prev) => ({
+        ...prev,
+        fromDate: "",
+        toDate: "",
+      }));
+      setMyRequestsFromDate("");
+      setMyRequestsToDate("");
+    }
+
+    setTeamLeaveSearch("");
+    setMyLeaveSearch("");
+    setTeamPage(0);
+    if (deepLinkRequestId) {
+      setHighlightRequestId(deepLinkRequestId);
+    }
+  }, [
+    deepLinkFrom,
+    deepLinkRequestId,
+    deepLinkTo,
+    isTeamLeaveRoute,
+    pathname,
+    tabFromQuery,
+  ]);
 
   const [onboardForm, setOnboardForm] = useState({
     emp_id: "",
@@ -1331,6 +1390,19 @@ export function LeavePageClient() {
     [filteredEmployeeRequests, teamLeaveSortId]
   );
 
+  useEffect(() => {
+    if (!highlightRequestId) return;
+    const frame = window.requestAnimationFrame(() => {
+      const el = document.querySelector(
+        `[data-leave-request-id="${CSS.escape(highlightRequestId)}"]`
+      );
+      if (el instanceof HTMLElement) {
+        el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [highlightRequestId, sortedEmployeeRequests, sortedLeaveTabRequests, sortedWfhTabRequests]);
+
   const myLeavePagination = useClientPagination(activeSelfServeRequests, {
     resetKeys: [myLeaveSortId, myLeaveSearch, leaveSubTab],
   });
@@ -2164,7 +2236,17 @@ export function LeavePageClient() {
                                     return (
                                       <TableRow
                                         key={`${requestId || "req"}-${idx}`}
-                                        className={idx % 2 === 1 ? "bg-muted/20" : ""}
+                                        data-leave-request-id={requestId || undefined}
+                                        className={
+                                          [
+                                            idx % 2 === 1 ? "bg-muted/20" : "",
+                                            highlightRequestId && requestId === highlightRequestId
+                                              ? "bg-[var(--wt-brand-soft)]/40 ring-1 ring-inset ring-[var(--wt-brand)]/30"
+                                              : "",
+                                          ]
+                                            .filter(Boolean)
+                                            .join(" ")
+                                        }
                                       >
                                         <TableCell className="px-4 py-3 whitespace-nowrap">
                                           <span className="font-medium text-foreground">{employee || "—"}</span>

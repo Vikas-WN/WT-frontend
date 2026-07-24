@@ -15,6 +15,12 @@ function readNotificationType(row: NotificationItem | Record<string, unknown>): 
     .toUpperCase();
 }
 
+function readNotificationMessage(row: NotificationItem | Record<string, unknown>): string {
+  return String(
+    (row as NotificationItem).message ?? (row as Record<string, unknown>).message ?? ""
+  );
+}
+
 function hasAnyRole(roles: string[], candidates: string[]): boolean {
   const normalized = normalizeRoles(roles);
   return candidates.some((role) => normalized.includes(role));
@@ -43,6 +49,38 @@ function timelogTeamHrefForEmployee(employeeEmail: string | null): string {
   const base = DASHBOARD_ROUTES["timelog-team"];
   if (!employeeEmail) return base;
   return `${base}?employee=${encodeURIComponent(employeeEmail)}`;
+}
+
+/** Extract leave/WFH deep-link fields from a notification message. */
+export function parseLeaveNotificationDeepLink(message: string): {
+  requestId: string | null;
+  from: string | null;
+  to: string | null;
+} {
+  const text = String(message ?? "");
+  const idMatch = text.match(/request\s*#\s*(\d+)/i);
+  const rangeMatch = text.match(
+    /from\s+(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/i
+  );
+  return {
+    requestId: idMatch?.[1] ?? null,
+    from: rangeMatch?.[1] ?? null,
+    to: rangeMatch?.[2] ?? null,
+  };
+}
+
+function withLeaveDeepLink(
+  basePath: string,
+  row: NotificationItem | Record<string, unknown>,
+  tab: string
+): string {
+  const { requestId, from, to } = parseLeaveNotificationDeepLink(readNotificationMessage(row));
+  const params = new URLSearchParams();
+  params.set("tab", tab);
+  if (requestId) params.set("requestId", requestId);
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  return `${basePath}?${params.toString()}`;
 }
 
 /** Human-readable category for the notification badge. */
@@ -127,22 +165,26 @@ export function resolveNotificationHref(
     case "LEAVE_REQUEST":
     case "LOP_LEAVE_REQUEST":
     case "LEAVE_APPROVAL_REMINDER":
-      return isRequestApprover(roles) ? DASHBOARD_ROUTES["leave-team"] : DASHBOARD_ROUTES.leave;
+      return isRequestApprover(roles)
+        ? withLeaveDeepLink(DASHBOARD_ROUTES["leave-team"], row, "team")
+        : withLeaveDeepLink(DASHBOARD_ROUTES.leave, row, "my");
 
     case "LEAVE_APPROVED":
     case "LEAVE_REJECTED":
     case "LEAVE_AUTO_APPROVED":
-      return DASHBOARD_ROUTES.leave;
+      return withLeaveDeepLink(DASHBOARD_ROUTES.leave, row, "my");
 
     case "WFH_REQUEST":
     case "WFH_EXCEPTION_REQUEST":
-      return isRequestApprover(roles) ? DASHBOARD_ROUTES["leave-team"] : DASHBOARD_ROUTES.leave;
+      return isRequestApprover(roles)
+        ? withLeaveDeepLink(DASHBOARD_ROUTES["leave-team"], row, "team")
+        : withLeaveDeepLink(DASHBOARD_ROUTES.leave, row, "wfh");
 
     case "WFH_APPROVED":
     case "WFH_REJECTED":
     case "WFH_EXCEPTION_APPROVED":
     case "WFH_EXCEPTION_REJECTED":
-      return DASHBOARD_ROUTES.leave;
+      return withLeaveDeepLink(DASHBOARD_ROUTES.leave, row, "wfh");
 
     case "COMP_OFF_REQUEST":
       return isRequestApprover(roles) ? DASHBOARD_ROUTES["leave-team"] : COMP_OFF_SELF;
