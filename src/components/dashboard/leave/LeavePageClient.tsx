@@ -155,6 +155,7 @@ import { LeaveAdditionalRecipientsSelector } from "@/components/dashboard/leave/
 
 import {
   calendarDaysInclusive,
+  mapEarnListRow,
   normalizeCompOffRequestType,
   pickRowField,
 } from "@/utils/compOff";
@@ -250,8 +251,8 @@ export function LeavePageClient() {
   const [leaveSubTab, setLeaveSubTab] = useState<
     "my" | "team" | "org" | "comp-off" | "wfh" | "balances"
   >(() => {
+    if (tabFromQuery === "comp-off" && !isTeamLeaveRoute) return "comp-off";
     if (
-      tabFromQuery === "comp-off" ||
       tabFromQuery === "wfh" ||
       tabFromQuery === "balances" ||
       tabFromQuery === "team" ||
@@ -271,12 +272,17 @@ export function LeavePageClient() {
       tabFromQuery === "org" ||
       tabFromQuery === "my"
     ) {
+      // Comp Off Credit lives on personal leave only.
+      if (tabFromQuery === "comp-off" && isTeamLeaveRoute) {
+        setLeaveSubTab("team");
+        return;
+      }
       setLeaveSubTab(tabFromQuery);
       return;
     }
     if (isTeamLeaveRoute) {
       setLeaveSubTab((prev) => {
-        if (prev === "comp-off" || prev === "balances" || prev === "team" || prev === "org") {
+        if (prev === "balances" || prev === "team" || prev === "org") {
           return prev;
         }
         return "team";
@@ -378,8 +384,6 @@ export function LeavePageClient() {
   });
   const [teamRequestsLoading, setTeamRequestsLoading] = useState(false);
   const [employeeRequests, setEmployeeRequests] = useState<Array<Record<string, unknown>>>([]);
-  const [teamPage, setTeamPage] = useState(0);
-  const [teamPageSize, setTeamPageSize] = useState(10);
   const [teamTotalPages, setTeamTotalPages] = useState(0);
   const [teamTotalElements, setTeamTotalElements] = useState(0);
   const teamCacheRef = useRef<Map<string, {
@@ -661,10 +665,11 @@ export function LeavePageClient() {
   const employeeSelfServeProfile = isEmployee || hasHrAccess;
   const canApplyCompOff = !hasHrAccess && !hasManagerAccess;
   const teamRequestType = employeeRequestFilters.requestType || "ALL";
-  const showCompOffTab = canApplyCompOff || hasManagerAccess || hasHrAccess || hasDmAccess;
+  /** Personal leave page only — team leave keeps Approvals without the Comp Off Credit tab. */
+  const showCompOffTab =
+    !isTeamLeaveRoute &&
+    (canApplyCompOff || hasManagerAccess || hasHrAccess || hasDmAccess);
   const showLeaveSubTabBar = showCompOffTab || hasHrAccess || !isTeamLeaveRoute;
-  const compOffForcedTab: "my" | "team" =
-    isTeamLeaveRoute && (hasManagerAccess || hasHrAccess || hasDmAccess) ? "team" : "my";
 
   const leaveRequestTypeOptions = useMemo(() => {
     const base = USER_REQUEST_TYPE_SELECT_OPTIONS.filter((opt) => opt.value !== "WFH");
@@ -886,6 +891,8 @@ export function LeavePageClient() {
     const from = hasDateFilter ? selectedFrom : fallbackRange.fromDate;
     const to = hasDateFilter ? selectedTo : fallbackRange.toDate;
     const requestType = employeeRequestFilters.requestType || "ALL";
+    const isCompOffEarnFilter =
+      normalizeCompOffRequestType(requestType) === "COMP_OFF_EARN";
 
     if (!skipScopeLoad) {
       await loadScopeEmployees(scope);
@@ -896,7 +903,26 @@ export function LeavePageClient() {
     let totalPages = 1;
     let totalElements = 0;
 
-    if (scope === "team") {
+    // Earn requests are not listed on /userRequest (API returns 400). Use /comp-off/earn.
+    if (isCompOffEarnFilter) {
+      const managerOnly =
+        !hasHrAccess && (hasManagerAccess || hasDmAccess || hasPrimaryLeaveInbox);
+      try {
+        const earnRes = await compOffService.listEarnRequests({
+          fromDate: from,
+          toDate: to,
+          page: 0,
+          size: Math.max(size, 200),
+          managerOnly: scope === "team" ? managerOnly : false,
+        });
+        rows = compOffService.parseRequestRows(earnRes).map(mapEarnListRow);
+      } catch {
+        rows = [];
+      }
+      rows = applyListSort(rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
+      totalElements = rows.length;
+      totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
+    } else if (scope === "team") {
       const normalizedType = String(requestType || "ALL").trim().toUpperCase();
       const wantsManagerInbox =
         normalizedType === "ALL" ||
@@ -1004,21 +1030,28 @@ export function LeavePageClient() {
         });
         // Newest submissions first for Team Requests.
         rows = applyListSort(rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
-        totalPages = 1;
         totalElements = rows.length;
+        totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
       } else {
         rows = filterTeamRequestsForPrimaryManager(
           applyListSort(portfolioRes.rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS),
           { actorEmail: userEmail, hasHrAccess }
         );
-        totalPages = portfolioRes.totalPages;
         totalElements = rows.length;
+        totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
       }
     } else if (hasHrAccess) {
-      const result = await fetchPaginatedScopedUserRequests({ fromDate: from, toDate: to, requestType, page, size });
+      // Load a full window for client-side pagination (same as team merge path).
+      const result = await fetchPaginatedScopedUserRequests({
+        fromDate: from,
+        toDate: to,
+        requestType,
+        page: 0,
+        size: Math.max(size, 200),
+      });
       rows = applyListSort(result.rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
-      totalPages = result.totalPages;
-      totalElements = result.totalElements;
+      totalElements = rows.length;
+      totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
     }
 
     const unresolvedEmails = [
@@ -1105,10 +1138,9 @@ export function LeavePageClient() {
       userEmail
     );
     setEmployeeRequests(withDecisions);
-    setTeamPage(page);
     setTeamTotalPages(totalPages);
     setTeamTotalElements(totalElements);
-    const cacheKey = `${scope}:${employeeRequestFilters.fromDate}:${employeeRequestFilters.toDate}:${employeeRequestFilters.requestType}:${page}:${size}`;
+    const cacheKey = `${scope}:${employeeRequestFilters.fromDate}:${employeeRequestFilters.toDate}:${employeeRequestFilters.requestType}:0:200`;
     teamCacheRef.current.set(cacheKey, {
       rows: withDecisions,
       totalPages,
@@ -1123,10 +1155,10 @@ export function LeavePageClient() {
   const teamTableColCount = showTeamActionsColumn ? 5 : 4;
 
   const fetchTeamRequests = useCallback(
-    async (scope: "team" | "org", page: number = 0, size: number = teamPageSize) => {
+    async (scope: "team" | "org", page: number = 0, size: number = 200) => {
       setTeamRequestsLoading(true);
       try {
-        const cacheKey = `${scope}:${employeeRequestFilters.fromDate}:${employeeRequestFilters.toDate}:${employeeRequestFilters.requestType}:${page}:${size}`;
+        const cacheKey = `${scope}:${employeeRequestFilters.fromDate}:${employeeRequestFilters.toDate}:${employeeRequestFilters.requestType}:0:200`;
         const cached = teamCacheRef.current.get(cacheKey);
         if (cached) {
           const withDecisions = applyLeaveTeamRequestDecisions(
@@ -1135,7 +1167,6 @@ export function LeavePageClient() {
             userEmail
           );
           setEmployeeRequests(withDecisions);
-          setTeamPage(page);
           setTeamTotalPages(cached.totalPages);
           setTeamTotalElements(cached.totalElements);
           return;
@@ -1147,7 +1178,7 @@ export function LeavePageClient() {
         setTeamRequestsLoading(false);
       }
     },
-    [employeeRequestFilters, loadEmployeeRequestsForApprover, teamPageSize, userEmail]
+    [employeeRequestFilters, loadEmployeeRequestsForApprover, userEmail]
   );
 
   const invalidateTeamCache = useCallback(() => {
@@ -1238,7 +1269,7 @@ export function LeavePageClient() {
       const scope = leaveSubTab === "org" ? "org" : "team";
       invalidateTeamCache();
       invalidateLeaveBalance();
-      await loadEmployeeRequestsForApprover(scope, teamPage, teamPageSize, true);
+      await loadEmployeeRequestsForApprover(scope, 0, 200, true);
     } finally {
       setTeamStatusUpdatingId(null);
     }
@@ -1304,14 +1335,25 @@ export function LeavePageClient() {
     resetKeys: [myLeaveSortId, myLeaveSearch, leaveSubTab],
   });
 
-  const teamPageSizeOptions = [10, 25, 50, 100] as const;
+  // Team/org tables load a merged full list (inbox + portfolio); paginate client-side
+  // so "Rows" (10/25/50/100) actually limits what's rendered.
+  const teamLeavePagination = useClientPagination(sortedEmployeeRequests, {
+    resetKeys: [
+      teamLeaveSortId,
+      teamLeaveSearch,
+      leaveSubTab,
+      employeeRequestFilters.fromDate,
+      employeeRequestFilters.toDate,
+      employeeRequestFilters.requestType,
+    ],
+  });
 
   const currentScope = leaveSubTab === "org" ? "org" : "team";
 
   useEffect(() => {
     if (!canViewTeamLeave) return;
     if (leaveSubTab !== "team" && leaveSubTab !== "org") return;
-    const cacheKey = `${currentScope}:${employeeRequestFilters.fromDate}:${employeeRequestFilters.toDate}:${employeeRequestFilters.requestType}:${teamPage}:${teamPageSize}`;
+    const cacheKey = `${currentScope}:${employeeRequestFilters.fromDate}:${employeeRequestFilters.toDate}:${employeeRequestFilters.requestType}:0:200`;
     const cached = teamCacheRef.current.get(cacheKey);
     if (cached) {
       setEmployeeRequests(
@@ -1320,7 +1362,7 @@ export function LeavePageClient() {
       setTeamTotalPages(cached.totalPages);
       setTeamTotalElements(cached.totalElements);
     } else {
-      fetchTeamRequests(currentScope, teamPage, teamPageSize);
+      fetchTeamRequests(currentScope, 0, 200);
     }
   }, [leaveSubTab]);
 
@@ -1331,33 +1373,17 @@ export function LeavePageClient() {
     if (filterTimerRef.current) clearTimeout(filterTimerRef.current);
     filterTimerRef.current = setTimeout(() => {
       invalidateTeamCache();
-      setTeamPage(0);
       const scope = leaveSubTab === "org" ? "org" : "team";
-      fetchTeamRequests(scope, 0, teamPageSize);
+      fetchTeamRequests(scope, 0, 200);
     }, 400);
     return () => { if (filterTimerRef.current) clearTimeout(filterTimerRef.current); };
   }, [employeeRequestFilters.fromDate, employeeRequestFilters.toDate, employeeRequestFilters.requestType]);
-
-  const handleTeamPageChange = useCallback((page: number) => {
-    setTeamPage(page);
-    const scope = leaveSubTab === "org" ? "org" : "team";
-    fetchTeamRequests(scope, page, teamPageSize);
-  }, [leaveSubTab, fetchTeamRequests, teamPageSize]);
-
-  const handleTeamPageSizeChange = useCallback((size: number) => {
-    setTeamPageSize(size);
-    setTeamPage(0);
-    invalidateTeamCache();
-    const scope = leaveSubTab === "org" ? "org" : "team";
-    fetchTeamRequests(scope, 0, size);
-  }, [leaveSubTab, fetchTeamRequests, invalidateTeamCache]);
 
   const leaveTabItems = useMemo(() => {
     if (isTeamLeaveRoute) {
       return [
         canViewTeamLeave ? { value: "team", label: "Team Requests" } : null,
         hasHrAccess ? { value: "org", label: "All Employee Requests" } : null,
-        showCompOffTab ? { value: "comp-off", label: "Compensation Off Credit" } : null,
         hasHrAccess ? { value: "balances", label: "Balances" } : null,
       ].filter((item): item is { value: string; label: string } => Boolean(item));
     }
@@ -1402,7 +1428,7 @@ export function LeavePageClient() {
                             <CompOffPageClient
                               embedded
                               flowScope="earn"
-                              forcedTab={compOffForcedTab}
+                              forcedTab="my"
                             />
                           ) : null}
                           {(leaveSubTab === "my" || leaveSubTab === "wfh") ? (
@@ -2030,8 +2056,8 @@ export function LeavePageClient() {
                                       ))}
                                     </TableRow>
                                   ))
-                                ) : sortedEmployeeRequests.length ? (
-                                  sortedEmployeeRequests.map((row, idx) => {
+                                ) : teamLeavePagination.pageItems.length ? (
+                                  teamLeavePagination.pageItems.map((row, idx) => {
                                     const requestId = String(
                                       row.user_request_id ??
                                         row.userRequestId ??
@@ -2220,7 +2246,7 @@ export function LeavePageClient() {
                                                           // Actions column is team-only (hidden on org / All Employee Requests).
                                                           invalidateTeamCache();
                                                           invalidateLeaveBalance();
-                                                          await loadEmployeeRequestsForApprover("team", teamPage, teamPageSize, true);
+                                                          await loadEmployeeRequestsForApprover("team", 0, 200, true);
                                                         } finally {
                                                           setTeamStatusUpdatingId(null);
                                                         }
@@ -2274,8 +2300,8 @@ export function LeavePageClient() {
                                                             invalidateLeaveBalance();
                                                             await loadEmployeeRequestsForApprover(
                                                               "team",
-                                                              teamPage,
-                                                              teamPageSize,
+                                                              0,
+                                                              200,
                                                               true
                                                             );
                                                           }
@@ -2334,18 +2360,18 @@ export function LeavePageClient() {
                               </TableBody>
                             </WtTable>
                           </ScrollableTable>
-                          {sortedEmployeeRequests.length > 0 ? (
+                          {teamLeavePagination.showPagination ? (
                             <div className="border-t border-border/40 pt-4">
                               <ListPagination
-                                page={teamPage}
-                                totalPages={teamTotalPages}
-                                totalItems={teamTotalElements}
-                                rangeStart={teamTotalElements === 0 ? 0 : teamPage * teamPageSize + 1}
-                                rangeEnd={Math.min(teamTotalElements, (teamPage + 1) * teamPageSize)}
-                                pageSize={teamPageSize}
-                                pageSizeOptions={teamPageSizeOptions}
-                                onPageChange={handleTeamPageChange}
-                                onPageSizeChange={handleTeamPageSizeChange}
+                                page={teamLeavePagination.page}
+                                totalPages={teamLeavePagination.totalPages}
+                                totalItems={teamLeavePagination.totalItems}
+                                rangeStart={teamLeavePagination.rangeStart}
+                                rangeEnd={teamLeavePagination.rangeEnd}
+                                pageSize={teamLeavePagination.pageSize}
+                                pageSizeOptions={teamLeavePagination.pageSizeOptions}
+                                onPageChange={teamLeavePagination.setPage}
+                                onPageSizeChange={teamLeavePagination.setPageSize}
                               />
                             </div>
                           ) : null}

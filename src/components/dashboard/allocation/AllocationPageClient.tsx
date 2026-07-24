@@ -30,12 +30,9 @@ import {
   formatActionSuccessMessage,
   userRequestActionLabel,
 } from "@/utils/actionToast";
-import { AllocationExtensionPanel } from "@/components/dashboard/sections/AllocationExtensionPanel";
-import { AllocatedPercentSelect } from "@/components/allocation/AllocatedPercentSelect";
 import { AllocateEmployeeDialog } from "@/components/allocation/AllocateEmployeeDialog";
 import { CreateProjectDialog } from "@/components/allocation/CreateProjectDialog";
 import { ProjectEmployeesDetailDialog } from "@/components/allocation/ProjectEmployeesDetailDialog";
-import { ProjectTypeSelect } from "@/components/allocation/ProjectTypeSelect";
 import { ProjectTypeFilterSelect } from "@/components/allocation/ProjectTypeFilterSelect";
 import { useAllocationEmployees } from "@/hooks/useAllocationEmployees";
 import { useAllocationPercentages } from "@/hooks/useAllocationPercentages";
@@ -45,18 +42,14 @@ import {
   ALLOCATION_FORECAST_PAGE,
   ALLOCATION_FORECAST_SIZE,
   ALLOCATION_LIST_PAGE,
-  ALLOCATION_LIST_SIZE,
 } from "@/constants/allocationApi";
 import {
   formatProjectTypeCode,
-  isKnownProjectTypeCode,
   isStaffingProjectTypeCode,
   projectTypeCodeFromRow,
   projectTypeLabelByCode,
   resolveProjectTypeForProjectCode,
 } from "@/utils/projectTypes";
-import { normalizePickerEmail } from "@/utils/learning/onboardOptions";
-import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
 import {
   HARDCODED_DEPARTMENT_OPTIONS,
   MAX_ONBOARD_FILE_BYTES,
@@ -66,13 +59,11 @@ import {
   defaultInvitedEmployeesDateRange,
   filterInvitedRowsByCreatedAtRange,
   formatInvitedEmployeeTableRows,
-  allocationAccManagerCell,
 } from "@/utils/dashboard/invitedEmployees";
 import {
   isValidPersonName,
   isValidIndiaMobile,
   resolveInternBandId,
-  generateAutomaticProjectCode,
   formatAllocatedHoursPercentLabel,
 } from "@/utils/dashboard/validation";
 import { apiDateToInputValue, formatApiDateDisplay, normalizeToApiDate } from "@/utils/apiDate";
@@ -83,32 +74,12 @@ import {
   formatAllocatedPercentDisplay,
   resolveAllocatedPercentFromRow,
 } from "@/utils/allocationPercent";
-import { applyTheme } from "@/utils/dashboard/theme";
 import {
   isManagerFlagTruthy,
-  isManagerRoleLabel,
-  buildUserIdToNameMap,
-  buildEmailToNameMap,
-  buildProjectCodeDisplayMap,
-  enrichAllocationRowsForDisplay,
-  normalizeForecastRows,
-  allocationRowEmail,
-  allocationProjectCode,
   allocationProjectDisplayName,
-  allocationProjectTitleFromRow,
 } from "@/utils/dashboard/allocationDisplay";
-import {
-  normalizeAssignedProjects,
-  mergeProjectAndAllocationData,
-  managerProjectCode,
-  managerProjectName,
-  managerTeamEmails,
-  managerTeamRowsForProject,
-} from "@/utils/dashboard/projects";
 import { allocationEmployeesToPickerUsers } from "@/utils/allocationEmployees";
-import { isHrCreatedProjectCode } from "@/utils/projectPicker";
-import { MetricCard } from "@/components/dashboard/ui/MetricCard";
-import { InputField, SelectField, FileField, UploadTile, FieldLabel, NativeSelectField } from "@/components/dashboard/ui/forms";
+import { InputField, SelectField, FileField, FieldLabel } from "@/components/dashboard/ui/forms";
 import {
   ProfilePhotoAvatar,
   ProfileField,
@@ -122,7 +93,6 @@ import {
   activeSortDirectionForColumn,
   applyListSort,
   PROJECT_SORT_OPTIONS,
-  TIMELOG_SORT_OPTIONS,
   ALLOCATION_FORECAST_SORT_OPTIONS,
   ALLOCATION_LIST_SORT_OPTIONS,
   toggleColumnSort,

@@ -43,7 +43,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import {
-  OFFBOARDING_LIST_PAGE_SIZE,
   useOffboardingPanelQueries,
 } from "@/hooks/offboarding/useOffboardingPanelQueries";
 import {
@@ -99,6 +98,9 @@ export function OffboardingPanel() {
   const {
     listPage,
     setListPage,
+    listPageSize,
+    setListPageSize,
+    listPageSizeOptions,
     search,
     setSearch,
     filterFromDate,
@@ -171,6 +173,12 @@ export function OffboardingPanel() {
     setSelectedEmpIds([]);
     setBulkResendResults([]);
   }, [search, filterType, filterFromDate, filterToDate, listPage]);
+
+  function handleListPageSizeChange(size: number) {
+    setSelectedEmpIds([]);
+    setBulkResendResults([]);
+    setListPageSize(size);
+  }
 
   const resendableEmpIdsOnPage = useMemo(
     () => resendableOffboardEmpIds(offboardedRows),
@@ -276,9 +284,10 @@ export function OffboardingPanel() {
   }
 
 
-  const totalPages = Math.max(1, Math.ceil(displayTotal / OFFBOARDING_LIST_PAGE_SIZE) || 1);
-  const rangeStart = displayTotal === 0 ? 0 : listPage * OFFBOARDING_LIST_PAGE_SIZE + 1;
-  const rangeEnd = Math.min(displayTotal, (listPage + 1) * OFFBOARDING_LIST_PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(displayTotal / listPageSize) || 1);
+  const rangeStart = displayTotal === 0 ? 0 : listPage * listPageSize + 1;
+  const rangeEnd = Math.min(displayTotal, (listPage + 1) * listPageSize);
+  const showListPagination = displayTotal > 0;
 
   const candidateOptions = useMemo(
     () =>
@@ -843,15 +852,22 @@ export function OffboardingPanel() {
                 </WtTable>
               </div>
             </div>
-            <ListPagination
-              page={listPage}
-              totalPages={totalPages}
-              totalItems={displayTotal}
-              rangeStart={rangeStart}
-              rangeEnd={rangeEnd}
-              pageSize={OFFBOARDING_LIST_PAGE_SIZE}
-              onPageChange={setListPage}
-            />
+            {showListPagination ? (
+              <div className="border-t border-border/40 pt-4">
+                <ListPagination
+                  page={listPage}
+                  totalPages={totalPages}
+                  totalItems={displayTotal}
+                  rangeStart={rangeStart}
+                  rangeEnd={rangeEnd}
+                  pageSize={listPageSize}
+                  pageSizeOptions={listPageSizeOptions}
+                  onPageChange={setListPage}
+                  onPageSizeChange={handleListPageSizeChange}
+                  loading={loadingList}
+                />
+              </div>
+            ) : null}
           </>
         )}
       </ManagementListCard>

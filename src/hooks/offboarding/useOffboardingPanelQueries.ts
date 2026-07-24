@@ -24,6 +24,7 @@ export type OffboardCandidate = {
 };
 
 export const OFFBOARDING_LIST_PAGE_SIZE = 10;
+export const OFFBOARDING_LIST_PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 
 const EMPTY_OFFBOARD_LIST: HrOffboardListItem[] = [];
 
@@ -123,7 +124,14 @@ function parseOffboardListPayload(payload: unknown): { items: HrOffboardListItem
   const items = rawItems
     .map((row) => parseOffboardListItem(row as Record<string, unknown>))
     .filter((row): row is HrOffboardListItem => Boolean(row));
-  const total = Number(data.total ?? items.length);
+  const totalRaw =
+    data.total ??
+    data.total_elements ??
+    data.totalElements ??
+    data.total_count ??
+    data.totalCount ??
+    items.length;
+  const total = Number(totalRaw);
   return {
     items,
     total: Number.isFinite(total) ? total : items.length,
@@ -168,6 +176,7 @@ export function useOffboardingPanelQueries() {
   const queryClient = useQueryClient();
 
   const [listPage, setListPage] = useState(0);
+  const [listPageSize, setListPageSizeState] = useState(OFFBOARDING_LIST_PAGE_SIZE);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
   const [filterFromDate, setFilterFromDate] = useState(
@@ -197,6 +206,19 @@ export function useOffboardingPanelQueries() {
     prevListFiltersKey.current = listFiltersKey;
     setListPage(0);
   }, [listFiltersKey]);
+
+  const setListPageSize = useCallback((size: number) => {
+    const next = OFFBOARDING_LIST_PAGE_SIZE_OPTIONS.includes(
+      size as (typeof OFFBOARDING_LIST_PAGE_SIZE_OPTIONS)[number]
+    )
+      ? size
+      : OFFBOARDING_LIST_PAGE_SIZE;
+    setListPageSizeState((current) => {
+      if (current === next) return current;
+      return next;
+    });
+    setListPage(0);
+  }, []);
 
   const fyYear = useMemo(() => parseFinancialYear(fyStartYear), [fyStartYear]);
 
@@ -270,11 +292,11 @@ export function useOffboardingPanelQueries() {
   });
 
   const listQ = useQuery({
-    queryKey: ["offboarding", "list", listPage, OFFBOARDING_LIST_PAGE_SIZE, listFilters],
+    queryKey: ["offboarding", "list", listPage, listPageSize, listFilters],
     queryFn: async () => {
       const res = await hrmsService.getOffboardList({
         page: listPage,
-        size: OFFBOARDING_LIST_PAGE_SIZE,
+        size: listPageSize,
         ...listFilters,
       });
       return parseOffboardListPayload(res);
@@ -339,6 +361,9 @@ export function useOffboardingPanelQueries() {
   return {
     listPage,
     setListPage,
+    listPageSize,
+    setListPageSize,
+    listPageSizeOptions: OFFBOARDING_LIST_PAGE_SIZE_OPTIONS,
     search,
     setSearch,
     filterFromDate,

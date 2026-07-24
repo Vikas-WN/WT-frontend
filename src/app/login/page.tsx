@@ -155,12 +155,14 @@ function LoginPageInner() {
     if (status !== "unauthenticated" || didPostLoginRefresh.current) return;
     didPostLoginRefresh.current = true;
     void (async () => {
-      // Read-only check: if a session already exists (e.g. just returned from
-      // OAuth), redirect. Never rotates tokens, so no refresh -> 401 -> logout loop.
-      const fresh = await fetchMe();
-      if (fresh && !didRedirect.current) {
-        didRedirect.current = true;
-        window.location.replace("/dashboard");
+      try {
+        const fresh = await fetchMe();
+        if (fresh && !didRedirect.current) {
+          didRedirect.current = true;
+          window.location.replace("/dashboard");
+        }
+      } catch {
+        /* Backend may be down; stay on login. */
       }
     })();
   }, [status]);

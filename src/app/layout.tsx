@@ -40,7 +40,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("h-full", inter.variable, plusJakarta.variable, "font-sans")} suppressHydrationWarning>
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      className={cn("h-full", inter.variable, plusJakarta.variable, "font-sans")}
+      suppressHydrationWarning
+    >
       <head>
         {/* Synchronous theme bootstrap: must run before first paint to avoid a
             light-mode flash. next/script (even beforeInteractive) does not

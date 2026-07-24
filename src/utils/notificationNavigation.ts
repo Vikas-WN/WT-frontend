@@ -2,7 +2,6 @@ import { DASHBOARD_ROUTES } from "@/constants/routes";
 import type { NotificationItem } from "@/services/hrms.service";
 import { normalizeRoles } from "@/utils/roles";
 
-const COMP_OFF_TEAM = "/dashboard/leave/team?tab=comp-off";
 const COMP_OFF_SELF = "/dashboard/leave?tab=comp-off";
 const LEARNING_SCORES = "/dashboard/learning-development";
 
@@ -146,7 +145,7 @@ export function resolveNotificationHref(
       return DASHBOARD_ROUTES.leave;
 
     case "COMP_OFF_REQUEST":
-      return isRequestApprover(roles) ? COMP_OFF_TEAM : COMP_OFF_SELF;
+      return isRequestApprover(roles) ? DASHBOARD_ROUTES["leave-team"] : COMP_OFF_SELF;
 
     case "COMP_OFF_APPROVED":
     case "COMP_OFF_REJECTED":

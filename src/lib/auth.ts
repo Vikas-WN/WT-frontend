@@ -151,6 +151,12 @@ export async function fetchMe(): Promise<AuthUser | null> {
     if (error instanceof ApiError && error.status === 401) {
       return null;
     }
+    if (
+      error instanceof ApiError &&
+      (error.status === 0 || error.status >= 500)
+    ) {
+      return null;
+    }
     throw error;
   }
 }

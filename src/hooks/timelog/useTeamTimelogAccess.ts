@@ -1,41 +1,30 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
-import { hrmsService } from "@/services/hrms.service";
-import { normalizeProjectTimelogsData } from "@/utils/timelog/normalizeProjectTimelogs";
+import { normalizeRoles } from "@/utils/roles";
 
 export const TEAM_TIMELOG_ACCESS_QUERY_KEY = ["timelog", "team-access"] as const;
 
-export function canViewTeamTimelogsByRole(roles: string[]): boolean {
-  return roles.some(
-    (role) => role === "ROLE_MANAGER" || role === "ROLE_HR" || role === "ROLE_ADMIN"
-  );
-}
+const TEAM_TIMELOG_ROLES = new Set(["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"]);
 
-async function fetchHasPrimaryManagerTimelogInbox(): Promise<boolean> {
-  const res = await hrmsService.getTimelogProjects();
-  const data = normalizeProjectTimelogsData(
-    ((res as { data?: unknown }).data ?? res) as unknown
-  );
-  return data.projects.length > 0 || data.pendingApprovals.length > 0;
+/**
+ * Managers, HR, and Admin may open team / project time-log views.
+ * Pure employees (and AM-only users) may not — including when ROLE_EMPLOYEE
+ * is combined with other non-team roles.
+ */
+export function canViewTeamTimelogsByRole(roles: string[]): boolean {
+  const normalized = normalizeRoles(roles);
+  return normalized.some((role) => TEAM_TIMELOG_ROLES.has(role));
 }
 
 /** Whether the signed-in user may open team / project time-log views. */
 export function useTeamTimelogAccess() {
   const { user } = useAuth();
   const roles = user?.roles ?? [];
-  const byRole = canViewTeamTimelogsByRole(roles);
-
-  const inboxQuery = useQuery({
-    queryKey: TEAM_TIMELOG_ACCESS_QUERY_KEY,
-    enabled: Boolean(user) && !byRole,
-    staleTime: 60_000,
-    queryFn: fetchHasPrimaryManagerTimelogInbox,
-  });
+  const canViewTeamTimelogs = canViewTeamTimelogsByRole(roles);
 
   return {
-    canViewTeamTimelogs: byRole || (inboxQuery.data ?? false),
-    isCheckingAccess: !byRole && inboxQuery.isLoading,
+    canViewTeamTimelogs,
+    isCheckingAccess: false,
   };
 }

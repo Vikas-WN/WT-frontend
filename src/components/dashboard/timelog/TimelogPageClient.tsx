@@ -8,7 +8,6 @@ import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
-import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { INNER_PANEL_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
@@ -262,14 +261,6 @@ export function TimelogPageClient() {
     }
   }, [isTeamView, isProjectView, canSeeTeamTab, isCheckingAccess, router]);
 
-  const timelogTabItems = useMemo(
-    () => [
-      { value: "my", label: "My Time Logs" },
-      { value: "projects", label: "Team Time Logs" },
-    ],
-    []
-  );
-
   if (isOffboarded) {
     return (
       <DashboardPageShell>
@@ -298,28 +289,19 @@ export function TimelogPageClient() {
     <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
       <DashboardPageShell>
         <ContentCard>
-          {canSeeTeamTab ? (
-            <PageTabs
-              embedded
-              aria-label="Time Log tabs"
-              value={subTab}
-              onValueChange={(value) => {
-                if (value === "team") router.push("/dashboard/timelog/team");
-                else if (value === "projects") router.push("/dashboard/timelog/projects");
-                else router.push("/dashboard/timelog");
-              }}
-              items={timelogTabItems}
-            />
-          ) : null}
-
-          <div className={canSeeTeamTab ? PAGE_TAB_BODY_CLASS : "space-y-6 p-4 sm:p-6"}>
+          {/*
+            Personal Time Logs (/dashboard/timelog) is My-only — no Team tab.
+            Team Time Logs lives under Manage → /dashboard/timelog/projects for
+            manager/HR/admin roles only.
+          */}
+          <div className="space-y-6 p-4 sm:p-6">
           {hasAmRole ? <HrReviewNoticeBanner /> : null}
 
           {!isTeamView && !isProjectView ? (
             <MyWeeklyTimesheet />
           ) : null}
 
-          {isProjectView ? (
+          {isProjectView && canSeeTeamTab ? (
             <ProjectTimelogPanel enabled />
           ) : null}
 

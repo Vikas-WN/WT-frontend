@@ -30,7 +30,6 @@ import {
   hasSecondaryLeaveManagers,
   isAssignedPrimaryLeaveManager,
   isAssignedSecondaryLeaveManager,
-  requestSecondaryManagerStatus,
 } from "@/utils/leaveManagerDisplay";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
 
@@ -669,43 +668,44 @@ export function patchLeaveTeamRequestStatus(
   const hasSecondary = hasSecondaryLeaveManagers(row);
 
   if (status === "REJECTED") {
+    // One rejection finalizes the request — both primary and secondary stages show REJECTED
+    // (same pattern as APPROVED painting both stages approved).
     return {
       ...row,
       status: "REJECTED",
       user_request_status: "REJECTED",
       userRequestStatus: "REJECTED",
-      ...(isPrimary
-        ? {
-            manager_status: "REJECTED",
-            managerStatus: "REJECTED",
-            ...(reason
-              ? {
-                  manager_reason: reason,
-                  managerReason: reason,
-                }
-              : {}),
-          }
-        : {}),
-      ...(isSecondary
+      manager_status: "REJECTED",
+      managerStatus: "REJECTED",
+      ...(hasSecondary
         ? {
             hr_status: "REJECTED",
             hrStatus: "REJECTED",
             secondary_status: "REJECTED",
             secondaryStatus: "REJECTED",
-            ...(reason
-              ? {
-                  hr_reason: reason,
-                  hrReason: reason,
-                }
-              : {}),
           }
-        : {}),
-      ...(!isPrimary && !isSecondary
-        ? {
-            manager_status: "REJECTED",
-            managerStatus: "REJECTED",
+        : {
             hr_status: "REJECTED",
             hrStatus: "REJECTED",
+          }),
+      ...(isPrimary && reason
+        ? {
+            manager_reason: reason,
+            managerReason: reason,
+          }
+        : {}),
+      ...(isSecondary && reason
+        ? {
+            hr_reason: reason,
+            hrReason: reason,
+          }
+        : {}),
+      ...(!isPrimary && !isSecondary && reason
+        ? {
+            manager_reason: reason,
+            managerReason: reason,
+            hr_reason: reason,
+            hrReason: reason,
           }
         : {}),
       ...(reason
@@ -721,26 +721,20 @@ export function patchLeaveTeamRequestStatus(
     return row;
   }
 
-  // One assigned-manager approval is enough — request becomes APPROVED.
-  const primaryApproved =
-    isPrimary || normalizeRequestStatus(requestManagerStatus(row)) === "APPROVED";
-  const secondaryApproved =
-    isSecondary ||
-    (hasSecondary && requestSecondaryManagerStatus(row) === "APPROVED");
 
   return {
     ...row,
     status: "APPROVED",
     user_request_status: "APPROVED",
     userRequestStatus: "APPROVED",
-    manager_status: primaryApproved ? "APPROVED" : "PENDING",
-    managerStatus: primaryApproved ? "APPROVED" : "PENDING",
+    manager_status: "APPROVED",
+    managerStatus: "APPROVED",
     ...(hasSecondary
       ? {
-          hr_status: secondaryApproved ? "APPROVED" : "PENDING",
-          hrStatus: secondaryApproved ? "APPROVED" : "PENDING",
-          secondary_status: secondaryApproved ? "APPROVED" : "PENDING",
-          secondaryStatus: secondaryApproved ? "APPROVED" : "PENDING",
+          hr_status: "APPROVED",
+          hrStatus: "APPROVED",
+          secondary_status: "APPROVED",
+          secondaryStatus: "APPROVED",
         }
       : {
           hr_status: "APPROVED",
