@@ -540,7 +540,6 @@ export function LeavePageClient() {
 
     setTeamLeaveSearch("");
     setMyLeaveSearch("");
-    setTeamPage(0);
     if (deepLinkRequestId) {
       setHighlightRequestId(deepLinkRequestId);
     }
@@ -1420,6 +1419,33 @@ export function LeavePageClient() {
     ],
   });
 
+  // Deep-link / highlight: jump to the page that contains the target request.
+  useEffect(() => {
+    if (!highlightRequestId) return;
+    const index = sortedEmployeeRequests.findIndex((row) => {
+      const id = String(
+        row.user_request_id ??
+          row.userRequestId ??
+          row.request_id ??
+          row.requestId ??
+          row.id ??
+          ""
+      ).trim();
+      return id === highlightRequestId;
+    });
+    if (index < 0) return;
+    const targetPage = Math.floor(index / Math.max(teamLeavePagination.pageSize, 1));
+    if (targetPage !== teamLeavePagination.page) {
+      teamLeavePagination.setPage(targetPage);
+    }
+  }, [
+    highlightRequestId,
+    sortedEmployeeRequests,
+    teamLeavePagination.page,
+    teamLeavePagination.pageSize,
+    teamLeavePagination.setPage,
+  ]);
+
   const currentScope = leaveSubTab === "org" ? "org" : "team";
 
   useEffect(() => {
@@ -2050,14 +2076,36 @@ export function LeavePageClient() {
                                 />
                               </div>
                             </div>
-                            <div className="flex w-full flex-col">
+                            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                               <input
                                 type="search"
                                 value={teamLeaveSearch}
                                 onChange={(e) => setTeamLeaveSearch(e.target.value)}
                                 placeholder="Search by employee name…"
-                                className="h-11 w-full min-w-0 rounded-xl border border-wt-border bg-wt-surface-1 px-3.5 text-sm text-wt-text outline-none transition-colors placeholder:text-wt-text-faint focus-visible:border-[var(--wt-brand)] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)] dark:border-wt-border-md dark:bg-wt-surface-1"
+                                className="h-11 w-full min-w-0 rounded-xl border border-wt-border bg-wt-surface-1 px-3.5 text-sm text-wt-text outline-none transition-colors placeholder:text-wt-text-faint focus-visible:border-[var(--wt-brand)] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)] dark:border-wt-border-md dark:bg-wt-surface-1 sm:max-w-md"
                               />
+                              {teamLeavePagination.totalItems > 0 ? (
+                                <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
+                                  <span className="text-xs text-wt-text-muted">Rows</span>
+                                  <select
+                                    aria-label="Rows per page"
+                                    className="h-9 rounded-lg border border-wt-border bg-wt-surface-1 px-2 text-xs tabular-nums text-wt-text outline-none focus-visible:border-[var(--wt-brand)]"
+                                    value={teamLeavePagination.pageSize}
+                                    onChange={(event) => {
+                                      const next = Number(event.target.value);
+                                      if (Number.isFinite(next) && next > 0) {
+                                        teamLeavePagination.setPageSize(next);
+                                      }
+                                    }}
+                                  >
+                                    {teamLeavePagination.pageSizeOptions.map((size) => (
+                                      <option key={size} value={size}>
+                                        {size}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              ) : null}
                             </div>
                           </div>
                         </div>
