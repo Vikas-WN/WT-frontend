@@ -38,9 +38,12 @@ export async function GET(request: NextRequest) {
   try {
     exchangeResponse = await fetch(`${getBackendBaseUrl()}/api/v1/auth/google/exchange`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        // Frontend owns oauthState; forward it so the backend can validate CSRF state.
+        Cookie: `oauthState=${expectedState}`,
+      },
       body: JSON.stringify({ code, redirect_uri: redirectUri, state }),
-      credentials: "include",
     });
   } catch {
     return loginRedirect(request, "backend_unavailable");
