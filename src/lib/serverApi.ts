@@ -192,3 +192,88 @@ export function buildCookieHeader(request: Request, keys: string[]): string {
 
   return parts.join("; ");
 }
+
+type RoutePathParams = { path?: string | string[] };
+
+/** Supports Next.js route params whether provided as a Promise or plain object. */
+export async function resolveRoutePathSegments(
+  params: Promise<RoutePathParams> | RoutePathParams | undefined
+): Promise<string[]> {
+  const resolved =
+    params && typeof (params as Promise<RoutePathParams>).then === "function"
+      ? await (params as Promise<RoutePathParams>)
+      : (params as RoutePathParams | undefined);
+  const raw = resolved?.path;
+  if (!raw) return [];
+  return Array.isArray(raw) ? raw.map((segment) => String(segment)) : [String(raw)];
+}
+
+function buildSafeUpstreamResponseHeaders(upstream: Response): Headers {
+  const headers = new Headers();
+  const contentType = upstream.headers.get("content-type");
+  if (contentType) headers.set("content-type", contentType);
+
+  const contentDisposition = upstream.headers.get("content-disposition");
+  if (contentDisposition) headers.set("content-disposition", contentDisposition);
+
+  const getSetCookie = (upstream.headers as Headers & { getSetCookie?: () => string[] })
+    .getSetCookie;
+  const cookies = typeof getSetCookie === "function" ? getSetCookie.call(upstream.headers) : [];
+  for (const cookie of cookies) {
+    headers.append("set-cookie", cookie);
+  }
+
+  return headers;
+}
+
+/** Proxy /api/v1/* requests to FastAPI with auth cookies and safe response headers. */
+export async function proxyUpstreamApiRequest(
+  request: NextRequest,
+  pathSegments: string[]
+): Promise<NextResponse> {
+  if (isBackendMisconfigured()) {
+    return backendMisconfiguredResponse();
+  }
+
+  const segments = pathSegments.map((segment) => segment.trim()).filter(Boolean);
+  if (!segments.length) {
+    return NextResponse.json({ detail: "invalid_api_path" }, { status: 400 });
+  }
+
+  const backendUrl = `${getBackendBaseUrl()}/api/v1/${segments.join("/")}${request.nextUrl.search}`;
+  const headers = buildUpstreamAuthHeaders(request);
+
+  const init: RequestInit = {
+    method: request.method,
+    headers,
+    redirect: "manual",
+  };
+
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    const body = await request.arrayBuffer();
+    if (body.byteLength > 0) {
+      init.body = body;
+      headers.set("content-length", String(body.byteLength));
+    }
+  }
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(backendUrl, init);
+  } catch (error) {
+    console.error("BFF proxy upstream fetch failed:", backendUrl, error);
+    return backendUnavailableResponse();
+  }
+
+  try {
+    const body = await upstream.arrayBuffer();
+    return new NextResponse(body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: buildSafeUpstreamResponseHeaders(upstream),
+    });
+  } catch (error) {
+    console.error("BFF proxy response build failed:", backendUrl, error);
+    return backendUnavailableResponse();
+  }
+}
