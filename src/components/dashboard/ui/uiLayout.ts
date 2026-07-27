@@ -89,7 +89,10 @@ export const TOOLBAR_SELECT_TRIGGER_COMPACT_CLASS = cn(
 /** In-table compact selects (e.g. portal role). */
 export const TABLE_INLINE_SELECT_TRIGGER_CLASS = cn(
   TOOLBAR_SELECT_TRIGGER_COMPACT_CLASS,
-  "h-9 min-h-9 px-2.5 text-xs shadow-none hover:bg-wt-surface-2/80"
+  // This class lands on the trigger's outer wrapper, not the inner <input>; the input
+  // keeps its own px-3.5 from FORM_CONTROL_CLASS unless zeroed here, which otherwise
+  // stacks on top of this px-2.5 and doubles the left inset.
+  "h-9 min-h-9 px-2.5 text-xs shadow-none hover:bg-wt-surface-2/80 [&>input]:pl-0"
 );
 
 export const DETAIL_LABEL_CELL_CLASS =

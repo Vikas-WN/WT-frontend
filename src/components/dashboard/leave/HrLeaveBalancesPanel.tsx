@@ -162,6 +162,7 @@ export function HrLeaveBalancesPanel({
                   setPage(0);
                 }}
                 options={monthOptions}
+                contentClassName="w-auto min-w-[11rem]"
               />
             </div>
             <Button
