@@ -16,14 +16,8 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "50mb",
     },
   },
-  async rewrites() {
-    return [
-      {
-        source: "/api/v1/:path*",
-        destination: `${process.env.API_BASE_URL || "http://localhost:8080"}/api/v1/:path*`,
-      },
-    ];
-  },
+  // API traffic is proxied at runtime by src/app/api/v1/[...path]/route.ts using API_BASE_URL.
+  // Do not add /api/v1 rewrites here: build-time destinations bake localhost into Docker images.
 };
 
 export default nextConfig;

@@ -45,6 +45,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
+# Set at container runtime (not build time): API_BASE_URL=http://<backend-host>:8080
 
 RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 

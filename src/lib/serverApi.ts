@@ -2,17 +2,49 @@ import { normalizeApiBaseUrl } from "@/api/httpClient";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+const LOCAL_BACKEND_FALLBACK = "http://localhost:8080";
+
+function readConfiguredBackendUrl(): string {
+  const candidates = [
+    process.env.API_BASE_URL,
+    process.env.BACKEND_URL,
+    process.env.RENDER_EXTERNAL_URL,
+    process.env.NEXT_PUBLIC_API_BASE_URL,
+  ];
+  for (const value of candidates) {
+    const trimmed = value?.trim();
+    if (trimmed) return normalizeApiBaseUrl(trimmed);
+  }
+  return "";
+}
+
 /** Upstream FastAPI base URL (server-side only). */
 export function getBackendBaseUrl(): string {
-  return normalizeApiBaseUrl(
-    process.env.API_BASE_URL ??
-      process.env.NEXT_PUBLIC_API_BASE_URL ??
-      "http://localhost:8080"
-  );
+  const configured = readConfiguredBackendUrl();
+  if (configured) return configured;
+  return LOCAL_BACKEND_FALLBACK;
+}
+
+/** True when production BFF would proxy to localhost (misconfigured deployment). */
+export function isBackendMisconfigured(): boolean {
+  if (process.env.NODE_ENV !== "production") return false;
+  const url = readConfiguredBackendUrl();
+  if (!url) return true;
+  return /localhost|127\.0\.0\.1/i.test(url);
 }
 
 export function backendUnavailableResponse(): NextResponse {
   return NextResponse.json({ detail: "backend_unavailable" }, { status: 503 });
+}
+
+export function backendMisconfiguredResponse(): NextResponse {
+  return NextResponse.json(
+    {
+      detail: "backend_unconfigured",
+      message: "API_BASE_URL is not configured for this deployment.",
+    },
+    { status: 503 }
+  );
 }
 
 /** Public frontend origin used for OAuth redirects and absolute app redirects. */
@@ -159,4 +191,89 @@ export function buildCookieHeader(request: Request, keys: string[]): string {
     });
 
   return parts.join("; ");
+}
+
+type RoutePathParams = { path?: string | string[] };
+
+/** Supports Next.js route params whether provided as a Promise or plain object. */
+export async function resolveRoutePathSegments(
+  params: Promise<RoutePathParams> | RoutePathParams | undefined
+): Promise<string[]> {
+  const resolved =
+    params && typeof (params as Promise<RoutePathParams>).then === "function"
+      ? await (params as Promise<RoutePathParams>)
+      : (params as RoutePathParams | undefined);
+  const raw = resolved?.path;
+  if (!raw) return [];
+  return Array.isArray(raw) ? raw.map((segment) => String(segment)) : [String(raw)];
+}
+
+function buildSafeUpstreamResponseHeaders(upstream: Response): Headers {
+  const headers = new Headers();
+  const contentType = upstream.headers.get("content-type");
+  if (contentType) headers.set("content-type", contentType);
+
+  const contentDisposition = upstream.headers.get("content-disposition");
+  if (contentDisposition) headers.set("content-disposition", contentDisposition);
+
+  const getSetCookie = (upstream.headers as Headers & { getSetCookie?: () => string[] })
+    .getSetCookie;
+  const cookies = typeof getSetCookie === "function" ? getSetCookie.call(upstream.headers) : [];
+  for (const cookie of cookies) {
+    headers.append("set-cookie", cookie);
+  }
+
+  return headers;
+}
+
+/** Proxy /api/v1/* requests to FastAPI with auth cookies and safe response headers. */
+export async function proxyUpstreamApiRequest(
+  request: NextRequest,
+  pathSegments: string[]
+): Promise<NextResponse> {
+  if (isBackendMisconfigured()) {
+    return backendMisconfiguredResponse();
+  }
+
+  const segments = pathSegments.map((segment) => segment.trim()).filter(Boolean);
+  if (!segments.length) {
+    return NextResponse.json({ detail: "invalid_api_path" }, { status: 400 });
+  }
+
+  const backendUrl = `${getBackendBaseUrl()}/api/v1/${segments.join("/")}${request.nextUrl.search}`;
+  const headers = buildUpstreamAuthHeaders(request);
+
+  const init: RequestInit = {
+    method: request.method,
+    headers,
+    redirect: "manual",
+  };
+
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    const body = await request.arrayBuffer();
+    if (body.byteLength > 0) {
+      init.body = body;
+      headers.set("content-length", String(body.byteLength));
+    }
+  }
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(backendUrl, init);
+  } catch (error) {
+    console.error("BFF proxy upstream fetch failed:", backendUrl, error);
+    return backendUnavailableResponse();
+  }
+
+  try {
+    const body = await upstream.arrayBuffer();
+    return new NextResponse(body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: buildSafeUpstreamResponseHeaders(upstream),
+    });
+  } catch (error) {
+    console.error("BFF proxy response build failed:", backendUrl, error);
+    return backendUnavailableResponse();
+  }
 }
