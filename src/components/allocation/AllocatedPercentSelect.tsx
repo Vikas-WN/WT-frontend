@@ -1,12 +1,21 @@
 "use client";
 
-import { InputField } from "@/components/dashboard/ui/forms";
+import { useMemo } from "react";
+import { SelectField } from "@/components/dashboard/ui/forms";
+import type { AllocationPercentRow } from "@/types/allocationPercent";
+import {
+  allocationPercentOptionsForDesignation,
+  allocationPercentSelectOptions,
+} from "@/utils/allocationPercent";
 
 export function AllocatedPercentSelect({
+  designation = "",
   value,
   onChange,
   required = false,
+  enabled = true,
   disabled = false,
+  allocationPercentOptions = [],
 }: {
   designation?: string;
   value: string;
@@ -14,25 +23,33 @@ export function AllocatedPercentSelect({
   required?: boolean;
   enabled?: boolean;
   disabled?: boolean;
+  allocationPercentOptions?: AllocationPercentRow[];
 }) {
+  const options = useMemo(
+    () =>
+      allocationPercentSelectOptions(
+        allocationPercentOptionsForDesignation(designation, allocationPercentOptions)
+      ),
+    [designation, allocationPercentOptions]
+  );
+
+  const isDisabled = disabled || !enabled || !designation.trim();
+
   return (
-    <InputField
+    <SelectField
       label="Allocated %"
-      type="number"
-      placeholder="e.g. 50"
       required={required}
       value={value}
-      disabled={disabled}
-      onChange={(v) => {
-        if (v === "") {
-          onChange(v);
-          return;
-        }
-        const num = Number(v);
-        if (Number.isFinite(num) && num >= 1 && num <= 100) {
-          onChange(String(Math.trunc(num)));
-        }
-      }}
+      disabled={isDisabled}
+      placeholder={
+        !designation.trim()
+          ? "Select role first"
+          : options.length
+            ? "Select allocation %"
+            : "No options"
+      }
+      options={options}
+      onChange={onChange}
     />
   );
 }

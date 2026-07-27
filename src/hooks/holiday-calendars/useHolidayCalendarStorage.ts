@@ -9,9 +9,10 @@ export function holidayCalendarStorageQueryKey(year: number | string) {
 
 export function useHolidayCalendarStorage(year: number | string) {
   const normalizedYear = Number(year);
+  const isValidYear = Number.isInteger(normalizedYear) && normalizedYear >= 2000 && normalizedYear<=9999;
 
   return useQuery({
-    queryKey: holidayCalendarStorageQueryKey(normalizedYear),
+    queryKey: holidayCalendarStorageQueryKey(isValidYear ? normalizedYear : "Please enter the valid year"),
     queryFn: () => holidayCalendarStorageService.fetchByYear(normalizedYear),
     enabled: Number.isFinite(normalizedYear),
     staleTime: 30_000,
