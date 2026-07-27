@@ -10,6 +10,7 @@ import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
 import { INNER_PANEL_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
+import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { ApprovalRemarkModal } from "@/components/dashboard/timelog/ApprovalRemarkModal/ApprovalRemarkModal";
@@ -68,7 +69,7 @@ export function TimelogPageClient() {
   const hasAdminAccess = roles.includes("ROLE_ADMIN");
   const hasAmRole = roles.includes("ROLE_AM");
   const isOffboarded = isOffboardedUserStatus(user?.status);
-  const requiresSelfOnboarding = Boolean(user?.requiresSelfOnboarding);
+  const { requiresSelfOnboarding } = useDashboardAccess();
 
   const subTab = pathname.endsWith("/dashboard/timelog/team")
     ? "team"
