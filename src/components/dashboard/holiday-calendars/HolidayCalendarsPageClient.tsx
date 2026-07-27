@@ -19,6 +19,7 @@ import {
 } from "@/components/dashboard/ui/wtTable";
 import {
   holidayCalendarStorageQueryKey,
+  isValidHolidayCalendarYear,
   useHolidayCalendarStorage,
 } from "@/hooks/holiday-calendars/useHolidayCalendarStorage";
 import { showErrorToast } from "@/lib/toast";
@@ -71,12 +72,22 @@ export function HolidayCalendarsPageClient() {
   const loadedStorageFileName = storageQuery.data?.fileName ?? "";
 
   useEffect(() => {
+    if (!isValidHolidayCalendarYear(selectedYear)) return;
     if (!storageQuery.isError) return;
     const error = storageQuery.error;
     showErrorToast(
       error instanceof Error ? error.message : "Failed to load holiday calendar from storage."
     );
-  }, [storageQuery.isError, storageQuery.error]);
+  }, [selectedYear, storageQuery.isError, storageQuery.error]);
+
+  function handleYearChange(next: string) {
+    // Empty / cleared year snaps back to the current year so we never call the API with year 0.
+    if (!next.trim() || !isValidHolidayCalendarYear(next)) {
+      setSelectedYear(String(currentYear));
+      return;
+    }
+    setSelectedYear(next);
+  }
 
   const yearOptions = useMemo(() => yearSelectOptions(currentYear), [currentYear]);
 
@@ -134,9 +145,12 @@ export function HolidayCalendarsPageClient() {
   const storageLabel =
     loadedStorageFileName || holidayCalendarStorageFileName(Number(selectedYear), ".csv");
 
-  const description = storageQuery.data
-    ? `Showing holidays for ${selectedYear}. Loaded file: ${storageLabel}`
-    : `Upload a CSV or XLSX file to store holidays for ${selectedYear}.`;
+  const yearIsValid = isValidHolidayCalendarYear(selectedYear);
+  const description = !yearIsValid
+    ? "Select a year to view or upload the holiday calendar."
+    : storageQuery.data
+      ? `Showing holidays for ${selectedYear}. Loaded file: ${storageLabel}`
+      : `Upload a CSV or XLSX file to store holidays for ${selectedYear}.`;
 
   return (
     <DashboardPageShell>
@@ -161,7 +175,7 @@ export function HolidayCalendarsPageClient() {
               variant="brand"
               type="button"
               className="h-10 shrink-0 gap-2 px-4"
-              disabled={loading}
+              disabled={loading || !yearIsValid}
               onClick={() => fileInputRef.current?.click()}
             >
               <ArrowDownToLine className="size-4" aria-hidden />
@@ -181,7 +195,7 @@ export function HolidayCalendarsPageClient() {
               id="holiday-calendar-year"
               label="Year"
               value={selectedYear}
-              onChange={setSelectedYear}
+              onChange={handleYearChange}
               options={yearSelectItems}
               digitsOnly
               className="w-32 min-w-32"
