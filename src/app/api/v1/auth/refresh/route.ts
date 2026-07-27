@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  backendMisconfiguredResponse,
   backendUnavailableResponse,
   clearAuthCookies,
   getBackendBaseUrl,
+  isBackendMisconfigured,
   setAuthCookies,
   type SessionTokens,
 } from "@/lib/serverApi";
@@ -10,6 +12,9 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
+  if (isBackendMisconfigured()) {
+    return backendMisconfiguredResponse();
+  }
   const tokenId = request.cookies.get("tokenId")?.value ?? "";
   const refreshToken = request.cookies.get("refreshToken")?.value ?? "";
   const cookieHeader = [tokenId && `tokenId=${tokenId}`, refreshToken && `refreshToken=${refreshToken}`]

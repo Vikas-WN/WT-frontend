@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { backendUnavailableResponse, buildCookieHeader, getBackendBaseUrl } from "@/lib/serverApi";
+import {
+  backendMisconfiguredResponse,
+  backendUnavailableResponse,
+  buildCookieHeader,
+  getBackendBaseUrl,
+  isBackendMisconfigured,
+} from "@/lib/serverApi";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
+  if (isBackendMisconfigured()) {
+    return backendMisconfiguredResponse();
+  }
   const cookieHeader = buildCookieHeader(request, ["tokenId", "refreshToken"]);
   let upstream: Response;
   try {

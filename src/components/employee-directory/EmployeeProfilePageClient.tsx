@@ -405,10 +405,6 @@ export function EmployeeProfilePageClient() {
             </Button>
           </div>
         ) : null}
-        
-        const isConsultantEmployee = String(pickProfileField(profileRecord, ["user_type", "userType"]) ??  "")
-        .toUpperCase()
-        .replace (/[\s-_]/g, "") === "CONSULTANT";
 
         {!isLoading && !isError ? (
           <div className="mt-6 space-y-4">

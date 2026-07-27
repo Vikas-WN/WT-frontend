@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  backendMisconfiguredResponse,
   getAppBaseUrl,
   getBackendBaseUrl,
+  isBackendMisconfigured,
   setAuthCookies,
   type SessionTokens,
 } from "@/lib/serverApi";
@@ -30,6 +32,10 @@ export async function GET(request: NextRequest) {
   }
   if (!state || !expectedState || state !== expectedState) {
     return loginRedirect(request, "invalid_oauth_state");
+  }
+
+  if (isBackendMisconfigured()) {
+    return loginRedirect(request, "backend_unavailable");
   }
 
   const appBaseUrl = getAppBaseUrl(request);

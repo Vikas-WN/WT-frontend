@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  backendMisconfiguredResponse,
   backendUnavailableResponse,
   buildUpstreamAuthHeaders,
   getBackendBaseUrl,
+  isBackendMisconfigured,
 } from "@/lib/serverApi";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 async function proxyRequest(request: NextRequest, pathSegments: string[]) {
+  if (isBackendMisconfigured()) {
+    return backendMisconfiguredResponse();
+  }
   const backendUrl = `${getBackendBaseUrl()}/api/v1/${pathSegments.join("/")}${request.nextUrl.search}`;
   const headers = buildUpstreamAuthHeaders(request);
 

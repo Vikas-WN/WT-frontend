@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { isLinodeObjectStorageConfigured } from "@/lib/linodeObjectStorage";
 import { requireSession } from "@/lib/requireSession";
 import {
+  backendMisconfiguredResponse,
   backendUnavailableResponse,
   buildUpstreamAuthHeaders,
   getBackendBaseUrl,
+  isBackendMisconfigured,
 } from "@/lib/serverApi";
 import {
   deleteHolidayCalendarObjectsForYear,
@@ -32,6 +34,10 @@ function storageUnavailableResponse(error: unknown) {
 }
 
 async function proxyToBackend(request: NextRequest, year: string) {
+  if (isBackendMisconfigured()) {
+    return backendMisconfiguredResponse();
+  }
+
   const backendUrl = `${getBackendBaseUrl()}/api/v1/holiday-calendar-storage/${encodeURIComponent(year)}${request.nextUrl.search}`;
   const headers = buildUpstreamAuthHeaders(request);
 

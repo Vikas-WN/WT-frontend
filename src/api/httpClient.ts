@@ -56,13 +56,12 @@ export function normalizeApiBaseUrl(url: string): string {
  * so OAuth cookies stay on the frontend domain — never Render directly.
  */
 export function resolveClientApiBaseUrl(): string {
-  const configured = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL ?? "");
-  // If an explicit base URL is configured, prefer it in all environments.
-  // This unblocks deployments where the frontend does not provide a BFF/rewrite for `/api/v1`.
-  if (configured) return configured;
-
-  // Default production behavior: same-origin so cookies remain scoped to the frontend domain.
+  // Production always uses same-origin /api/v1 (Next.js BFF) so HttpOnly auth cookies work.
   if (process.env.NODE_ENV === "production") return "";
+
+  const configured = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL ?? "");
+  // Local dev only: optional direct API access without the BFF proxy.
+  if (configured) return configured;
 
   return "";
 }
