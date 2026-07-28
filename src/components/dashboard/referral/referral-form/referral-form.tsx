@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import {
   Briefcase,
@@ -59,12 +59,6 @@ export function ReferralForm({
   const hasNumericName = /\d/.test(candidateName);
   const isInvalidEmail = candidateEmail.trim().length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidateEmail.trim());
   const step1Valid = Boolean(selectedJob && candidateName.trim() && !hasNumericName && candidateEmail.trim() && !isInvalidEmail && candidatePhone.trim());
-
-  const handleIntersect = useCallback(() => {
-    if (hasMore && !isFetchingNextPage) {
-      loadMore();
-    }
-  }, [hasMore, isFetchingNextPage, loadMore]);
 
   const handleSelect = useCallback(
     (title: string | null, _eventDetails?: object) => {
