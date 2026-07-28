@@ -162,8 +162,19 @@ export function isSystemProjectAllocationRow(row: Record<string, unknown>): bool
   return name === "BENCH";
 }
 
+/** Talent-pool billing does not consume assignable project capacity. */
+export function isTalentPoolBillingAllocationRow(row: Record<string, unknown>): boolean {
+  const billing = String(row.billing_status ?? row.billingStatus ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/-/g, "_")
+    .replace(/ /g, "_");
+  return billing === "TALENT_POOL";
+}
+
 function isCountableProjectAllocationRow(row: Record<string, unknown>): boolean {
   if (isSystemProjectAllocationRow(row)) return false;
+  if (isTalentPoolBillingAllocationRow(row)) return false;
   if (isSupersededAllocationRow(row) || isDeallocatedAllocationRow(row)) return false;
   return true;
 }

@@ -102,13 +102,25 @@ export function isValidAllocationPercentForDesignation(
   );
 }
 
-/** Map legacy hours (4/8) or percent fields to allocation percent code. */
+/** 8 hours/day = 100% (service-company FTE model). */
+export const MAX_ALLOCATION_HOURS_PER_DAY = 8;
+
+export function allocatedHoursToPercent(hours: number): number {
+  return Math.max(0, Math.min(100, Math.round(hours * 100 / MAX_ALLOCATION_HOURS_PER_DAY)));
+}
+
+export function percentToAllocatedHours(percent: number): number {
+  const hours = Math.round(percent * MAX_ALLOCATION_HOURS_PER_DAY / 100);
+  return Math.max(1, Math.min(MAX_ALLOCATION_HOURS_PER_DAY, hours));
+}
+
+/** Map legacy hours (2/4/6/8) or percent fields to allocation percent code. */
 export function resolveAllocatedPercentFromRow(row: Record<string, unknown>): number | null {
   const percentRaw =
     row.allocatedPercent ?? row.allocated_percent ?? row.allocated_percent_code;
   if (percentRaw !== undefined && percentRaw !== null && percentRaw !== "") {
     const pct = Number(percentRaw);
-    if (Number.isFinite(pct) && pct > 0) return pct;
+    if (Number.isFinite(pct) && pct > 0 && pct <= 100) return Math.round(pct);
   }
 
   const hoursRaw = row.allocatedHours ?? row.allocated_hours ?? row.hours;
@@ -116,12 +128,12 @@ export function resolveAllocatedPercentFromRow(row: Record<string, unknown>): nu
 
   const hours = Number(String(hoursRaw).replace(/[^\d.-]/g, ""));
   if (!Number.isFinite(hours) || hours <= 0) return null;
-  if (hours === 4) return 50;
-  if (hours === 8) return 100;
-  if (hours === 2) return 25;
-  if (hours === 6) return 75;
-  if (hours === 50 || hours === 100) return hours;
-  const asPct = Math.min(100, Math.round((hours / 8) * 100));
+  if (hours > MAX_ALLOCATION_HOURS_PER_DAY) {
+    // Legacy spreadsheets sometimes stored percent in the hours column.
+    const asPercent = Math.round(hours);
+    return asPercent > 0 && asPercent <= 100 ? asPercent : null;
+  }
+  const asPct = allocatedHoursToPercent(hours);
   return asPct > 0 ? asPct : null;
 }
 

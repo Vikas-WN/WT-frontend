@@ -4,7 +4,6 @@ import { useState, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAuth } from "@/context/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
@@ -13,7 +12,6 @@ import { useReferralList } from "@/components/dashboard/referral/hooks/use-refer
 import { useReferralSubmit } from "@/components/dashboard/referral/hooks/use-referral-submit";
 import { JobList } from "@/components/dashboard/referral/job-list/job-list";
 import { ReferralForm } from "@/components/dashboard/referral/referral-form/referral-form";
-import { ReferralFormSkeleton } from "@/components/dashboard/referral/referral-form/referral-form-skeleton";
 import { MyReferralsTable } from "@/components/dashboard/referral/my-referrals-table";
 import { MobileDrawer } from "@/components/dashboard/referral/mobile-drawer/mobile-drawer";
 import { REFERRAL_PAGE_SIZE, REFERRAL_QUERY_KEYS } from "@/components/dashboard/referral/referral-page-client.constants";
@@ -27,8 +25,9 @@ export function ReferralPageClient() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [candidateName, setCandidateName] = useState("");
   const [candidateEmail, setCandidateEmail] = useState("");
+  const [candidatePhone, setCandidatePhone] = useState("");
   const [resume, setResume] = useState<File | null>(null);
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [page, setPage] = useState(1);
 
@@ -67,6 +66,7 @@ export function ReferralPageClient() {
         job_title: selectedJob.title,
         candidate_name: candidateName,
         candidate_email: candidateEmail,
+        candidate_phone: candidatePhone,
         referrer_name: user.name ?? user.email ?? "",
         referrer_email: user.email ?? "",
         resume,
@@ -76,16 +76,25 @@ export function ReferralPageClient() {
       setSelectedJob(null);
       setCandidateName("");
       setCandidateEmail("");
+      setCandidatePhone("");
       setStep(1);
       setDrawerOpen(false);
     } catch {
       showErrorToast("Failed to submit referral");
     }
-  }, [selectedJob, candidateName, candidateEmail, resume, user, submitMutation]);
+  }, [selectedJob, candidateName, candidateEmail, candidatePhone, resume, user, submitMutation]);
 
   const handleRefreshList = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: REFERRAL_QUERY_KEYS.list(userEmail) });
   }, [queryClient, userEmail]);
+
+  const handleNextStep = useCallback(() => {
+    setStep(prev => Math.min(3, prev + 1) as 1 | 2 | 3);
+  }, []);
+
+  const handlePrevStep = useCallback(() => {
+    setStep(prev => Math.max(1, prev - 1) as 1 | 2 | 3);
+  }, []);
 
   const canSend = Boolean(resume);
   const sending = submitMutation.isPending;
@@ -109,72 +118,38 @@ export function ReferralPageClient() {
         </TabsList>
 
         <TabsContent value="refer">
-          <div className="grid gap-6 lg:grid-cols-5">
-            <div className="lg:col-span-3">
-              <JobList
-                jobs={jobs}
-                total={total}
-                isLoading={isLoading}
-                error={error}
-                selectedJob={selectedJob}
-                page={page}
-                pageSize={REFERRAL_PAGE_SIZE}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                onSelectJob={handleSelectJob}
-                onPageChange={setPage}
-                onMobileDrawerOpen={() => setDrawerOpen(true)}
-              />
-            </div>
-
-            <div className="hidden lg:block lg:col-span-2">
-              {isLoading ? (
-                <div className="sticky top-8">
-                  <ReferralFormSkeleton />
-                </div>
-              ) : (
-                <Card className="sticky top-8 overflow-hidden">
-                  <CardHeader>
-                    <CardTitle>Refer a Candidate</CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <ReferralForm
-                      jobs={jobs}
-                      selectedJob={selectedJob}
-                      resume={resume}
-                      candidateName={candidateName}
-                      candidateEmail={candidateEmail}
-                      step={step}
-                      onSelectJob={setSelectedJob}
-                      onPickResume={setResume}
-                      onCandidateNameChange={setCandidateName}
-                      onCandidateEmailChange={setCandidateEmail}
-                      onNextStep={() => setStep(2)}
-                      onPrevStep={() => setStep(1)}
-                      canSend={canSend}
-                      sending={sending}
-                      onSend={handleSend}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+          <div className="grid gap-6">
+            <JobList
+              jobs={jobs}
+              total={total}
+              isLoading={isLoading}
+              error={error}
+              selectedJob={selectedJob}
+              page={page}
+              pageSize={REFERRAL_PAGE_SIZE}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onSelectJob={handleSelectJob}
+              onPageChange={setPage}
+              onMobileDrawerOpen={() => setDrawerOpen(true)}
+            />
           </div>
 
           <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
             <ReferralForm
-              jobs={jobs}
               selectedJob={selectedJob}
               resume={resume}
               candidateName={candidateName}
               candidateEmail={candidateEmail}
+              candidatePhone={candidatePhone}
               step={step}
               onSelectJob={setSelectedJob}
               onPickResume={setResume}
               onCandidateNameChange={setCandidateName}
               onCandidateEmailChange={setCandidateEmail}
-              onNextStep={() => setStep(2)}
-              onPrevStep={() => setStep(1)}
+              onCandidatePhoneChange={setCandidatePhone}
+              onNextStep={handleNextStep}
+              onPrevStep={handlePrevStep}
               canSend={canSend}
               sending={sending}
               onSend={handleSend}

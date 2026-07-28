@@ -86,6 +86,7 @@ export function ManagerAllocationFields({
             required
             designation={percentDesignation}
             enabled={enabled}
+            allocationPercentOptions={allocationPercentOptions}
             value={state.allocated_percent}
             onChange={(allocated_percent) => onChange({ ...state, allocated_percent })}
           />

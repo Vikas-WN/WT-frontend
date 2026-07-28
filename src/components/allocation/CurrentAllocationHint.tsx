@@ -6,6 +6,7 @@ import {
   isDeallocatedAllocationRow,
   isSupersededAllocationRow,
   isSystemProjectAllocationRow,
+  isTalentPoolBillingAllocationRow,
   parseEmployeeAllocationsResponse,
 } from "@/utils/allocationList";
 import { resolveAllocatedPercentFromRow } from "@/utils/allocationPercent";
@@ -35,7 +36,8 @@ function buildBreakdown(allocations: Array<Record<string, unknown>>): Allocation
     const projectName = String(
       row.project_name ?? row.projectName ?? row.allocated_project ?? projectCode
     ).trim();
-    const isBench = isSystemProjectAllocationRow(row);
+    const isBench =
+      isSystemProjectAllocationRow(row) || isTalentPoolBillingAllocationRow(row);
     items.push({
       projectCode: projectCode || "—",
       projectName: projectName || projectCode || "—",

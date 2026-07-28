@@ -10,6 +10,7 @@ type SubmitReferralPayload = {
   job_title: string;
   candidate_name: string;
   candidate_email: string;
+  candidate_phone: string;
   referrer_name: string;
   referrer_email: string;
   resume: File | null;
@@ -25,6 +26,7 @@ export function useReferralSubmit() {
       formData.append("job_title", payload.job_title);
       formData.append("candidate_name", payload.candidate_name);
       formData.append("candidate_email", payload.candidate_email);
+      formData.append("candidate_phone", payload.candidate_phone);
       formData.append("referrer_name", payload.referrer_name);
       formData.append("referrer_email", payload.referrer_email);
       if (payload.resume) {

@@ -25,7 +25,10 @@ import {
   INFO_BANNER_TITLE_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
 import { ApiError } from "@/api/error";
-import { useHolidayCalendarStorage } from "@/hooks/holiday-calendars/useHolidayCalendarStorage";
+import {
+  isValidHolidayCalendarYear,
+  useHolidayCalendarStorage,
+} from "@/hooks/holiday-calendars/useHolidayCalendarStorage";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { holidayCalendarStorageService } from "@/services/holidayCalendarStorage.service";
 import {
@@ -73,14 +76,23 @@ export function PersonalHolidayCalendarView() {
   const storageQuery = useHolidayCalendarStorage(selectedYear);
 
   useEffect(() => {
+    if (!isValidHolidayCalendarYear(selectedYear)) return;
     if (!storageQuery.isError) return;
     const error = storageQuery.error;
     const message =
       error instanceof Error ? error.message : "Failed to load holiday calendar.";
     if (/file not found|nosuchkey|not found/i.test(message)) return;
-    if (error instanceof ApiError && error.status === 503) return;
+    if (error instanceof ApiError && (error.status === 400 || error.status === 503)) return;
     showErrorToast(message);
-  }, [storageQuery.isError, storageQuery.error]);
+  }, [selectedYear, storageQuery.isError, storageQuery.error]);
+
+  function handleYearChange(next: string) {
+    if (!next.trim() || !isValidHolidayCalendarYear(next)) {
+      setSelectedYear(String(currentYear));
+      return;
+    }
+    setSelectedYear(next);
+  }
 
   const rowsInYear = useMemo(() => {
     if (storageQuery.data?.year !== yearNumber) return [];
@@ -92,12 +104,13 @@ export function PersonalHolidayCalendarView() {
     [rowsInYear, yearNumber]
   );
 
-  const isLoading = storageQuery.isFetching;
+  const isLoading = storageQuery.isFetching && isValidHolidayCalendarYear(selectedYear);
   const isServiceUnavailable =
     storageQuery.isError &&
     storageQuery.error instanceof ApiError &&
     storageQuery.error.status === 503;
   const missingCalendar =
+    isValidHolidayCalendarYear(selectedYear) &&
     !storageQuery.isFetching &&
     !isServiceUnavailable &&
     (storageQuery.data == null ||
@@ -160,7 +173,11 @@ export function PersonalHolidayCalendarView() {
       <div className={CARD_CONTENT_CLASS}>
         <PageSectionHeader
           title="Holiday Calendar"
-          description={`View and export organization holidays for ${selectedYear}.`}
+          description={
+            isValidHolidayCalendarYear(selectedYear)
+              ? `View and export organization holidays for ${selectedYear}.`
+              : "Select a year to view organization holidays."
+          }
           action={
             <div className="flex flex-wrap items-center justify-end gap-2">
               <Button
@@ -183,7 +200,7 @@ export function PersonalHolidayCalendarView() {
                 id="personal-holiday-calendar-year"
                 label="Year"
                 value={selectedYear}
-                onChange={setSelectedYear}
+                onChange={handleYearChange}
                 options={yearSelectItems}
                 digitsOnly
                 className="w-32 min-w-32"

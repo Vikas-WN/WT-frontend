@@ -8,6 +8,7 @@ import { EmployeeCurrentAllocationsPanel } from "@/components/allocation/Employe
 import { InternalEmployeeSelect } from "@/components/allocation/InternalEmployeeSelect";
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
+import { useAllocationPercentages } from "@/hooks/useAllocationPercentages";
 import { hrmsService } from "@/services/hrms.service";
 import { normalizeToApiDate, parseApiDate } from "@/utils/apiDate";
 import {
@@ -19,6 +20,10 @@ import {
   parseEmployeeAllocationsResponse,
   sumOverlappingProjectAllocatedPercent,
 } from "@/utils/allocationList";
+import {
+  allocationPercentOptionsForDesignation,
+  isValidAllocationPercentForDesignation,
+} from "@/utils/allocationPercent";
 import {
   ALLOCATION_STATUS_OPTIONS,
   type AllocationBillingStatus,
@@ -77,6 +82,28 @@ export function AllocateEmployeeDialog({
   const resolvedRole =
     form.role === CUSTOM_ROLE_VALUE ? customRole.trim() : form.role.trim();
 
+  const { data: rolePercentOptions = [] } = useAllocationPercentages(
+    resolvedRole,
+    enabled && Boolean(resolvedRole.trim())
+  );
+  const effectivePercentOptions = rolePercentOptions.length
+    ? rolePercentOptions
+    : allocationPercentOptions;
+
+  useEffect(() => {
+    if (!open || !resolvedRole.trim()) return;
+    if (
+      form.allocated_percent &&
+      !isValidAllocationPercentForDesignation(
+        form.allocated_percent,
+        resolvedRole,
+        effectivePercentOptions
+      )
+    ) {
+      setForm((prev) => ({ ...prev, allocated_percent: "" }));
+    }
+  }, [open, resolvedRole, effectivePercentOptions, form.allocated_percent]);
+
   useEffect(() => {
     if (!open) {
       setForm(createEmptyAllocationForm());
@@ -99,6 +126,10 @@ export function AllocateEmployeeDialog({
   }, [open, initialForm, allocationRoles]);
 
   const staffing = isStaffingProject(form.project_code);
+  const percentOptions = useMemo(
+    () => allocationPercentOptionsForDesignation(resolvedRole, effectivePercentOptions),
+    [resolvedRole, effectivePercentOptions]
+  );
   const allocationTypeOptions = staffing
     ? [{ value: "STAFFING", label: "Staffing" }]
     : ALLOCATION_TYPE_SELECT_OPTIONS;
@@ -151,7 +182,22 @@ export function AllocateEmployeeDialog({
       return;
     }
     if (!form.allocated_percent || Number(form.allocated_percent) <= 0 || Number(form.allocated_percent) > 100) {
-      showErrorToast("Please enter a valid allocation % (1–100).");
+      showErrorToast("Please select a valid allocation %.");
+      return;
+    }
+    if (
+      !isValidAllocationPercentForDesignation(
+        form.allocated_percent,
+        resolvedRole,
+        effectivePercentOptions
+      )
+    ) {
+      const allowed = percentOptions.map((option) => option.label).join(", ");
+      showErrorToast(
+        allowed
+          ? `Allocation % must be one of: ${allowed} for ${resolvedRole}.`
+          : `Allocation % is not valid for ${resolvedRole}.`
+      );
       return;
     }
     if (!form.allocation_type) {
@@ -392,6 +438,7 @@ export function AllocateEmployeeDialog({
             required
             designation={resolvedRole}
             enabled={enabled}
+            allocationPercentOptions={effectivePercentOptions}
             value={form.allocated_percent}
             onChange={(value) => setForm((prev) => ({ ...prev, allocated_percent: value }))}
           />

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { InputField } from "@/components/dashboard/ui/forms";
+import { useAllocationPercentages } from "@/hooks/useAllocationPercentages";
 import { ClientSelect } from "@/components/allocation/ClientSelect";
 import { ProjectTypeSelect } from "@/components/allocation/ProjectTypeSelect";
 import {
@@ -20,6 +21,10 @@ import {
 import { generateAutomaticProjectCode } from "@/utils/dashboard/validation";
 import { isKnownProjectTypeCode } from "@/utils/projectTypes";
 import { normalizePickerEmail } from "@/utils/learning/onboardOptions";
+import {
+  allocationPercentOptionsForDesignation,
+  isValidAllocationPercentForDesignation,
+} from "@/utils/allocationPercent";
 import { parseEmployeeAllocationsResponse } from "@/utils/allocationList";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { UI_COPY } from "@/constants/uiCopy";
@@ -57,6 +62,7 @@ async function allocateManagerOnProject({
   projectStart,
   projectEnd,
   isManager = false,
+  allocationPercentOptions = [],
 }: {
   email: string;
   fields: ManagerAllocationFieldsState;
@@ -64,12 +70,24 @@ async function allocateManagerOnProject({
   projectStart: string;
   projectEnd: string;
   isManager?: boolean;
+  allocationPercentOptions?: AllocationPercentRow[];
 }) {
   const normalized = normalizePickerEmail(email);
   if (!normalized) return;
   const percent = Number(fields.allocated_percent);
   if (!Number.isFinite(percent) || percent <= 0) {
     throw new Error("Project Manager allocation % is required.");
+  }
+  const roleDesignation = fields.role || "Project Manager";
+  if (!isValidAllocationPercentForDesignation(String(percent), roleDesignation, allocationPercentOptions)) {
+    const allowed = allocationPercentOptionsForDesignation(roleDesignation, allocationPercentOptions)
+      .map((option) => option.label)
+      .join(", ");
+    throw new Error(
+      allowed
+        ? `Allocation % must be one of: ${allowed} for ${roleDesignation}.`
+        : `Allocation % is not valid for ${roleDesignation}.`
+    );
   }
   await assertAllocationWithinCap(normalized, percent);
   const startDate = normalizeToApiDate(fields.start_date || projectStart);
@@ -145,6 +163,13 @@ export function CreateProjectDialog({
   );
   const [loading, setLoading] = useState(false);
   const isEditing = Boolean(editingProjectCode.trim());
+  const { data: projectManagerPercentOptions = [] } = useAllocationPercentages(
+    "Project Manager",
+    enabled
+  );
+  const pmPercentOptions = projectManagerPercentOptions.length
+    ? projectManagerPercentOptions
+    : allocationPercentOptions;
 
   useEffect(() => {
     if (!open) {
@@ -276,6 +301,7 @@ export function CreateProjectDialog({
                 projectStart: startDate,
                 projectEnd: endDate,
                 isManager: true,
+                allocationPercentOptions: pmPercentOptions,
               });
             }
           }
@@ -313,6 +339,7 @@ export function CreateProjectDialog({
           projectStart: startDate,
           projectEnd: endDate,
           isManager: true,
+          allocationPercentOptions: pmPercentOptions,
         });
       }
 
@@ -438,7 +465,7 @@ export function CreateProjectDialog({
           title="Project Manager"
           state={pmFields}
           onChange={setPmFields}
-          allocationPercentOptions={allocationPercentOptions}
+          allocationPercentOptions={pmPercentOptions}
           enabled={enabled}
           percentDesignation="Project Manager"
         />

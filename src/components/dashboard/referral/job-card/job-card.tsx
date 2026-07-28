@@ -1,7 +1,6 @@
 "use client";
 
-import { Building2, MapPin, Clock, ExternalLink } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Building2, MapPin, Clock, ExternalLink, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { showSuccessToast } from "@/lib/toast";
@@ -33,10 +32,11 @@ function JobIdChip({ id }: { id: string }) {
   );
 }
 
-function CareerPageLink() {
+function CareerPageLink({ jobId }: { jobId: string }) {
+  const url = `${CAREER_PAGE_URL}?jobId=${encodeURIComponent(jobId)}`;
   return (
     <a
-      href={CAREER_PAGE_URL}
+      href={url}
       target="_blank"
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
@@ -100,24 +100,21 @@ export function JobCard({ job, selected, onSelect }: JobCardProps) {
               {job.type}
             </Badge>
             <JobIdChip id={job.id} />
-            <CareerPageLink />
+            <CareerPageLink jobId={job.id} />
           </div>
         </div>
 
-        <Button
-          variant={selected ? "default" : "outline"}
-          size="sm"
-          className={cn(
-            "shrink-0 transition-all",
-            selected && "bg-[var(--wt-brand)] text-[var(--wt-brand-text)]"
-          )}
+        <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
             onSelect(job);
           }}
+          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text transition-colors"
+          title={JOB_CARD_COPY.referNow}
         >
-          {selected ? JOB_CARD_COPY.selected : JOB_CARD_COPY.referNow}
-        </Button>
+          <MoreHorizontal className="size-5" />
+        </button>
       </div>
     </div>
   );
