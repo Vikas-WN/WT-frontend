@@ -30,14 +30,14 @@ export function MobileDrawer({ open, onClose, children }: MobileDrawerProps) {
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] lg:pointer-events-none">
-      <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] lg:bg-transparent lg:backdrop-blur-none lg:pointer-events-none" onClick={onClose} />
+    <div className="fixed inset-0 z-[100]" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] lg:bg-transparent lg:backdrop-blur-none" />
       <div
+        onClick={(e) => e.stopPropagation()}
         className={cn(
           "absolute right-0 top-0 bottom-0 flex w-full max-w-sm flex-col overflow-hidden",
           "animate-in slide-in-from-right duration-300 ease-[var(--wt-ease)]",
-          "bg-wt-surface-1 border-l border-wt-border shadow-xl",
-          "lg:pointer-events-auto"
+          "bg-wt-surface-1 border-l border-wt-border shadow-xl"
         )}
       >
         <div className="flex items-center justify-between border-b border-wt-border px-5 py-4">
