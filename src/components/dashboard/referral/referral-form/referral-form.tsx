@@ -1,73 +1,136 @@
 "use client";
 
+import { useRef, useEffect, useState, useCallback } from "react";
+import { Loader2 } from "lucide-react";
 import {
   Briefcase,
   Send,
   User,
   Mail,
+  Phone,
   ArrowLeft,
+  Check,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Combobox,
+  ComboboxContent,
+  ComboboxInput,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxEmpty,
+} from "@/components/ui/combobox";
 import { ResumeDropZone } from "@/components/dashboard/referral/resume-drop-zone/resume-drop-zone";
+import { useReferralJobsInfinite } from "@/components/dashboard/referral/hooks/use-referral-jobs-infinite";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { Timeline } from "@/components/dashboard/referral/referral-form/timeline";
 import {
-  STEP_LABELS,
   REFERRAL_FORM_COPY,
 } from "@/components/dashboard/referral/referral-form/referral-form.constants";
 import type { ReferralFormProps } from "@/components/dashboard/referral/referral-form/referral-form.types";
+import type { Job } from "@/components/dashboard/referral/referral-page-client.types";
 import "./referral-form.css";
 
-function StepIndicator({ step }: { step: 1 | 2 }) {
-  return (
-    <div className="step-indicator">
-      {(STEP_LABELS as readonly string[]).map((label, idx) => {
-        const n = (idx + 1) as 1 | 2;
-        const active = n === step;
-        return (
-          <div key={n} className="flex items-center gap-2 flex-1">
-            <span className={`step-dot ${active ? "step-dot--active" : "step-dot--inactive"}`}>
-              {n}
-            </span>
-            <span className={`step-label ${active ? "step-label--active" : "step-label--inactive"}`}>
-              {label}
-            </span>
-            {n === 1 && <div className="step-separator" />}
-          </div>
-        );
-      })}
-    </div>
-  );
+function Sentinel({ onIntersect }: { onIntersect: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          onIntersect();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [onIntersect]);
+
+  return <div ref={ref} className="h-px" />;
 }
 
 export function ReferralForm({
-  jobs,
   selectedJob,
   resume,
   candidateName,
   candidateEmail,
+  candidatePhone,
   step,
   onSelectJob,
   onPickResume,
   onCandidateNameChange,
   onCandidateEmailChange,
+  onCandidatePhoneChange,
   onNextStep,
   onPrevStep,
   canSend,
   sending,
   onSend,
 }: ReferralFormProps) {
-  const step1Valid = Boolean(selectedJob && candidateName.trim() && candidateEmail.trim());
+  const [isFiltering, setIsFiltering] = useState(false);
+  const [filterText, setFilterText] = useState("");
+  const debouncedFilter = useDebouncedValue(filterText, 300);
+  const { jobs, isLoading, isFetchingNextPage, hasMore, error, loadMore } = useReferralJobsInfinite(debouncedFilter);
+
+  const hasNumericName = /\d/.test(candidateName);
+  const isInvalidEmail = candidateEmail.trim().length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidateEmail.trim());
+  const step1Valid = Boolean(selectedJob && candidateName.trim() && !hasNumericName && candidateEmail.trim() && !isInvalidEmail && candidatePhone.trim());
+
+  const handleIntersect = useCallback(() => {
+    if (hasMore && !isFetchingNextPage) {
+      loadMore();
+    }
+  }, [hasMore, isFetchingNextPage, loadMore]);
+
+  const handleSelect = useCallback(
+    (title: string | null, _eventDetails?: object) => {
+      const job = title ? jobs.find((j: Job) => j.title === title) ?? null : null;
+      onSelectJob(job);
+      setIsFiltering(false);
+      setFilterText("");
+    },
+    [jobs, onSelectJob]
+  );
+
+  useEffect(() => {
+    setIsFiltering(false);
+    setFilterText("");
+  }, [selectedJob?.id]);
+
+  const handleInputValueChange = useCallback(
+    (next: string | null, _details?: object) => {
+      const value = next ?? "";
+      if (value === "") {
+        setIsFiltering(false);
+        setFilterText("");
+        return;
+      }
+      setIsFiltering(true);
+      setFilterText(value);
+    },
+    []
+  );
+
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setIsFiltering(false);
+      setFilterText("");
+    }
+  }, []);
+
+  const inputValue = isFiltering ? filterText : (selectedJob?.title ?? "");
+
+  const showLoading = isLoading && jobs.length === 0;
+  const showSentinel = hasMore && !isLoading && !isFetchingNextPage;
 
   return (
-    <div className="space-y-6">
-      <StepIndicator step={step} />
+    <div className="space-y-4">
+      <Timeline step={step} />
 
       {step === 1 && (
         <>
@@ -75,33 +138,58 @@ export function ReferralForm({
             <label className="text-sm font-medium text-wt-text">
               {REFERRAL_FORM_COPY.selectPosition} <span className="text-destructive">*</span>
             </label>
-            <Select
+            <Combobox
               value={selectedJob?.title ?? ""}
-              onValueChange={(title) =>
-                onSelectJob(jobs.find((j) => j.title === title) ?? null)
-              }
+              onValueChange={handleSelect}
+              inputValue={inputValue}
+              onInputValueChange={handleInputValueChange}
+              onOpenChange={handleOpenChange}
+              itemToStringValue={(v) => v}
+              
             >
-              <SelectTrigger>
-                <SelectValue placeholder={REFERRAL_FORM_COPY.choosePosition} />
-              </SelectTrigger>
-              <SelectContent>
-                {jobs.map((job) => (
-                  <SelectItem key={job.id} value={job.title}>
-                    <span className="flex items-center gap-2">
-                      <Briefcase className="size-3.5 shrink-0 text-wt-text-muted" />
-                      {job.title}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <ComboboxInput
+                placeholder={REFERRAL_FORM_COPY.choosePosition}
+                className="h-10 mt-[5px]"
+              />
+              <ComboboxContent className="min-w-[calc(var(--anchor-width)+1.5rem)]">
+                <ComboboxList>
+                  {showLoading ? (
+                    <div className="flex items-center justify-center py-6">
+                      <Loader2 className="size-5 animate-spin text-slate-400" />
+                    </div>
+                  ) : error ? (
+                    <p className="px-3 py-4 text-center text-sm text-rose-500">{error}</p>
+                  ) : jobs.length === 0 ? (
+                    <ComboboxEmpty>{REFERRAL_FORM_COPY.noMatch}</ComboboxEmpty>
+                  ) : (
+                    jobs.map((job: Job) => (
+                      <ComboboxItem key={job.id} value={job.title}>
+                        <Briefcase className="size-3.5 shrink-0 text-wt-text-muted" />
+                        <span className="flex-1 truncate">{job.title}</span>
+                        {selectedJob?.id === job.id && (
+                          <Check className="size-3.5 text-wt-text-muted" />
+                        )}
+                      </ComboboxItem>
+                    ))
+                  )}
+                  {showSentinel && (
+                    <Sentinel onIntersect={handleIntersect} />
+                  )}
+                  {isFetchingNextPage && (
+                    <div className="flex items-center justify-center py-3">
+                      <Loader2 className="size-4 animate-spin text-slate-400" />
+                    </div>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-wt-text">
               {REFERRAL_FORM_COPY.candidateName} <span className="text-destructive">*</span>
             </label>
-            <div className="relative">
+            <div className="relative mt-[5px]">
               <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-wt-text-muted" />
               <Input
                 className="pl-10"
@@ -110,13 +198,16 @@ export function ReferralForm({
                 onChange={(e) => onCandidateNameChange(e.target.value)}
               />
             </div>
+            {hasNumericName && (
+              <p className="text-xs text-destructive mt-1">Should not contain numbers</p>
+            )}
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-wt-text">
               {REFERRAL_FORM_COPY.candidateEmail} <span className="text-destructive">*</span>
             </label>
-            <div className="relative">
+            <div className="relative mt-[5px]">
               <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-wt-text-muted" />
               <Input
                 className="pl-10"
@@ -124,6 +215,25 @@ export function ReferralForm({
                 placeholder="john@example.com"
                 value={candidateEmail}
                 onChange={(e) => onCandidateEmailChange(e.target.value)}
+              />
+            </div>
+            {isInvalidEmail && (
+              <p className="text-xs text-destructive mt-1">Enter a valid email address</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-wt-text">
+              {REFERRAL_FORM_COPY.candidatePhone} <span className="text-destructive">*</span>
+            </label>
+            <div className="relative mt-[5px]">
+              <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-wt-text-muted" />
+              <Input
+                className="pl-10"
+                type="tel"
+                placeholder="+1 (555) 123-4567"
+                value={candidatePhone}
+                onChange={(e) => onCandidatePhoneChange(e.target.value)}
               />
             </div>
           </div>
@@ -165,6 +275,58 @@ export function ReferralForm({
             <Button
               className="flex-1 gap-2"
               size="lg"
+              disabled={!resume}
+              onClick={onNextStep}
+            >
+              {REFERRAL_FORM_COPY.next}
+            </Button>
+          </div>
+
+          {!resume && <p className="form-hint">{REFERRAL_FORM_COPY.hintUploadResume}</p>}
+        </>
+      )}
+
+      {step === 3 && (
+        <>
+          <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2.5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+            <span className="text-wt-text-muted">Position</span>
+            <span className="font-medium text-wt-text">{selectedJob?.title}</span>
+
+            <span className="text-wt-text-muted">Candidate</span>
+            <span className="font-medium text-wt-text">{candidateName}</span>
+
+            <span className="text-wt-text-muted">Email</span>
+            <span className="font-medium text-wt-text">{candidateEmail}</span>
+
+            <span className="text-wt-text-muted">Phone</span>
+            <span className="font-medium text-wt-text">{candidatePhone || "—"}</span>
+
+            <span className="text-wt-text-muted">Resume</span>
+            <span className="font-medium text-wt-text min-w-0">
+              {resume ? (
+                <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 py-0.5 max-w-full">
+                  <FileText className="size-3.5 shrink-0 text-indigo-500" />
+                  <span className="truncate">{resume.name}</span>
+                </span>
+              ) : (
+                "—"
+              )}
+            </span>
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              className="gap-2"
+              variant="outline"
+              size="lg"
+              onClick={onPrevStep}
+            >
+              <ArrowLeft className="size-4" />
+              {REFERRAL_FORM_COPY.back}
+            </Button>
+            <Button
+              className="flex-1 gap-2"
+              size="lg"
               disabled={!canSend || sending}
               onClick={onSend}
             >
@@ -181,8 +343,6 @@ export function ReferralForm({
               )}
             </Button>
           </div>
-
-          {!resume && <p className="form-hint">{REFERRAL_FORM_COPY.hintUploadResume}</p>}
         </>
       )}
     </div>

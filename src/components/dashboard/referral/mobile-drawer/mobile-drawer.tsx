@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MOBILE_DRAWER_COPY } from "@/components/dashboard/referral/mobile-drawer/mobile-drawer.constants";
@@ -8,18 +9,15 @@ import type { MobileDrawerProps } from "@/components/dashboard/referral/mobile-d
 import "./mobile-drawer.css";
 
 export function MobileDrawer({ open, onClose, children }: MobileDrawerProps) {
-  /*
-   * Prevent body scroll while drawer is open.
-   * Rule 6: useEffect allowed ONLY for event listeners / cleanup.
-   */
   useEffect(() => {
     if (!open) return;
+    const isMobile = typeof window === "undefined" || window.matchMedia("(max-width: 1023px)").matches;
+    if (!isMobile) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = prev; };
   }, [open]);
 
-  /* Close on Escape key */
   useEffect(() => {
     if (!open) return;
     function handler(e: KeyboardEvent) {
@@ -31,13 +29,15 @@ export function MobileDrawer({ open, onClose, children }: MobileDrawerProps) {
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-[100] lg:hidden">
-      <div className="drawer-overlay absolute inset-0" onClick={onClose} />
+  return createPortal(
+    <div className="fixed inset-0 z-[100] lg:pointer-events-none">
+      <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] lg:bg-transparent lg:backdrop-blur-none lg:pointer-events-none" onClick={onClose} />
       <div
         className={cn(
-          "drawer-panel absolute right-0 top-0 bottom-0 flex w-full max-w-sm flex-col overflow-hidden",
-          "animate-in slide-in-from-right duration-300 ease-[var(--wt-ease)]"
+          "absolute right-0 top-0 bottom-0 flex w-full max-w-sm flex-col overflow-hidden",
+          "animate-in slide-in-from-right duration-300 ease-[var(--wt-ease)]",
+          "bg-wt-surface-1 border-l border-wt-border shadow-xl",
+          "lg:pointer-events-auto"
         )}
       >
         <div className="flex items-center justify-between border-b border-wt-border px-5 py-4">
@@ -54,6 +54,7 @@ export function MobileDrawer({ open, onClose, children }: MobileDrawerProps) {
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
