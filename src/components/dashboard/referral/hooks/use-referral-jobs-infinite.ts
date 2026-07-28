@@ -22,13 +22,15 @@ export function useReferralJobsInfinite(q: string) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } = useInfiniteQuery({
     queryKey: ["referral-jobs-infinite", q],
     queryFn: async ({ pageParam = 1 }) => {
+      const limit = q ? 100 : 20;
       const res = await apiClient.get<Record<string, unknown>>(endpoints.referral.jobs, {
-        query: { page: pageParam, limit: 20, q: q || undefined },
+        query: { page: pageParam, limit, q: q || undefined },
       });
       const payload = (res as unknown as { data: Record<string, unknown> }).data ?? {};
       const items = ((payload.items as Record<string, unknown>[]) ?? []).map(mapJob);
       const total = (payload.total as number) ?? 0;
-      return { items, total, nextPage: items.length > 0 ? pageParam + 1 : undefined };
+      const isLastPage = items.length < limit;
+      return { items, total, nextPage: isLastPage ? undefined : pageParam + 1 };
     },
     getNextPageParam: (lastPage) => lastPage.nextPage,
     initialPageParam: 1,

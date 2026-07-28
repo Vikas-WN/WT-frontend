@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import {
   Briefcase,
@@ -33,6 +33,27 @@ import type { ReferralFormProps } from "@/components/dashboard/referral/referral
 import type { Job } from "@/components/dashboard/referral/referral-page-client.types";
 import "./referral-form.css";
 
+function Sentinel({ onIntersect, root }: { onIntersect: () => void; root: HTMLElement | null }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !root) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          onIntersect();
+        }
+      },
+      { root, rootMargin: "120px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [onIntersect, root]);
+
+  return <div ref={ref} className="h-px" />;
+}
+
 export function ReferralForm({
   selectedJob,
   resume,
@@ -55,6 +76,7 @@ export function ReferralForm({
   const [filterText, setFilterText] = useState("");
   const debouncedFilter = useDebouncedValue(filterText, 300);
   const { jobs, isLoading, isFetchingNextPage, hasMore, error, loadMore } = useReferralJobsInfinite(debouncedFilter);
+  const [listEl, setListEl] = useState<HTMLDivElement | null>(null);
 
   const hasNumericName = /\d/.test(candidateName);
   const isInvalidEmail = candidateEmail.trim().length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidateEmail.trim());
@@ -98,18 +120,18 @@ export function ReferralForm({
 
   const inputValue = isFiltering ? filterText : (selectedJob?.title ?? "");
 
-  const handleScroll = useCallback(
-    (e: React.UIEvent<HTMLDivElement>) => {
-      if (!hasMore || isFetchingNextPage) return;
-      const el = e.currentTarget;
-      if (el.scrollHeight - el.scrollTop - el.clientHeight < 120) {
-        loadMore();
-      }
-    },
-    [hasMore, isFetchingNextPage, loadMore]
-  );
+  const handleIntersect = useCallback(() => {
+    if (hasMore && !isFetchingNextPage) {
+      loadMore();
+    }
+  }, [hasMore, isFetchingNextPage, loadMore]);
+
+  const comboboxListRef = useCallback((node: HTMLDivElement | null) => {
+    setListEl(node);
+  }, []);
 
   const showLoading = isLoading && jobs.length === 0;
+  const showSentinel = hasMore && !isLoading && !isFetchingNextPage;
 
   return (
     <div className="space-y-4">
@@ -135,7 +157,7 @@ export function ReferralForm({
                 className="h-10 mt-[5px]"
               />
               <ComboboxContent className="min-w-[calc(var(--anchor-width)+1.5rem)]">
-                <ComboboxList onScroll={handleScroll}>
+                <ComboboxList ref={comboboxListRef}>
                   {showLoading ? (
                     <div className="flex items-center justify-center py-6">
                       <Loader2 className="size-5 animate-spin text-slate-400" />
@@ -154,6 +176,9 @@ export function ReferralForm({
                         )}
                       </ComboboxItem>
                     ))
+                  )}
+                  {showSentinel && (
+                    <Sentinel onIntersect={handleIntersect} root={listEl} />
                   )}
                   {isFetchingNextPage && (
                     <div className="flex items-center justify-center py-3">
