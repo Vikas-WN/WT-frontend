@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Loader2 } from "lucide-react";
 import {
   Briefcase,
@@ -32,27 +32,6 @@ import {
 import type { ReferralFormProps } from "@/components/dashboard/referral/referral-form/referral-form.types";
 import type { Job } from "@/components/dashboard/referral/referral-page-client.types";
 import "./referral-form.css";
-
-function Sentinel({ onIntersect }: { onIntersect: () => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          onIntersect();
-        }
-      },
-      { rootMargin: "200px" }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [onIntersect]);
-
-  return <div ref={ref} className="h-px" />;
-}
 
 export function ReferralForm({
   selectedJob,
@@ -125,8 +104,18 @@ export function ReferralForm({
 
   const inputValue = isFiltering ? filterText : (selectedJob?.title ?? "");
 
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      if (!hasMore || isFetchingNextPage) return;
+      const el = e.currentTarget;
+      if (el.scrollHeight - el.scrollTop - el.clientHeight < 120) {
+        loadMore();
+      }
+    },
+    [hasMore, isFetchingNextPage, loadMore]
+  );
+
   const showLoading = isLoading && jobs.length === 0;
-  const showSentinel = hasMore && !isLoading && !isFetchingNextPage;
 
   return (
     <div className="space-y-4">
@@ -152,7 +141,7 @@ export function ReferralForm({
                 className="h-10 mt-[5px]"
               />
               <ComboboxContent className="min-w-[calc(var(--anchor-width)+1.5rem)]">
-                <ComboboxList>
+                <ComboboxList onScroll={handleScroll}>
                   {showLoading ? (
                     <div className="flex items-center justify-center py-6">
                       <Loader2 className="size-5 animate-spin text-slate-400" />
@@ -171,9 +160,6 @@ export function ReferralForm({
                         )}
                       </ComboboxItem>
                     ))
-                  )}
-                  {showSentinel && (
-                    <Sentinel onIntersect={handleIntersect} />
                   )}
                   {isFetchingNextPage && (
                     <div className="flex items-center justify-center py-3">
@@ -288,7 +274,7 @@ export function ReferralForm({
 
       {step === 3 && (
         <>
-          <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2.5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+          <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2.5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm dark:border-wt-border dark:bg-wt-surface-2">
             <span className="text-wt-text-muted">Position</span>
             <span className="font-medium text-wt-text">{selectedJob?.title}</span>
 
@@ -304,7 +290,7 @@ export function ReferralForm({
             <span className="text-wt-text-muted">Resume</span>
             <span className="font-medium text-wt-text min-w-0">
               {resume ? (
-                <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 py-0.5 max-w-full">
+                  <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 py-0.5 max-w-full dark:border-wt-border dark:bg-wt-surface-1">
                   <FileText className="size-3.5 shrink-0 text-indigo-500" />
                   <span className="truncate">{resume.name}</span>
                 </span>
