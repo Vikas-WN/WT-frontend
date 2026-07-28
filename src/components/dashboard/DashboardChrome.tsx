@@ -474,12 +474,16 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                   </span>
                 ) : null}
               </summary>
-              <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-[380px] bg-white rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-100 p-2">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 mb-1">
-                  <h3 className="font-semibold text-slate-900 text-base">Notifications</h3>
+              <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-[380px] bg-white dark:bg-wt-surface-1 rounded-2xl shadow-xl shadow-slate-200/60 dark:shadow-none border border-slate-100 dark:border-wt-border-md p-2">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 dark:border-wt-border/80 mb-1">
+                  <h3 className="font-semibold text-slate-900 dark:text-wt-text text-base">Notifications</h3>
                   <button type="button" className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors disabled:opacity-40" onClick={() =>
                       runAction("Mark all notifications read", async () => {
-                        await hrmsService.markAllNotificationsRead();
+                        try {
+                          await hrmsService.markAllNotificationsRead();
+                        } catch {
+                          /* Silently ignore — non-critical action */
+                        }
                         await loadNotifications();
                       })
                     }
@@ -490,7 +494,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 </div>
                 <div className="max-h-[320px] overflow-auto">
                   {notificationsLoading && !notifications.length ? (
-                    <p className="text-sm text-slate-400 px-3 py-4 text-center">Loading notifications…</p>
+                    <p className="text-sm text-slate-400 dark:text-wt-text-muted px-3 py-4 text-center">Loading notifications…</p>
                   ) : notificationsError ? (
                     <p className="text-sm text-rose-500 px-3 py-4 text-center">{notificationsError}</p>
                   ) : notifications.length ? (
@@ -510,12 +514,12 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
 
                       const badgeClass =
                         /leave|wfh/i.test(roleLabel)
-                          ? "bg-amber-50 text-amber-700"
+                          ? "bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
                           : /time.?log/i.test(roleLabel)
-                            ? "bg-blue-50 text-blue-700"
+                            ? "bg-blue-50 text-blue-700 dark:bg-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)] dark:text-[#b8c7e8]"
                             : /exit|survey/i.test(roleLabel)
-                              ? "bg-purple-50 text-purple-700"
-                              : "bg-slate-50 text-slate-600";
+                              ? "bg-purple-50 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400"
+                              : "bg-slate-50 text-slate-600 dark:bg-wt-surface-3 dark:text-wt-text-muted";
 
                       return (
                         <div
@@ -533,8 +537,8 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                             }
                           }}
                           className={cn(
-                            "p-3 rounded-xl hover:bg-slate-50 transition-all duration-150 group cursor-pointer border-b border-slate-50 last:border-0",
-                            isNavigable && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
+                            "p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-wt-surface-2 transition-all duration-150 group cursor-pointer border-b border-slate-50 dark:border-wt-border last:border-0",
+                            isNavigable && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 dark:focus-visible:ring-wt-brand"
                           )}
                         >
                           <div className="flex items-start justify-between gap-3">
@@ -544,26 +548,30 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                                   {roleLabel}
                                 </span>
                                 {createdAt ? (
-                                  <span className="text-xs text-slate-400 ml-auto">{createdAt}</span>
+                                  <span className="text-xs text-slate-400 dark:text-wt-text-muted ml-auto">{createdAt}</span>
                                 ) : null}
                               </div>
                               {title && title !== message ? (
-                                <p className="font-medium text-slate-800 text-sm mt-1">{title}</p>
+                                <p className="font-medium text-slate-800 dark:text-wt-text text-sm mt-1">{title}</p>
                               ) : null}
-                              <p className="text-xs text-slate-500 line-clamp-2 mt-0.5 leading-relaxed">{message}</p>
+                              <p className="text-xs text-slate-500 dark:text-wt-text-muted line-clamp-2 mt-0.5 leading-relaxed">{message}</p>
                             </div>
                             {!isRead && id ? (
                               <button
                                 type="button"
-                                className="shrink-0 mt-1 size-6 rounded-full flex items-center justify-center text-slate-300 hover:text-blue-600 hover:bg-blue-50 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-0"
+                                className="shrink-0 mt-1 size-6 rounded-full flex items-center justify-center text-slate-300 dark:text-wt-text-faint hover:text-blue-600 dark:hover:text-wt-brand hover:bg-blue-50 dark:hover:bg-wt-surface-2 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-0"
                                 disabled={actionLoading}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  runAction("Mark notification read", async () => {
-                                    await hrmsService.markNotificationRead(id);
-                                    await loadNotifications();
-                                  });
-                                }}
+                                 onClick={(event) => {
+                                   event.stopPropagation();
+                                   runAction("Mark notification read", async () => {
+                                     try {
+                                       await hrmsService.markNotificationRead(id);
+                                     } catch {
+                                       /* Silently ignore — non-critical action */
+                                     }
+                                     await loadNotifications();
+                                   });
+                                 }}
                                 title="Mark as read"
                               >
                                 <IconCheck className="size-3.5" />
@@ -574,7 +582,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                       );
                     })
                   ) : (
-                    <p className="text-sm text-slate-400 px-3 py-4 text-center">No notifications.</p>
+                    <p className="text-sm text-slate-400 dark:text-wt-text-muted px-3 py-4 text-center">No notifications.</p>
                   )}
                 </div>
               </div>

@@ -42,24 +42,28 @@ export function useReferralJobs(q: string, page: number): UseReferralJobsResult 
     queryKey: REFERRAL_QUERY_KEYS.jobs(q, page),
     queryFn: async () => {
       const res = await apiClient.get<Record<string, unknown>>(endpoints.referral.jobs, {
-        query: { page, limit: REFERRAL_PAGE_SIZE, q: undefined },
+        query: { page, limit: REFERRAL_PAGE_SIZE, q: q || undefined },
       });
       const payload = (res as unknown as { data: Record<string, unknown> }).data as Record<string, unknown> ?? {};
-      let raw = (payload.items as Record<string, unknown>[]) ?? [];
+      const raw = (payload.items as Record<string, unknown>[]) ?? [];
       const total = (payload.total as number) ?? 0;
 
       if (q) {
         const lowerQ = q.toLowerCase();
-        raw = raw.filter((item) =>
-          String(item.id ?? "").toLowerCase().includes(lowerQ) ||
-          String(item.title ?? "").toLowerCase().includes(lowerQ) ||
-          String(item.department ?? "").toLowerCase().includes(lowerQ)
-        );
+        return {
+          items: raw
+            .filter((item) =>
+              String(item.id ?? "").toLowerCase().includes(lowerQ) ||
+              String(item.department ?? "").toLowerCase().includes(lowerQ)
+            )
+            .map(mapJob),
+          total,
+        };
       }
 
       return {
         items: raw.map(mapJob),
-        total: q ? raw.length : total,
+        total,
       };
     },
     staleTime: 30_000,
