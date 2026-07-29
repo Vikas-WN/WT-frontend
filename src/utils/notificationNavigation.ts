@@ -115,7 +115,7 @@ export function notificationCategoryLabel(
     case "ALLOCATION_EXTENSION_REQUEST":
     case "ALLOCATION_EXTENSION_APPROVED":
     case "ALLOCATION_EXTENSION_REJECTED":
-      return "Allocation Extension";
+      return "Extend Project Allocation";
     case "TIMELOG_APPROVED":
     case "TIMELOG_REJECTED":
     case "TIMELOG_SUBMITTED":

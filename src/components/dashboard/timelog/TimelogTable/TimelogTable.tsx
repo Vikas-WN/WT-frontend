@@ -69,7 +69,7 @@ export function TimelogTable({
                     {formatTimelogTableDate(entry.log_date)}
                   </td>
                   <td className="whitespace-nowrap font-medium">
-                    {entry.project_code}
+                    {entry.project_name?.trim() || "\u2014"}
                   </td>
                   <td className="whitespace-nowrap">{taskLabel}</td>
                   <td className="whitespace-nowrap">

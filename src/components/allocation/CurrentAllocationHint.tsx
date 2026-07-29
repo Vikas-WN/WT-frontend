@@ -6,7 +6,6 @@ import {
   isDeallocatedAllocationRow,
   isSupersededAllocationRow,
   isSystemProjectAllocationRow,
-  isTalentPoolBillingAllocationRow,
   parseEmployeeAllocationsResponse,
 } from "@/utils/allocationList";
 import { resolveAllocatedPercentFromRow } from "@/utils/allocationPercent";
@@ -36,8 +35,7 @@ function buildBreakdown(allocations: Array<Record<string, unknown>>): Allocation
     const projectName = String(
       row.project_name ?? row.projectName ?? row.allocated_project ?? projectCode
     ).trim();
-    const isBench =
-      isSystemProjectAllocationRow(row) || isTalentPoolBillingAllocationRow(row);
+    const isBench = isSystemProjectAllocationRow(row);
     items.push({
       projectCode: projectCode || "—",
       projectName: projectName || projectCode || "—",
@@ -93,12 +91,9 @@ export function CurrentAllocationHint({
     const projectTotal = breakdown
       .filter((item) => !item.isBench)
       .reduce((sum, item) => sum + item.percent, 0);
-    const benchTotal = breakdown
-      .filter((item) => item.isBench)
-      .reduce((sum, item) => sum + item.percent, 0);
-    // Talent pool is free capacity — available for new project allocations.
+    // Free capacity is talent-pool availability (not a separate BENCH row %).
     const available = Math.max(0, 100 - projectTotal);
-    return { projectTotal, benchTotal, available };
+    return { projectTotal, benchTotal: available, available };
   }, [breakdown]);
 
   if (!email.trim()) return null;

@@ -292,7 +292,9 @@ export function OffboardingPanel() {
   const candidateOptions = useMemo(
     () =>
       offboardCandidates.map((emp) => {
-        const label = `${emp.emp_id} — ${emp.name}`;
+        const name = String(emp.name ?? "").trim() || String(emp.email ?? "").trim() || "Employee";
+        const email = String(emp.email ?? "").trim();
+        const label = email && name !== email ? `${name} (${email})` : name;
         return {
           value: emp.emp_id,
           label: label.length > 50 ? `${label.slice(0, 50)}…` : label,

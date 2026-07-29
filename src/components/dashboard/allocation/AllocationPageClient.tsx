@@ -2988,7 +2988,7 @@ export function AllocationPageClient() {
           value={selfOnboardForm.phone_number}
           onChange={(v) => setSelfOnboardForm((p) => ({ ...p, phone_number: v }))}
         />
-        <InputField label="Years of Experience" value={selfOnboardForm.yoe} onChange={(v) => setSelfOnboardForm((p) => ({ ...p, yoe: v }))} />
+        <InputField label="Years of Experience (excluding internship)" required value={selfOnboardForm.yoe} onChange={(v) => setSelfOnboardForm((p) => ({ ...p, yoe: v }))} />
         <InputField
           label="Primary Skills (comma separated)"
           value={selfOnboardForm.primary_skills}
@@ -3272,7 +3272,7 @@ export function AllocationPageClient() {
         <InputField label="Primary Skills (comma separated)" value={selfProfileForm.primary_skills} onChange={(v) => setSelfProfileForm((p) => ({ ...p, primary_skills: v }))} />
         <InputField label="Secondary Skill" value={selfProfileForm.secondary_skill} onChange={(v) => setSelfProfileForm((p) => ({ ...p, secondary_skill: v }))} />
         <SelectField label="Secondary Skill Rating" value={selfProfileForm.secondary_rating} options={["1", "2", "3", "4", "5"]} onChange={(v) => setSelfProfileForm((p) => ({ ...p, secondary_rating: v }))} />
-        <InputField label="Years of Experience" value={selfProfileForm.yoe} onChange={(v) => setSelfProfileForm((p) => ({ ...p, yoe: v }))} />
+        <InputField label="Years of Experience (excluding internship)" required value={selfProfileForm.yoe} onChange={(v) => setSelfProfileForm((p) => ({ ...p, yoe: v }))} />
       </div>
       {priorEmploymentDocsForProfile ? (
         <div className="mt-4 rounded-xl border border-wt-border bg-wt-surface-2 p-4">
@@ -3793,11 +3793,6 @@ export function AllocationPageClient() {
                                                 <span className="block truncate text-sm font-semibold text-wt-text">
                                                   {group.projectName}
                                                 </span>
-                                                {group.projectCode ? (
-                                                  <span className="text-xs text-wt-text-muted">
-                                                    {group.projectCode}
-                                                  </span>
-                                                ) : null}
                                               </span>
                                               <span className="shrink-0 text-xs font-medium text-wt-text-muted">
                                                 {group.rows.length} allocation

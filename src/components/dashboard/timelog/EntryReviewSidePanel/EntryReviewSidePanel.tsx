@@ -74,7 +74,7 @@ export function EntryReviewSidePanel({
           </div>
           <div className="entry-review-field">
             <span className="entry-review-label">Project</span>
-            <span>{row.project_name || row.project_code}</span>
+            <span>{row.project_name?.trim() || "—"}</span>
           </div>
           <div className="entry-review-field">
             <span className="entry-review-label">Task</span>

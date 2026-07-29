@@ -143,6 +143,7 @@ import {
   type UserRequestStatusValue,
 } from "@/utils/userRequest";
 import { formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
+import { useNonOptionalHolidayDates } from "@/hooks/leave/useNonOptionalHolidayDates";
 import { buildUserRequestBody } from "@/utils/leaveRequestPayload";
 import { activeAllocationsRequireClientApproval } from "@/utils/leaveAllocations";
 import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSummary";
@@ -243,6 +244,7 @@ export function LeavePageClient() {
       .toLowerCase()
       .includes("manager");
   const { user, refresh: refreshSession } = useAuth();
+  const holidayDates = useNonOptionalHolidayDates();
   const userEmail = useMemo(() => String(user?.email ?? "").trim(), [user?.email]);
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -2266,7 +2268,12 @@ export function LeavePageClient() {
                                       row.is_half_day ?? row.isHalfDay ?? false
                                     );
                                     const duration = fromDate && toDate ? `${fromDate} – ${toDate}` : "—";
-                                    const durationDays = formatLeaveDaysCount(fromDate, toDate, isHalfDay);
+                                    const durationDays = formatLeaveDaysCount(
+                                      fromDate,
+                                      toDate,
+                                      isHalfDay,
+                                      holidayDates
+                                    );
                                     const comments = String(row.comments ?? "").trim();
                                     const requestTypeLabel = formatUserRequestTypeLabel(
                                       row.request_type ?? row.requestType,

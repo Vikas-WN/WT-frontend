@@ -106,11 +106,15 @@ export function SelfOnboardingPanel({
         throw new Error("Date of birth cannot be in the future.");
       }
 
-      const yoeValue = form.yoe.trim() ? Number(form.yoe) : null;
-      if (form.yoe.trim() && (!Number.isFinite(yoeValue) || yoeValue! < 0)) {
+      const yoeRaw = form.yoe.trim();
+      if (!yoeRaw) {
+        throw new Error("Years of experience is required.");
+      }
+      const yoeValue = Number(yoeRaw);
+      if (!Number.isFinite(yoeValue) || yoeValue < 0) {
         throw new Error("Years of experience must be a valid number.");
       }
-      if (form.yoe.trim() && !Number.isInteger(Number(form.yoe))) {
+      if (!Number.isInteger(Number(yoeRaw))) {
         throw new Error("Years of experience must be a whole number.");
       }
 
@@ -196,7 +200,7 @@ export function SelfOnboardingPanel({
         resume_share_link: resumeShareLink,
       };
 
-      if (yoeValue !== null) userData.yoe = yoeValue;
+      if (yoeValue !== null)       userData.yoe = yoeValue;
       if (experience) userData.experience = experience;
       userData.primary_skills = primarySkills;
       if (form.secondary_skill.trim()) {
@@ -274,13 +278,14 @@ export function SelfOnboardingPanel({
           onChange={(v) => setForm((p) => ({ ...p, date_of_birth: v }))}
         />
         <InputField
-          label="Years of Experience"
+          label="Years of Experience (excluding internship)"
+          required
           value={form.yoe}
           onChange={(v) => setForm((p) => ({ ...p, yoe: v }))}
         />
         {priorEmploymentDocsRequired ? (
           <InputField
-            label="Experience summary"
+            label="Experience summary (excluding internship)"
             required
             placeholder="e.g. 2 years at XYZ Corp"
             value={form.experience}

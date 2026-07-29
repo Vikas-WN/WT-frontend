@@ -54,6 +54,47 @@ export function notificationMessage(row: NotificationItem | Record<string, unkno
   return String(row.title ?? "").trim() || "—";
 }
 
+/**
+ * Rewrite stored notification text that embeds project codes so the UI shows
+ * project names. Codes are replaced only when a distinct name is available.
+ */
+export function humanizeNotificationProjectRefs(
+  message: string,
+  projectNameByCode: Map<string, string> | Record<string, string>
+): string {
+  const text = String(message ?? "").trim();
+  if (!text) return text;
+  const lookup =
+    projectNameByCode instanceof Map
+      ? projectNameByCode
+      : new Map(
+          Object.entries(projectNameByCode).map(([code, name]) => [
+            code.trim().toUpperCase(),
+            name,
+          ])
+        );
+  if (!lookup.size) return text;
+
+  let result = text;
+  const codes = Array.from(lookup.keys()).sort((a, b) => b.length - a.length);
+  for (const code of codes) {
+    const name = String(lookup.get(code) ?? "").trim();
+    if (!name || name.toUpperCase() === code) continue;
+    // "Project Name (CODE)" → "Project Name"
+    result = result.replace(
+      new RegExp(`${escapeRegExp(name)}\\s*\\(${escapeRegExp(code)}\\)`, "gi"),
+      name
+    );
+    // bare code token → name
+    result = result.replace(new RegExp(`\\b${escapeRegExp(code)}\\b`, "gi"), name);
+  }
+  return result;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export function notificationTitle(row: NotificationItem | Record<string, unknown>): string {
   return String(row.title ?? "").trim();
 }

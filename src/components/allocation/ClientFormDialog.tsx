@@ -136,14 +136,13 @@ export function ClientFormDialog({
 
         <FormSection
           title="External SPOC"
-          description="Client-side point of contact outside your organization."
+          description="Optional client-side point of contact outside your organization."
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <InputField
               label="SPOC Name"
               value={form.spoc_external_name}
               onChange={(value) => setForm((prev) => ({ ...prev, spoc_external_name: value }))}
-              required
             />
             <InputField
               label="SPOC Email"

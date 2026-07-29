@@ -92,7 +92,7 @@ function ProjectsCell({ client }: { client: ClientRecord }) {
           {visible.map((project) => (
             <span
               key={project.projectCode}
-              title={`${project.projectName} (${project.projectCode})`}
+              title={project.projectName}
               className="inline-flex max-w-[9rem] truncate rounded-md bg-wt-surface-2 px-1.5 py-0.5 text-[11px] text-wt-text-muted"
             >
               {project.projectName}

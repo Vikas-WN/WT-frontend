@@ -56,7 +56,7 @@ export function createEmptyAllocationForm(): AllocationFormState {
 
 export function createEmptyAllocationExtensionForm() {
   return {
-    userEmail: "",
+    userEmails: [] as string[],
     projectCode: "",
     requestedEndDate: "",
     reason: "",

@@ -91,7 +91,7 @@ export function ProfileAssignedProjectsSection({
       ) : rows.length === 0 ? (
         <EmptyState
           title="No Projects Assigned"
-          description="Active project allocations will appear here once you are staffed on a client engagement."
+          description="Active project allocations will appear here once staffed on a client engagement."
           className="py-10"
         />
       ) : (

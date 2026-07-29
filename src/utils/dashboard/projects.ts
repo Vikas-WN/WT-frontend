@@ -5,6 +5,7 @@ import {
 } from "@/utils/dashboard/allocationDisplay";
 import { formatAllocatedHoursPercentLabel } from "@/utils/dashboard/validation";
 import { toPagedRows } from "@/utils/apiRows";
+import { parseApiDate } from "@/utils/apiDate";
 
 export function normalizeAssignedProjects(rows: Array<Record<string, unknown>>) {
   return rows.map((row) => {
@@ -40,19 +41,145 @@ function isTalentPoolProjectRow(row: Record<string, unknown>): boolean {
   return billingStatus === "TALENT_POOL" || projectCode === "BENCH";
 }
 
+function withoutTalentPoolRows(
+  rows: Array<Record<string, unknown>>
+): Array<Record<string, unknown>> {
+  return rows.filter((row) => !isTalentPoolProjectRow(row));
+}
+
+/** Map GET /allocation/user/detail current_projects into profile Project Details rows. */
+export function buildProfileRowsFromMyAllocationsDetail(
+  input: unknown
+): Array<Record<string, unknown>> {
+  const payload = (input as { data?: unknown })?.data ?? input;
+  if (!payload || typeof payload !== "object") return [];
+  const root = payload as Record<string, unknown>;
+  const currentRaw = root.current_projects ?? root.currentProjects ?? root.current;
+  if (!Array.isArray(currentRaw)) return [];
+
+  const rows: Array<Record<string, unknown>> = [];
+  for (const item of currentRaw) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const my =
+      o.my_allocation && typeof o.my_allocation === "object"
+        ? (o.my_allocation as Record<string, unknown>)
+        : o.myAllocation && typeof o.myAllocation === "object"
+          ? (o.myAllocation as Record<string, unknown>)
+          : null;
+    const projectCode = String(
+      o.project_code ?? o.projectCode ?? my?.project_code ?? my?.projectCode ?? ""
+    ).trim();
+    if (!projectCode) continue;
+    rows.push({
+      project_code: projectCode,
+      project_name:
+        o.project_name ??
+        o.projectName ??
+        my?.project_name ??
+        my?.projectName ??
+        projectCode,
+      role: my?.role ?? o.role ?? "—",
+      allocated_hours:
+        my?.allocated_hours ?? my?.allocatedHours ?? my?.allocated_percent ?? my?.allocatedPercent,
+      allocated_percent: my?.allocated_percent ?? my?.allocatedPercent,
+      billing_status: my?.billing_status ?? my?.billingStatus ?? "—",
+      start_date: my?.start_date ?? my?.startDate ?? "—",
+      end_date: my?.end_date ?? my?.endDate ?? "—",
+      is_manager: "No",
+    });
+  }
+  return withoutTalentPoolRows(normalizeAssignedProjects(rows));
+}
+
+/** Map GET /allocation/employee into profile Project Details rows. */
+export function buildProfileRowsFromEmployeeAllocations(
+  input: unknown
+): Array<Record<string, unknown>> {
+  const payload = (input as { data?: unknown })?.data ?? input;
+  const allocations =
+    payload &&
+    typeof payload === "object" &&
+    Array.isArray((payload as { allocations?: unknown }).allocations)
+      ? ((payload as { allocations: Array<Record<string, unknown>> }).allocations)
+      : toPagedRows(payload);
+  return withoutTalentPoolRows(normalizeAssignedProjects(allocations));
+}
+
+/** True when the allocation window includes today (started and not ended). */
+export function isCurrentlyActiveAllocationRow(
+  row: Record<string, unknown>,
+  today: Date = new Date()
+): boolean {
+  const todayStart = new Date(today);
+  todayStart.setHours(0, 0, 0, 0);
+
+  const startRaw = String(row.start_date ?? row.startDate ?? "").trim();
+  const endRaw = String(row.end_date ?? row.endDate ?? "").trim();
+  const start = startRaw && startRaw !== "—" ? parseApiDate(startRaw) : null;
+  const end = endRaw && endRaw !== "—" ? parseApiDate(endRaw) : null;
+
+  if (start && start > todayStart) return false;
+  if (end && end < todayStart) return false;
+  return true;
+}
+
+/** Human-readable current allocation line for profile Work Information. */
+export function formatCurrentAllocationSummary(
+  rows: Array<Record<string, unknown>>
+): string {
+  const active = rows.filter((row) => isCurrentlyActiveAllocationRow(row));
+  if (!active.length) return "—";
+
+  return active
+    .map((row) => {
+      const name = String(row.project_name ?? row.projectName ?? "")
+        .trim();
+      const code = String(row.project_code ?? row.projectCode ?? "").trim();
+      const label = name && name !== "—" ? name : code || "—";
+      const percent = formatAllocatedHoursPercentLabel(
+        row.allocated_percent ??
+          row.allocatedPercent ??
+          row.allocated_hours ??
+          row.allocatedHours
+      );
+      const role = String(row.role ?? row.designation ?? "").trim();
+      const parts = [label];
+      if (role && role !== "—") parts.push(role);
+      if (percent && percent !== "—") parts.push(percent);
+      return parts.join(" · ");
+    })
+    .filter((line) => line && line !== "—")
+    .join("; ");
+}
+
+/** Prefer currently active rows for profile Project Details; fall back to all non-bench. */
+export function selectProfileAllocationRows(
+  rows: Array<Record<string, unknown>>
+): Array<Record<string, unknown>> {
+  const active = rows.filter((row) => isCurrentlyActiveAllocationRow(row));
+  return active.length ? active : rows;
+}
+
 export function buildProfileAssignedProjects(
   assignedInput: unknown,
   allocationInput?: unknown
 ): Array<Record<string, unknown>> {
   const normalizedProjects = normalizeAssignedProjects(toPagedRows(assignedInput));
+  const allocationRows =
+    allocationInput === undefined ? [] : toPagedRows(allocationInput);
+
+  // Allocations alone should still populate profile when assigned-projects is empty/failed.
+  if (!normalizedProjects.length && allocationRows.length) {
+    return withoutTalentPoolRows(normalizeAssignedProjects(allocationRows));
+  }
   if (allocationInput === undefined) {
-    return normalizedProjects.filter((row) => !isTalentPoolProjectRow(row));
+    return withoutTalentPoolRows(normalizedProjects);
   }
 
-  return mergeProjectAndAllocationData(
-    normalizedProjects,
-    toPagedRows(allocationInput)
-  ).filter((row) => !isTalentPoolProjectRow(row));
+  return withoutTalentPoolRows(
+    mergeProjectAndAllocationData(normalizedProjects, allocationRows)
+  );
 }
 
 export function mergeProjectAndAllocationData(

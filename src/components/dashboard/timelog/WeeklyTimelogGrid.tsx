@@ -61,7 +61,7 @@ function projectLabel(row: TimelogGridRow, projectOptions: TimelogProjectOption[
   const selected = projectOptions.find(
     (p) => p.project_code.toUpperCase() === row.project_code.trim().toUpperCase()
   );
-  return readOnlyText(selected?.project_name ?? row.project_code);
+  return readOnlyText(selected?.project_name ?? "—");
 }
 
 function taskCategoryLabel(row: TimelogGridRow): string {

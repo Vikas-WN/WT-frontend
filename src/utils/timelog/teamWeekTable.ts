@@ -34,7 +34,7 @@ function flattenEntriesFromSnapshot(
   const entries: Array<TeamTimelogEntryLine & { log_date: string; log_date_label: string }> = [];
 
   for (const row of snapshot.rows) {
-    const project = String(row.project_name ?? row.project_code ?? "").trim() || "—";
+    const project = String(row.project_name ?? "").trim() || "—";
     const taskLabel =
       TASK_CATEGORY_LABELS[row.task_category] ?? row.task_category?.trim() ?? "—";
     const subCategory = String(row.sub_category ?? "").trim() || "—";

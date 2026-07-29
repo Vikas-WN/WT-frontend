@@ -62,7 +62,6 @@ import {
   effectiveRequestRowStatus,
   inferStatusFromAlreadyActedError,
   isAlreadyActedOnRequestError,
-  isWeekendYmd,
   normalizeCompOffRequestType,
   normalizeRequestStatus,
   pickRowField,
@@ -828,10 +827,7 @@ export function CompOffPageClient({
     const projectCode = earnForm.project_code.trim();
     const comments = earnForm.comments.trim();
     if (!projectCode) throw new Error("Project is required.");
-    if (!workedDate) throw new Error("A weekend worked date is required.");
-    if (!isWeekendYmd(workedDate)) {
-      throw new Error("Worked date must be a weekend (Saturday or Sunday).");
-    }
+    if (!workedDate) throw new Error("Worked date is required.");
     if (compareApiDates(workedDate, todayYmd()) > 0) {
       throw new Error("Worked date cannot be in the future.");
     }

@@ -149,7 +149,7 @@ export function LeaveRequestForm({
               htmlFor="half-day"
               className="text-sm text-muted-foreground cursor-pointer select-none"
             >
-              Half-day leave (single day only)
+              Half-day leave
             </label>
           </div>
         ) : null}

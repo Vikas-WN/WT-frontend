@@ -257,6 +257,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                       <th className="px-2 py-2 text-left font-medium whitespace-nowrap">Date</th>
                       <th className="px-2 py-2 text-left font-medium">Project</th>
                       <th className="px-2 py-2 text-left font-medium">Task Category</th>
+                      <th className="px-2 py-2 text-left font-medium min-w-[180px]">Description</th>
                       <th className="px-2 py-2 text-center font-medium">Hours</th>
                       <th className="px-2 py-2 text-center font-medium">Status</th>
                       <th className="px-2 py-2 text-center font-medium">Approve / Reject</th>
@@ -275,10 +276,15 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                             {entry.log_date}
                           </td>
                           <td className="px-2 py-2 whitespace-nowrap">
-                            {entry.project_name?.trim() || entry.project_code}
+                            {entry.project_name?.trim() || "—"}
                           </td>
                           <td className="px-2 py-2 whitespace-nowrap">
                             {TASK_CATEGORY_LABELS[entry.task_category] ?? entry.task_category}
+                          </td>
+                          <td className="px-2 py-2 max-w-[240px]">
+                            <span className="line-clamp-3 whitespace-pre-wrap break-words" title={entry.description || undefined}>
+                              {entry.description?.trim() || "—"}
+                            </span>
                           </td>
                           <td className="px-2 py-2 text-center tabular-nums">{entry.hours}h</td>
                           <td className="px-2 py-2 text-center">
@@ -404,7 +410,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                         <div className="text-xs text-wt-text-muted">{item.employee_email}</div>
                       </td>
                       <td className="px-2 py-2 whitespace-nowrap">
-                        {item.project_name?.trim() || item.project_code}
+                        {item.project_name?.trim() || "—"}
                       </td>
                       <td className="px-2 py-2 whitespace-nowrap tabular-nums">{item.log_date}</td>
                       <td className="px-2 py-2 text-center tabular-nums">{item.hours}h</td>

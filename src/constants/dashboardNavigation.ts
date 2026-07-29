@@ -101,8 +101,8 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "allocation-extension",
-        label: "Allocation Extension",
-        roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+        label: "Extend Project Allocation",
+        roles: ["ROLE_MANAGER", "ROLE_AM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarRange",
       },
       {

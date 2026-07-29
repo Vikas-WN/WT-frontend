@@ -427,8 +427,13 @@ export function buildGroupedProfileSections(
       pickProfileField(profile, ["webknot_experience", "webknotExperience"])
     ),
     profileEntry(
-      "Total Experience",
-      pickProfileField(profile, ["total_experience", "totalExperience", "yoe", "years_of_experience", "experience"])
+      "Years of Experience (excluding internship)",
+      formatYoeDisplay(pickProfileField(profile, ["yoe", "years_of_experience", "yearsOfExperience", "total_experience", "totalExperience"]))
+    ),
+    profileEntry(
+      "Experience Summary (excluding internship)",
+      pickProfileField(profile, ["experience", "experience_summary", "experienceSummary"]),
+      { fullWidth: true }
     ),
   ];
 
@@ -484,7 +489,9 @@ const PROFILE_VIEW_WORK_LABELS = new Set([
   "Category",
   "Primary Skills",
   "Secondary Skills",
-  "Total Experience",
+  "Years of Experience (excluding internship)",
+  "Experience Summary (excluding internship)",
+  "Current Allocation",
 ]);
 
 const PROFILE_VIEW_PERSONAL_LABELS = new Set([
@@ -498,7 +505,6 @@ const PROFILE_VIEW_PERSONAL_LABELS = new Set([
 const PROFILE_VIEW_LABEL_OVERRIDES: Record<string, string> = {
   "User Type": "Employment Type",
   "Local Address": "Current Address",
-  "Total Experience": "Experience",
 };
 
 function filterProfileViewEntries(
@@ -529,12 +535,33 @@ function filterProfileViewEntries(
 export function buildProfileViewSections(
   profile: Record<string, unknown>,
   resumeShareHref?: string | null,
-  options?: { includeDateOfBirth?: boolean }
+  options?: {
+    includeDateOfBirth?: boolean;
+    currentAllocationSummary?: string | null;
+  }
 ): ProfileDisplaySection[] {
-  return buildGroupedProfileSections(profile, resumeShareHref).map((section) => ({
-    ...section,
-    entries: filterProfileViewEntries(section.title, section.entries, options),
-  }));
+  return buildGroupedProfileSections(profile, resumeShareHref)
+    .map((section) => {
+      if (
+        section.title === "Work Information" &&
+        options?.currentAllocationSummary !== undefined
+      ) {
+        return {
+          ...section,
+          entries: [
+            ...section.entries,
+            profileEntry("Current Allocation", options.currentAllocationSummary || "—", {
+              fullWidth: true,
+            }),
+          ],
+        };
+      }
+      return section;
+    })
+    .map((section) => ({
+      ...section,
+      entries: filterProfileViewEntries(section.title, section.entries, options),
+    }));
 }
 
 /** @deprecated Prefer buildGroupedProfileSections for directory profile layout. */

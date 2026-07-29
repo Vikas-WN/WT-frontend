@@ -96,18 +96,31 @@ export function buildProjectCodeDisplayMap(projectRows: Array<Record<string, unk
   return map;
 }
 
+export function formatProjectDisplayLabel(
+  name?: string | null,
+  code?: string | null
+): string {
+  const nameText = String(name ?? "").trim();
+  const codeText = String(code ?? "").trim();
+  if (nameText) return nameText;
+  const upper = codeText.toUpperCase();
+  if (upper === "BENCH" || upper === "GLOBAL") return "Talent Pool";
+  // Never surface raw project codes in the UI.
+  return "—";
+}
+
 export function allocationProjectDisplayName(row: Record<string, unknown>): string {
   const title = allocationProjectTitleFromRow(row);
-  if (title) return title;
   const code = allocationProjectCode(row);
+  if (title) return title;
   if (code.toUpperCase() === "BENCH" || code.toUpperCase() === "GLOBAL") return "Talent Pool";
   const allocated = String(row.allocated_project ?? "").trim();
   if (allocated.includes("—")) {
     const name = allocated.split("—").slice(1).join("—").trim();
     if (name) return name;
   }
-  if (allocated && !allocated.includes("—")) return allocated;
-  return code || "—";
+  if (allocated && allocated !== code) return allocated;
+  return formatProjectDisplayLabel(null, code);
 }
 
 export function enrichAllocationRowsForDisplay(
@@ -142,11 +155,12 @@ export function enrichAllocationRowsForDisplay(
     const titleOnRow = allocationProjectTitleFromRow(row);
     let allocated_project = "";
     if (code) {
-      allocated_project = projectDisplayByCode[code] ?? (titleOnRow || code);
+      allocated_project =
+        projectDisplayByCode[code] ?? formatProjectDisplayLabel(titleOnRow, code);
     } else if (titleOnRow) {
       allocated_project = titleOnRow;
     } else {
-      allocated_project = "Project (no code on record)";
+      allocated_project = "—";
     }
 
     return { ...row, employee_name, allocated_project };
