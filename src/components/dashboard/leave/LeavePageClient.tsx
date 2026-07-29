@@ -147,7 +147,7 @@ import {
 import { formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
 import { useNonOptionalHolidayDates } from "@/hooks/leave/useNonOptionalHolidayDates";
 import { buildUserRequestBody } from "@/utils/leaveRequestPayload";
-import { activeAllocationsRequireClientApproval } from "@/utils/leaveAllocations";
+import { activeAllocationsRequireClientApproval, isTalentPoolLeaveRouting } from "@/utils/leaveAllocations";
 import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSummary";
 import { HrLeaveBalancesPanel } from "@/components/dashboard/leave/HrLeaveBalancesPanel";
 import { CONTENT_CARD_CLASS, FILTER_BAR_CLASS } from "@/components/dashboard/ui/uiLayout";
@@ -747,6 +747,13 @@ export function LeavePageClient() {
   const requiresClientApproval = useMemo(
     () => activeAllocationsRequireClientApproval(myAllocationRowsForLeave),
     [myAllocationRowsForLeave]
+  );
+
+  const routesLeaveWfhToHr = useMemo(
+    () =>
+      !profileAssignedProjectsLoading &&
+      isTalentPoolLeaveRouting(myAllocationRowsForLeave),
+    [myAllocationRowsForLeave, profileAssignedProjectsLoading]
   );
 
   useEffect(() => {
@@ -1699,17 +1706,24 @@ export function LeavePageClient() {
                                       ) : null}
                                     </div>
                                     <div className="rounded-xl bg-muted/40 p-5 space-y-5 shadow-sm border border-border/40">
-                                      <LeaveManagerSelector
-                                        label="Select Managers"
-                                        required
-                                        selectedEmails={selectedWfhManagerEmails}
-                                        onChange={setSelectedWfhManagerEmails}
-                                        disabled={actionLoading}
-                                      />
+                                      {routesLeaveWfhToHr ? (
+                                        <p className="rounded-lg border border-wt-border/70 bg-wt-surface-2/40 px-3 py-2 text-xs leading-relaxed text-wt-text-muted">
+                                          You are in the talent pool (bench or no client allocation). This WFH
+                                          request will go directly to HR for approval.
+                                        </p>
+                                      ) : (
+                                        <LeaveManagerSelector
+                                          label="Select Managers"
+                                          required
+                                          selectedEmails={selectedWfhManagerEmails}
+                                          onChange={setSelectedWfhManagerEmails}
+                                          disabled={actionLoading || profileAssignedProjectsLoading}
+                                        />
+                                      )}
                                       <TextAreaField label="Comments" required value={leaveRequestForm.comments} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, comments: v }))} />
                                       <div className="flex justify-end pt-4 border-t border-border/40 mt-6">
                                         <div className="flex items-center gap-3">
-                                          <Button variant="brand" type="button" className="px-6 h-10 font-medium" onClick={() =>
+                                          <Button variant="brand" type="button" className="px-6 h-10 font-medium" disabled={actionLoading || profileAssignedProjectsLoading} onClick={() =>
                                               runAction(
                                                 userRequestActionLabel("WFH", editingLeaveRequestId ? "update" : "submit"),
                                                 async () => {
@@ -1741,7 +1755,7 @@ export function LeavePageClient() {
                                                 if (needsClientApproval && !leaveRequestForm.client_approval) {
                                                   throw new Error("Client approval is required for client users.");
                                                 }
-                                                if (!selectedWfhManagerEmails.length) {
+                                                if (!routesLeaveWfhToHr && !selectedWfhManagerEmails.length) {
                                                   throw new Error("Select at least one manager to notify.");
                                                 }
                                                 const payload = buildUserRequestBody(
@@ -1754,7 +1768,9 @@ export function LeavePageClient() {
                                                     client_approval: needsClientApproval
                                                       ? leaveRequestForm.client_approval
                                                       : undefined,
-                                                    selected_manager_emails: selectedWfhManagerEmails,
+                                                    selected_manager_emails: routesLeaveWfhToHr
+                                                      ? []
+                                                      : selectedWfhManagerEmails,
                                                   },
                                                   editingLeaveRequestId
                                                     ? { userRequestId: Number(editingLeaveRequestId) }
@@ -1880,7 +1896,8 @@ export function LeavePageClient() {
                                     onAdditionalEmailsChange={setSelectedAdditionalRecipientEmails}
                                     editingLeaveRequestId={editingLeaveRequestId}
                                     requiresClientApproval={requiresClientApproval}
-                                    actionLoading={actionLoading}
+                                    routesToHr={routesLeaveWfhToHr}
+                                    actionLoading={actionLoading || profileAssignedProjectsLoading}
                                     leaveRequestTypeOptions={leaveRequestTypeOptions}
                                     onViewCompOffCredits={() => setCompOffCreditsOpen(true)}
                                     onSubmit={() =>
@@ -1924,6 +1941,7 @@ export function LeavePageClient() {
                                           throw new Error("Client approval is required for client users.");
                                         }
                                         if (
+                                          !routesLeaveWfhToHr &&
                                           (normalizeUserRequestType(requestType) === "LEAVE" ||
                                            normalizeUserRequestType(requestType) === "OPTIONAL") &&
                                           !selectedLeaveManagerEmails.length
@@ -1931,6 +1949,7 @@ export function LeavePageClient() {
                                           throw new Error("Select at least one primary manager.");
                                         }
                                         if (
+                                          !routesLeaveWfhToHr &&
                                           (normalizeUserRequestType(requestType) === "LEAVE" ||
                                            normalizeUserRequestType(requestType) === "OPTIONAL") &&
                                           !selectedAdditionalRecipientEmails.length
@@ -1993,11 +2012,12 @@ export function LeavePageClient() {
                                               ? leaveRequestForm.client_approval
                                               : undefined,
                                             selected_manager_emails:
-                                              isLeaveOrOptional
+                                              isLeaveOrOptional && !routesLeaveWfhToHr
                                                 ? selectedLeaveManagerEmails
                                                 : undefined,
                                             secondary_manager_emails:
                                               isLeaveOrOptional &&
+                                              !routesLeaveWfhToHr &&
                                               selectedAdditionalRecipientEmails.length
                                                 ? selectedAdditionalRecipientEmails
                                                 : undefined,

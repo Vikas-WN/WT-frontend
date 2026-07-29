@@ -30,6 +30,7 @@ export function LeaveRequestForm({
   onAdditionalEmailsChange,
   editingLeaveRequestId,
   requiresClientApproval,
+  routesToHr = false,
   actionLoading,
   leaveRequestTypeOptions,
   onSubmit,
@@ -44,6 +45,8 @@ export function LeaveRequestForm({
   onAdditionalEmailsChange: (emails: string[]) => void;
   editingLeaveRequestId: string;
   requiresClientApproval: boolean;
+  /** Talent-pool / bench / no client allocation — managers not required; BE routes to HR. */
+  routesToHr?: boolean;
   actionLoading: boolean;
   leaveRequestTypeOptions: (string | { value: string; label: string })[];
   onSubmit: () => void;
@@ -54,8 +57,8 @@ export function LeaveRequestForm({
   const isLeaveType = normalizedType === "LEAVE";
   const isLeaveOrOptional = normalizedType === "LEAVE" || normalizedType === "OPTIONAL";
   const isCompOff = normalizedType === "COMP_OFF";
-  // Primary + secondary manager pickers are required for leave/optional routing.
-  const showManagerSelectors = isLeaveOrOptional;
+  // Primary + secondary manager pickers are required for leave/optional routing (unless talent pool → HR).
+  const showManagerSelectors = isLeaveOrOptional && !routesToHr;
 
   const selectItems = useMemo(() => {
     return leaveRequestTypeOptions.map((opt) =>
@@ -190,6 +193,12 @@ export function LeaveRequestForm({
       </div>
 
       <div className="rounded-xl bg-muted/40 p-5 space-y-5 shadow-sm border border-border/40">
+        {routesToHr && isLeaveOrOptional ? (
+          <p className="rounded-lg border border-wt-border/70 bg-wt-surface-2/40 px-3 py-2 text-xs leading-relaxed text-wt-text-muted">
+            You are in the talent pool (bench or no client allocation). This leave request will go
+            directly to HR for approval.
+          </p>
+        ) : null}
         {showManagerSelectors ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-1.5 min-w-0">
