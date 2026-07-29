@@ -6,7 +6,6 @@ type WtLoaderProps = {
   label?: string;
 };
 
-/** Distinctive non-spinner loader used across dashboard fetch/submit states. */
 export function WtLoader({ size = "md", className = "", label = "Loading" }: WtLoaderProps) {
   return (
     <span
@@ -14,14 +13,7 @@ export function WtLoader({ size = "md", className = "", label = "Loading" }: WtL
       role="status"
       aria-live="polite"
       aria-label={label}
-    >
-      <span className="wt-loader__core" aria-hidden>
-        <span className="wt-loader__orbit" />
-        <span className="wt-loader__orbit" />
-        <span className="wt-loader__orbit" />
-        <span className="wt-loader__pulse" />
-      </span>
-    </span>
+    />
   );
 }
 

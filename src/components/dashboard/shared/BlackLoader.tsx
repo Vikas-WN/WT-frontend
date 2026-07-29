@@ -1,12 +1,16 @@
-import { WtLoader } from "@/components/dashboard/ui/WtLoader";
-
 type BlackLoaderProps = {
   label?: string;
   size?: "md" | "sm";
 };
 
 export function BlackLoader({ label = "Loading", size = "md" }: BlackLoaderProps) {
-  return <WtLoader label={label} size={size} />;
+  return (
+    <span
+      className={size === "sm" ? "spinner-dark-sm" : "spinner-dark"}
+      role="status"
+      aria-label={label}
+    />
+  );
 }
 
 type LoadingOverlayProps = {
