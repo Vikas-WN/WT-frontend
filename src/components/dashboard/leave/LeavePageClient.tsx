@@ -1799,7 +1799,6 @@ export function LeavePageClient() {
                                                 invalidateLeaveBalance();
                                               })
                                             }
-                                            disabled={actionLoading}
                                           >
                                             {editingLeaveRequestId ? "Save Changes" : "Submit Request"}
                                           </Button>
