@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { WtLoader } from "@/components/dashboard/ui/WtLoader";
 import { cn } from "@/lib/utils";
 import { RefreshCw } from "lucide-react";
 
@@ -39,10 +40,11 @@ export function RefreshIconButton({
         className
       )}
     >
-      <RefreshCw
-        className={cn("size-4 stroke-[2.25]", loading && "animate-spin")}
-        aria-hidden
-      />
+      {loading ? (
+        <WtLoader size="sm" label={label} />
+      ) : (
+        <RefreshCw className="size-4 stroke-[2.25]" aria-hidden />
+      )}
     </Button>
   );
 }

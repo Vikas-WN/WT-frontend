@@ -271,7 +271,7 @@ export function ClientsPageClient() {
           }
           emptyIcon={<Building2 className="size-5" aria-hidden />}
           skeletonRows={8}
-          skeletonColumns={canEdit ? 8 : 7}
+          skeletonColumns={canEdit ? 7 : 6}
         >
           <div className="wt-detail-scroll-section min-h-0">
             <ScrollableTable
@@ -284,7 +284,6 @@ export function ClientsPageClient() {
                   <TableRow className="hover:bg-transparent">
                     <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>Client</TableHead>
                     <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>SPOC (External)</TableHead>
-                    <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>POC (Internal)</TableHead>
                     <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>Account Manager</TableHead>
                     <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>Delivery Manager</TableHead>
                     <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>Projects</TableHead>
@@ -321,12 +320,6 @@ export function ClientsPageClient() {
                         <PersonCell
                           name={client.spocExternalName}
                           email={client.spocExternalEmail}
-                        />
-                      </TableCell>
-                      <TableCell className={cn(WT_TABLE_CELL_COMPACT_CLASS, "align-top")}>
-                        <PersonCell
-                          name={client.pocInternalName}
-                          email={client.pocInternalEmail}
                         />
                       </TableCell>
                       <TableCell className={cn(WT_TABLE_CELL_COMPACT_CLASS, "align-top")}>

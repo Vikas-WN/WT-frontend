@@ -125,11 +125,13 @@ import {
 } from "@/utils/leaveManagerDisplay";
 import {
   canHrShowTeamRequestActions,
+  canManagerActOnCompOffEarn,
   canManagerActOnRequest,
   canManagerRejectRequest,
   extractStatusUpdateData,
   formatApprovalStageLabel,
   formatStageRejectionReason,
+  isCompOffEarnRequestType,
   listScopedUserRequests,
   fetchPaginatedScopedUserRequests,
   mergeStatusUpdateIntoRow,
@@ -1100,6 +1102,45 @@ export function LeavePageClient() {
         totalElements = rows.length;
         totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
       }
+
+      // Comp-off earn is not on /userRequest — merge from /comp-off/earn when viewing All types.
+      if (normalizedType === "ALL" && (hasManagerAccess || hasHrAccess || hasDmAccess || hasPrimaryLeaveInbox)) {
+        try {
+          const managerOnly =
+            !hasHrAccess && (hasManagerAccess || hasDmAccess || hasPrimaryLeaveInbox);
+          const earnRes = await compOffService.listEarnRequests({
+            fromDate: from,
+            toDate: to,
+            page: 0,
+            size: Math.max(size, 200),
+            managerOnly,
+          });
+          const earnRows = compOffService.parseRequestRows(earnRes).map(mapEarnListRow);
+          if (earnRows.length) {
+            const merged = [...rows, ...earnRows];
+            rows = Array.from(
+              new Map(
+                merged.map((row) => {
+                  const key = String(
+                    row.user_request_id ??
+                      row.userRequestId ??
+                      row.request_id ??
+                      row.requestId ??
+                      row.id ??
+                      Math.random()
+                  );
+                  return [key, row] as const;
+                })
+              ).values()
+            );
+            rows = applyListSort(rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
+            totalElements = rows.length;
+            totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
+          }
+        } catch {
+          /* keep leave/WFH rows */
+        }
+      }
     } else if (hasHrAccess) {
       // Load a full window for client-side pagination (same as team merge path).
       const result = await fetchPaginatedScopedUserRequests({
@@ -1275,8 +1316,34 @@ export function LeavePageClient() {
   async function updateEmployeeRequestStatus(
     requestId: string,
     status: UserRequestStatusValue,
-    options?: { reason?: string; requireReasonOnReject?: boolean }
+    options?: { reason?: string; requireReasonOnReject?: boolean; requestType?: unknown }
   ) {
+    const isEarn = isCompOffEarnRequestType(options?.requestType);
+    if (isEarn) {
+      await compOffService.updateEarnRequestStatus(
+        Number(requestId),
+        status === "REJECTED" ? "REJECTED" : "APPROVED",
+        options?.reason
+      );
+      const reason = options?.reason?.trim();
+      applyLocalTeamRequestStatus(requestId, status, reason);
+      setEmployeeRequests((prev) =>
+        prev.map((row) => {
+          const rowId = String(
+            row.user_request_id ??
+              row.userRequestId ??
+              row.request_id ??
+              row.requestId ??
+              row.id ??
+              ""
+          ).trim();
+          if (rowId !== requestId) return row;
+          return patchLeaveTeamRequestStatus(row, status, { reason, actorEmail: userEmail });
+        })
+      );
+      return;
+    }
+
     const res = await updateUserRequestStatus(Number(requestId), status, options);
     const updated = extractStatusUpdateData(res);
     const reason = options?.reason?.trim();
@@ -1324,6 +1391,7 @@ export function LeavePageClient() {
       await updateEmployeeRequestStatus(requestId, "REJECTED", {
         reason,
         requireReasonOnReject: true,
+        requestType: pendingReject.requestType,
       });
       closeRejectDialog();
       const scope = leaveSubTab === "org" ? "org" : "team";
@@ -2198,9 +2266,12 @@ export function LeavePageClient() {
                                       ) ?? ""
                                     ).trim();
                                     const rowRecord = row as Record<string, unknown>;
+                                    const rowRequestType = rowRecord.request_type ?? rowRecord.requestType;
+                                    const isEarnRequest = isCompOffEarnRequestType(rowRequestType);
                                     const hrCanActOnRow =
                                       leaveSubTab !== "org" &&
                                       status === "PENDING" &&
+                                      !isEarnRequest &&
                                       canHrShowTeamRequestActions(rowRecord, {
                                         hasHrAccess,
                                       });
@@ -2217,8 +2288,15 @@ export function LeavePageClient() {
                                       rowRecord,
                                       userEmail
                                     );
+                                    const earnManagerAct =
+                                      !hrCanActOnRow &&
+                                      canManagerActOnCompOffEarn(rowRecord, {
+                                        hasManagerAccess: hasManagerAccess || hasDmAccess,
+                                        actorEmail: userEmail,
+                                      });
                                     const legacyManagerAct =
                                       !hrCanActOnRow &&
+                                      !isEarnRequest &&
                                       status === "PENDING" &&
                                       canManagerActOnRequest(rowRecord, {
                                         hasManagerAccess: hasManagerAccess || hasDmAccess,
@@ -2230,13 +2308,15 @@ export function LeavePageClient() {
                                     const showManagerApprove =
                                       !hrCanActOnRow &&
                                       status === "PENDING" &&
-                                      (assignedPrimaryAct ||
+                                      (earnManagerAct ||
+                                        assignedPrimaryAct ||
                                         assignedSecondaryApprove ||
                                         legacyManagerAct);
                                     const showManagerReject =
                                       !hrCanActOnRow &&
                                       status === "PENDING" &&
-                                      (assignedPrimaryAct ||
+                                      (earnManagerAct ||
+                                        assignedPrimaryAct ||
                                         assignedSecondaryReject ||
                                         (legacyManagerAct &&
                                           canManagerRejectRequest(rowRecord, {
@@ -2268,15 +2348,17 @@ export function LeavePageClient() {
                                       row.is_half_day ?? row.isHalfDay ?? false
                                     );
                                     const duration = fromDate && toDate ? `${fromDate} – ${toDate}` : "—";
-                                    const durationDays = formatLeaveDaysCount(
-                                      fromDate,
-                                      toDate,
-                                      isHalfDay,
-                                      holidayDates
-                                    );
+                                    const durationDays = isEarnRequest
+                                      ? "1"
+                                      : formatLeaveDaysCount(
+                                          fromDate,
+                                          toDate,
+                                          isHalfDay,
+                                          holidayDates
+                                        );
                                     const comments = String(row.comments ?? "").trim();
                                     const requestTypeLabel = formatUserRequestTypeLabel(
-                                      row.request_type ?? row.requestType,
+                                      rowRequestType,
                                       isHalfDay
                                     );
                                     const hasDetails = managerReason || comments || requestTypeLabel;
@@ -2378,7 +2460,10 @@ export function LeavePageClient() {
                                                           await updateEmployeeRequestStatus(
                                                             requestId,
                                                             "APPROVED",
-                                                            { requireReasonOnReject: false }
+                                                            {
+                                                              requireReasonOnReject: false,
+                                                              requestType: rowRequestType,
+                                                            }
                                                           );
                                                           // Actions column is team-only (hidden on org / All Employee Requests).
                                                           invalidateTeamCache();
@@ -2431,6 +2516,7 @@ export function LeavePageClient() {
                                                               "APPROVED",
                                                               {
                                                                 requireReasonOnReject: false,
+                                                                requestType: rowRequestType,
                                                               }
                                                             );
                                                             invalidateTeamCache();
@@ -2458,7 +2544,7 @@ export function LeavePageClient() {
                                                       onClick={() =>
                                                         openRejectDialog(
                                                           requestId,
-                                                          row.request_type ?? row.requestType
+                                                          rowRequestType
                                                         )
                                                       }
                                                     >

@@ -112,8 +112,13 @@ export function mapEarnListRow(row: Record<string, unknown>): Record<string, unk
   const worked = String(pickRowField(row, "worked_date", "workedDate") ?? "").trim();
   const projectCode = String(pickRowField(row, "project_code", "projectCode") ?? "").trim();
   const projectName = String(pickRowField(row, "project_name", "projectName") ?? "").trim();
+  const requestId =
+    pickRowField(row, "user_request_id", "userRequestId", "id") ?? row.id ?? null;
   return {
     ...row,
+    id: requestId ?? row.id,
+    user_request_id: requestId,
+    userRequestId: requestId,
     request_type: COMP_OFF_EARN_LIST_TYPE,
     request_from_date: worked || (pickRowField(row, "request_from_date", "requestFromDate") ?? ""),
     request_to_date: worked || (pickRowField(row, "request_to_date", "requestToDate") ?? ""),
@@ -125,6 +130,7 @@ export function mapEarnListRow(row: Record<string, unknown>): Record<string, unk
       pickRowField(row, "work_description", "workDescription", "comments", "comment") ?? "",
     emp_email: pickRowField(row, "emp_email", "empEmail") ?? "",
     status: pickRowField(row, "status") ?? "PENDING",
+    user_request_status: pickRowField(row, "status") ?? "PENDING",
     manager_status: pickRowField(row, "manager_status", "managerStatus") ?? String(pickRowField(row, "status") ?? "PENDING"),
     manager_reason: pickRowField(row, "manager_reason", "managerReason") ?? null,
   };

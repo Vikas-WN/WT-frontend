@@ -20,12 +20,10 @@ import { SkillsMultiSelectField } from "@/components/dashboard/ui/SkillsMultiSel
 import { Button } from "@/components/ui/button";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
-import {
-  HrLeaveStatusToggle,
-  type HrToggleStatus,
-} from "@/components/dashboard/leave/HrLeaveStatusToggle";
 import { formatApiDateDisplay, inputValueToApiDate } from "@/utils/apiDate";
 import { RequestStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { WtLoader } from "@/components/dashboard/ui/WtLoader";
 import {
   buildAllocationExtensionContextQuery,
   buildCreateAllocationExtensionBody,
@@ -51,12 +49,6 @@ function normalizeHrStatusFilter(value: string): AllocationExtensionRequestStatu
 
 function asDateDisplayValue(value: string) {
   return formatApiDateDisplay(String(value ?? ""));
-}
-
-function toHrToggleStatus(status: string): HrToggleStatus {
-  const v = status.trim().toUpperCase();
-  if (v === "APPROVED" || v === "REJECTED") return v;
-  return "PENDING";
 }
 
 export function AllocationExtensionPanel() {
@@ -88,6 +80,7 @@ export function AllocationExtensionPanel() {
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(false);
   const [updatingRequestId, setUpdatingRequestId] = useState<number | null>(null);
+  const [updatingDecision, setUpdatingDecision] = useState<"APPROVED" | "REJECTED" | null>(null);
 
   const visibleMode = useMemo<"hr" | "manager">(() => {
     if (hasHrAccess) return "hr";
@@ -370,17 +363,19 @@ export function AllocationExtensionPanel() {
   }
 
   async function updateStatus(requestId: number, next: "APPROVED" | "REJECTED") {
-    setUpdatingRequestId(requestId);
-    try {
-      let message: string | undefined;
-      if (next === "REJECTED") {
-        const entered = window.prompt("Enter rejection reason (required):", "") ?? "";
-        message = entered.trim();
-        if (!message) {
-          showErrorToast("Rejection reason is required.");
-          return;
-        }
+    let message: string | undefined;
+    if (next === "REJECTED") {
+      const entered = window.prompt("Enter rejection reason (required):", "") ?? "";
+      message = entered.trim();
+      if (!message) {
+        showErrorToast("Rejection reason is required.");
+        return;
       }
+    }
+
+    setUpdatingRequestId(requestId);
+    setUpdatingDecision(next);
+    try {
       const res = await hrmsService.updateAllocationExtensionRequestStatus({
         requestId,
         status: next,
@@ -400,16 +395,8 @@ export function AllocationExtensionPanel() {
       showErrorToast(msg);
     } finally {
       setUpdatingRequestId(null);
+      setUpdatingDecision(null);
     }
-  }
-
-  function handleHrDecisionChange(
-    requestId: number,
-    current: HrToggleStatus,
-    next: HrToggleStatus
-  ) {
-    if (next === current || next === "PENDING") return;
-    void updateStatus(requestId, next);
   }
 
   const rangeStart = totalElements === 0 ? 0 : page * size + 1;
@@ -651,14 +638,18 @@ export function AllocationExtensionPanel() {
                   <TableHead>Reason</TableHead>
                   <TableHead>Status</TableHead>
                   {visibleMode === "hr" ? (
-                    <TableHead>Requested by</TableHead>
+                    <>
+                      <TableHead>Requested by</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </>
                   ) : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((r) => {
                   const status = String(r.status ?? "PENDING").toUpperCase();
-                  const hrStatus = toHrToggleStatus(status);
+                  const isPending = status === "PENDING";
+                  const isUpdating = updatingRequestId === r.id;
                   return (
                     <TableRow key={String(r.id)}>
                       <TableCell className="px-3 py-2 whitespace-nowrap">{r.employee_name || "—"}</TableCell>
@@ -675,21 +666,49 @@ export function AllocationExtensionPanel() {
                         </span>
                       </TableCell>
                       <TableCell className="px-3 py-2 whitespace-nowrap">
-                        {visibleMode === "hr" ? (
-                          <HrLeaveStatusToggle
-                            value={hrStatus}
-                            onChange={(next) =>
-                              handleHrDecisionChange(r.id, hrStatus, next)
-                            }
-                            loading={updatingRequestId === r.id}
-                            threeWay
-                          />
-                        ) : (
-                          <RequestStatusBadge status={status} />
-                        )}
+                        <RequestStatusBadge status={status} />
                       </TableCell>
                       {visibleMode === "hr" ? (
-                        <TableCell className="px-3 py-2 whitespace-nowrap">{r.requested_by_name || "—"}</TableCell>
+                        <>
+                          <TableCell className="px-3 py-2 whitespace-nowrap">
+                            {r.requested_by_name || "—"}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-right whitespace-nowrap">
+                            {isPending ? (
+                              isUpdating ? (
+                                <div className="inline-flex items-center justify-end gap-2 text-wt-text">
+                                  <WtLoader size="sm" label="Updating request" />
+                                  <span className="text-xs text-wt-text-muted">
+                                    {updatingDecision === "REJECTED" ? "Rejecting…" : "Approving…"}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="inline-flex items-center justify-end gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="xs"
+                                    className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
+                                    onClick={() => void updateStatus(r.id, "APPROVED")}
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="xs"
+                                    className="border-rose-600/30 text-rose-700 hover:bg-rose-500/10"
+                                    onClick={() => void updateStatus(r.id, "REJECTED")}
+                                  >
+                                    Reject
+                                  </Button>
+                                </div>
+                              )
+                            ) : (
+                              <span className="text-xs text-wt-text-muted">—</span>
+                            )}
+                          </TableCell>
+                        </>
                       ) : null}
                     </TableRow>
                   );
@@ -698,7 +717,11 @@ export function AllocationExtensionPanel() {
             </WtTable>
           </ScrollableTable>
         ) : (
-          <p className="text-sm text-wt-text-muted">{loading ? "Loading…" : "No extension requests found."}</p>
+          loading ? (
+            <SectionLoading label="Loading extension requests…" className="py-10" />
+          ) : (
+            <p className="text-sm text-wt-text-muted">No extension requests found.</p>
+          )
         )}
 
         <ListPagination
