@@ -21,6 +21,7 @@ export function normalizeAssignedProjects(rows: Array<Record<string, unknown>>) 
       project_type: row.project_type ?? row.projectType ?? "—",
       role: row.role ?? row.designation ?? "—",
       allocated_hours: row.allocated_hours ?? row.allocatedHours ?? row.hours ?? "—",
+      allocated_percent: row.allocated_percent ?? row.allocatedPercent ?? "—",
       billing_status: row.billing_status ?? row.billingStatus ?? "—",
       is_manager: isManager,
       start_date: row.start_date ?? row.startDate ?? "—",
@@ -137,12 +138,7 @@ export function formatCurrentAllocationSummary(
         .trim();
       const code = String(row.project_code ?? row.projectCode ?? "").trim();
       const label = name && name !== "—" ? name : code || "—";
-      const percent = formatAllocatedHoursPercentLabel(
-        row.allocated_percent ??
-          row.allocatedPercent ??
-          row.allocated_hours ??
-          row.allocatedHours
-      );
+      const percent = formatAllocatedHoursPercentLabel(row);
       const role = String(row.role ?? row.designation ?? "").trim();
       const parts = [label];
       if (role && role !== "—") parts.push(role);
@@ -217,6 +213,10 @@ export function mergeProjectAndAllocationData(
         row.allocated_hours === "—"
           ? allocation.allocated_hours ?? allocation.allocatedHours ?? allocation.hours ?? "—"
           : row.allocated_hours,
+      allocated_percent:
+        row.allocated_percent === "—" || row.allocated_percent == null || row.allocated_percent === ""
+          ? allocation.allocated_percent ?? allocation.allocatedPercent ?? "—"
+          : row.allocated_percent,
       billing_status:
         row.billing_status === "—"
           ? allocation.billing_status ?? allocation.billingStatus ?? "—"
