@@ -464,7 +464,11 @@ export function CompOffPageClient({
       setMyRequests(cached);
       return;
     }
-    const earnRows = await compOffService.listEarnRequestRows({ fromDate: from, toDate: to });
+    const earnRows = await compOffService.listEarnRequestRows({
+      fromDate: from,
+      toDate: to,
+      selfOnly: true,
+    });
     let usageRows: Array<Record<string, unknown>> = [];
     if (!earnOnly) {
       try {
