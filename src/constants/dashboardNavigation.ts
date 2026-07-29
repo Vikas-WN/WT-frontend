@@ -243,7 +243,15 @@ export function filterVisibleNavigation(
     if (item.kind === "link" || item.kind === "expandable") {
       if (item.id === "employee" && !options.hasHrAccess) continue;
       if (item.roles.length === 0 ? false : !item.roles.some((r) => userRoles.includes(r))) continue;
-      result.push(item);
+      if (item.kind === "expandable") {
+        const children = item.children.filter(
+          (child) =>
+            !child.roles?.length || child.roles.some((role) => userRoles.includes(role))
+        );
+        result.push({ ...item, children });
+      } else {
+        result.push(item);
+      }
     }
   }
   return result;

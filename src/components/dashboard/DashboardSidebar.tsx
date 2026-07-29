@@ -308,10 +308,7 @@ export function DashboardSidebar({
             }
 
             if (item.kind === "expandable" && item.id === "reports") {
-              const children = item.children.filter(
-                (child) =>
-                  !child.roles?.length || child.roles.some((role) => userRoles.includes(role))
-              );
+              const children = item.children;
               const isExpanded = expandedSection === "reports";
               const groupActive = activeSection.startsWith("reports-");
               return (
