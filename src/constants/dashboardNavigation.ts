@@ -31,7 +31,7 @@ export type NavExpandable = {
   label: string;
   roles: string[];
   icon: SidebarIconName;
-  children: Array<{ id: string; label: string; icon?: SidebarIconName }>;
+  children: Array<{ id: string; label: string; icon?: SidebarIconName; roles?: string[] }>;
 };
 
 export type NavItem = NavGroup | NavLink | NavExpandable;
@@ -108,7 +108,7 @@ export const dashboardNavigation: NavItem[] = [
       {
         id: "talent-pool",
         label: "Talent Pool",
-        roles: ["ROLE_HR", "ROLE_ADMIN"],
+        roles: ["ROLE_HR"],
         icon: "users",
       },
     ],
@@ -184,7 +184,7 @@ export const dashboardNavigation: NavItem[] = [
     children: [
       { id: "reports-workforce", label: "Workforce Overview" },
       { id: "reports-section-2", label: "Utilization vs Effort" },
-      { id: "reports-bench", label: "Bench" },
+      { id: "reports-bench", label: "Bench", roles: ["ROLE_HR"] },
       { id: "reports-section-3", label: "Attrition & Retention" },
       { id: "reports-section-4", label: "Skill & Capacity Report" },
       { id: "reports-section-6", label: "Compliance & Risk Support Report" },

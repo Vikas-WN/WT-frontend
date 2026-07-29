@@ -1772,9 +1772,12 @@ export function LeavePageClient() {
                                                       ? []
                                                       : selectedWfhManagerEmails,
                                                   },
-                                                  editingLeaveRequestId
-                                                    ? { userRequestId: Number(editingLeaveRequestId) }
-                                                    : undefined
+                                                  {
+                                                    ...(editingLeaveRequestId
+                                                      ? { userRequestId: Number(editingLeaveRequestId) }
+                                                      : {}),
+                                                    routesToHr: routesLeaveWfhToHr,
+                                                  }
                                                 );
                                                 if (editingLeaveRequestId) {
                                                   await apiClient.put(endpoints.userRequest.root, {
@@ -2021,9 +2024,12 @@ export function LeavePageClient() {
                                                 ? selectedAdditionalRecipientEmails
                                                 : undefined,
                                           },
-                                          editingLeaveRequestId
-                                            ? { userRequestId: Number(editingLeaveRequestId) }
-                                            : undefined
+                                          {
+                                            ...(editingLeaveRequestId
+                                              ? { userRequestId: Number(editingLeaveRequestId) }
+                                              : {}),
+                                            routesToHr: routesLeaveWfhToHr,
+                                          }
                                         );
                                         if (editingLeaveRequestId) {
                                           await apiClient.put(endpoints.userRequest.root, {

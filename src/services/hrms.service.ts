@@ -380,7 +380,7 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.byId(allocationId));
   },
 
-  /** GET /allocation/talent-pool — alias of unallocated list (ROLE_HR | ROLE_ADMIN). */
+  /** GET /allocation/talent-pool — alias of unallocated list (ROLE_HR). */
   getTalentPool(params: { page?: number; size?: number; search?: string } = {}) {
     const query: Record<string, string | number> = {
       page: params.page ?? 0,
