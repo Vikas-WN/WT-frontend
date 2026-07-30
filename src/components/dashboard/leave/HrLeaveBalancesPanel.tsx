@@ -144,27 +144,7 @@ export function HrLeaveBalancesPanel({
                 placeholder="Name, Email, Emp Id"
               />
             </div>
-            <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 sm:max-w-xs">
-              <SelectField
-                label="Year"
-                value={year}
-                onChange={(value) => {
-                  setYear(value);
-                  setPage(0);
-                }}
-                options={YEAR_OPTIONS}
-              />
-              <SelectField
-                label="Month"
-                value={month}
-                onChange={(value) => {
-                  setMonth(value);
-                  setPage(0);
-                }}
-                options={monthOptions}
-                contentClassName="w-auto min-w-[11rem]"
-              />
-            </div>
+            {/* Year and Month filters removed as per requirements to show only for current month */}
             <Button
               variant="brand"
               type="submit"
