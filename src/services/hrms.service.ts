@@ -316,8 +316,13 @@ export const hrmsService = {
     });
   },
 
-  getMyLeaveBalance() {
-    return apiClient.get<ApiEnvelope<EmployeeLeaveBalancesData>>(endpoints.profile.myBalances);
+  getMyLeaveBalance(year?: number, month?: number) {
+    const query: Record<string, string> = {};
+    if (year !== undefined) query.year = String(year);
+    if (month !== undefined) query.month = String(month);
+    return apiClient.get<ApiEnvelope<EmployeeLeaveBalancesData>>(endpoints.profile.myBalances, {
+      query,
+    });
   },
 
   getEmployeeLeaveBalances(empId: string) {

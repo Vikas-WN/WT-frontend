@@ -53,8 +53,18 @@ function BalanceCardsSkeleton() {
   );
 }
 
-export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?: boolean; selectedType?: string }) {
-  const { data, isLoading, isError, refetch } = useMyLeaveBalance({ enabled });
+export function LeaveBalanceSummary({
+  enabled = true,
+  selectedType,
+  year,
+  month,
+}: {
+  enabled?: boolean;
+  selectedType?: string;
+  year?: number;
+  month?: number;
+}) {
+  const { data, isLoading, isError, refetch } = useMyLeaveBalance({ enabled, year, month });
 
   if (isLoading) {
     return <BalanceCardsSkeleton />;
