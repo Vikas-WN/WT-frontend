@@ -104,6 +104,16 @@ export function formatPortalRolesDisplay(roles: string[]): string {
   return elevated.map((role) => formatRoleLabel(role)).join(", ");
 }
 
+/** Portal role options an actor may assign — Admin is hidden unless the actor already holds ROLE_ADMIN. */
+export function portalRoleOptionsForActor(
+  actorRoles: string[]
+): (typeof PORTAL_ROLE_SELECT_OPTIONS)[number][] {
+  const isAdmin = normalizeRoles(actorRoles).includes("ROLE_ADMIN");
+  return isAdmin
+    ? [...PORTAL_ROLE_SELECT_OPTIONS]
+    : PORTAL_ROLE_SELECT_OPTIONS.filter((option) => option.value !== "ROLE_ADMIN");
+}
+
 /** @deprecated Use PORTAL_ROLE_SELECT_OPTIONS */
 export const PORTAL_ROLE_ASSIGN_OPTIONS = PORTAL_ROLE_SELECT_OPTIONS.filter(
   (option) => option.value !== "ROLE_EMPLOYEE"
