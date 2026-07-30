@@ -1130,7 +1130,7 @@ export const hrmsService = {
     return apiClient.get<unknown>(endpoints.masters.clients, { query });
   },
 
-  getClient(clientId: number, params: { includeProjects?: boolean } = {}) {
+  getClient(clientId: string | number, params: { includeProjects?: boolean } = {}) {
     const query: Record<string, string> = {};
     if (params.includeProjects) query.include_projects = "true";
     return apiClient.get<unknown>(endpoints.masters.clientById(clientId), { query });

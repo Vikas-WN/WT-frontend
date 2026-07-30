@@ -36,6 +36,7 @@ import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { useClients, useInvalidateClients } from "@/hooks/clients/useClients";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { isExternalClientId } from "@/utils/client";
 import type { ClientRecord } from "@/types/client";
 
 type StatusFilter = "all" | "active" | "inactive";
@@ -296,9 +297,11 @@ export function ClientsPageClient() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredClients.map((client) => (
+                  {filteredClients.map((client) => {
+                    const isExternal = isExternalClientId(client.id);
+                    return (
                     <TableRow
-                      key={client.id}
+                      key={String(client.id)}
                       className="transition hover:bg-blue-50/40 dark:hover:bg-wt-surface-2"
                     >
                       <TableCell className={cn(WT_TABLE_CELL_COMPACT_CLASS, "align-top")}>
@@ -352,9 +355,11 @@ export function ClientsPageClient() {
                               variant="ghost"
                               size="sm"
                               className="h-8 gap-1.5 px-2.5"
-                              disabled={!client.isActive}
+                              disabled={!client.isActive || isExternal}
                               title={
-                                client.isActive
+                                isExternal
+                                  ? "Managed in WK Business"
+                                  : client.isActive
                                   ? "Allocate project to this client"
                                   : "Activate the client before allocating projects"
                               }
@@ -368,7 +373,8 @@ export function ClientsPageClient() {
                               variant="ghost"
                               size="sm"
                               className="h-8 gap-1.5 px-2.5"
-                              title="Edit client"
+                              title={isExternal ? "Managed in WK Business" : "Edit client"}
+                              disabled={isExternal}
                               onClick={() => openEditDialog(client)}
                             >
                               <Pencil className="size-3.5" aria-hidden />
@@ -378,7 +384,8 @@ export function ClientsPageClient() {
                         </TableCell>
                       ) : null}
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </WtTable>
             </ScrollableTable>
