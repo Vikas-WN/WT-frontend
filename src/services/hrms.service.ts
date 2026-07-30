@@ -1143,14 +1143,14 @@ export const hrmsService = {
     });
   },
 
-  updateClient(clientId: number, payload: Record<string, unknown>) {
+  updateClient(clientId: string | number, payload: Record<string, unknown>) {
     return apiClient.put<unknown>(endpoints.masters.clientById(clientId), {
       contentType: "application/json",
       body: JSON.stringify(payload),
     });
   },
 
-  allocateProjectToClient(projectId: number, clientId: number) {
+  allocateProjectToClient(projectId: number, clientId: string | number) {
     return apiClient.post<unknown>(endpoints.masters.allocateProjectToClient(projectId, clientId));
   },
 
