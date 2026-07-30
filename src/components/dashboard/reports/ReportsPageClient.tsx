@@ -363,6 +363,7 @@ export function ReportsPageClient() {
   const [leaveSubTab, setLeaveSubTab] = useState<"my" | "team">("my");
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
+  const hasHrRoleOnly = userRoles.includes("ROLE_HR");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
   /** HR without manager portfolio — no allocated projects; use Team timelogs for org view */
   const timelogHrNoSelfProject =
@@ -947,7 +948,7 @@ export function ReportsPageClient() {
       const code = String(p.project_code ?? p.projectCode ?? "").trim();
       if (!code) continue;
       const name = String(p.project_name ?? p.projectName ?? "").trim();
-      map[code] = name ? `${code} — ${name}` : code;
+      map[code] = name || "—";
     }
     return map;
   }
@@ -985,7 +986,7 @@ export function ReportsPageClient() {
       let allocated_project = "";
       if (code) {
         allocated_project =
-          projectDisplayByCode[code] ?? (titleOnRow ? `${code} — ${titleOnRow}` : code);
+          projectDisplayByCode[code] ?? (titleOnRow || "—");
       } else if (titleOnRow) {
         allocated_project = titleOnRow;
       } else {
@@ -2592,7 +2593,7 @@ export function ReportsPageClient() {
   }, [activeSection, hasHrAccess, loadAllocationsForHr, loadUtilizationReports]);
 
   useEffect(() => {
-    if (activeSection !== "reports-bench" || !hasHrAccess) return;
+    if (activeSection !== "reports-bench" || !hasHrRoleOnly) return;
     const id = window.setTimeout(() => {
       void Promise.all([
         loadBenchAgingReport().catch(() => {
@@ -2605,7 +2606,7 @@ export function ReportsPageClient() {
       ]);
     }, 0);
     return () => window.clearTimeout(id);
-  }, [activeSection, hasHrAccess, loadAllocationsForHr, loadBenchAgingReport]);
+  }, [activeSection, hasHrRoleOnly, loadAllocationsForHr, loadBenchAgingReport]);
 
   useEffect(() => {
     if (activeSection !== "reports-section-3" || !hasHrAccess) return;
@@ -2787,7 +2788,7 @@ export function ReportsPageClient() {
           value={selfOnboardForm.phone_number}
           onChange={(v) => setSelfOnboardForm((p) => ({ ...p, phone_number: v }))}
         />
-        <InputField label="Years of Experience" value={selfOnboardForm.yoe} onChange={(v) => setSelfOnboardForm((p) => ({ ...p, yoe: v }))} />
+        <InputField label="Years of Experience (excluding internship)" required value={selfOnboardForm.yoe} onChange={(v) => setSelfOnboardForm((p) => ({ ...p, yoe: v }))} />
         <InputField
           label="Primary Skills (comma separated)"
           value={selfOnboardForm.primary_skills}
@@ -3071,7 +3072,7 @@ export function ReportsPageClient() {
         <InputField label="Primary Skills (comma separated)" value={selfProfileForm.primary_skills} onChange={(v) => setSelfProfileForm((p) => ({ ...p, primary_skills: v }))} />
         <InputField label="Secondary Skill" value={selfProfileForm.secondary_skill} onChange={(v) => setSelfProfileForm((p) => ({ ...p, secondary_skill: v }))} />
         <SelectField label="Secondary Skill Rating" value={selfProfileForm.secondary_rating} options={["1", "2", "3", "4", "5"]} onChange={(v) => setSelfProfileForm((p) => ({ ...p, secondary_rating: v }))} />
-        <InputField label="Years of Experience" value={selfProfileForm.yoe} onChange={(v) => setSelfProfileForm((p) => ({ ...p, yoe: v }))} />
+        <InputField label="Years of Experience (excluding internship)" required value={selfProfileForm.yoe} onChange={(v) => setSelfProfileForm((p) => ({ ...p, yoe: v }))} />
       </div>
       {priorEmploymentDocsForProfile ? (
         <div className="mt-4 rounded-xl border border-wt-border bg-wt-surface-2 p-4">
@@ -3347,11 +3348,17 @@ export function ReportsPageClient() {
                                 />
                               </div>
                             ) : activeSection === "reports-bench" ? (
-                              <BenchAgingReportTable
-                                rows={utilizationBenchRowsWithInvestment}
-                                peopleOnBench={benchPeopleOnBench}
-                                loading={benchReportLoading}
-                              />
+                              hasHrRoleOnly ? (
+                                <BenchAgingReportTable
+                                  rows={utilizationBenchRowsWithInvestment}
+                                  peopleOnBench={benchPeopleOnBench}
+                                  loading={benchReportLoading}
+                                />
+                              ) : (
+                                <p className="text-sm text-wt-text-muted">
+                                  Bench reporting is available to HR only.
+                                </p>
+                              )
                             ) : activeSection === "reports-section-3" ? (
                               <AttritionRetentionReports
                                 fyStartYear={attritionFyStartYear}

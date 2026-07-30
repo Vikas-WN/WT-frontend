@@ -37,12 +37,12 @@ export function useClients({
   });
 }
 
-export function useClientDetail(clientId: number | null, includeProjects = false) {
+export function useClientDetail(clientId: string | number | null, includeProjects = false) {
   return useQuery({
     queryKey: ["clients", "detail", clientId, includeProjects],
-    enabled: clientId != null && clientId > 0,
+    enabled: clientId != null && String(clientId).trim() !== "",
     queryFn: async (): Promise<ClientRecord | null> => {
-      if (!clientId) return null;
+      if (clientId == null || String(clientId).trim() === "") return null;
       const res = await hrmsService.getClient(clientId, { includeProjects });
       const payload = (res as { data?: unknown }).data ?? res;
       if (!payload || typeof payload !== "object") return null;

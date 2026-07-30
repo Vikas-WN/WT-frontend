@@ -18,17 +18,23 @@ export function ProfileSectionsView({
   resumeShareHref,
   sections: sectionsOverride,
   includeDateOfBirth = false,
+  currentAllocationSummary,
 }: {
   profile: Record<string, unknown>;
   resumeShareHref?: string | null;
   sections?: ProfileDisplaySection[];
   /** When true (Personal → Profile), show Date of Birth. Directory HR view omits it. */
   includeDateOfBirth?: boolean;
+  /** Current project allocation summary for Work Information. */
+  currentAllocationSummary?: string | null;
   layout?: "stack" | "split";
 }) {
   const sections =
     sectionsOverride ??
-    buildProfileViewSections(profile, resumeShareHref, { includeDateOfBirth });
+    buildProfileViewSections(profile, resumeShareHref, {
+      includeDateOfBirth,
+      currentAllocationSummary,
+    });
 
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:items-stretch">

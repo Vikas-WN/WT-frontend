@@ -52,8 +52,45 @@ export function isSupersededAllocationRow(row: Record<string, unknown>): boolean
 /** Only ACTIVE rows can be edited or soft-deleted from the main list. */
 export function isEditableAllocationRow(row: Record<string, unknown>): boolean {
   if (isSupersededAllocationRow(row)) return false;
+  if (isDeallocatedAllocationRow(row)) return false;
   if (allocationRecordStatus(row) === "DEALLOCATED") return false;
   return true;
+}
+
+function allocationUserProjectKey(row: Record<string, unknown>): string {
+  const userId = String(row.user_id ?? row.userId ?? "").trim();
+  const email = String(
+    row.employee_email ?? row.employeeEmail ?? row.email ?? ""
+  )
+    .trim()
+    .toLowerCase();
+  const project = String(row.project_code ?? row.projectCode ?? "")
+    .trim()
+    .toUpperCase();
+  const userKey = userId || email;
+  if (!userKey || !project) return "";
+  return `${userKey}::${project}`;
+}
+
+/**
+ * Edit-allocation supersedes the old row (deactivated) and creates a new active row.
+ * Hide ended history when an active assignment exists for the same employee + project.
+ */
+export function hideDeallocatedRowsWithActiveSuccessor(
+  rows: Array<Record<string, unknown>>
+): Array<Record<string, unknown>> {
+  const activeKeys = new Set<string>();
+  for (const row of rows) {
+    if (isDeallocatedAllocationRow(row)) continue;
+    const key = allocationUserProjectKey(row);
+    if (key) activeKeys.add(key);
+  }
+  return rows.filter((row) => {
+    if (!isDeallocatedAllocationRow(row)) return true;
+    const key = allocationUserProjectKey(row);
+    if (!key) return true;
+    return !activeKeys.has(key);
+  });
 }
 
 export const ALLOCATION_LIST_DEFAULT_SORT_ID = "project_end_asc";
@@ -162,7 +199,7 @@ export function isSystemProjectAllocationRow(row: Record<string, unknown>): bool
   return name === "BENCH";
 }
 
-/** Talent-pool billing does not consume assignable project capacity. */
+/** Talent-pool billing label on a real project — still counts toward allocated %. */
 export function isTalentPoolBillingAllocationRow(row: Record<string, unknown>): boolean {
   const billing = String(row.billing_status ?? row.billingStatus ?? "")
     .trim()
@@ -174,7 +211,6 @@ export function isTalentPoolBillingAllocationRow(row: Record<string, unknown>): 
 
 function isCountableProjectAllocationRow(row: Record<string, unknown>): boolean {
   if (isSystemProjectAllocationRow(row)) return false;
-  if (isTalentPoolBillingAllocationRow(row)) return false;
   if (isSupersededAllocationRow(row) || isDeallocatedAllocationRow(row)) return false;
   return true;
 }

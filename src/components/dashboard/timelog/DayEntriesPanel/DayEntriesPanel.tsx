@@ -93,7 +93,7 @@ export function DayEntriesPanel({
                   <div className="day-entries-card-header">
                     <div>
                       <div className="day-entries-card-project">
-                        {entry.project_name?.trim() || entry.project_code}
+                        {entry.project_name?.trim() || "—"}
                       </div>
                       {projectManagerEmail ? (
                         <div className="day-entries-card-task">

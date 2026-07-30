@@ -31,7 +31,7 @@ export type NavExpandable = {
   label: string;
   roles: string[];
   icon: SidebarIconName;
-  children: Array<{ id: string; label: string; icon?: SidebarIconName }>;
+  children: Array<{ id: string; label: string; icon?: SidebarIconName; roles?: string[] }>;
 };
 
 export type NavItem = NavGroup | NavLink | NavExpandable;
@@ -101,14 +101,14 @@ export const dashboardNavigation: NavItem[] = [
       },
       {
         id: "allocation-extension",
-        label: "Allocation Extension",
-        roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+        label: "Extend Project Allocation",
+        roles: ["ROLE_MANAGER", "ROLE_AM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarRange",
       },
       {
         id: "talent-pool",
         label: "Talent Pool",
-        roles: ["ROLE_HR", "ROLE_ADMIN"],
+        roles: ["ROLE_HR"],
         icon: "users",
       },
     ],
@@ -184,7 +184,7 @@ export const dashboardNavigation: NavItem[] = [
     children: [
       { id: "reports-workforce", label: "Workforce Overview" },
       { id: "reports-section-2", label: "Utilization vs Effort" },
-      { id: "reports-bench", label: "Bench" },
+      { id: "reports-bench", label: "Bench", roles: ["ROLE_HR"] },
       { id: "reports-section-3", label: "Attrition & Retention" },
       { id: "reports-section-4", label: "Skill & Capacity Report" },
       { id: "reports-section-6", label: "Compliance & Risk Support Report" },
@@ -243,7 +243,15 @@ export function filterVisibleNavigation(
     if (item.kind === "link" || item.kind === "expandable") {
       if (item.id === "employee" && !options.hasHrAccess) continue;
       if (item.roles.length === 0 ? false : !item.roles.some((r) => userRoles.includes(r))) continue;
-      result.push(item);
+      if (item.kind === "expandable") {
+        const children = item.children.filter(
+          (child) =>
+            !child.roles?.length || child.roles.some((role) => userRoles.includes(role))
+        );
+        result.push({ ...item, children });
+      } else {
+        result.push(item);
+      }
     }
   }
   return result;

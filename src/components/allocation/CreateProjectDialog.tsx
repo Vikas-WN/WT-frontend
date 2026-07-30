@@ -26,6 +26,7 @@ import {
   isValidAllocationPercentForDesignation,
 } from "@/utils/allocationPercent";
 import { parseEmployeeAllocationsResponse } from "@/utils/allocationList";
+import { isExternalClientId } from "@/utils/client";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { UI_COPY } from "@/constants/uiCopy";
 
@@ -203,8 +204,11 @@ export function CreateProjectDialog({
       showErrorToast("Project name is required.");
       return;
     }
-    const clientId = Number(form.client_id);
-    if (!Number.isFinite(clientId) || clientId <= 0) {
+    const clientIdRaw = form.client_id.trim();
+    const clientName = form.client_name.trim();
+    const numericClientId = Number(clientIdRaw);
+    const hasNumericClientId = /^\d+$/.test(clientIdRaw) && Number.isFinite(numericClientId) && numericClientId > 0;
+    if (!hasNumericClientId && !clientName) {
       showErrorToast("Client is required.");
       return;
     }
@@ -216,11 +220,16 @@ export function CreateProjectDialog({
       return;
     }
     const accountManagerEmail = normalizePickerEmail(form.account_manager_email);
+    const externalClientSelected = isExternalClientId(form.client_id);
     if (
       !isEditing &&
       (!accountManagerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountManagerEmail))
     ) {
-      showErrorToast("Select a client with a valid account manager.");
+      showErrorToast(
+        externalClientSelected
+          ? "Enter a valid account manager email for this client."
+          : "Select a client with a valid account manager."
+      );
       return;
     }
     const startDate = normalizeToApiDate(form.start_date);
@@ -273,7 +282,7 @@ export function CreateProjectDialog({
         await hrmsService.updateProject(code, {
           project_name: name,
           project_type: form.project_type,
-          client_id: clientId,
+          ...(hasNumericClientId ? { client_id: numericClientId } : { client_name: clientName }),
           start_date: startDate,
           end_date: endDate,
         });
@@ -318,7 +327,7 @@ export function CreateProjectDialog({
         project_code: projectCode,
         project_name: name,
         project_type: DEFAULT_CREATE_PROJECT_TYPE,
-        client_id: clientId,
+        ...(hasNumericClientId ? { client_id: numericClientId } : { client_name: clientName }),
         account_manager_email: accountManagerEmail,
         start_date: startDate,
         end_date: endDate,
@@ -426,9 +435,15 @@ export function CreateProjectDialog({
               <InputField
                 label="Account Manager"
                 value={form.account_manager_email}
-                onChange={() => {}}
-                disabled
-                placeholder="Filled from selected client"
+                onChange={(value) =>
+                  setForm((prev) => ({ ...prev, account_manager_email: value }))
+                }
+                disabled={!isExternalClientId(form.client_id)}
+                placeholder={
+                  isExternalClientId(form.client_id)
+                    ? "Enter account manager email"
+                    : "Filled from selected client"
+                }
               />
             ) : null}
             {isEditing ? (

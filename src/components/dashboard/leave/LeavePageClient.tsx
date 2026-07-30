@@ -125,11 +125,13 @@ import {
 } from "@/utils/leaveManagerDisplay";
 import {
   canHrShowTeamRequestActions,
+  canManagerActOnCompOffEarn,
   canManagerActOnRequest,
   canManagerRejectRequest,
   extractStatusUpdateData,
   formatApprovalStageLabel,
   formatStageRejectionReason,
+  isCompOffEarnRequestType,
   listScopedUserRequests,
   fetchPaginatedScopedUserRequests,
   mergeStatusUpdateIntoRow,
@@ -143,8 +145,9 @@ import {
   type UserRequestStatusValue,
 } from "@/utils/userRequest";
 import { formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
+import { useNonOptionalHolidayDates } from "@/hooks/leave/useNonOptionalHolidayDates";
 import { buildUserRequestBody } from "@/utils/leaveRequestPayload";
-import { activeAllocationsRequireClientApproval } from "@/utils/leaveAllocations";
+import { activeAllocationsRequireClientApproval, isTalentPoolLeaveRouting } from "@/utils/leaveAllocations";
 import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSummary";
 import { HrLeaveBalancesPanel } from "@/components/dashboard/leave/HrLeaveBalancesPanel";
 import { CONTENT_CARD_CLASS, FILTER_BAR_CLASS } from "@/components/dashboard/ui/uiLayout";
@@ -243,6 +246,7 @@ export function LeavePageClient() {
       .toLowerCase()
       .includes("manager");
   const { user, refresh: refreshSession } = useAuth();
+  const holidayDates = useNonOptionalHolidayDates();
   const userEmail = useMemo(() => String(user?.email ?? "").trim(), [user?.email]);
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -745,6 +749,13 @@ export function LeavePageClient() {
     [myAllocationRowsForLeave]
   );
 
+  const routesLeaveWfhToHr = useMemo(
+    () =>
+      !profileAssignedProjectsLoading &&
+      isTalentPoolLeaveRouting(myAllocationRowsForLeave),
+    [myAllocationRowsForLeave, profileAssignedProjectsLoading]
+  );
+
   useEffect(() => {
     if (leaveSubTab === "wfh") {
       setLeaveRequestForm((prev) =>
@@ -985,11 +996,12 @@ export function LeavePageClient() {
       const wantsManagerInbox =
         normalizedType === "ALL" ||
         normalizedType === "LEAVE" ||
-        normalizedType === "WFH";
+        normalizedType === "WFH" ||
+        normalizedType === "COMP_OFF";
       const managerInboxTypes =
         normalizedType === "ALL"
-          ? (["LEAVE", "WFH"] as const)
-          : normalizedType === "LEAVE" || normalizedType === "WFH"
+          ? (["LEAVE", "WFH", "COMP_OFF"] as const)
+          : normalizedType === "LEAVE" || normalizedType === "WFH" || normalizedType === "COMP_OFF"
             ? ([normalizedType] as const)
             : ([] as const);
       const canLoadManagerInbox =
@@ -1097,6 +1109,45 @@ export function LeavePageClient() {
         );
         totalElements = rows.length;
         totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
+      }
+
+      // Comp-off earn is not on /userRequest — merge from /comp-off/earn when viewing All types.
+      if (normalizedType === "ALL" && (hasManagerAccess || hasHrAccess || hasDmAccess || hasPrimaryLeaveInbox)) {
+        try {
+          const managerOnly =
+            !hasHrAccess && (hasManagerAccess || hasDmAccess || hasPrimaryLeaveInbox);
+          const earnRes = await compOffService.listEarnRequests({
+            fromDate: from,
+            toDate: to,
+            page: 0,
+            size: Math.max(size, 200),
+            managerOnly,
+          });
+          const earnRows = compOffService.parseRequestRows(earnRes).map(mapEarnListRow);
+          if (earnRows.length) {
+            const merged = [...rows, ...earnRows];
+            rows = Array.from(
+              new Map(
+                merged.map((row) => {
+                  const key = String(
+                    row.user_request_id ??
+                      row.userRequestId ??
+                      row.request_id ??
+                      row.requestId ??
+                      row.id ??
+                      Math.random()
+                  );
+                  return [key, row] as const;
+                })
+              ).values()
+            );
+            rows = applyListSort(rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
+            totalElements = rows.length;
+            totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
+          }
+        } catch {
+          /* keep leave/WFH rows */
+        }
       }
     } else if (hasHrAccess) {
       // Load a full window for client-side pagination (same as team merge path).
@@ -1273,8 +1324,34 @@ export function LeavePageClient() {
   async function updateEmployeeRequestStatus(
     requestId: string,
     status: UserRequestStatusValue,
-    options?: { reason?: string; requireReasonOnReject?: boolean }
+    options?: { reason?: string; requireReasonOnReject?: boolean; requestType?: unknown }
   ) {
+    const isEarn = isCompOffEarnRequestType(options?.requestType);
+    if (isEarn) {
+      await compOffService.updateEarnRequestStatus(
+        Number(requestId),
+        status === "REJECTED" ? "REJECTED" : "APPROVED",
+        options?.reason
+      );
+      const reason = options?.reason?.trim();
+      applyLocalTeamRequestStatus(requestId, status, reason);
+      setEmployeeRequests((prev) =>
+        prev.map((row) => {
+          const rowId = String(
+            row.user_request_id ??
+              row.userRequestId ??
+              row.request_id ??
+              row.requestId ??
+              row.id ??
+              ""
+          ).trim();
+          if (rowId !== requestId) return row;
+          return patchLeaveTeamRequestStatus(row, status, { reason, actorEmail: userEmail });
+        })
+      );
+      return;
+    }
+
     const res = await updateUserRequestStatus(Number(requestId), status, options);
     const updated = extractStatusUpdateData(res);
     const reason = options?.reason?.trim();
@@ -1322,6 +1399,7 @@ export function LeavePageClient() {
       await updateEmployeeRequestStatus(requestId, "REJECTED", {
         reason,
         requireReasonOnReject: true,
+        requestType: pendingReject.requestType,
       });
       closeRejectDialog();
       const scope = leaveSubTab === "org" ? "org" : "team";
@@ -1629,17 +1707,24 @@ export function LeavePageClient() {
                                       ) : null}
                                     </div>
                                     <div className="rounded-xl bg-muted/40 p-5 space-y-5 shadow-sm border border-border/40">
-                                      <LeaveManagerSelector
-                                        label="Select Managers"
-                                        required
-                                        selectedEmails={selectedWfhManagerEmails}
-                                        onChange={setSelectedWfhManagerEmails}
-                                        disabled={actionLoading}
-                                      />
+                                      {routesLeaveWfhToHr ? (
+                                        <p className="rounded-lg border border-wt-border/70 bg-wt-surface-2/40 px-3 py-2 text-xs leading-relaxed text-wt-text-muted">
+                                          You are in the talent pool (bench or no client allocation). This WFH
+                                          request will go directly to HR for approval.
+                                        </p>
+                                      ) : (
+                                        <LeaveManagerSelector
+                                          label="Select Managers"
+                                          required
+                                          selectedEmails={selectedWfhManagerEmails}
+                                          onChange={setSelectedWfhManagerEmails}
+                                          disabled={actionLoading || profileAssignedProjectsLoading}
+                                        />
+                                      )}
                                       <TextAreaField label="Comments" required value={leaveRequestForm.comments} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, comments: v }))} />
                                       <div className="flex justify-end pt-4 border-t border-border/40 mt-6">
                                         <div className="flex items-center gap-3">
-                                          <Button variant="brand" type="button" className="px-6 h-10 font-medium" onClick={() =>
+                                          <Button variant="brand" type="button" className="px-6 h-10 font-medium" disabled={actionLoading || profileAssignedProjectsLoading} onClick={() =>
                                               runAction(
                                                 userRequestActionLabel("WFH", editingLeaveRequestId ? "update" : "submit"),
                                                 async () => {
@@ -1671,7 +1756,7 @@ export function LeavePageClient() {
                                                 if (needsClientApproval && !leaveRequestForm.client_approval) {
                                                   throw new Error("Client approval is required for client users.");
                                                 }
-                                                if (!selectedWfhManagerEmails.length) {
+                                                if (!routesLeaveWfhToHr && !selectedWfhManagerEmails.length) {
                                                   throw new Error("Select at least one manager to notify.");
                                                 }
                                                 const payload = buildUserRequestBody(
@@ -1684,11 +1769,16 @@ export function LeavePageClient() {
                                                     client_approval: needsClientApproval
                                                       ? leaveRequestForm.client_approval
                                                       : undefined,
-                                                    selected_manager_emails: selectedWfhManagerEmails,
+                                                    selected_manager_emails: routesLeaveWfhToHr
+                                                      ? []
+                                                      : selectedWfhManagerEmails,
                                                   },
-                                                  editingLeaveRequestId
-                                                    ? { userRequestId: Number(editingLeaveRequestId) }
-                                                    : undefined
+                                                  {
+                                                    ...(editingLeaveRequestId
+                                                      ? { userRequestId: Number(editingLeaveRequestId) }
+                                                      : {}),
+                                                    routesToHr: routesLeaveWfhToHr,
+                                                  }
                                                 );
                                                 if (editingLeaveRequestId) {
                                                   await apiClient.put(endpoints.userRequest.root, {
@@ -1713,7 +1803,6 @@ export function LeavePageClient() {
                                                 invalidateLeaveBalance();
                                               })
                                             }
-                                            disabled={actionLoading}
                                           >
                                             {editingLeaveRequestId ? "Save Changes" : "Submit Request"}
                                           </Button>
@@ -1810,7 +1899,8 @@ export function LeavePageClient() {
                                     onAdditionalEmailsChange={setSelectedAdditionalRecipientEmails}
                                     editingLeaveRequestId={editingLeaveRequestId}
                                     requiresClientApproval={requiresClientApproval}
-                                    actionLoading={actionLoading}
+                                    routesToHr={routesLeaveWfhToHr}
+                                    actionLoading={actionLoading || profileAssignedProjectsLoading}
                                     leaveRequestTypeOptions={leaveRequestTypeOptions}
                                     onViewCompOffCredits={() => setCompOffCreditsOpen(true)}
                                     onSubmit={() =>
@@ -1854,6 +1944,7 @@ export function LeavePageClient() {
                                           throw new Error("Client approval is required for client users.");
                                         }
                                         if (
+                                          !routesLeaveWfhToHr &&
                                           (normalizeUserRequestType(requestType) === "LEAVE" ||
                                            normalizeUserRequestType(requestType) === "OPTIONAL") &&
                                           !selectedLeaveManagerEmails.length
@@ -1861,6 +1952,7 @@ export function LeavePageClient() {
                                           throw new Error("Select at least one primary manager.");
                                         }
                                         if (
+                                          !routesLeaveWfhToHr &&
                                           (normalizeUserRequestType(requestType) === "LEAVE" ||
                                            normalizeUserRequestType(requestType) === "OPTIONAL") &&
                                           !selectedAdditionalRecipientEmails.length
@@ -1923,18 +2015,22 @@ export function LeavePageClient() {
                                               ? leaveRequestForm.client_approval
                                               : undefined,
                                             selected_manager_emails:
-                                              isLeaveOrOptional
+                                              isLeaveOrOptional && !routesLeaveWfhToHr
                                                 ? selectedLeaveManagerEmails
                                                 : undefined,
                                             secondary_manager_emails:
                                               isLeaveOrOptional &&
+                                              !routesLeaveWfhToHr &&
                                               selectedAdditionalRecipientEmails.length
                                                 ? selectedAdditionalRecipientEmails
                                                 : undefined,
                                           },
-                                          editingLeaveRequestId
-                                            ? { userRequestId: Number(editingLeaveRequestId) }
-                                            : undefined
+                                          {
+                                            ...(editingLeaveRequestId
+                                              ? { userRequestId: Number(editingLeaveRequestId) }
+                                              : {}),
+                                            routesToHr: routesLeaveWfhToHr,
+                                          }
                                         );
                                         if (editingLeaveRequestId) {
                                           await apiClient.put(endpoints.userRequest.root, {
@@ -2196,9 +2292,12 @@ export function LeavePageClient() {
                                       ) ?? ""
                                     ).trim();
                                     const rowRecord = row as Record<string, unknown>;
+                                    const rowRequestType = rowRecord.request_type ?? rowRecord.requestType;
+                                    const isEarnRequest = isCompOffEarnRequestType(rowRequestType);
                                     const hrCanActOnRow =
                                       leaveSubTab !== "org" &&
                                       status === "PENDING" &&
+                                      !isEarnRequest &&
                                       canHrShowTeamRequestActions(rowRecord, {
                                         hasHrAccess,
                                       });
@@ -2215,8 +2314,15 @@ export function LeavePageClient() {
                                       rowRecord,
                                       userEmail
                                     );
+                                    const earnManagerAct =
+                                      !hrCanActOnRow &&
+                                      canManagerActOnCompOffEarn(rowRecord, {
+                                        hasManagerAccess: hasManagerAccess || hasDmAccess,
+                                        actorEmail: userEmail,
+                                      });
                                     const legacyManagerAct =
                                       !hrCanActOnRow &&
+                                      !isEarnRequest &&
                                       status === "PENDING" &&
                                       canManagerActOnRequest(rowRecord, {
                                         hasManagerAccess: hasManagerAccess || hasDmAccess,
@@ -2228,13 +2334,15 @@ export function LeavePageClient() {
                                     const showManagerApprove =
                                       !hrCanActOnRow &&
                                       status === "PENDING" &&
-                                      (assignedPrimaryAct ||
+                                      (earnManagerAct ||
+                                        assignedPrimaryAct ||
                                         assignedSecondaryApprove ||
                                         legacyManagerAct);
                                     const showManagerReject =
                                       !hrCanActOnRow &&
                                       status === "PENDING" &&
-                                      (assignedPrimaryAct ||
+                                      (earnManagerAct ||
+                                        assignedPrimaryAct ||
                                         assignedSecondaryReject ||
                                         (legacyManagerAct &&
                                           canManagerRejectRequest(rowRecord, {
@@ -2266,10 +2374,17 @@ export function LeavePageClient() {
                                       row.is_half_day ?? row.isHalfDay ?? false
                                     );
                                     const duration = fromDate && toDate ? `${fromDate} – ${toDate}` : "—";
-                                    const durationDays = formatLeaveDaysCount(fromDate, toDate, isHalfDay);
+                                    const durationDays = isEarnRequest
+                                      ? "1"
+                                      : formatLeaveDaysCount(
+                                          fromDate,
+                                          toDate,
+                                          isHalfDay,
+                                          holidayDates
+                                        );
                                     const comments = String(row.comments ?? "").trim();
                                     const requestTypeLabel = formatUserRequestTypeLabel(
-                                      row.request_type ?? row.requestType,
+                                      rowRequestType,
                                       isHalfDay
                                     );
                                     const hasDetails = managerReason || comments || requestTypeLabel;
@@ -2371,7 +2486,10 @@ export function LeavePageClient() {
                                                           await updateEmployeeRequestStatus(
                                                             requestId,
                                                             "APPROVED",
-                                                            { requireReasonOnReject: false }
+                                                            {
+                                                              requireReasonOnReject: false,
+                                                              requestType: rowRequestType,
+                                                            }
                                                           );
                                                           // Actions column is team-only (hidden on org / All Employee Requests).
                                                           invalidateTeamCache();
@@ -2424,6 +2542,7 @@ export function LeavePageClient() {
                                                               "APPROVED",
                                                               {
                                                                 requireReasonOnReject: false,
+                                                                requestType: rowRequestType,
                                                               }
                                                             );
                                                             invalidateTeamCache();
@@ -2451,7 +2570,7 @@ export function LeavePageClient() {
                                                       onClick={() =>
                                                         openRejectDialog(
                                                           requestId,
-                                                          row.request_type ?? row.requestType
+                                                          rowRequestType
                                                         )
                                                       }
                                                     >

@@ -29,7 +29,7 @@ import {
 export function TalentPoolPageClient() {
   const { user, status: authStatus } = useAuth();
   const roles = user?.roles ?? [];
-  const canView = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
+  const canView = roles.includes("ROLE_HR");
   const queriesEnabled = authStatus === "authenticated" && canView;
 
   const {
@@ -48,7 +48,7 @@ export function TalentPoolPageClient() {
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
           <h3 className="text-lg font-semibold">Access Restricted</h3>
           <p className="mt-2 text-sm text-wt-text-muted">
-            Talent pool is available to HR and admin only.
+            Talent pool is available to HR only.
           </p>
           <Link
             href={DASHBOARD_ROUTES.profile}

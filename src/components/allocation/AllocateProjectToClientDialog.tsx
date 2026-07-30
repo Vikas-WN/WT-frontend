@@ -46,7 +46,7 @@ export function AllocateProjectToClientDialog({
       })
       .map((row) => ({
         value: String(row.id),
-        label: `${row.name} (${row.code})`,
+        label: row.name,
       }));
   }, [pickerRows, client]);
 

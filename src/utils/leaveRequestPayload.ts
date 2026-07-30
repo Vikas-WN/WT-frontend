@@ -18,7 +18,11 @@ export type LeaveRequestFormPayload = {
 
 export function buildUserRequestBody(
   form: LeaveRequestFormPayload,
-  options?: { userRequestId?: number }
+  options?: {
+    userRequestId?: number;
+    /** Talent pool / bench: leave & WFH route to HR — secondary managers not collected in UI. */
+    routesToHr?: boolean;
+  }
 ): Record<string, unknown> {
   const requestType = String(form.request_type ?? "LEAVE").trim().toUpperCase();
   const fromDate = form.request_from_date.trim();
@@ -65,11 +69,13 @@ export function buildUserRequestBody(
     const primarySet = new Set(
       (managerEmails ?? []).map((email) => email.trim().toLowerCase())
     );
+    // Allow primary===secondary when talent-pool routes both to all HRs.
+    const allowOverlap = Boolean(options?.routesToHr);
     const normalizedSecondaryManagers = [
       ...new Set(
         secondaryManagerEmails
           .map((email) => email.trim().toLowerCase())
-          .filter((email) => email && !primarySet.has(email))
+          .filter((email) => email && (allowOverlap || !primarySet.has(email)))
       ),
     ];
     if (!normalizedSecondaryManagers.length) {
@@ -80,8 +86,8 @@ export function buildUserRequestBody(
     body.secondary_managers = normalizedSecondaryManagers;
     body.secondaryManagers = normalizedSecondaryManagers;
   } else if (
-    requestType === "LEAVE" ||
-    requestType === "OPTIONAL"
+    (requestType === "LEAVE" || requestType === "OPTIONAL") &&
+    !options?.routesToHr
   ) {
     throw new Error("secondaryManagerEmails is required");
   }

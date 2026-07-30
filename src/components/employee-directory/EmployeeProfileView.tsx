@@ -5,6 +5,7 @@ import { EmployeeProfileHeaderCard } from "@/components/employee-directory/Emplo
 import { ProfileSectionsView } from "@/components/employee-directory/ProfileSectionsView";
 import { EmployeeTrainingMarksCard } from "@/components/learning-development/EmployeeTrainingMarksCard";
 import { EmployeeLeaveBalancesCard } from "@/components/employee-directory/EmployeeLeaveBalancesCard";
+import { ProfileAssignedProjectsSection } from "@/components/dashboard/profile/ProfileAssignedProjectsSection";
 
 type EmployeeProfileViewProps = {
   profile: Record<string, unknown>;
@@ -19,6 +20,9 @@ type EmployeeProfileViewProps = {
   resumeShareHref?: string | null;
   queriesEnabled: boolean;
   headerAction?: ReactNode;
+  allocationRows?: Array<Record<string, unknown>>;
+  allocationsLoading?: boolean;
+  currentAllocationSummary?: string | null;
 };
 
 export function EmployeeProfileView({
@@ -34,6 +38,9 @@ export function EmployeeProfileView({
   resumeShareHref,
   queriesEnabled,
   headerAction,
+  allocationRows = [],
+  allocationsLoading = false,
+  currentAllocationSummary,
 }: EmployeeProfileViewProps) {
   return (
     <div className="w-full space-y-4">
@@ -49,7 +56,16 @@ export function EmployeeProfileView({
         headerAction={headerAction}
       />
 
-      <ProfileSectionsView profile={profile} resumeShareHref={resumeShareHref} />
+      <ProfileSectionsView
+        profile={profile}
+        resumeShareHref={resumeShareHref}
+        currentAllocationSummary={currentAllocationSummary}
+      />
+
+      <ProfileAssignedProjectsSection
+        rows={allocationRows}
+        loading={allocationsLoading}
+      />
 
       <EmployeeTrainingMarksCard
         variant="hr"

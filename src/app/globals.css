@@ -1194,7 +1194,7 @@ select.input-field {
   color: #fbbf24;
 }
 
-/* Black loader (fetch / submit / refresh) */
+/* Black loader (fetch / submit / refresh) — single-element rotate, cheap to paint */
 .wt-loader {
   display: inline-block;
   flex-shrink: 0;
@@ -1226,6 +1226,17 @@ select.input-field {
   border-top-color: #f8fafc;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .wt-loader,
+  .spinner,
+  .spinner-dark,
+  .spinner-dark-sm {
+    animation: none;
+    border-top-color: inherit;
+    opacity: 0.7;
+  }
+}
+
 .wt-loading-overlay {
   position: fixed;
   inset: 0;
@@ -1233,8 +1244,7 @@ select.input-field {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(1px);
+  background: rgba(255, 255, 255, 0.55);
   pointer-events: all;
 }
 

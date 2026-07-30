@@ -5,7 +5,8 @@ export function formatEmployeePickerLabel(employee: {
 }): string {
   const name = employee.employeeName.trim() || employee.employeeEmail;
   const email = employee.employeeEmail.trim();
-  const empId = employee.empId?.trim();
-  if (empId) return `${empId} — ${name} (${email})`;
-  return `${name} (${email})`;
+  // Employee IDs must never appear in dropdown labels.
+  void employee.empId;
+  if (email && name !== email) return `${name} (${email})`;
+  return name || email || "—";
 }

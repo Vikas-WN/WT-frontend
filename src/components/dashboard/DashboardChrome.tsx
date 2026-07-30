@@ -9,12 +9,14 @@ import { useAuth } from "@/context/AuthContext";
 import { hrmsService, type NotificationItem } from "@/services/hrms.service";
 import {
   formatNotificationTimestamp,
+  humanizeNotificationProjectRefs,
   notificationIsRead,
   notificationMessage,
   notificationRowId,
   notificationTitle,
   parseNotificationItems,
 } from "@/utils/notifications";
+import { toPagedRows } from "@/utils/apiRows";
 import {
   notificationCategoryLabel,
   resolveNotificationHref,
@@ -179,6 +181,9 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
+  const [projectNameByCode, setProjectNameByCode] = useState<Map<string, string>>(
+    () => new Map()
+  );
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">(readStoredTheme);
@@ -250,9 +255,25 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     setNotificationsLoading(true);
     setNotificationsError(null);
     try {
-      const res = await hrmsService.getNotifications({ page: "0", size: "20" });
+      const [res, projectsRes] = await Promise.all([
+        hrmsService.getNotifications({ page: "0", size: "20" }),
+        hrmsService.getAllProjects({ page: "0", size: "500" }).catch(() => null),
+      ]);
       const items = parseNotificationItems(res.data ?? res);
       setNotifications(items);
+
+      if (projectsRes) {
+        const next = new Map<string, string>();
+        for (const row of toPagedRows(projectsRes.data ?? projectsRes)) {
+          const code = String(row.project_code ?? row.projectCode ?? "")
+            .trim()
+            .toUpperCase();
+          const name = String(row.project_name ?? row.projectName ?? "").trim();
+          if (code && name) next.set(code, name);
+        }
+        if (next.size) setProjectNameByCode(next);
+      }
+
       if (
         items.some(
           (row) =>
@@ -502,7 +523,10 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                       const id = notificationRowId(row);
                       const isRead = notificationIsRead(row);
                       const title = notificationTitle(row);
-                      const message = notificationMessage(row);
+                      const message = humanizeNotificationProjectRefs(
+                        notificationMessage(row),
+                        projectNameByCode
+                      );
                       const createdAt = formatNotificationTimestamp(row.created_at);
                       const categoryLabel = notificationCategoryLabel(row);
                       const roleLabel =

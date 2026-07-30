@@ -16,15 +16,14 @@ import { ApiError } from "@/api/error";
 import { hrmsService, type AllocationExtensionRequestRow, type AllocationExtensionRequestStatus } from "@/services/hrms.service";
 import { useAuth } from "@/context/AuthContext";
 import { ApiDateField, SelectField } from "@/components/dashboard/ui/forms";
+import { SkillsMultiSelectField } from "@/components/dashboard/ui/SkillsMultiSelectField";
 import { Button } from "@/components/ui/button";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
-import {
-  HrLeaveStatusToggle,
-  type HrToggleStatus,
-} from "@/components/dashboard/leave/HrLeaveStatusToggle";
-import { formatApiDateDisplay } from "@/utils/apiDate";
+import { formatApiDateDisplay, inputValueToApiDate } from "@/utils/apiDate";
 import { RequestStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { WtLoader } from "@/components/dashboard/ui/WtLoader";
 import {
   buildAllocationExtensionContextQuery,
   buildCreateAllocationExtensionBody,
@@ -41,7 +40,6 @@ import {
 import { parseEmployeeAllocationsResponse } from "@/utils/allocationList";
 import { createEmptyAllocationExtensionForm } from "@/utils/allocationFormState";
 
-
 function normalizeHrStatusFilter(value: string): AllocationExtensionRequestStatus | "" {
   const v = value.trim().toUpperCase();
   if (v === "ALL" || v === "") return "";
@@ -53,20 +51,15 @@ function asDateDisplayValue(value: string) {
   return formatApiDateDisplay(String(value ?? ""));
 }
 
-function toHrToggleStatus(status: string): HrToggleStatus {
-  const v = status.trim().toUpperCase();
-  if (v === "APPROVED" || v === "REJECTED") return v;
-  return "PENDING";
-}
-
 export function AllocationExtensionPanel() {
   const { user } = useAuth();
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasManagerRole = userRoles.includes("ROLE_MANAGER");
-  const canCreateRequest = hasManagerRole;
+  const hasAmRole = userRoles.includes("ROLE_AM");
+  const canCreateRequest = hasManagerRole || hasAmRole || hasHrAccess;
 
-  // Manager create form
+  // Create form (Manager / AM / HR)
   const [createForm, setCreateForm] = useState(createEmptyAllocationExtensionForm);
   const [creating, setCreating] = useState(false);
   const [managerProjectsData, setManagerProjectsData] = useState<ManagerExtensionProject[]>([]);
@@ -87,11 +80,14 @@ export function AllocationExtensionPanel() {
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(false);
   const [updatingRequestId, setUpdatingRequestId] = useState<number | null>(null);
+  const [updatingDecision, setUpdatingDecision] = useState<"APPROVED" | "REJECTED" | null>(null);
 
   const visibleMode = useMemo<"hr" | "manager">(() => {
     if (hasHrAccess) return "hr";
     return "manager";
   }, [hasHrAccess]);
+
+  const primarySelectedEmail = createForm.userEmails[0] ?? "";
 
   const managerProjects = useMemo(
     () =>
@@ -216,8 +212,9 @@ export function AllocationExtensionPanel() {
   );
 
   const loadAllocationContext = useCallback(async () => {
+    // Preview context for the first selected employee (multi-select shares one end date).
     const query = buildAllocationExtensionContextQuery({
-      userEmail: createForm.userEmail,
+      userEmail: primarySelectedEmail,
       projectValue: createForm.projectCode,
     });
     if (!query) {
@@ -231,7 +228,7 @@ export function AllocationExtensionPanel() {
     } finally {
       setLoadingContext(false);
     }
-  }, [createForm.userEmail, createForm.projectCode, resolveExtensionContext]);
+  }, [primarySelectedEmail, createForm.projectCode, resolveExtensionContext]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -280,7 +277,7 @@ export function AllocationExtensionPanel() {
   }, [loadAllocationContext]);
 
   async function submitCreate() {
-    const userEmail = createForm.userEmail.trim();
+    const userEmails = createForm.userEmails.map((email) => email.trim().toLowerCase()).filter(Boolean);
     const projectCode = resolveExtensionProjectCodeForSubmit(
       createForm.projectCode,
       allocationContext
@@ -288,63 +285,97 @@ export function AllocationExtensionPanel() {
     const requestedEndDate = createForm.requestedEndDate.trim();
     const reason = createForm.reason.trim();
 
-    if (!userEmail || !projectCode || !requestedEndDate) {
-      showErrorToast("Employee, project, and requested end date are required.");
+    if (!userEmails.length || !projectCode || !requestedEndDate) {
+      showErrorToast("Select at least one employee, a project, and a requested end date.");
       return;
     }
 
-    if (allocationContext && !allocationContext.extension_allowed) {
-      showErrorToast("Extension is not allowed for this allocation (no current end date).");
+    const bodyPreview = buildCreateAllocationExtensionBody({
+      userEmail: userEmails[0]!,
+      projectCode,
+      requestedEndDate,
+      reason: reason || undefined,
+    });
+    if (!bodyPreview.requestedEndDate) {
+      showErrorToast("Enter a valid requested end date (dd/mm/yyyy).");
       return;
     }
 
     const minimumRequested = allocationContext?.minimum_requested_end_date?.trim();
-    if (minimumRequested && requestedEndDate < minimumRequested) {
+    const requestedIso =
+      inputValueToApiDate(requestedEndDate) ||
+      bodyPreview.requestedEndDate ||
+      requestedEndDate;
+    if (minimumRequested && requestedIso < minimumRequested) {
       showErrorToast(
-        `Requested end date must be on or after ${minimumRequested} (minimum extension period).`
+        `Requested end date must be on or after ${asDateDisplayValue(minimumRequested)} (minimum extension period).`
       );
       return;
     }
 
     setCreating(true);
     try {
-      const body = buildCreateAllocationExtensionBody({
-        userEmail,
-        projectCode,
-        requestedEndDate,
-        reason: reason || undefined,
-      });
-      if (!body.requestedEndDate) {
-        showErrorToast("Enter a valid requested end date (dd/mm/yyyy).");
-        setCreating(false);
-        return;
+      const createdIds: number[] = [];
+      const failures: string[] = [];
+      for (const userEmail of userEmails) {
+        try {
+          const body = buildCreateAllocationExtensionBody({
+            userEmail,
+            projectCode,
+            requestedEndDate,
+            reason: reason || undefined,
+          });
+          if (!body.requestedEndDate) {
+            failures.push(`${userEmail}: invalid end date`);
+            continue;
+          }
+          const res = await hrmsService.createAllocationExtensionRequest(body);
+          if (typeof res.data === "number") createdIds.push(res.data);
+        } catch (e) {
+          const msg = e instanceof ApiError ? e.message : "Failed";
+          failures.push(`${userEmail}: ${msg}`);
+        }
       }
-      const res = await hrmsService.createAllocationExtensionRequest(body);
-      showSuccessToast(`Extension request created (ID: ${res.data}).`);
-      setCreateForm(createEmptyAllocationExtensionForm());
-      setAllocationContext(null);
-      setPage(0);
-      void load();
-    } catch (e) {
-      const msg = e instanceof ApiError ? e.message : "Failed to create extension request.";
-      showErrorToast(msg);
+
+      if (createdIds.length) {
+        showSuccessToast(
+          createdIds.length === 1
+            ? `Extension request created (ID: ${createdIds[0]}).`
+            : `${createdIds.length} extension requests created.`
+        );
+      }
+      if (failures.length) {
+        showErrorToast(
+          failures.length === 1
+            ? failures[0]!
+            : `${failures.length} of ${userEmails.length} requests failed. ${failures[0]}`
+        );
+      }
+      if (createdIds.length) {
+        setCreateForm(createEmptyAllocationExtensionForm());
+        setAllocationContext(null);
+        setPage(0);
+        void load();
+      }
     } finally {
       setCreating(false);
     }
   }
 
   async function updateStatus(requestId: number, next: "APPROVED" | "REJECTED") {
-    setUpdatingRequestId(requestId);
-    try {
-      let message: string | undefined;
-      if (next === "REJECTED") {
-        const entered = window.prompt("Enter rejection reason (required):", "") ?? "";
-        message = entered.trim();
-        if (!message) {
-          showErrorToast("Rejection reason is required.");
-          return;
-        }
+    let message: string | undefined;
+    if (next === "REJECTED") {
+      const entered = window.prompt("Enter rejection reason (required):", "") ?? "";
+      message = entered.trim();
+      if (!message) {
+        showErrorToast("Rejection reason is required.");
+        return;
       }
+    }
+
+    setUpdatingRequestId(requestId);
+    setUpdatingDecision(next);
+    try {
       const res = await hrmsService.updateAllocationExtensionRequestStatus({
         requestId,
         status: next,
@@ -364,36 +395,31 @@ export function AllocationExtensionPanel() {
       showErrorToast(msg);
     } finally {
       setUpdatingRequestId(null);
+      setUpdatingDecision(null);
     }
-  }
-
-  function handleHrDecisionChange(
-    requestId: number,
-    current: HrToggleStatus,
-    next: HrToggleStatus
-  ) {
-    if (next === current || next === "PENDING") return;
-    void updateStatus(requestId, next);
   }
 
   const rangeStart = totalElements === 0 ? 0 : page * size + 1;
   const rangeEnd = Math.min(totalElements, (page + 1) * size);
 
-  if (!hasHrAccess && !hasManagerRole) {
+  if (!hasHrAccess && !hasManagerRole && !hasAmRole) {
     return (
-      <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-        <p className="text-sm text-wt-text-muted">You don’t have access to allocation extension requests.</p>
+      <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm">
+        <p className="text-sm text-wt-text-muted">You don’t have access to extend project allocation.</p>
       </section>
     );
   }
 
   return (
-    <div className="space-y-4">
-            {canCreateRequest ? (
-        <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-          <h3 className="font-semibold">Request Allocation End-Date Extension</h3>
-          <p className="mt-1 text-xs text-wt-text-muted">
-            Project Managers raise extension requests here. HR reviews and approves them below.
+    <div className="space-y-5">
+      {canCreateRequest ? (
+        <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm">
+          <h3 className="text-base font-semibold tracking-tight text-wt-text">
+            Extend Project Allocation
+          </h3>
+          <p className="mt-1 text-xs leading-relaxed text-wt-text-muted">
+            Select a project and one or more employees to request a new allocation end date.
+            {hasHrAccess ? " HR/Admin can approve requests in the list below." : " HR reviews and approves pending requests."}
           </p>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -409,13 +435,16 @@ export function AllocationExtensionPanel() {
                       (proj) => proj.code.toLowerCase() === value.toLowerCase()
                     );
                 setCreateForm((prev) => {
-                  const keepEmployee =
-                    Boolean(prev.userEmail) &&
-                    project?.employees.some((e) => e.email === prev.userEmail);
+                  const allowed = new Set(
+                    (project?.employees ?? []).map((e) => e.email.trim().toLowerCase())
+                  );
+                  const kept = prev.userEmails.filter((email) =>
+                    allowed.has(email.trim().toLowerCase())
+                  );
                   return {
                     ...prev,
                     projectCode,
-                    userEmail: keepEmployee ? prev.userEmail : "",
+                    userEmails: kept,
                   };
                 });
               }}
@@ -433,24 +462,24 @@ export function AllocationExtensionPanel() {
               }))}
             />
 
-            <SelectField
-              label="Employee name"
+            <SkillsMultiSelectField
+              label="Employees"
               required
-              value={createForm.userEmail}
-              onChange={(userEmail) => setCreateForm((p) => ({ ...p, userEmail }))}
+              value={createForm.userEmails}
+              onChange={(userEmails) => setCreateForm((p) => ({ ...p, userEmails }))}
               disabled={
                 loadingCreateOptions ||
                 !createForm.projectCode.trim() ||
                 !managerEmployeesForProject.length
               }
+              loading={loadingCreateOptions}
+              loadingLabel="Loading employees…"
               placeholder={
                 !createForm.projectCode.trim()
                   ? "Select project first"
-                  : loadingCreateOptions
-                    ? "Loading employees..."
-                    : managerEmployeesForProject.length
-                      ? "Select employee"
-                      : "No employees on this project"
+                  : managerEmployeesForProject.length
+                    ? "Select employees"
+                    : "No employees on this project"
               }
               options={managerEmployeesForProject.map((opt) => ({
                 value: opt.email,
@@ -459,20 +488,21 @@ export function AllocationExtensionPanel() {
             />
 
             <label className="text-sm">
-              <span className="block text-xs text-wt-text-muted mb-1">
+              <span className="mb-1 block text-xs text-wt-text-muted">
                 Current allocation end date
+                {createForm.userEmails.length > 1 ? " (first selected)" : ""}
               </span>
               <div
                 className="w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm text-wt-text"
                 aria-live="polite"
               >
-                {loadingContext && createForm.userEmail && createForm.projectCode
+                {loadingContext && primarySelectedEmail && createForm.projectCode
                   ? "Loading…"
                   : allocationContext?.current_end_date
                     ? asDateDisplayValue(allocationContext.current_end_date)
-                    : createForm.userEmail && createForm.projectCode
+                    : primarySelectedEmail && createForm.projectCode
                       ? "—"
-                      : "Select employee and project"}
+                      : "Select employees and project"}
               </div>
               {allocationContext && !allocationContext.extension_allowed ? (
                 <p className="mt-1 text-xs text-amber-700">
@@ -486,7 +516,7 @@ export function AllocationExtensionPanel() {
               required
               min={allocationContext?.minimum_requested_end_date ?? undefined}
               disabled={
-                !createForm.userEmail.trim() ||
+                !createForm.userEmails.length ||
                 !createForm.projectCode.trim() ||
                 (allocationContext != null && !allocationContext.extension_allowed)
               }
@@ -500,17 +530,18 @@ export function AllocationExtensionPanel() {
             />
 
             <label className="text-sm md:col-span-2">
-              <span className="block text-xs text-wt-text-muted mb-1">Reason (optional)</span>
+              <span className="mb-1 block text-xs text-wt-text-muted">Reason</span>
               <input
                 value={createForm.reason}
                 onChange={(e) => setCreateForm((p) => ({ ...p, reason: e.target.value }))}
                 className="w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:border-[var(--wt-brand)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)]"
                 placeholder="Needed for release closure"
+                required
               />
             </label>
           </div>
 
-          <div className="mt-4 flex items-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="brand"
@@ -518,12 +549,17 @@ export function AllocationExtensionPanel() {
               disabled={
                 creating ||
                 loadingContext ||
+                !createForm.userEmails.length ||
                 (allocationContext != null && !allocationContext.extension_allowed)
               }
               onClick={() => void submitCreate()}
               className="px-4 py-2 text-sm"
             >
-              {creating ? "Submitting…" : "Submit request"}
+              {creating
+                ? "Submitting…"
+                : createForm.userEmails.length > 1
+                  ? `Submit ${createForm.userEmails.length} requests`
+                  : "Submit request"}
             </Button>
             <Button
               type="button"
@@ -540,19 +576,19 @@ export function AllocationExtensionPanel() {
         </section>
       ) : null}
 
-      <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
+      <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm space-y-4">
         <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <h3 className="font-semibold">
+              <h3 className="text-base font-semibold tracking-tight text-wt-text">
                 {visibleMode === "hr"
-                  ? "Allocation Extension Requests"
-                  : "My Allocation Extension Requests"}
+                  ? "Extension Requests"
+                  : "My Extension Requests"}
               </h3>
               <p className="text-xs text-wt-text-muted">
                 {loading ? "Loading…" : `${totalElements} Total`}
                 {visibleMode === "hr" && !loading
-                  ? " · Approve Or Reject Pending Requests From Project Managers"
+                  ? " · Approve or reject pending extension requests"
                   : ""}
               </p>
             </div>
@@ -603,14 +639,18 @@ export function AllocationExtensionPanel() {
                   <TableHead>Reason</TableHead>
                   <TableHead>Status</TableHead>
                   {visibleMode === "hr" ? (
-                    <TableHead>Requested by</TableHead>
+                    <>
+                      <TableHead>Requested by</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </>
                   ) : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((r) => {
                   const status = String(r.status ?? "PENDING").toUpperCase();
-                  const hrStatus = toHrToggleStatus(status);
+                  const isPending = status === "PENDING";
+                  const isUpdating = updatingRequestId === r.id;
                   return (
                     <TableRow key={String(r.id)}>
                       <TableCell className="px-3 py-2 whitespace-nowrap">{r.employee_name || "—"}</TableCell>
@@ -627,21 +667,49 @@ export function AllocationExtensionPanel() {
                         </span>
                       </TableCell>
                       <TableCell className="px-3 py-2 whitespace-nowrap">
-                        {visibleMode === "hr" ? (
-                          <HrLeaveStatusToggle
-                            value={hrStatus}
-                            onChange={(next) =>
-                              handleHrDecisionChange(r.id, hrStatus, next)
-                            }
-                            loading={updatingRequestId === r.id}
-                            threeWay
-                          />
-                        ) : (
-                          <RequestStatusBadge status={status} />
-                        )}
+                        <RequestStatusBadge status={status} />
                       </TableCell>
                       {visibleMode === "hr" ? (
-                        <TableCell className="px-3 py-2 whitespace-nowrap">{r.requested_by_name || "—"}</TableCell>
+                        <>
+                          <TableCell className="px-3 py-2 whitespace-nowrap">
+                            {r.requested_by_name || "—"}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-right whitespace-nowrap">
+                            {isPending ? (
+                              isUpdating ? (
+                                <div className="inline-flex items-center justify-end gap-2 text-wt-text">
+                                  <WtLoader size="sm" label="Updating request" />
+                                  <span className="text-xs text-wt-text-muted">
+                                    {updatingDecision === "REJECTED" ? "Rejecting…" : "Approving…"}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="inline-flex items-center justify-end gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="xs"
+                                    className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
+                                    onClick={() => void updateStatus(r.id, "APPROVED")}
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="xs"
+                                    className="border-rose-600/30 text-rose-700 hover:bg-rose-500/10"
+                                    onClick={() => void updateStatus(r.id, "REJECTED")}
+                                  >
+                                    Reject
+                                  </Button>
+                                </div>
+                              )
+                            ) : (
+                              <span className="text-xs text-wt-text-muted">—</span>
+                            )}
+                          </TableCell>
+                        </>
                       ) : null}
                     </TableRow>
                   );
@@ -650,7 +718,11 @@ export function AllocationExtensionPanel() {
             </WtTable>
           </ScrollableTable>
         ) : (
-          <p className="text-sm text-wt-text-muted">{loading ? "Loading…" : "No extension requests found."}</p>
+          loading ? (
+            <SectionLoading label="Loading extension requests…" className="py-10" />
+          ) : (
+            <p className="text-sm text-wt-text-muted">No extension requests found.</p>
+          )
         )}
 
         <ListPagination

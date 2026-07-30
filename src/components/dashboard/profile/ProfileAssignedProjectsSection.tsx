@@ -10,7 +10,7 @@ import {
 } from "@/components/dashboard/ui/wtTable";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import { formatRoleDisplayValue } from "@/utils/roles";
-import { formatAllocatedHoursPercentLabel } from "@/utils/dashboard/validation";
+import { formatAllocatedPercentDisplay } from "@/utils/allocationPercent";
 import { RequestStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
@@ -49,15 +49,7 @@ function readProjectEndDate(row: Record<string, unknown>): string {
 }
 
 function readAllocationPercent(row: Record<string, unknown>): string {
-  const raw =
-    row.allocated_percent ??
-    row.allocatedPercent ??
-    row.allocation_percent ??
-    row.allocationPercent ??
-    row.allocated_hours ??
-    row.allocatedHours;
-  const label = formatAllocatedHoursPercentLabel(raw);
-  return label && label !== "—" ? label : "—";
+  return formatAllocatedPercentDisplay(row);
 }
 
 function readBillingOrStatus(row: Record<string, unknown>): string {
@@ -91,7 +83,7 @@ export function ProfileAssignedProjectsSection({
       ) : rows.length === 0 ? (
         <EmptyState
           title="No Projects Assigned"
-          description="Active project allocations will appear here once you are staffed on a client engagement."
+          description="Active project allocations will appear here once staffed on a client engagement."
           className="py-10"
         />
       ) : (

@@ -5,7 +5,8 @@ export type ClientProjectSummary = {
 };
 
 export type ClientRecord = {
-  id: number;
+  id: string | number;
+  externalId?: string | null;
   name: string;
   address: string | null;
   spocExternalName: string | null;

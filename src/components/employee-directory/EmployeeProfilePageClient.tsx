@@ -60,6 +60,8 @@ import { EmployeeProfileHeaderCard } from "@/components/employee-directory/Emplo
 import { EmployeeProfileView } from "@/components/employee-directory/EmployeeProfileView";
 import { EmployeePortalRoleSelect } from "@/components/employee-directory/EmployeePortalRoleSelect";
 import { IconPencil } from "@/components/employee-directory/employeeDirectoryIcons";
+import { buildProfileRowsFromEmployeeAllocations, formatCurrentAllocationSummary, selectProfileAllocationRows } from "@/utils/dashboard/projects";
+import { isSystemProjectAllocationRow } from "@/utils/allocationList";
 const WORK_MODES = ["WFO", "WFH", "HYBRID"];
 const WORK_LOCATIONS = ["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"];
 const USER_STATUSES = ["ACTIVE", "INACTIVE", "PENDING", "ONBOARDING"];
@@ -95,6 +97,8 @@ export function EmployeeProfilePageClient() {
   const [editForm, setEditForm] = useState<EmployeeProfileEditForm | null>(null);
   const [bandRows, setBandRows] = useState<Array<Record<string, unknown>>>([]);
   const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
+  const [allocationRows, setAllocationRows] = useState<Array<Record<string, unknown>>>([]);
+  const [allocationsLoading, setAllocationsLoading] = useState(false);
   const { data: onboardOptions, isLoading: onboardOptionsLoading } = useOnboardOptions(
     queriesEnabled && isEditing && canEditProfile
   );
@@ -196,6 +200,37 @@ export function EmployeeProfilePageClient() {
       cancelled = true;
     };
   }, [isEditing, canEditProfile]);
+
+  useEffect(() => {
+    if (!queriesEnabled || isLoading || !email.trim()) {
+      setAllocationRows([]);
+      return;
+    }
+    let cancelled = false;
+    setAllocationsLoading(true);
+    void (async () => {
+      try {
+        const res = await hrmsService.getEmployeeAllocations({
+          userEmail: email.trim(),
+          scope: "current_and_future",
+        });
+        if (cancelled) return;
+        const rows = selectProfileAllocationRows(
+          buildProfileRowsFromEmployeeAllocations(res.data ?? res).filter(
+            (row) => !isSystemProjectAllocationRow(row)
+          )
+        );
+        setAllocationRows(rows);
+      } catch {
+        if (!cancelled) setAllocationRows([]);
+      } finally {
+        if (!cancelled) setAllocationsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [queriesEnabled, isLoading, email, empId]);
 
   const bandSelectOptionsList = useMemo(() => {
     const dept = editForm?.department?.trim() ?? "";
@@ -652,6 +687,9 @@ export function EmployeeProfilePageClient() {
                 profileUserId={profileUserId}
                 resumeShareHref={resumeShareHref}
                 queriesEnabled={queriesEnabled}
+                allocationRows={allocationRows}
+                allocationsLoading={allocationsLoading}
+                currentAllocationSummary={formatCurrentAllocationSummary(allocationRows)}
                 headerAction={
                   canOpenProfileEditor ? (
                     <Button

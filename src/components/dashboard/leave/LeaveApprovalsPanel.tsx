@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
@@ -23,6 +24,7 @@ import {
   primaryManagerInboxQueryKey,
   usePrimaryManagerLeaveInbox,
 } from "@/hooks/leave/usePrimaryManagerLeaveInbox";
+import { useNonOptionalHolidayDates } from "@/hooks/leave/useNonOptionalHolidayDates";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import { formatUserRequestTypeLabel, userRequestActionLabel } from "@/utils/actionToast";
 import { formatLeaveDateRange, formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
@@ -81,6 +83,7 @@ export function LeaveApprovalsPanel({
 }) {
   const queryClient = useQueryClient();
   const inboxQ = usePrimaryManagerLeaveInbox(actorEmail, Boolean(actorEmail));
+  const holidayDates = useNonOptionalHolidayDates();
   const [search, setSearch] = useState("");
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
   const [pendingReject, setPendingReject] = useState<{
@@ -264,11 +267,23 @@ export function LeaveApprovalsPanel({
                         canSecondaryManagerRejectOnLeave(rowRecord, actorEmail);
                       const rejectionReason =
                         rowStatus === "REJECTED" ? requestRejectionReason(rowRecord) : null;
+                      const leaveReason = String(rowRecord.comments ?? "").trim();
 
                       return (
                         <TableRow key={`${requestId || "approval"}-${idx}`}>
                           <TableCell className="px-3 py-2.5 whitespace-nowrap">
-                            {employeeDisplayName(rowRecord)}
+                            <div className="inline-flex items-center gap-1.5">
+                              <span>{employeeDisplayName(rowRecord)}</span>
+                              {leaveReason ? (
+                                <span
+                                  title={leaveReason}
+                                  className="inline-flex cursor-help text-wt-text-muted"
+                                  aria-label={`Leave reason: ${leaveReason}`}
+                                >
+                                  <Info className="size-3.5 shrink-0" aria-hidden />
+                                </span>
+                              ) : null}
+                            </div>
                           </TableCell>
                           <TableCell className="px-3 py-2.5 whitespace-nowrap">
                             {formatLeaveDateRange(fromDate, toDate, isHalfDay)}
@@ -300,7 +315,7 @@ export function LeaveApprovalsPanel({
                             </div>
                           </TableCell>
                           <TableCell className="px-3 py-2.5 whitespace-nowrap tabular-nums">
-                            {formatLeaveDaysCount(fromDate, toDate, isHalfDay)}
+                            {formatLeaveDaysCount(fromDate, toDate, isHalfDay, holidayDates)}
                           </TableCell>
                           <TableCell className="px-3 py-2.5 text-right">
                             {canApprove || canReject ? (

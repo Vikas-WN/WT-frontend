@@ -1,4 +1,4 @@
-import { resolveAllocatedPercentFromRow } from "@/utils/allocationPercent";
+import { allocatedHoursToPercent, MAX_ALLOCATION_HOURS_PER_DAY, resolveAllocatedPercentFromRow } from "@/utils/allocationPercent";
 
 /** Letters, spaces, common punctuation; 2–120 chars */
 export function isValidPersonName(name: string): boolean {
@@ -148,16 +148,25 @@ export function designationAllowsFlexibleHours(designation: string): boolean {
 export const FLEXIBLE_ALLOCATION_HOUR_OPTIONS = ["1", "2", "3", "4", "5", "6", "7", "8"] as const;
 export const RESTRICTED_ALLOCATION_HOUR_OPTIONS = ["4", "8"] as const;
 
-/** Display allocation as percent (supports allocatedPercent or legacy 4/8 hours). */
+/** Display allocation as percent (supports allocatedPercent or legacy 1–8 hours/day). */
 export function formatAllocatedHoursPercentLabel(hoursRaw: unknown): string {
   const raw = String(hoursRaw ?? "").trim();
   if (!raw || raw === "—") return "—";
-  const pct = resolveAllocatedPercentFromRow({
-    allocatedPercent: hoursRaw,
-    allocated_percent: hoursRaw,
-    allocatedHours: hoursRaw,
-    allocated_hours: hoursRaw,
-  });
-  if (pct != null) return `${pct}%`;
+
+  // Prefer full-row resolution when a record is passed.
+  if (hoursRaw && typeof hoursRaw === "object" && !Array.isArray(hoursRaw)) {
+    const pct = resolveAllocatedPercentFromRow(hoursRaw as Record<string, unknown>);
+    if (pct != null) return `${pct}%`;
+  }
+
+  const cleaned = raw.replace(/%/g, "").trim();
+  const n = Number(String(cleaned).replace(/[^\d.-]/g, ""));
+  if (!Number.isFinite(n) || n <= 0) return raw;
+
+  // Ambiguous scalar: 1–8 are daily hours (4h → 50%); 9–100 are percent codes.
+  if (n <= MAX_ALLOCATION_HOURS_PER_DAY) {
+    return `${allocatedHoursToPercent(n)}%`;
+  }
+  if (n <= 100) return `${Math.round(n)}%`;
   return raw;
 }

@@ -407,11 +407,15 @@ export function TimelogPageClient() {
                             <tr key={entry.id} className="border-t border-wt-border hover:bg-wt-surface-2/50">
                               <td className="px-2 py-2 whitespace-nowrap tabular-nums">{entry.log_date}</td>
                               <td className="px-2 py-2 whitespace-nowrap">
-                                {entry.project_name?.trim() || entry.project_code}
+                                {entry.project_name?.trim() || "—"}
                               </td>
                               <td className="px-2 py-2 whitespace-nowrap">{taskLabel}</td>
                               <td className="px-2 py-2 whitespace-nowrap">{entry.sub_category || "—"}</td>
-                              <td className="px-2 py-2 max-w-[200px] truncate">{entry.description || "—"}</td>
+                              <td className="px-2 py-2 max-w-[240px]">
+                                <span className="line-clamp-3 whitespace-pre-wrap break-words" title={entry.description || undefined}>
+                                  {entry.description || "—"}
+                                </span>
+                              </td>
                               <td className="px-2 py-2 text-center tabular-nums">{entry.hours}h</td>
                               <td className="px-2 py-2 text-center">
                                 <span className={entryStatusClass(entry.status)}>

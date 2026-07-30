@@ -43,7 +43,12 @@ import {
   TableRowsSkeleton,
 } from "@/components/dashboard/ui/SectionSkeleton";
 import { shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
-import { buildProfileAssignedProjects } from "@/utils/dashboard/projects";
+import {
+  buildProfileAssignedProjects,
+  buildProfileRowsFromMyAllocationsDetail,
+  formatCurrentAllocationSummary,
+  selectProfileAllocationRows,
+} from "@/utils/dashboard/projects";
 import { OffboardedBanner } from "@/components/dashboard/shared/OffboardedBanner";
 import { OnboardingPendingBanner } from "@/components/dashboard/shared/OnboardingPendingBanner";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
@@ -102,22 +107,35 @@ export function ProfilePageLeanClient() {
     const load = async () => {
       setProfileAssignedProjectsLoading(true);
       try {
-        const [assignedRes, myAllocationsRes] = await Promise.allSettled([
+        const [detailRes, assignedRes, myAllocationsRes] = await Promise.allSettled([
+          hrmsService.getMyAllocationsDetail(),
           hrmsService.getAssignedProjects(),
           hrmsService.getMyAllocations(),
         ]);
-        if (assignedRes.status !== "fulfilled") {
-          setProfileAssignedProjects([]);
-          return;
+
+        if (detailRes.status === "fulfilled") {
+          const fromDetail = selectProfileAllocationRows(
+            buildProfileRowsFromMyAllocationsDetail(
+              detailRes.value.data ?? detailRes.value,
+            ),
+          );
+          if (fromDetail.length) {
+            setProfileAssignedProjects(fromDetail);
+            return;
+          }
         }
+
+        const assignedInput =
+          assignedRes.status === "fulfilled"
+            ? (assignedRes.value.data ?? assignedRes.value)
+            : [];
         const allocationInput =
           myAllocationsRes.status === "fulfilled"
             ? (myAllocationsRes.value.data ?? myAllocationsRes.value)
             : undefined;
         setProfileAssignedProjects(
-          buildProfileAssignedProjects(
-            assignedRes.value.data ?? assignedRes.value,
-            allocationInput,
+          selectProfileAllocationRows(
+            buildProfileAssignedProjects(assignedInput, allocationInput),
           ),
         );
       } finally {
@@ -256,7 +274,8 @@ export function ProfilePageLeanClient() {
           }
         />
         <InputField
-          label="Years of Experience"
+          label="Years of Experience (excluding internship)"
+          required
           value={selfProfileForm.yoe}
           onChange={(v) => setSelfProfileForm((p) => ({ ...p, yoe: v }))}
         />
@@ -371,9 +390,16 @@ export function ProfilePageLeanClient() {
                 );
               }
               const fd = new FormData();
-              const yoeValue = selfProfileForm.yoe
-                ? Number(selfProfileForm.yoe)
-                : null;
+              if (!String(selfProfileForm.yoe ?? "").trim()) {
+                throw new Error("Years of experience is required.");
+              }
+              const yoeValue = Number(selfProfileForm.yoe);
+              if (!Number.isFinite(yoeValue) || yoeValue < 0) {
+                throw new Error("Years of experience must be a valid number.");
+              }
+              if (!Number.isInteger(Number(selfProfileForm.yoe))) {
+                throw new Error("Years of experience must be a whole number.");
+              }
               const profilePayload: Record<string, unknown> = {
                 phone_number: formattedPhoneNumber,
                 primary_skills: primarySkills.length ? primarySkills : null,
@@ -386,7 +412,7 @@ export function ProfilePageLeanClient() {
                     ]
                   : [],
                 experience:
-                  yoeValue && yoeValue > 0 ? `${yoeValue} years` : null,
+                  yoeValue > 0 ? `${yoeValue} years` : null,
                 yoe: yoeValue,
               };
               if (selfProfileForm.date_of_birth.trim()) {
@@ -549,6 +575,9 @@ export function ProfilePageLeanClient() {
                           "resumeShareLink",
                         ) || null
                       }
+                      currentAllocationSummary={formatCurrentAllocationSummary(
+                        profileAssignedProjects,
+                      )}
                     />
                     {!requiresSelfOnboarding ? (
                       <ProfileAssignedProjectsSection

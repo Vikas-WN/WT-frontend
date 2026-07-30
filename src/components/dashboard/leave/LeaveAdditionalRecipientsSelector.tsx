@@ -9,8 +9,9 @@ import { ChevronsUpDown, X, Check, Search, Loader2 } from "lucide-react";
 
 function optionLabel(option: LeaveManagerOption): string {
   const name = option.name?.trim() || option.email;
-  const empId = option.employee_id?.trim();
-  return empId ? `${name} (${empId})` : name;
+  const email = option.email?.trim();
+  if (email && name !== email) return `${name} (${email})`;
+  return name;
 }
 
 function matchesQuery(option: LeaveManagerOption, query: string): boolean {

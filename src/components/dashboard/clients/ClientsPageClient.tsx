@@ -36,6 +36,7 @@ import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { useClients, useInvalidateClients } from "@/hooks/clients/useClients";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { isExternalClientId } from "@/utils/client";
 import type { ClientRecord } from "@/types/client";
 
 type StatusFilter = "all" | "active" | "inactive";
@@ -92,7 +93,7 @@ function ProjectsCell({ client }: { client: ClientRecord }) {
           {visible.map((project) => (
             <span
               key={project.projectCode}
-              title={`${project.projectName} (${project.projectCode})`}
+              title={project.projectName}
               className="inline-flex max-w-[9rem] truncate rounded-md bg-wt-surface-2 px-1.5 py-0.5 text-[11px] text-wt-text-muted"
             >
               {project.projectName}
@@ -271,7 +272,7 @@ export function ClientsPageClient() {
           }
           emptyIcon={<Building2 className="size-5" aria-hidden />}
           skeletonRows={8}
-          skeletonColumns={canEdit ? 8 : 7}
+          skeletonColumns={canEdit ? 7 : 6}
         >
           <div className="wt-detail-scroll-section min-h-0">
             <ScrollableTable
@@ -284,7 +285,6 @@ export function ClientsPageClient() {
                   <TableRow className="hover:bg-transparent">
                     <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>Client</TableHead>
                     <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>SPOC (External)</TableHead>
-                    <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>POC (Internal)</TableHead>
                     <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>Account Manager</TableHead>
                     <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>Delivery Manager</TableHead>
                     <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>Projects</TableHead>
@@ -297,9 +297,11 @@ export function ClientsPageClient() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredClients.map((client) => (
+                  {filteredClients.map((client) => {
+                    const isExternal = isExternalClientId(client.id);
+                    return (
                     <TableRow
-                      key={client.id}
+                      key={String(client.id)}
                       className="transition hover:bg-blue-50/40 dark:hover:bg-wt-surface-2"
                     >
                       <TableCell className={cn(WT_TABLE_CELL_COMPACT_CLASS, "align-top")}>
@@ -321,12 +323,6 @@ export function ClientsPageClient() {
                         <PersonCell
                           name={client.spocExternalName}
                           email={client.spocExternalEmail}
-                        />
-                      </TableCell>
-                      <TableCell className={cn(WT_TABLE_CELL_COMPACT_CLASS, "align-top")}>
-                        <PersonCell
-                          name={client.pocInternalName}
-                          email={client.pocInternalEmail}
                         />
                       </TableCell>
                       <TableCell className={cn(WT_TABLE_CELL_COMPACT_CLASS, "align-top")}>
@@ -359,9 +355,11 @@ export function ClientsPageClient() {
                               variant="ghost"
                               size="sm"
                               className="h-8 gap-1.5 px-2.5"
-                              disabled={!client.isActive}
+                              disabled={!client.isActive || isExternal}
                               title={
-                                client.isActive
+                                isExternal
+                                  ? "Managed in WK Business"
+                                  : client.isActive
                                   ? "Allocate project to this client"
                                   : "Activate the client before allocating projects"
                               }
@@ -375,7 +373,8 @@ export function ClientsPageClient() {
                               variant="ghost"
                               size="sm"
                               className="h-8 gap-1.5 px-2.5"
-                              title="Edit client"
+                              title={isExternal ? "Managed in WK Business" : "Edit client"}
+                              disabled={isExternal}
                               onClick={() => openEditDialog(client)}
                             >
                               <Pencil className="size-3.5" aria-hidden />
@@ -385,7 +384,8 @@ export function ClientsPageClient() {
                         </TableCell>
                       ) : null}
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </WtTable>
             </ScrollableTable>

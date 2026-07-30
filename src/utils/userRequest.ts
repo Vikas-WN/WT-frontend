@@ -261,6 +261,42 @@ export function isCompOffRequestType(value: unknown): boolean {
 
 }
 
+/** Comp-off earn credit requests (manager-approved; separate from usage COMP_OFF). */
+export function isCompOffEarnRequestType(value: unknown): boolean {
+  const raw = String(value ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "_");
+  return raw === "COMP_OFF_EARN" || raw === "COMPOFF_EARN" || raw === "COMP_OFF_EARNED";
+}
+
+/**
+ * Managers approve/reject pending comp-off earn on Team Requests.
+ * (HR may view earn rows but credit approval is manager-gated.)
+ */
+export function canManagerActOnCompOffEarn(
+  row: Record<string, unknown>,
+  options: { hasManagerAccess: boolean; actorEmail?: string | null }
+): boolean {
+  if (!options.hasManagerAccess) return false;
+  if (!isCompOffEarnRequestType(pickRowField(row, "request_type", "requestType"))) {
+    return false;
+  }
+  if (requestFinalStatus(row) !== "PENDING") return false;
+  if (!isPendingApprovalStage(requestManagerStatus(row))) return false;
+  const actor = String(options.actorEmail ?? "")
+    .trim()
+    .toLowerCase();
+  if (!actor) return false;
+  const empEmail = String(
+    pickRowField(row, "emp_email", "empEmail", "email", "user_email", "userEmail") ?? ""
+  )
+    .trim()
+    .toLowerCase();
+  if (empEmail && empEmail === actor) return false;
+  return true;
+}
+
 
 
 export function isPendingApprovalStage(value: unknown): boolean {
@@ -411,6 +447,10 @@ export function hrTeamActionBlockedHint(
 
   if (isLeaveRequestType(requestType) || isLeaveOrWfhRequestType(requestType)) {
     return null;
+  }
+
+  if (isCompOffEarnRequestType(requestType)) {
+    return "Awaiting manager approval";
   }
 
   if (!isLeaveOrWfhRequestType(requestType) && !isCompOffRequestType(requestType)) {

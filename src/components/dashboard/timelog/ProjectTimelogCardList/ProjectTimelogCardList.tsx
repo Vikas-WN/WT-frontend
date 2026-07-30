@@ -52,7 +52,6 @@ export function ProjectTimelogCardList({
             >
               <span>
                 <span className="project-card-name">{project.project_name}</span>
-                <span className="project-card-code">{project.project_code}</span>
               </span>
               <span className="project-card-toggle">
                 {project.employees.length} member{project.employees.length !== 1 ? "s" : ""}

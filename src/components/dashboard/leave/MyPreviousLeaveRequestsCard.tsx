@@ -21,9 +21,10 @@ import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { formatUserRequestTypeLabel } from "@/utils/actionToast";
 import { formatLeaveDateRange, formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
+import { useNonOptionalHolidayDates } from "@/hooks/leave/useNonOptionalHolidayDates";
 import { pickManagerEmailList } from "@/utils/leaveManagerDisplay";
 import { requestFinalStatus, requestRejectionReason } from "@/utils/userRequest";
-import { Eye, Filter, MoreVertical } from "lucide-react";
+import { Eye, Filter, Info, MoreVertical } from "lucide-react";
 import type { useClientPagination } from "@/hooks/useClientPagination";
 
 const TABLE_COL_COUNT = 6;
@@ -60,6 +61,7 @@ export function MyPreviousLeaveRequestsCard({
   onEdit: (row: RowRecord) => void;
   onRevoke: (row: RowRecord) => void;
 }) {
+  const holidayDates = useNonOptionalHolidayDates();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -160,11 +162,23 @@ export function MyPreviousLeaveRequestsCard({
                   const fromDate = String(rowRecord.request_from_date ?? rowRecord.requestFromDate ?? "");
                   const toDate = String(rowRecord.request_to_date ?? rowRecord.requestToDate ?? "");
                   const isHalfDay = Boolean(rowRecord.is_half_day ?? rowRecord.isHalfDay ?? false);
+                  const leaveReason = String(rowRecord.comments ?? "").trim();
 
                   return (
                     <TableRow key={`${requestId || "myreq"}-${idx}`}>
                       <TableCell className="px-3 py-2.5 whitespace-nowrap">
-                        {formatLeaveDateRange(fromDate, toDate, isHalfDay)}
+                        <div className="inline-flex items-center gap-1.5">
+                          <span>{formatLeaveDateRange(fromDate, toDate, isHalfDay)}</span>
+                          {leaveReason ? (
+                            <span
+                              title={leaveReason}
+                              className="inline-flex cursor-help text-wt-text-muted"
+                              aria-label={`Leave reason: ${leaveReason}`}
+                            >
+                              <Info className="size-3.5 shrink-0" aria-hidden />
+                            </span>
+                          ) : null}
+                        </div>
                       </TableCell>
                       <TableCell className="px-3 py-2.5 whitespace-nowrap">
                         {formatUserRequestTypeLabel(rowRecord.request_type ?? rowRecord.requestType, isHalfDay)}
@@ -186,7 +200,7 @@ export function MyPreviousLeaveRequestsCard({
                         <LeaveManagerEmailsCell emails={approverEmails} />
                       </TableCell>
                       <TableCell className="px-3 py-2.5 whitespace-nowrap tabular-nums">
-                        {formatLeaveDaysCount(fromDate, toDate, isHalfDay)}
+                        {formatLeaveDaysCount(fromDate, toDate, isHalfDay, holidayDates)}
                       </TableCell>
                       <TableCell className="px-3 py-2.5 text-right">
                         <div className="inline-flex items-center justify-end gap-1">
