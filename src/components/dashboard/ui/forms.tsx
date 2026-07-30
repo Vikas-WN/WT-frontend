@@ -167,6 +167,8 @@ export function InputField({
   inputMode,
   pattern,
   autoComplete,
+  min,
+  max,
 }: {
   label: string;
   value: string;
@@ -179,6 +181,8 @@ export function InputField({
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   pattern?: string;
   autoComplete?: string;
+  min?: string;
+  max?: string;
 }) {
   const fieldId = useId();
   const descriptionId = description ? `${fieldId}-description` : undefined;
@@ -191,6 +195,8 @@ export function InputField({
         onChange={onChange}
         required={required}
         disabled={disabled}
+        min={min}
+        max={max}
       />
     );
   }

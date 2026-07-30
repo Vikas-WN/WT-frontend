@@ -6,6 +6,7 @@ export type AllocationEmployeeOption = {
   userId?: number;
   empId?: string;
   role?: string;
+  doj?: string;
 };
 
 /** Parse GET /allocation/employees → data.items */
@@ -75,11 +76,13 @@ export function parseActiveOnboardEmployees(
       userIdRaw !== undefined && userIdRaw !== null && userIdRaw !== ""
         ? Number(userIdRaw)
         : undefined;
+    const doj = String(row.doj ?? row.date_of_joining ?? row.dateOfJoining ?? "").trim();
     out.push({
       employeeEmail: email,
       employeeName: name || email,
       userId: Number.isFinite(userId) ? userId : undefined,
       empId: String(row.empId ?? row.emp_id ?? "").trim() || undefined,
+      doj: doj || undefined,
       ...(role ? { role } : {}),
     });
   }

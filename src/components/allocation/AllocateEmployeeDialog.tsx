@@ -9,6 +9,7 @@ import { InternalEmployeeSelect } from "@/components/allocation/InternalEmployee
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { useAllocationPercentages } from "@/hooks/useAllocationPercentages";
+import { useAllocationEmployees } from "@/hooks/useAllocationEmployees";
 import { hrmsService } from "@/services/hrms.service";
 import { normalizeToApiDate, parseApiDate } from "@/utils/apiDate";
 import {
@@ -70,6 +71,12 @@ export function AllocateEmployeeDialog({
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<AllocateStep>("Employee");
   const [allocationVersion, setAllocationVersion] = useState(0);
+
+  const { data: employees = [] } = useAllocationEmployees(enabled);
+  const selectedEmployee = useMemo(() => {
+    const email = form.employee_email.trim().toLowerCase();
+    return employees.find((emp) => emp.employeeEmail.toLowerCase() === email);
+  }, [employees, form.employee_email]);
 
   const isEditMode = Boolean(editingAllocationId);
   const stepIndex = ALLOCATE_STEPS.indexOf(step);
@@ -223,6 +230,13 @@ export function AllocateEmployeeDialog({
     if (startParsed && endParsed && endParsed < startParsed) {
       showErrorToast("End date must be on or after the start date.");
       return;
+    }
+    if (selectedEmployee?.doj) {
+      const dojParsed = parseApiDate(selectedEmployee.doj);
+      if (dojParsed && startParsed && startParsed < dojParsed) {
+        showErrorToast(`Allocation start date cannot be before employee's date of joining (${selectedEmployee.doj}).`);
+        return;
+      }
     }
 
     const nextPercent = Number(form.allocated_percent);
@@ -498,6 +512,7 @@ export function AllocateEmployeeDialog({
               type="date"
               value={form.locked_in_date}
               onChange={(value) => setForm((prev) => ({ ...prev, locked_in_date: value }))}
+              min={selectedEmployee?.doj}
             />
           ) : null}
           <InputField
@@ -506,6 +521,7 @@ export function AllocateEmployeeDialog({
             type="date"
             value={form.start_date}
             onChange={(value) => setForm((prev) => ({ ...prev, start_date: value, locked_in_date: prev.allocation_type === "LOCKED" && !prev.locked_in_date ? value : prev.locked_in_date }))}
+            min={selectedEmployee?.doj}
           />
           <InputField
             label="End Date"
@@ -513,6 +529,7 @@ export function AllocateEmployeeDialog({
             type="date"
             value={form.end_date}
             onChange={(value) => setForm((prev) => ({ ...prev, end_date: value }))}
+            min={selectedEmployee?.doj}
           />
         </div>
         ) : null}
