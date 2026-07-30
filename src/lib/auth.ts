@@ -161,6 +161,22 @@ export async function fetchMe(): Promise<AuthUser | null> {
   }
 }
 
+/**
+ * Roles assigned to the logged-in user (GET /api/v1/roles), used to decide whether
+ * to show the header persona switcher. Falsy/empty on failure — callers should fall
+ * back to the roles already present on the AuthUser from /auth/me.
+ */
+export async function fetchRoles(): Promise<string[]> {
+  try {
+    const body = await apiClient.get<ApiResponse<{ roles: string[] }>>(endpoints.auth.roles, {
+      skipAuth: true,
+    });
+    return body.data?.roles ?? [];
+  } catch {
+    return [];
+  }
+}
+
 /** Human-readable messages for OAuth error query params */
 export const oauthErrorMessages: Record<string, string> = {
   oauth_failed: "Google sign-in was cancelled or returned an error.",

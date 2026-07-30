@@ -20,7 +20,8 @@ import {
 import { parseApiDate } from "@/utils/apiDate";
 import type { OnboardFormState } from "@/utils/onboardFormState";
 import type { OnboardOptionsResponse } from "@/types/onboard-options";
-import { PORTAL_ROLE_SELECT_OPTIONS } from "@/utils/roles";
+import { useAuth } from "@/context/AuthContext";
+import { PORTAL_ROLE_SELECT_OPTIONS, portalRoleOptionsForActor } from "@/utils/roles";
 
 type HrOnboardFormProps = {
   formKey: number;
@@ -180,6 +181,8 @@ export function HrOnboardForm({
   onError,
   runAction,
 }: HrOnboardFormProps) {
+  const { user } = useAuth();
+  const portalRoleOptions = useMemo(() => portalRoleOptionsForActor(user?.roles ?? []), [user?.roles]);
   const internBandId = useMemo(() => resolveInternBandId(bands), [bands]);
 
   const bandOptions = useMemo(
@@ -360,7 +363,7 @@ export function HrOnboardForm({
           required
           placeholder="Select"
           value={form.portal_role}
-          options={[...PORTAL_ROLE_SELECT_OPTIONS]}
+          options={portalRoleOptions}
           onChange={(v) => setForm((p) => ({ ...p, portal_role: v }))}
         />
         <DropdownSelectField

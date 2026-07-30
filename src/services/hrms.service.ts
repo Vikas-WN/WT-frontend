@@ -1022,6 +1022,17 @@ export const hrmsService = {
     });
   },
 
+  /** PATCH /employee-profile/{empId}/balances — admin edit of primary/secondary/carry-forward (ROLE_ADMIN). */
+  updateLeaveBalance(
+    empId: string,
+    payload: { primary?: number; secondary?: number; carry_forward?: number; year?: number; month?: number }
+  ) {
+    return apiClient.patch<ApiEnvelope<LeaveBalancesListItem>>(endpoints.profile.employeeBalances(empId), {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
   /** GET /manager-team-on-leave-today — ROLE_MANAGER. */
   getManagerTeamOnLeaveToday(params: { asOfDate?: string } = {}) {
     const query: Record<string, string> = {};
