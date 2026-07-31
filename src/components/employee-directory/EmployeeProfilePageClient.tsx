@@ -270,20 +270,25 @@ export function EmployeeProfilePageClient() {
   }, [bandSelectOptionsList, editForm, isEditing, isConsultantEmployee]);
 
   useEffect(() => {
-    if (!isEditing || !editForm || designationLoading || isConsultantEmployee) return;
+    if (!isEditing || designationLoading || isConsultantEmployee) return;
     if (designationOptions.length === 1) {
       const onlyRole = designationOptions[0]?.value ?? "";
-      if (onlyRole && editForm.role !== onlyRole) {
-        setEditForm((prev) => (prev ? { ...prev, role: onlyRole } : prev));
-      }
+      if (!onlyRole) return;
+      setEditForm((prev) => {
+        if (!prev) return prev;
+        return prev.role === onlyRole ? prev : { ...prev, role: onlyRole };
+      });
       return;
     }
-    if (!editForm.role) return;
-    const validRoles = new Set(designationOptions.map((option) => option.value).filter(Boolean));
-    if (designationOptions.length > 0 && !validRoles.has(editForm.role)) {
-      setEditForm((prev) => (prev ? { ...prev, role: "" } : prev));
-    }
-  }, [designationOptions, designationLoading, editForm, isEditing, isConsultantEmployee]);
+    setEditForm((prev) => {
+      if (!prev || !prev.role) return prev;
+      const validRoles = new Set(designationOptions.map((option) => option.value).filter(Boolean));
+      if (designationOptions.length > 0 && !validRoles.has(prev.role)) {
+        return { ...prev, role: "" };
+      }
+      return prev;
+    });
+  }, [designationOptions, designationLoading, isEditing, isConsultantEmployee]);
 
   useEffect(() => {
     if (!isEditing || !editForm || onboardOptionsLoading || !allowedPrimarySkills.size) return;
