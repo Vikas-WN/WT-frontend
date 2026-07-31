@@ -91,7 +91,7 @@ export function SearchableSelectCombobox({
       // causes an infinite controlled-input loop.
       if (reason === "clear-press" || sanitized === "") {
         if (clearSelectionOnEmptyInput) {
-          setIsFiltering(false);
+          setIsFiltering(true);
           setFilterText("");
           if (value) onChange("");
           return;

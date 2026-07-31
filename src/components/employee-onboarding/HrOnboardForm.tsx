@@ -238,15 +238,13 @@ export function HrOnboardForm({
     if (designationLoading) return;
     if (designationOptions.length === 1) {
       const onlyRole = designationOptions[0]?.value ?? "";
-      if (onlyRole && form.role !== onlyRole) {
-        setForm((prev) => ({ ...prev, role: onlyRole }));
-      }
+      setForm((p) => (p.role === onlyRole ? p : { ...p, role: onlyRole }));
       return;
     }
     if (!form.role) return;
     const validRoles = new Set(designationOptions.map((option) => option.value).filter(Boolean));
     if (designationOptions.length > 0 && !validRoles.has(form.role)) {
-      setForm((prev) => ({ ...prev, role: "" }));
+      setForm((p) => (p.role === "" ? p : { ...p, role: "" }));
     }
   }, [designationOptions, designationLoading, form.role, isConsultant, setForm]);
 
