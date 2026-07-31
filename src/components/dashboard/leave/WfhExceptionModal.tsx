@@ -34,7 +34,13 @@ export function WfhExceptionModal({ open, onClose, onSubmit }: WfhExceptionModal
       setToDate("");
       setReason("");
       onClose();
-    } catch { } finally {
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Failed to submit custom WFH request. Please try again.";
+      showErrorToast(message);
+    } finally {
       setSaving(false);
     }
   };
