@@ -446,7 +446,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
             <h2 className="truncate text-xl font-semibold tracking-tight text-wt-text sm:text-[1.35rem]">
               {pageTitle}
             </h2>
-            {isEmployeeDirectoryRoute && !isLearningRoute && !isEmployeeOnboardingRoute ? (
+            {isEmployeeDirectoryRoute && isEmployeeProfileRoute && !isLearningRoute && !isEmployeeOnboardingRoute ? (
               <nav
                 className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
                 aria-label="Breadcrumb"
@@ -455,21 +455,15 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                   Dashboard
                 </Link>
                 <span aria-hidden>/</span>
-                {isEmployeeProfileRoute ? (
-                  <>
-                    <Link
-                      prefetch={false}
-                      href={DASHBOARD_ROUTES["employee-directory"]}
-                      className="hover:text-wt-text transition"
-                    >
-                      Employee Directory
-                    </Link>
-                    <span aria-hidden>/</span>
-                    <span className="text-wt-text">Employee Profile</span>
-                  </>
-                ) : (
-                  <span className="text-wt-text">Employee Directory</span>
-                )}
+                <Link
+                  prefetch={false}
+                  href={DASHBOARD_ROUTES["employee-directory"]}
+                  className="hover:text-wt-text transition"
+                >
+                  Employee Directory
+                </Link>
+                <span aria-hidden>/</span>
+                <span className="text-wt-text">Employee Profile</span>
               </nav>
             ) : isLearningRoute ? (
               <p className="text-xs text-wt-text-muted">{learningSectionTitle}</p>
