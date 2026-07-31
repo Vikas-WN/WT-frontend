@@ -13,13 +13,13 @@ import { CARD_FORM_GRID_CLASS, CARD_FORM_ACTIONS_CLASS, FORM_FIELD_CLASS } from 
 import { FormGridSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { isValidPersonName } from "@/utils/dashboard/validation";
 import {
-  bandSelectOptionsForUserType,
   internBandDisplayLabel,
+  isInternOnlyBand,
   resolveInternBandId,
 } from "@/utils/dashboard/validation";
 import { parseApiDate } from "@/utils/apiDate";
 import type { OnboardFormState } from "@/utils/onboardFormState";
-import type { OnboardOptionsResponse } from "@/types/onboard-options";
+import type { OnboardOptionItem, OnboardOptionsResponse } from "@/types/onboard-options";
 import { PORTAL_ROLE_SELECT_OPTIONS } from "@/utils/roles";
 
 type HrOnboardFormProps = {
@@ -182,10 +182,15 @@ export function HrOnboardForm({
 }: HrOnboardFormProps) {
   const internBandId = useMemo(() => resolveInternBandId(bands), [bands]);
 
-  const bandOptions = useMemo(
-    () => bandSelectOptionsForUserType(bands, form.department, form.user_type, internBandId),
-    [bands, form.department, form.user_type, internBandId]
-  );
+  /** Band options for the selected department from onboard-options `department_bands`. */
+  const bandOptions = useMemo((): OnboardOptionItem[] => {
+    const department = form.department.trim();
+    if (!department) return [];
+    const mapped = options.department_bands[department] ?? [];
+    // Full-time must never see intern-only bands in the Band dropdown.
+    if (form.user_type === "INTERN") return mapped;
+    return mapped.filter((opt) => !isInternOnlyBand(opt.label));
+  }, [form.department, form.user_type, options.department_bands]);
 
   const internBandLabel = useMemo(
     () => internBandDisplayLabel(bands, internBandId),
