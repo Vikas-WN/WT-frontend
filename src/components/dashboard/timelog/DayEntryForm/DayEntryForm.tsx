@@ -26,6 +26,7 @@ import { projectManagerEmailFromEntry } from "@/utils/timelog/entryManager";
 import { formatEmployeePickerLabel } from "@/utils/employeePickerLabel";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
+import { showErrorToast } from "@/lib/toast";
 
 function emptyForm(): DayTimelogEntryForm {
   return {
@@ -187,7 +188,7 @@ export function DayEntryForm({
   const handleSaveAndSubmit = useCallback(() => {
     const error = validate();
     if (error) {
-      setLocalError(error);
+      showErrorToast(error);
       return;
     }
     setLocalError(null);
@@ -198,7 +199,7 @@ export function DayEntryForm({
   const handleSave = useCallback(() => {
     const error = validate();
     if (error) {
-      setLocalError(error);
+      showErrorToast(error);
       return;
     }
     setLocalError(null);
@@ -231,10 +232,6 @@ export function DayEntryForm({
         </div>
 
         <div className={cn(MODAL_BODY_CLASS, "day-entry-form-body")}>
-          {localError ? (
-            <div className="day-entry-form-error">{localError}</div>
-          ) : null}
-
           <label className="day-entry-form-field">
             <FieldLabel label="Project" required className="day-entry-form-label" />
             <SearchableSelectCombobox
