@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TextAreaField } from "@/components/dashboard/ui/forms";
 import { useState } from "react";
+import { showErrorToast } from "@/lib/toast";
 
 type WfhExceptionModalProps = {
   open: boolean;
@@ -22,6 +23,10 @@ export function WfhExceptionModal({ open, onClose, onSubmit }: WfhExceptionModal
   const handleSubmit = async () => {
     if (!fromDate || !toDate) return;
     if (!reason.trim()) return;
+    if (new Date(fromDate) > new Date(toDate)) {
+      showErrorToast("End Date cannot be earlier than Start Date.");
+      return;
+    }
     setSaving(true);
     try {
       await onSubmit({ request_from_date: fromDate, request_to_date: toDate, comments: reason });
