@@ -219,7 +219,7 @@ export function LeaveApprovalsPanel({
               </div>
             </div>
 
-            <ScrollableTable maxHeightClass="max-h-[min(55vh,420px)]" className="min-h-[240px]">
+            <ScrollableTable maxHeightClass="max-h-[min(55vh,420px)]" className="min-h-[240px]" scrollChain>
               <WtTable>
                 <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
                   <TableRow className="hover:bg-transparent">

@@ -2202,6 +2202,7 @@ export function LeavePageClient() {
                           <ScrollableTable
                             maxHeightClass="max-h-[min(70vh,520px)]"
                             className={LEAVE_REQUESTS_TABLE_MIN_HEIGHT}
+                            scrollChain
                           >
                             <WtTable>
                               <TableHeader className={`${WT_STICKY_TABLE_HEAD_CLASS} text-[11px] font-semibold tracking-wider text-muted-foreground/70 bg-muted/30`}>

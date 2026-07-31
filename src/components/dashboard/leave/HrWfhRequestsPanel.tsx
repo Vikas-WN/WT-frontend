@@ -136,7 +136,7 @@ export function HrWfhRequestsPanel({
       </div>
 
       <FormSection title="WFH Requests" className="rounded-2xl shadow-sm">
-        <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]" className={TABLE_MIN_HEIGHT}>
+        <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]" className={TABLE_MIN_HEIGHT} scrollChain>
           <WtTable>
             <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
               <TableRow className="hover:bg-transparent">
