@@ -1939,18 +1939,20 @@ export function LeavePageClient() {
                                         if (needsClientApproval && !leaveRequestForm.client_approval) {
                                           throw new Error("Client approval is required for client users.");
                                         }
+                                        const isLeaveOptionalOrCompOff =
+                                          normalizeUserRequestType(requestType) === "LEAVE" ||
+                                          normalizeUserRequestType(requestType) === "OPTIONAL" ||
+                                          normalizeUserRequestType(requestType) === "COMP_OFF";
                                         if (
                                           !routesLeaveWfhToHr &&
-                                          (normalizeUserRequestType(requestType) === "LEAVE" ||
-                                           normalizeUserRequestType(requestType) === "OPTIONAL") &&
+                                          isLeaveOptionalOrCompOff &&
                                           !selectedLeaveManagerEmails.length
                                         ) {
                                           throw new Error("Select at least one primary manager.");
                                         }
                                         if (
                                           !routesLeaveWfhToHr &&
-                                          (normalizeUserRequestType(requestType) === "LEAVE" ||
-                                           normalizeUserRequestType(requestType) === "OPTIONAL") &&
+                                          isLeaveOptionalOrCompOff &&
                                           !selectedAdditionalRecipientEmails.length
                                         ) {
                                           throw new Error("Select at least one secondary manager.");
@@ -1972,7 +1974,8 @@ export function LeavePageClient() {
                                             );
                                           }
                                           const managerCompOffEmail =
-                                            await compOffService.resolveUsageManagerCompOffEmail();
+                                            selectedLeaveManagerEmails[0] ||
+                                            (await compOffService.resolveUsageManagerCompOffEmail());
                                           if (!managerCompOffEmail) {
                                             throw new Error(
                                               "Could not resolve project manager for comp-off. Ensure you are allocated to a project with a manager."
@@ -1984,6 +1987,8 @@ export function LeavePageClient() {
                                             request_type: "COMP_OFF",
                                             comments,
                                             manager_comp_off_email: managerCompOffEmail,
+                                            primary_manager_emails: selectedLeaveManagerEmails,
+                                            secondary_manager_emails: selectedAdditionalRecipientEmails,
                                           });
                                           setLeaveRequestForm(createDefaultLeaveRequestForm());
                                           setSelectedLeaveManagerEmails([]);
