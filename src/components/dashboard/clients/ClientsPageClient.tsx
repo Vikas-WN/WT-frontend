@@ -262,7 +262,7 @@ export function ClientsPageClient() {
                 <TableBody>
                   {clients.map((client) => (
                     <TableRow
-                      key={client.id}
+                      key={String(client.id)}
                       className="transition hover:bg-blue-50/40 dark:hover:bg-wt-surface-2"
                     >
                       <TableCell className={cn(WT_TABLE_CELL_COMPACT_CLASS, "align-top")}>

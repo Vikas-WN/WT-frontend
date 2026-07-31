@@ -124,6 +124,7 @@ import {
   groupAllocationsByProject,
   isSystemProjectAllocationRow,
   mergeUniqueAllocationListRows,
+  hideDeallocatedRowsWithActiveSuccessor,
   sortAllocationListForDisplay,
   sortAllocationListRows,
 } from "@/utils/allocationList";
@@ -2253,7 +2254,9 @@ export function AllocationPageClient() {
         ? parseDeallocatedAllocationListRows((deallocRes as { data?: unknown }).data ?? deallocRes)
         : [];
 
-      const rows = mergeUniqueAllocationListRows([...mainRows, ...deallocRows]);
+      const rows = hideDeallocatedRowsWithActiveSuccessor(
+        mergeUniqueAllocationListRows([...mainRows, ...deallocRows])
+      );
       setAllocations(await enrichAllocationRowsWithContext(rows));
     } catch (err) {
       setAllocations([]);

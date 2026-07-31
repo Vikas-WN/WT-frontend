@@ -5,12 +5,14 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { type AuthUser, fetchMe, refreshSession, logout as authLogout, recordSessionActivity, initAuthClient } from "@/lib/auth";
-import { normalizeRoles } from "@/utils/roles";
+import { type AuthUser, fetchMe, fetchRoles, refreshSession, logout as authLogout, recordSessionActivity, initAuthClient } from "@/lib/auth";
+import { normalizeRoles, pickPrimaryPortalRole } from "@/utils/roles";
+import { clearStoredPersona, getStoredPersona, setStoredPersona } from "@/utils/persona";
 import {
   clearSessionTiming,
   persistSessionTiming,
@@ -31,8 +33,15 @@ import {
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
 interface AuthContextValue {
+  /** Reflects the active persona: roles is narrowed to [activePersona] when one is selected. */
   user: AuthUser | null;
   status: AuthStatus;
+  /** Full set of roles assigned to the user, independent of the active persona. Powers the switcher's options. */
+  allRoles: string[];
+  /** Currently selected persona, or null unless the user holds ROLE_ADMIN (and >1 role) — switcher hidden otherwise. */
+  activePersona: string | null;
+  /** Switches the active persona; persists for the rest of the browser session. */
+  setActivePersona: (role: string) => void;
   /** Re-validates the session with the server. Returns the user or null. */
   refresh: () => Promise<AuthUser | null>;
   /** Logs out and redirects to /login. */
@@ -60,8 +69,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [rawUser, setRawUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
+  const [allRoles, setAllRoles] = useState<string[]>([]);
+  const [activePersona, setActivePersonaState] = useState<string | null>(null);
   const [sessionLogoutReason, setSessionLogoutReason] = useState<SessionLogoutReason | null>(null);
   const [idleWarningMinutes, setIdleWarningMinutes] = useState<number | null>(null);
   const didInitialRefresh = useRef(false);
@@ -69,9 +80,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const userRef = useRef<AuthUser | null>(null);
   const extendSessionRef = useRef<() => void>(() => undefined);
 
+  const user = useMemo<AuthUser | null>(() => {
+    if (!rawUser) return null;
+    if (activePersona && rawUser.roles.includes(activePersona)) {
+      return { ...rawUser, roles: [activePersona] };
+    }
+    return rawUser;
+  }, [rawUser, activePersona]);
+
   useEffect(() => {
     userRef.current = user;
   }, [user]);
+
+  const setActivePersona = useCallback(
+    (role: string) => {
+      if (!rawUser || !allRoles.includes(role)) return;
+      setActivePersonaState(role);
+      setStoredPersona(rawUser.email, role);
+    },
+    [rawUser, allRoles]
+  );
+
+  /**
+   * Resolves the full role set and, for eligible users, the active persona:
+   * the session's stored choice if still valid, else the highest-priority role
+   * (same ranking already used elsewhere for a user's "primary" role).
+   *
+   * The persona switcher is scoped to users who hold ROLE_ADMIN in the database —
+   * everyone else (including other multi-role combinations like Manager+DM) keeps
+   * today's additive/union permissions and never sees the switcher.
+   */
+  const syncRolesAndPersona = useCallback(async (freshUser: AuthUser) => {
+    const fetched = await fetchRoles();
+    const roles = normalizeRoles(fetched.length ? fetched : freshUser.roles);
+    setAllRoles(roles);
+    const eligibleForSwitcher = roles.includes("ROLE_ADMIN") && roles.length > 1;
+    if (!eligibleForSwitcher) {
+      setActivePersonaState(null);
+      return;
+    }
+    const stored = getStoredPersona(freshUser.email);
+    const persona = stored && roles.includes(stored) ? stored : pickPrimaryPortalRole(roles);
+    setActivePersonaState(persona);
+    setStoredPersona(freshUser.email, persona);
+  }, []);
 
   const refresh = useCallback(async (): Promise<AuthUser | null> => {
     setStatus("loading");
@@ -79,12 +131,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const freshUser = await refreshSession();
       if (freshUser) {
         const normalized = applyAuthenticatedUser(freshUser);
-        setUser(normalized);
+        setRawUser(normalized);
         setStatus("authenticated");
+        void syncRolesAndPersona(normalized);
         return normalized;
       }
       clearSessionTiming();
-      setUser(null);
+      setRawUser(null);
+      setAllRoles([]);
+      setActivePersonaState(null);
       setStatus("unauthenticated");
       return null;
     } catch {
@@ -94,11 +149,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return keptUser;
       }
       clearSessionTiming();
-      setUser(null);
+      setRawUser(null);
+      setAllRoles([]);
+      setActivePersonaState(null);
       setStatus("unauthenticated");
       return null;
     }
-  }, []);
+  }, [syncRolesAndPersona]);
 
   /**
    * First-mount session bootstrap.
@@ -114,8 +171,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const me = await fetchMe();
       if (me) {
         const normalized = applyAuthenticatedUser(me);
-        setUser(normalized);
+        setRawUser(normalized);
         setStatus("authenticated");
+        void syncRolesAndPersona(normalized);
         return normalized;
       }
     } catch {
@@ -127,24 +185,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // session (sliding sessions after the short-lived access token expires).
     if (pathname?.startsWith("/login")) {
       clearSessionTiming();
-      setUser(null);
+      setRawUser(null);
+      setAllRoles([]);
+      setActivePersonaState(null);
       setStatus("unauthenticated");
       return null;
     }
     return refresh();
-  }, [pathname, refresh]);
+  }, [pathname, refresh, syncRolesAndPersona]);
 
   const logout = useCallback(async () => {
+    const email = rawUser?.email;
     try {
       await authLogout();
     } finally {
       clearSessionTiming();
-      setUser(null);
+      if (email) clearStoredPersona(email);
+      setRawUser(null);
+      setAllRoles([]);
+      setActivePersonaState(null);
       setStatus("unauthenticated");
       setIdleWarningMinutes(null);
       router.push("/login");
     }
-  }, [router]);
+  }, [router, rawUser]);
 
   const handleSessionTimeout = useCallback(
     async (reason: SessionLogoutReason) => {
@@ -159,7 +223,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         /* best-effort */
       } finally {
         clearSessionTiming();
-        setUser(null);
+        setRawUser(null);
+        setAllRoles([]);
+        setActivePersonaState(null);
         setStatus("unauthenticated");
         if (wasSignedIn) {
           setSessionLogoutReason(reason);
@@ -220,7 +286,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [status]);
 
   return (
-    <AuthContext.Provider value={{ user, status, refresh, logout }}>
+    <AuthContext.Provider value={{ user, status, allRoles, activePersona, setActivePersona, refresh, logout }}>
       {children}
       <SessionIdleWarningDialog
         open={idleWarningMinutes != null}

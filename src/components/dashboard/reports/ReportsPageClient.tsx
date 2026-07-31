@@ -363,6 +363,7 @@ export function ReportsPageClient() {
   const [leaveSubTab, setLeaveSubTab] = useState<"my" | "team">("my");
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
+  const hasHrRoleOnly = userRoles.includes("ROLE_HR");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
   /** HR without manager portfolio — no allocated projects; use Team timelogs for org view */
   const timelogHrNoSelfProject =
@@ -2592,7 +2593,7 @@ export function ReportsPageClient() {
   }, [activeSection, hasHrAccess, loadAllocationsForHr, loadUtilizationReports]);
 
   useEffect(() => {
-    if (activeSection !== "reports-bench" || !hasHrAccess) return;
+    if (activeSection !== "reports-bench" || !hasHrRoleOnly) return;
     const id = window.setTimeout(() => {
       void Promise.all([
         loadBenchAgingReport().catch(() => {
@@ -2605,7 +2606,7 @@ export function ReportsPageClient() {
       ]);
     }, 0);
     return () => window.clearTimeout(id);
-  }, [activeSection, hasHrAccess, loadAllocationsForHr, loadBenchAgingReport]);
+  }, [activeSection, hasHrRoleOnly, loadAllocationsForHr, loadBenchAgingReport]);
 
   useEffect(() => {
     if (activeSection !== "reports-section-3" || !hasHrAccess) return;
@@ -3347,11 +3348,17 @@ export function ReportsPageClient() {
                                 />
                               </div>
                             ) : activeSection === "reports-bench" ? (
-                              <BenchAgingReportTable
-                                rows={utilizationBenchRowsWithInvestment}
-                                peopleOnBench={benchPeopleOnBench}
-                                loading={benchReportLoading}
-                              />
+                              hasHrRoleOnly ? (
+                                <BenchAgingReportTable
+                                  rows={utilizationBenchRowsWithInvestment}
+                                  peopleOnBench={benchPeopleOnBench}
+                                  loading={benchReportLoading}
+                                />
+                              ) : (
+                                <p className="text-sm text-wt-text-muted">
+                                  Bench reporting is available to HR only.
+                                </p>
+                              )
                             ) : activeSection === "reports-section-3" ? (
                               <AttritionRetentionReports
                                 fyStartYear={attritionFyStartYear}

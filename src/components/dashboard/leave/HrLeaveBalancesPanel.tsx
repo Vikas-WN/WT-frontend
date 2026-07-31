@@ -17,13 +17,15 @@ import { InputField, SelectField } from "@/components/dashboard/ui/forms";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { showErrorToast } from "@/lib/toast";
-import { Search, Wallet } from "lucide-react";
+import { Pencil, Search, Wallet } from "lucide-react";
 import { useHrLeaveBalancesList } from "@/hooks/leave/useHrLeaveBalancesList";
 import { FILTER_BAR_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
+import { EditLeaveBalanceDialog } from "@/components/dashboard/leave/EditLeaveBalanceDialog";
+import type { LeaveBalancesListItem } from "@/services/hrms.service";
 
 const BALANCES_TABLE_MIN_HEIGHT = "min-h-[320px]";
-const BALANCES_TABLE_COL_COUNT = 6;
 
 const MONTH_OPTIONS = [
   { value: "1", label: "January" },
@@ -66,6 +68,11 @@ export function HrLeaveBalancesPanel({
   const [appliedSearch, setAppliedSearch] = useState("");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(25);
+  const [editingEmployee, setEditingEmployee] = useState<LeaveBalancesListItem | null>(null);
+
+  const { user } = useAuth();
+  const canEditBalances = Boolean(user?.roles.includes("ROLE_ADMIN"));
+  const columnCount = canEditBalances ? 7 : 6;
 
   const monthOptions =
     Number(year) === currentYear
@@ -199,13 +206,16 @@ export function HrLeaveBalancesPanel({
                 <TableHead className="px-4 font-semibold">Carry Forward</TableHead>
                 <TableHead className="px-4 font-semibold">Total</TableHead>
                 <TableHead className="px-4 font-semibold">Comp-Off</TableHead>
+                {canEditBalances ? (
+                  <TableHead className="px-4 font-semibold text-right">Actions</TableHead>
+                ) : null}
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && !rows.length ? (
                 Array.from({ length: 6 }).map((_, rowIndex) => (
                   <TableRow key={`balances-skeleton-${rowIndex}`} className="hover:bg-transparent">
-                    {Array.from({ length: BALANCES_TABLE_COL_COUNT }).map((_, colIndex) => (
+                    {Array.from({ length: columnCount }).map((_, colIndex) => (
                       <TableCell key={colIndex} className="px-4 py-3.5">
                         <Skeleton
                           className={`h-4 ${colIndex === 0 ? "w-36 max-w-full" : "w-12"}`}
@@ -241,12 +251,27 @@ export function HrLeaveBalancesPanel({
                     <TableCell className="px-4 py-3.5 tabular-nums">
                       {row.comp_off_balance ?? "—"}
                     </TableCell>
+                    {canEditBalances ? (
+                      <TableCell className="px-4 py-3.5 text-right">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 gap-1.5 px-2.5"
+                          title="Edit balance"
+                          onClick={() => setEditingEmployee(row)}
+                        >
+                          <Pencil className="size-3.5" aria-hidden />
+                          <span className="hidden lg:inline">Edit</span>
+                        </Button>
+                      </TableCell>
+                    ) : null}
                   </TableRow>
                 ))
               ) : (
                 <TableRow className="hover:bg-transparent">
                   <TableCell
-                    colSpan={BALANCES_TABLE_COL_COUNT}
+                    colSpan={columnCount}
                     className="h-[280px] text-center align-middle"
                   >
                     <div className="flex flex-col items-center gap-2.5">
@@ -288,6 +313,19 @@ export function HrLeaveBalancesPanel({
           </div>
         ) : null}
       </div>
+
+      {canEditBalances ? (
+        <EditLeaveBalanceDialog
+          open={editingEmployee != null}
+          employee={editingEmployee}
+          year={Number(year)}
+          month={Number(month)}
+          onClose={() => setEditingEmployee(null)}
+          onSaved={async () => {
+            await balancesQ.refetch();
+          }}
+        />
+      ) : null}
     </FormSection>
   );
 }

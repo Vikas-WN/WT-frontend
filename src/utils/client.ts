@@ -39,10 +39,19 @@ function parseProjectSummary(row: Record<string, unknown>): ClientProjectSummary
   };
 }
 
+function readId(row: Record<string, unknown>): string | number | null {
+  const raw = row.id ?? row.external_id ?? row.externalId;
+  if (raw === undefined || raw === null || String(raw).trim() === "") return null;
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  const value = String(raw).trim();
+  if (/^\d+$/.test(value)) return Number(value);
+  return value;
+}
+
 export function parseClientRow(row: Record<string, unknown>): ClientRecord | null {
-  const id = readNumber(row, "id");
+  const id = readId(row);
   const name = readString(row, "name");
-  if (!id || !name) return null;
+  if (id == null || !name) return null;
 
   const projectsRaw = row.projects;
   const projects = Array.isArray(projectsRaw)
@@ -51,13 +60,22 @@ export function parseClientRow(row: Record<string, unknown>): ClientRecord | nul
         .filter((item) => item.projectCode)
     : undefined;
 
+  const externalId = readNullableString(row, "external_id", "externalId") ?? (typeof id === "string" ? id : null);
+
   return {
     id,
+    externalId,
     name,
     address: readNullableString(row, "address"),
-    spocExternalName: readNullableString(row, "spoc_external_name", "spocExternalName"),
-    spocExternalEmail: readNullableString(row, "spoc_external_email", "spocExternalEmail"),
-    spocExternalPhone: readNullableString(row, "spoc_external_phone", "spocExternalPhone"),
+    spocExternalName: readNullableString(
+      row,
+      "spoc_external_name",
+      "spocExternalName",
+      "contact_person",
+      "contactPerson"
+    ),
+    spocExternalEmail: readNullableString(row, "spoc_external_email", "spocExternalEmail", "email"),
+    spocExternalPhone: readNullableString(row, "spoc_external_phone", "spocExternalPhone", "phone"),
     pocInternalUserId: readNumber(row, "poc_internal_user_id", "pocInternalUserId"),
     pocInternalEmail: readNullableString(row, "poc_internal_email", "pocInternalEmail"),
     pocInternalName: readNullableString(row, "poc_internal_name", "pocInternalName"),
@@ -70,7 +88,12 @@ export function parseClientRow(row: Record<string, unknown>): ClientRecord | nul
     projectManagerUserId: readNumber(row, "project_manager_user_id", "projectManagerUserId"),
     projectManagerEmail: readNullableString(row, "project_manager_email", "projectManagerEmail"),
     projectManagerName: readNullableString(row, "project_manager_name", "projectManagerName"),
-    isActive: Boolean(row.is_active ?? row.isActive ?? true),
+    isActive: (() => {
+      const status = readString(row, "status").toLowerCase();
+      if (status === "active") return true;
+      if (status === "inactive") return false;
+      return Boolean(row.is_active ?? row.isActive ?? true);
+    })(),
     projectCount: readNumber(row, "project_count", "projectCount") ?? projects?.length ?? 0,
     ...(projects ? { projects } : {}),
   };
@@ -125,6 +148,13 @@ export function parseClientList(data: unknown): ClientRecord[] {
   if (items.length) return items;
   if (Array.isArray(payload)) return parseClientItems(payload);
   return [];
+}
+
+export function isExternalClientId(id: string | number | null | undefined): boolean {
+  if (id == null) return false;
+  const value = String(id).trim();
+  if (!value) return false;
+  return !/^\d+$/.test(value);
 }
 
 export function parseClientListPage(data: unknown): ClientListPage {

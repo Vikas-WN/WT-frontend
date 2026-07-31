@@ -10,6 +10,7 @@ export const endpoints = {
     activity: `${api}/auth/activity`,
     logout: `${api}/auth/logout`,
     me: `${api}/auth/me`,
+    roles: `${api}/roles`,
     oauthBypass: (email: string) => `${api}/oauth/bypass/${encodeURIComponent(email)}`,
   },
 

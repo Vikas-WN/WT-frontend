@@ -13,14 +13,15 @@ import { CARD_FORM_GRID_CLASS, CARD_FORM_ACTIONS_CLASS, FORM_FIELD_CLASS } from 
 import { FormGridSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { isValidPersonName } from "@/utils/dashboard/validation";
 import {
+  bandSelectOptionsForUserType,
   internBandDisplayLabel,
-  isInternOnlyBand,
   resolveInternBandId,
 } from "@/utils/dashboard/validation";
 import { parseApiDate } from "@/utils/apiDate";
 import type { OnboardFormState } from "@/utils/onboardFormState";
-import type { OnboardOptionItem, OnboardOptionsResponse } from "@/types/onboard-options";
-import { PORTAL_ROLE_SELECT_OPTIONS } from "@/utils/roles";
+import type { OnboardOptionsResponse } from "@/types/onboard-options";
+import { useAuth } from "@/context/AuthContext";
+import { PORTAL_ROLE_SELECT_OPTIONS, portalRoleOptionsForActor } from "@/utils/roles";
 
 type HrOnboardFormProps = {
   formKey: number;
@@ -180,17 +181,14 @@ export function HrOnboardForm({
   onError,
   runAction,
 }: HrOnboardFormProps) {
+  const { user } = useAuth();
+  const portalRoleOptions = useMemo(() => portalRoleOptionsForActor(user?.roles ?? []), [user?.roles]);
   const internBandId = useMemo(() => resolveInternBandId(bands), [bands]);
 
-  /** Band options for the selected department from onboard-options `department_bands`. */
-  const bandOptions = useMemo((): OnboardOptionItem[] => {
-    const department = form.department.trim();
-    if (!department) return [];
-    const mapped = options.department_bands[department] ?? [];
-    // Full-time must never see intern-only bands in the Band dropdown.
-    if (form.user_type === "INTERN") return mapped;
-    return mapped.filter((opt) => !isInternOnlyBand(opt.label));
-  }, [form.department, form.user_type, options.department_bands]);
+  const bandOptions = useMemo(
+    () => bandSelectOptionsForUserType(bands, form.department, form.user_type, internBandId),
+    [bands, form.department, form.user_type, internBandId]
+  );
 
   const internBandLabel = useMemo(
     () => internBandDisplayLabel(bands, internBandId),
@@ -238,22 +236,27 @@ export function HrOnboardForm({
     setForm((prev) => (prev.band_id === internBandId ? prev : { ...prev, band_id: internBandId }));
   }, [form.user_type, internBandId, setForm]);
 
+  // Reacts only to the designation options themselves (band/department changes) —
+  // not to form.role — so clearing the field (e.g. via Backspace) isn't immediately
+  // fought by this effect snapping the single/only option back in.
   useEffect(() => {
     if (isConsultant) return;
     if (designationLoading) return;
     if (designationOptions.length === 1) {
       const onlyRole = designationOptions[0]?.value ?? "";
-      if (onlyRole && form.role !== onlyRole) {
-        setForm((prev) => ({ ...prev, role: onlyRole }));
-      }
+      if (!onlyRole) return;
+      setForm((prev) => (prev.role === onlyRole ? prev : { ...prev, role: onlyRole }));
       return;
     }
-    if (!form.role) return;
-    const validRoles = new Set(designationOptions.map((option) => option.value).filter(Boolean));
-    if (designationOptions.length > 0 && !validRoles.has(form.role)) {
-      setForm((prev) => ({ ...prev, role: "" }));
-    }
-  }, [designationOptions, designationLoading, form.role, isConsultant, setForm]);
+    setForm((prev) => {
+      if (!prev.role) return prev;
+      const validRoles = new Set(designationOptions.map((option) => option.value).filter(Boolean));
+      if (designationOptions.length > 0 && !validRoles.has(prev.role)) {
+        return { ...prev, role: "" };
+      }
+      return prev;
+    });
+  }, [designationOptions, designationLoading, isConsultant, setForm]);
 
   useEffect(() => {
     if (!form.department.trim()) return;
@@ -365,7 +368,7 @@ export function HrOnboardForm({
           required
           placeholder="Select"
           value={form.portal_role}
-          options={[...PORTAL_ROLE_SELECT_OPTIONS]}
+          options={portalRoleOptions}
           onChange={(v) => setForm((p) => ({ ...p, portal_role: v }))}
         />
         <DropdownSelectField
