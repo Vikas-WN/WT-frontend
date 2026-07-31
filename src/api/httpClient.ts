@@ -14,7 +14,7 @@ export interface ApiEnvelope<T> {
 }
 
 export interface QueryParams {
-  [key: string]: string | number | boolean | null | undefined;
+  [key: string]: string | number | boolean | null | undefined | string[];
 }
 
 export interface ApiRequestOptions {
@@ -260,7 +260,15 @@ export class HttpClient {
 
     Object.entries(query).forEach(([key, value]) => {
       if (value === undefined || value === null || value === "") return;
-      url.searchParams.set(key, String(value));
+      if (Array.isArray(value)) {
+        value.forEach((v) => {
+          if (v !== undefined && v !== null && v !== "") {
+            url.searchParams.append(key, String(v));
+          }
+        });
+      } else {
+        url.searchParams.set(key, String(value));
+      }
     });
 
     return url.toString();

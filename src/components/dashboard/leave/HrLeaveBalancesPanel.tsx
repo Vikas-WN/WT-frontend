@@ -101,7 +101,11 @@ export function HrLeaveBalancesPanel({
   const loading = balancesQ.isFetching && !balancesQ.isPlaceholderData;
   const loadError =
     balancesQ.error instanceof Error
-      ? balancesQ.error.message
+      ? balancesQ.error.message.includes("valid year") ||
+        balancesQ.error.message.includes("valid month") ||
+        balancesQ.error.message.includes("Future")
+        ? null
+        : balancesQ.error.message
       : balancesQ.error
         ? "Could not load leave balances."
         : null;
@@ -112,7 +116,12 @@ export function HrLeaveBalancesPanel({
     const next = search.trim();
     if (next === appliedSearch.trim() && page === 0) {
       runAction("Load leave balances", async () => {
-        await balancesQ.refetch();
+        try {
+          await balancesQ.refetch();
+        } catch {
+          // Do not re-throw to avoid duplicate toast error.
+          // React-query error state changes will be handled by the useEffect.
+        }
       });
       return;
     }
