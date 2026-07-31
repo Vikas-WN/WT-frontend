@@ -205,6 +205,7 @@ export const endpoints = {
     clients: `${api}/masters/clients`,
     clientById: (clientId: string | number) =>
       `${api}/masters/clients/${encodeURIComponent(String(clientId))}`,
+    opportunities: `${api}/masters/opportunities`,
     allocateProjectToClient: (projectId: string | number, clientId: string | number) =>
       `${api}/clients/allocate/${encodeURIComponent(String(projectId))}/client/${encodeURIComponent(String(clientId))}`,
   },

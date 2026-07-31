@@ -2514,7 +2514,7 @@ export function AllocationPageClient() {
   }, [hrProjectRawRows, projectFilters, projectSortId]);
   const projectPagination = useClientPagination(filteredProjects, {
     pageSize: 10,
-    pageSizeOptions: [10],
+    pageSizeOptions: [10, 25, 50],
     resetKeys: [projectFilters.search, projectFilters.project_type, projectSortId],
   });
   const filteredAllocations = useMemo(
@@ -3529,6 +3529,7 @@ export function AllocationPageClient() {
                                               />
                                             </TableHead>
                                             <TableHead>Type</TableHead>
+                                            <TableHead>Opportunities</TableHead>
                                             <TableHead>Start Date</TableHead>
                                             <TableHead>End Date</TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
@@ -3548,6 +3549,20 @@ export function AllocationPageClient() {
                                             const endDate = formatApiDateDisplay(
                                               String(row.end_date ?? row.endDate ?? "")
                                             );
+                                            const opportunitiesRaw = Array.isArray(row.opportunities)
+                                              ? (row.opportunities as Array<Record<string, unknown>>)
+                                              : [];
+                                            const opportunityLabels = opportunitiesRaw
+                                              .map((item) =>
+                                                String(
+                                                  item.opportunity_name ??
+                                                    item.opportunityName ??
+                                                    item.opp_id ??
+                                                    item.oppId ??
+                                                    ""
+                                                ).trim()
+                                              )
+                                              .filter(Boolean);
                                             return (
                                               <TableRow
                                                 key={code || String(idx)}
@@ -3555,6 +3570,28 @@ export function AllocationPageClient() {
                                               >
                                                 <TableCell className="px-3 py-2 max-w-[240px] truncate font-medium">{name || "—"}</TableCell>
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{typ}</TableCell>
+                                                <TableCell className="px-3 py-2 align-top">
+                                                  {opportunityLabels.length ? (
+                                                    <div className="flex min-w-[10rem] flex-col gap-1">
+                                                      {opportunityLabels.slice(0, 2).map((label) => (
+                                                        <span
+                                                          key={label}
+                                                          title={label}
+                                                          className="inline-flex max-w-[12rem] truncate rounded-md bg-wt-surface-2 px-1.5 py-0.5 text-[11px] text-wt-text-muted"
+                                                        >
+                                                          {label}
+                                                        </span>
+                                                      ))}
+                                                      {opportunityLabels.length > 2 ? (
+                                                        <span className="text-[11px] text-wt-text-muted">
+                                                          +{opportunityLabels.length - 2} more
+                                                        </span>
+                                                      ) : null}
+                                                    </div>
+                                                  ) : (
+                                                    <span className="text-wt-text-muted">—</span>
+                                                  )}
+                                                </TableCell>
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{startDate || "—"}</TableCell>
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{endDate || "—"}</TableCell>
                                                 <TableCell className="px-3 py-2 text-right">
@@ -3699,9 +3736,10 @@ export function AllocationPageClient() {
                                       rangeStart={projectPagination.rangeStart}
                                       rangeEnd={projectPagination.rangeEnd}
                                       pageSize={projectPagination.pageSize}
+                                      pageSizeOptions={projectPagination.pageSizeOptions}
                                       onPageChange={projectPagination.setPage}
-                                      nextOnly
-                                      showPageNumbers={false}
+                                      onPageSizeChange={projectPagination.setPageSize}
+                                      loading={hrProjectsQ.isFetching}
                                     />
                                     </>
                                   ) : (
