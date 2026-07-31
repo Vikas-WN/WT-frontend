@@ -1260,7 +1260,7 @@ export function LeavePageClient() {
 
   /** All Employee Requests (HR org view) is read-only — no Actions column. */
   const showTeamActionsColumn = leaveSubTab !== "org";
-  const teamTableColCount = showTeamActionsColumn ? 5 : 4;
+  const teamTableColCount = showTeamActionsColumn ? 6 : 5;
 
   const fetchTeamRequests = useCallback(
     async (scope: "team" | "org", page: number = 0, size: number = 200) => {
@@ -2252,6 +2252,7 @@ export function LeavePageClient() {
                                       }
                                     />
                                   </TableHead>
+                                  <TableHead className="font-semibold px-4">Request Type</TableHead>
                                   <TableHead className="font-semibold px-4 text-center">Days</TableHead>
                                   <TableHead className="font-semibold px-4">Manager status</TableHead>
                                   <TableHead className="font-semibold px-4">Details</TableHead>
@@ -2386,7 +2387,7 @@ export function LeavePageClient() {
                                       rowRequestType,
                                       isHalfDay
                                     );
-                                    const hasDetails = managerReason || comments || requestTypeLabel;
+                                    const hasDetails = Boolean(managerReason || comments);
                                     const statusBadgeClass =
                                       status === "APPROVED"
                                         ? filledBadgeClass("success")
@@ -2421,6 +2422,9 @@ export function LeavePageClient() {
                                         <TableCell className="px-4 py-3 whitespace-nowrap text-muted-foreground text-xs">
                                           <span>{duration}</span>
                                         </TableCell>
+                                        <TableCell className="px-4 py-3 whitespace-nowrap text-muted-foreground text-xs">
+                                          <span>{requestTypeLabel || "—"}</span>
+                                        </TableCell>
                                         <TableCell className="px-4 py-3 whitespace-nowrap text-center text-xs font-medium text-foreground/70">
                                           {durationDays && durationDays !== "—" ? durationDays : "—"}
                                         </TableCell>
@@ -2447,11 +2451,8 @@ export function LeavePageClient() {
                                           {hasDetails ? (
                                             <div
                                               className="text-xs text-muted-foreground space-y-0.5 max-w-[220px]"
-                                              title={`${requestTypeLabel ? `Type: ${requestTypeLabel}` : ""}${requestTypeLabel && (managerReason || comments) ? " | " : ""}${managerReason ? `Reason: ${managerReason}` : ""}${managerReason && comments ? " | " : ""}${comments ? `Comments: ${comments}` : ""}`}
+                                              title={`${managerReason ? `Reason: ${managerReason}` : ""}${managerReason && comments ? " | " : ""}${comments ? `Comments: ${comments}` : ""}`}
                                             >
-                                              {requestTypeLabel ? (
-                                                <p className="font-medium text-foreground/80">{requestTypeLabel}</p>
-                                              ) : null}
                                               {comments ? (
                                                 <p className="truncate">{comments}</p>
                                               ) : null}
