@@ -380,7 +380,7 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.byId(allocationId));
   },
 
-  /** GET /allocation/talent-pool — alias of unallocated list (ROLE_HR | ROLE_ADMIN). */
+  /** GET /allocation/talent-pool — alias of unallocated list (ROLE_HR). */
   getTalentPool(params: { page?: number; size?: number; search?: string } = {}) {
     const query: Record<string, string | number> = {
       page: params.page ?? 0,
@@ -1022,6 +1022,17 @@ export const hrmsService = {
     });
   },
 
+  /** PATCH /employee-profile/{empId}/balances — admin edit of primary/secondary/carry-forward (ROLE_ADMIN). */
+  updateLeaveBalance(
+    empId: string,
+    payload: { primary?: number; secondary?: number; carry_forward?: number; year?: number; month?: number }
+  ) {
+    return apiClient.patch<ApiEnvelope<LeaveBalancesListItem>>(endpoints.profile.employeeBalances(empId), {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
   /** GET /manager-team-on-leave-today — ROLE_MANAGER. */
   getManagerTeamOnLeaveToday(params: { asOfDate?: string } = {}) {
     const query: Record<string, string> = {};
@@ -1130,7 +1141,7 @@ export const hrmsService = {
     return apiClient.get<unknown>(endpoints.masters.clients, { query });
   },
 
-  getClient(clientId: number, params: { includeProjects?: boolean } = {}) {
+  getClient(clientId: string | number, params: { includeProjects?: boolean } = {}) {
     const query: Record<string, string> = {};
     if (params.includeProjects) query.include_projects = "true";
     return apiClient.get<unknown>(endpoints.masters.clientById(clientId), { query });
@@ -1143,14 +1154,14 @@ export const hrmsService = {
     });
   },
 
-  updateClient(clientId: number, payload: Record<string, unknown>) {
+  updateClient(clientId: string | number, payload: Record<string, unknown>) {
     return apiClient.put<unknown>(endpoints.masters.clientById(clientId), {
       contentType: "application/json",
       body: JSON.stringify(payload),
     });
   },
 
-  allocateProjectToClient(projectId: number, clientId: number) {
+  allocateProjectToClient(projectId: number, clientId: string | number) {
     return apiClient.post<unknown>(endpoints.masters.allocateProjectToClient(projectId, clientId));
   },
 

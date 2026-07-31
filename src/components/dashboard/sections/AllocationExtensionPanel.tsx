@@ -530,12 +530,13 @@ export function AllocationExtensionPanel() {
             />
 
             <label className="text-sm md:col-span-2">
-              <span className="mb-1 block text-xs text-wt-text-muted">Reason (optional)</span>
+              <span className="mb-1 block text-xs text-wt-text-muted">Reason</span>
               <input
                 value={createForm.reason}
                 onChange={(e) => setCreateForm((p) => ({ ...p, reason: e.target.value }))}
                 className="w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:border-[var(--wt-brand)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)]"
                 placeholder="Needed for release closure"
+                required
               />
             </label>
           </div>
