@@ -11,6 +11,8 @@ import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { useAuth } from "@/context/AuthContext";
+import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
+import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import {
   TableBody,
   TableCell,
@@ -232,6 +234,7 @@ function ProjectAllocationCard({
 
 export function MyAllocationsPageClient() {
   const { user } = useAuth();
+  const { requiresSelfOnboarding } = useDashboardAccess();
   const hideOperationalDetails = shouldHideAllocationOperationalDetails(user?.roles ?? []);
   const { data, isLoading, isError, error, refetch, isFetching } = useMyAllocationsDetail();
   const [tab, setTab] = useState<"current" | "history">("current");
@@ -248,6 +251,7 @@ export function MyAllocationsPageClient() {
   );
 
   return (
+    <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
     <DashboardPageShell className="wt-detail-page">
       <ContentCard>
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-wt-border px-4 py-4 sm:px-6">
@@ -312,5 +316,6 @@ export function MyAllocationsPageClient() {
         )}
       </ContentCard>
     </DashboardPageShell>
+    </OnboardingGate>
   );
 }

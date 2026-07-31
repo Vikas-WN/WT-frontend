@@ -66,6 +66,10 @@ export function ClientFormDialog({
       showErrorToast("Client name is required.");
       return;
     }
+    if (!editingClient && !form.account_manager_email.trim()) {
+      showErrorToast("Please select an Account Manager before creating this client.");
+      return;
+    }
 
     setLoading(true);
     try {
