@@ -115,6 +115,9 @@ export function formatActionSuccessMessage(label: string): string {
   if (/^create and invite employee$/i.test(l)) {
     return "Employee created successfully. An invitation has been sent.";
   }
+  if (/^deallocate$/i.test(l)) {
+    return "Employee deallocated. Capacity returned to the talent pool.";
+  }
   if (/^create /i.test(l)) {
     const rest = l.replace(/^create /i, "").trim();
     return `${titleCasePhrase(rest)} created.`;

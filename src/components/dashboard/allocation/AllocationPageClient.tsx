@@ -4108,9 +4108,6 @@ export function AllocationPageClient() {
                                                                     await hrmsService.deleteAllocation(
                                                                       allocationId
                                                                     );
-                                                                    showSuccessToast(
-                                                                      "Employee deallocated. Capacity returned to the talent pool."
-                                                                    );
                                                                     setAllocations((prev) =>
                                                                       prev.filter(
                                                                         (r) =>
@@ -4282,9 +4279,7 @@ export function AllocationPageClient() {
                                                             if (!detailId) return;
                                                             runAction("Deallocate", async () => {
                                                               await hrmsService.deleteAllocation(detailId);
-                                                              showSuccessToast(
-                                                                "Employee deallocated. Capacity returned to the talent pool."
-                                                              );
+                                                              // Success toast handled by runAction
                                                               setSelectedEmployeeAllocations((prev) =>
                                                                 prev
                                                                   ? {
