@@ -29,6 +29,22 @@ export type ClientRecord = {
   projects?: ClientProjectSummary[];
 };
 
+export type ClientListSummary = {
+  total: number;
+  active: number;
+  inactive: number;
+  withProjects: number;
+};
+
+export type ClientListPage = {
+  items: ClientRecord[];
+  total: number;
+  page: number;
+  size: number;
+  totalPages: number;
+  summary: ClientListSummary | null;
+};
+
 export type ClientFormState = {
   name: string;
   address: string;

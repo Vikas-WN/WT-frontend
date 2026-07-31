@@ -1,4 +1,9 @@
-import type { ClientProjectSummary, ClientRecord } from "@/types/client";
+import type {
+  ClientListPage,
+  ClientListSummary,
+  ClientProjectSummary,
+  ClientRecord,
+} from "@/types/client";
 import { toRows } from "@/utils/apiRows";
 
 function readString(row: Record<string, unknown>, ...keys: string[]): string {
@@ -100,6 +105,38 @@ function parseClientItems(payload: unknown): ClientRecord[] {
     .filter((row): row is ClientRecord => Boolean(row));
 }
 
+function parseClientListPayload(payload: unknown): ClientRecord[] {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return parseClientItems(payload);
+  if (typeof payload !== "object") return [];
+
+  const obj = payload as Record<string, unknown>;
+  // Prefer explicit list shapes — do not use generic toRows("projects"), which can
+  // mistake a single client's projects[] for the clients list.
+  if (Array.isArray(obj.items)) {
+    return obj.items
+      .map((row) => parseClientRow(row as Record<string, unknown>))
+      .filter((row): row is ClientRecord => Boolean(row));
+  }
+  if (Array.isArray(obj.clients)) {
+    return obj.clients
+      .map((row) => parseClientRow(row as Record<string, unknown>))
+      .filter((row): row is ClientRecord => Boolean(row));
+  }
+  return [];
+}
+
+function parseClientListSummary(raw: unknown): ClientListSummary | null {
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as Record<string, unknown>;
+  return {
+    total: readNumber(row, "total") ?? 0,
+    active: readNumber(row, "active") ?? 0,
+    inactive: readNumber(row, "inactive") ?? 0,
+    withProjects: readNumber(row, "with_projects", "withProjects") ?? 0,
+  };
+}
+
 export function parseClientList(data: unknown): ClientRecord[] {
   if (!data) return [];
   if (Array.isArray(data)) return parseClientItems(data);
@@ -107,23 +144,8 @@ export function parseClientList(data: unknown): ClientRecord[] {
 
   const envelope = data as Record<string, unknown>;
   const payload = (envelope.data !== undefined ? envelope.data : envelope) as unknown;
-
-  // Prefer explicit list shapes — do not use generic toRows("projects"), which can
-  // mistake a single client's projects[] for the clients list.
-  if (payload && typeof payload === "object") {
-    const obj = payload as Record<string, unknown>;
-    if (Array.isArray(obj.items)) {
-      return obj.items
-        .map((row) => parseClientRow(row as Record<string, unknown>))
-        .filter((row): row is ClientRecord => Boolean(row));
-    }
-    if (Array.isArray(obj.clients)) {
-      return obj.clients
-        .map((row) => parseClientRow(row as Record<string, unknown>))
-        .filter((row): row is ClientRecord => Boolean(row));
-    }
-  }
-
+  const items = parseClientListPayload(payload);
+  if (items.length) return items;
   if (Array.isArray(payload)) return parseClientItems(payload);
   return [];
 }
@@ -133,6 +155,49 @@ export function isExternalClientId(id: string | number | null | undefined): bool
   const value = String(id).trim();
   if (!value) return false;
   return !/^\d+$/.test(value);
+}
+
+export function parseClientListPage(data: unknown): ClientListPage {
+  const empty: ClientListPage = {
+    items: [],
+    total: 0,
+    page: 0,
+    size: 0,
+    totalPages: 1,
+    summary: null,
+  };
+  if (!data || typeof data !== "object") return empty;
+
+  const envelope = data as Record<string, unknown>;
+  const payload = (envelope.data !== undefined ? envelope.data : envelope) as unknown;
+  if (!payload || typeof payload !== "object") {
+    const items = parseClientList(data);
+    return {
+      ...empty,
+      items,
+      total: items.length,
+      size: items.length,
+      totalPages: items.length ? 1 : 0,
+    };
+  }
+
+  const obj = payload as Record<string, unknown>;
+  const items = parseClientListPayload(payload);
+  const total = readNumber(obj, "total") ?? items.length;
+  const page = readNumber(obj, "page") ?? 0;
+  const size = readNumber(obj, "size") ?? items.length;
+  const totalPages =
+    readNumber(obj, "total_pages", "totalPages") ??
+    (total === 0 ? 0 : Math.max(1, Math.ceil(total / Math.max(size || 1, 1))));
+
+  return {
+    items,
+    total,
+    page,
+    size,
+    totalPages,
+    summary: parseClientListSummary(obj.summary),
+  };
 }
 
 export function clientToFormState(client: ClientRecord) {

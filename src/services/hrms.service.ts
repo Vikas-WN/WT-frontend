@@ -610,6 +610,7 @@ export const hrmsService = {
         account_manager_email: payload.account_manager_email ?? payload.accountManagerEmail,
         start_date: payload.start_date ?? payload.startDate,
         end_date: payload.end_date ?? payload.endDate,
+        opportunity_ids: payload.opportunity_ids ?? payload.opportunityIds ?? [],
       },
       ["start_date", "end_date"]
     );
@@ -1133,15 +1134,43 @@ export const hrmsService = {
     return apiClient.get<unknown>(endpoints.masters.kpiDefinitions, { query: params });
   },
 
-  listClients(params: { search?: string; activeOnly?: boolean; includeProjects?: boolean } = {}) {
+  listClients(
+    params: {
+      search?: string;
+      status?: "active" | "inactive";
+      activeOnly?: boolean;
+      includeProjects?: boolean;
+      page?: number;
+      size?: number;
+    } = {},
+  ) {
     const query: Record<string, string> = {};
     if (params.search?.trim()) query.search = params.search.trim();
-    if (params.activeOnly) query.active_only = "true";
+    if (params.status === "active" || params.status === "inactive") {
+      query.status = params.status;
+    } else if (params.activeOnly) {
+      query.active_only = "true";
+    }
     if (params.includeProjects) query.include_projects = "true";
+    if (params.page != null) query.page = String(params.page);
+    if (params.size != null) query.size = String(params.size);
     return apiClient.get<unknown>(endpoints.masters.clients, { query });
   },
 
-  getClient(clientId: string | number, params: { includeProjects?: boolean } = {}) {
+  listClientOpportunities(params: {
+    clientId: string | number;
+    search?: string;
+    status?: string[];
+  }) {
+    const query: Record<string, string> = {
+      client_id: String(params.clientId),
+    };
+    if (params.search?.trim()) query.search = params.search.trim();
+    if (params.status?.length) query.status = params.status.join(",");
+    return apiClient.get<unknown>(endpoints.masters.opportunities, { query });
+  },
+
+  getClient(clientId: number, params: { includeProjects?: boolean } = {}) {
     const query: Record<string, string> = {};
     if (params.includeProjects) query.include_projects = "true";
     return apiClient.get<unknown>(endpoints.masters.clientById(clientId), { query });
