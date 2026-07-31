@@ -104,6 +104,7 @@ export function TimelogCalendar({
             inputClassName="timelog-calendar-select"
             aria-label="Month"
             showChevron
+            clearSelectionOnEmptyInput={false}
           />
           <SearchableSelectCombobox
             value={String(viewYear)}
@@ -116,6 +117,7 @@ export function TimelogCalendar({
             inputClassName="timelog-calendar-select"
             aria-label="Year"
             showChevron
+            clearSelectionOnEmptyInput={false}
           />
           <Button
             variant="outline"
