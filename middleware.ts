@@ -9,6 +9,7 @@ export function middleware(request: NextRequest) {
 
   const isPublic =
     pathname.startsWith("/login") ||
+    pathname.startsWith("/api-docs") ||
     pathname.startsWith("/api/") ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico" ||

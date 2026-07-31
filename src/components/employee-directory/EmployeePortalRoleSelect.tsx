@@ -7,11 +7,13 @@ import { AdaptiveSelectField } from "@/components/dashboard/ui/forms";
 import { hrmsService } from "@/services/hrms.service";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import type { OnboardListItem } from "@/types/onboard";
+import { useAuth } from "@/context/AuthContext";
 import {
   PORTAL_ROLE_SELECT_OPTIONS,
   formatPrimaryPortalRoleLabel,
   normalizePortalRoles,
   pickPrimaryPortalRole,
+  portalRoleOptionsForActor,
 } from "@/utils/roles";
 import { isPreActiveEmployeeStatus } from "@/utils/userStatus";
 
@@ -40,6 +42,7 @@ export function EmployeePortalRoleSelect({
   compact = false,
 }: Props) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [optimisticRole, setOptimisticRole] = useState<string | null>(null);
   const roles = useMemo(() => normalizePortalRoles(portalRoles), [portalRoles]);
@@ -48,9 +51,17 @@ export function EmployeePortalRoleSelect({
   const displayLabel = formatPrimaryPortalRoleLabel(
     optimisticRole ? [optimisticRole] : roles
   );
+  // Admin is hidden from assignable options unless the viewer is already an Admin —
+  // except the row's own current role, so an existing Admin's row still renders correctly.
+  const assignableOptions = useMemo(() => {
+    const base = portalRoleOptionsForActor(user?.roles ?? []);
+    if (base.some((option) => option.value === currentRole)) return base;
+    const currentOption = PORTAL_ROLE_SELECT_OPTIONS.find((option) => option.value === currentRole);
+    return currentOption ? [...base, currentOption] : base;
+  }, [user?.roles, currentRole]);
   const options = useMemo(
-    () => PORTAL_ROLE_SELECT_OPTIONS.map((option) => ({ value: option.value, label: option.label })),
-    []
+    () => assignableOptions.map((option) => ({ value: option.value, label: option.label })),
+    [assignableOptions]
   );
   const invited = isInvitedEmployeeStatus(employeeStatus);
   const editable = canEdit && !invited;
@@ -172,7 +183,7 @@ export function EmployeePortalRoleSelect({
         label="Role"
         value={currentRole}
         placeholder="Select Role"
-        options={[...PORTAL_ROLE_SELECT_OPTIONS]}
+        options={assignableOptions}
         disabled={saving}
         onChange={(next) => void persistRole(next)}
         clearSelectionOnEmptyInput={false}

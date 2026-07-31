@@ -9,6 +9,7 @@ export type ProjectFormState = {
   project_manager_emails: string[];
   start_date: string;
   end_date: string;
+  opportunity_ids: string[];
 };
 
 export type AllocationFormState = {
@@ -36,6 +37,7 @@ export function createEmptyProjectForm(): ProjectFormState {
     project_manager_emails: [],
     start_date: "",
     end_date: "",
+    opportunity_ids: [],
   };
 }
 

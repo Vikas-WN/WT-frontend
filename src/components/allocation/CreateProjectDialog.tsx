@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { InputField } from "@/components/dashboard/ui/forms";
 import { useAllocationPercentages } from "@/hooks/useAllocationPercentages";
 import { ClientSelect } from "@/components/allocation/ClientSelect";
+import { OpportunityMultiSelect } from "@/components/allocation/OpportunityMultiSelect";
 import { ProjectTypeSelect } from "@/components/allocation/ProjectTypeSelect";
 import {
   ManagerAllocationFields,
@@ -26,6 +27,7 @@ import {
   isValidAllocationPercentForDesignation,
 } from "@/utils/allocationPercent";
 import { parseEmployeeAllocationsResponse } from "@/utils/allocationList";
+import { isExternalClientId } from "@/utils/client";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { UI_COPY } from "@/constants/uiCopy";
 
@@ -203,9 +205,16 @@ export function CreateProjectDialog({
       showErrorToast("Project name is required.");
       return;
     }
-    const clientId = Number(form.client_id);
-    if (!Number.isFinite(clientId) || clientId <= 0) {
+    const clientIdRaw = form.client_id.trim();
+    const clientName = form.client_name.trim();
+    const numericClientId = Number(clientIdRaw);
+    const hasNumericClientId = /^\d+$/.test(clientIdRaw) && Number.isFinite(numericClientId) && numericClientId > 0;
+    if (!hasNumericClientId && !clientName) {
       showErrorToast("Client is required.");
+      return;
+    }
+    if (!isEditing && !form.opportunity_ids.length) {
+      showErrorToast("Select at least one opportunity for this client.");
       return;
     }
     if (
@@ -216,11 +225,16 @@ export function CreateProjectDialog({
       return;
     }
     const accountManagerEmail = normalizePickerEmail(form.account_manager_email);
+    const externalClientSelected = isExternalClientId(form.client_id);
     if (
       !isEditing &&
       (!accountManagerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountManagerEmail))
     ) {
-      showErrorToast("Select a client with a valid account manager.");
+      showErrorToast(
+        externalClientSelected
+          ? "Enter a valid account manager email for this client."
+          : "Select a client with a valid account manager."
+      );
       return;
     }
     const startDate = normalizeToApiDate(form.start_date);
@@ -273,7 +287,7 @@ export function CreateProjectDialog({
         await hrmsService.updateProject(code, {
           project_name: name,
           project_type: form.project_type,
-          client_id: clientId,
+          ...(hasNumericClientId ? { client_id: numericClientId } : { client_name: clientName }),
           start_date: startDate,
           end_date: endDate,
         });
@@ -318,10 +332,11 @@ export function CreateProjectDialog({
         project_code: projectCode,
         project_name: name,
         project_type: DEFAULT_CREATE_PROJECT_TYPE,
-        client_id: clientId,
+        ...(hasNumericClientId ? { client_id: numericClientId } : { client_name: clientName }),
         account_manager_email: accountManagerEmail,
         start_date: startDate,
         end_date: endDate,
+        opportunity_ids: form.opportunity_ids,
       });
 
       // Delivery Manager is contact-only on create (no allocation). PM is allocated.
@@ -386,7 +401,18 @@ export function CreateProjectDialog({
             <ClientSelect
               required
               value={form.client_id}
-              onChange={(value) => setForm((prev) => ({ ...prev, client_id: value }))}
+              onChange={(value) =>
+                setForm((prev) => ({
+                  ...prev,
+                  client_id: value,
+                  ...(value !== prev.client_id
+                    ? {
+                        opportunity_ids: [],
+                        account_manager_email: value ? prev.account_manager_email : "",
+                      }
+                    : {}),
+                }))
+              }
               onClientSelected={(client) => {
                 const dmEmail = client.deliveryManagerEmail?.trim() || "";
                 const amEmail = client.accountManagerEmail?.trim() || "";
@@ -396,12 +422,24 @@ export function CreateProjectDialog({
                   client_name: client.name,
                   account_manager_email: amEmail,
                   delivery_manager_email: dmEmail || prev.delivery_manager_email,
+                  opportunity_ids: [],
                 }));
                 if (dmEmail) {
                   setDmFields((prev) => ({ ...prev, email: dmEmail }));
                 }
               }}
             />
+            {!isEditing ? (
+              <OpportunityMultiSelect
+                clientId={form.client_id}
+                value={form.opportunity_ids}
+                onChange={(opportunityIds) =>
+                  setForm((prev) => ({ ...prev, opportunity_ids: opportunityIds }))
+                }
+                disabled={loading}
+                required
+              />
+            ) : null}
             <InputField
               label="Start Date"
               required
@@ -426,9 +464,15 @@ export function CreateProjectDialog({
               <InputField
                 label="Account Manager"
                 value={form.account_manager_email}
-                onChange={() => {}}
-                disabled
-                placeholder="Filled from selected client"
+                onChange={(value) =>
+                  setForm((prev) => ({ ...prev, account_manager_email: value }))
+                }
+                disabled={!isExternalClientId(form.client_id)}
+                placeholder={
+                  isExternalClientId(form.client_id)
+                    ? "Enter account manager email"
+                    : "Filled from selected client"
+                }
               />
             ) : null}
             {isEditing ? (

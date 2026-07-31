@@ -5,7 +5,8 @@ export type ClientProjectSummary = {
 };
 
 export type ClientRecord = {
-  id: number;
+  id: string | number;
+  externalId?: string | null;
   name: string;
   address: string | null;
   spocExternalName: string | null;
@@ -26,6 +27,22 @@ export type ClientRecord = {
   isActive: boolean;
   projectCount: number;
   projects?: ClientProjectSummary[];
+};
+
+export type ClientListSummary = {
+  total: number;
+  active: number;
+  inactive: number;
+  withProjects: number;
+};
+
+export type ClientListPage = {
+  items: ClientRecord[];
+  total: number;
+  page: number;
+  size: number;
+  totalPages: number;
+  summary: ClientListSummary | null;
 };
 
 export type ClientFormState = {
