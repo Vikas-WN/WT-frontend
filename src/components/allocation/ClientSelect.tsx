@@ -15,7 +15,7 @@ export function ClientSelect({
   value: string;
   onChange: (value: string) => void;
   onClientSelected?: (client: {
-    id: number;
+    id: string | number;
     name: string;
     accountManagerEmail: string | null;
     deliveryManagerEmail: string | null;

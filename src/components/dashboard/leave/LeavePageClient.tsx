@@ -996,11 +996,12 @@ export function LeavePageClient() {
       const wantsManagerInbox =
         normalizedType === "ALL" ||
         normalizedType === "LEAVE" ||
-        normalizedType === "WFH";
+        normalizedType === "WFH" ||
+        normalizedType === "COMP_OFF";
       const managerInboxTypes =
         normalizedType === "ALL"
-          ? (["LEAVE", "WFH"] as const)
-          : normalizedType === "LEAVE" || normalizedType === "WFH"
+          ? (["LEAVE", "WFH", "COMP_OFF"] as const)
+          : normalizedType === "LEAVE" || normalizedType === "WFH" || normalizedType === "COMP_OFF"
             ? ([normalizedType] as const)
             : ([] as const);
       const canLoadManagerInbox =
@@ -1772,9 +1773,12 @@ export function LeavePageClient() {
                                                       ? []
                                                       : selectedWfhManagerEmails,
                                                   },
-                                                  editingLeaveRequestId
-                                                    ? { userRequestId: Number(editingLeaveRequestId) }
-                                                    : undefined
+                                                  {
+                                                    ...(editingLeaveRequestId
+                                                      ? { userRequestId: Number(editingLeaveRequestId) }
+                                                      : {}),
+                                                    routesToHr: routesLeaveWfhToHr,
+                                                  }
                                                 );
                                                 if (editingLeaveRequestId) {
                                                   await apiClient.put(endpoints.userRequest.root, {
@@ -2026,9 +2030,12 @@ export function LeavePageClient() {
                                                 ? selectedAdditionalRecipientEmails
                                                 : undefined,
                                           },
-                                          editingLeaveRequestId
-                                            ? { userRequestId: Number(editingLeaveRequestId) }
-                                            : undefined
+                                          {
+                                            ...(editingLeaveRequestId
+                                              ? { userRequestId: Number(editingLeaveRequestId) }
+                                              : {}),
+                                            routesToHr: routesLeaveWfhToHr,
+                                          }
                                         );
                                         if (editingLeaveRequestId) {
                                           await apiClient.put(endpoints.userRequest.root, {

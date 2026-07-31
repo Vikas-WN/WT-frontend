@@ -28,6 +28,8 @@ import {
   getDashboardSectionLabel,
 } from "@/constants/dashboardNavigation";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
+import { DropdownSelect } from "@/components/dashboard/ui/DropdownSelect";
+import { formatRoleLabel } from "@/utils/roles";
 import { cleanEmployeeName } from "@/utils/employeeDirectory";
 import { shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
 import { selfProfileQueryKey } from "@/hooks/useSelfProfile";
@@ -133,7 +135,7 @@ function extractRoleFromNotificationMessage(message: string): string {
 }
 
 export function DashboardChrome({ children }: { children: ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, allRoles, activePersona, setActivePersona, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -471,6 +473,19 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {/* activePersona is only ever set for users with ROLE_ADMIN — see AuthContext.syncRolesAndPersona. */}
+            {activePersona ? (
+              <DropdownSelect
+                value={activePersona}
+                onChange={(next) => setActivePersona(next)}
+                options={allRoles.map((role) => ({ value: role, label: formatRoleLabel(role) }))}
+                variant="compact"
+                className="w-35"
+                contentClassName="w-auto min-w-[9rem]"
+                aria-label="Switch active role"
+                clearSelectionOnEmptyInput={false}
+              />
+            ) : null}
             <details
               ref={notificationsPanelRef}
               className="group relative"

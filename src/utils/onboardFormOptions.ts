@@ -1,4 +1,8 @@
-import type { OnboardOptionItem, OnboardOptionsResponse } from "@/types/onboard-options";
+import type {
+  DepartmentBandsMap,
+  OnboardOptionItem,
+  OnboardOptionsResponse,
+} from "@/types/onboard-options";
 import { parseBandsList } from "@/utils/masters";
 
 function parseOptionItems(raw: unknown): OnboardOptionItem[] {
@@ -13,6 +17,27 @@ function parseOptionItems(raw: unknown): OnboardOptionItem[] {
       return { value, label: label || value };
     })
     .filter((item): item is OnboardOptionItem => Boolean(item));
+}
+
+/** Parse `department_bands` and ensure every department key is present (empty array if none). */
+function parseDepartmentBands(
+  raw: unknown,
+  departments: OnboardOptionItem[]
+): DepartmentBandsMap {
+  const map: DepartmentBandsMap = {};
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+      const dept = key.trim();
+      if (!dept) continue;
+      map[dept] = parseOptionItems(value);
+    }
+  }
+  for (const dept of departments) {
+    if (!(dept.value in map)) {
+      map[dept.value] = [];
+    }
+  }
+  return map;
 }
 
 function isCompleteOptions(parsed: OnboardOptionsResponse): boolean {
@@ -60,6 +85,7 @@ export function directoryUserTypeFilterOptions(
 export function parseOnboardOptions(raw: unknown): OnboardOptionsResponse {
   const row = unwrapOnboardOptionsPayload(raw);
   const directoryUserTypes = parseOptionItems(row.directory_user_types);
+  const departments = parseOptionItems(row.departments);
 
   const parsed: OnboardOptionsResponse = {
     categories: parseOptionItems(row.categories ?? row.delivery_statuses),
@@ -69,7 +95,8 @@ export function parseOnboardOptions(raw: unknown): OnboardOptionsResponse {
     directory_user_types: directoryUserTypes.length
       ? directoryUserTypes
       : FALLBACK_DIRECTORY_USER_TYPES,
-    departments: parseOptionItems(row.departments),
+    departments,
+    department_bands: parseDepartmentBands(row.department_bands, departments),
     genders: parseOptionItems(row.genders),
     marital_statuses: parseOptionItems(row.marital_statuses),
     blood_groups: parseOptionItems(row.blood_groups),
@@ -116,19 +143,18 @@ export const FALLBACK_ONBOARD_OPTIONS: OnboardOptionsResponse = {
   directory_user_types: FALLBACK_DIRECTORY_USER_TYPES,
   departments: [
     { value: "AI/ML", label: "AI/ML" },
-    { value: "Account Manager", label: "Account Manager" },
     { value: "Business Analyst", label: "Business Analyst" },
-    { value: "Delivery Manager", label: "Delivery Manager" },
     { value: "DevOps", label: "DevOps" },
     { value: "Developer", label: "Developer" },
     { value: "Executive", label: "Executive" },
     { value: "Finance", label: "Finance" },
     { value: "Human Resources", label: "Human Resources" },
-    { value: "Project Manager", label: "Project Manager" },
+    { value: "Manager", label: "Manager" },
     { value: "QA", label: "QA" },
     { value: "Quality Assurance", label: "Quality Assurance" },
     { value: "UI/UX", label: "UI/UX" },
   ],
+  department_bands: {},
   genders: [
     { value: "MALE", label: "Male" },
     { value: "FEMALE", label: "Female" },
@@ -199,3 +225,8 @@ export const FALLBACK_ONBOARD_OPTIONS: OnboardOptionsResponse = {
     { value: "React Native", label: "React Native" },
   ],
 };
+
+// Ensure every fallback department has a key in department_bands.
+FALLBACK_ONBOARD_OPTIONS.department_bands = Object.fromEntries(
+  FALLBACK_ONBOARD_OPTIONS.departments.map((d) => [d.value, [] as OnboardOptionItem[]])
+);

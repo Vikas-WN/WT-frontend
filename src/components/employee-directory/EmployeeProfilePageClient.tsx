@@ -64,7 +64,7 @@ import { buildProfileRowsFromEmployeeAllocations, formatCurrentAllocationSummary
 import { isSystemProjectAllocationRow } from "@/utils/allocationList";
 const WORK_MODES = ["WFO", "WFH", "HYBRID"];
 const WORK_LOCATIONS = ["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"];
-const USER_STATUSES = ["ACTIVE", "INACTIVE", "PENDING", "ONBOARDING"];
+const USER_STATUSES = ["ACTIVE", "INACTIVE", "PENDING", "ONBOARDING", "INVITED", "SERVING_NOTICE"];
 const SKILL_RATINGS = ["1", "2", "3", "4", "5"];
 
 type BandOption = { value: string; label: string };

@@ -78,8 +78,9 @@ export const compOffService = {
     page?: number;
     size?: number;
     managerOnly?: boolean;
+    selfOnly?: boolean;
   }) {
-    const { fromDate, toDate, page = 0, size = 200, managerOnly } = params;
+    const { fromDate, toDate, page = 0, size = 200, managerOnly, selfOnly } = params;
     const query: Record<string, string> = {
       page: String(page),
       size: String(size),
@@ -88,6 +89,9 @@ export const compOffService = {
     };
     if (managerOnly) {
       query.managerOnly = "true";
+    }
+    if (selfOnly) {
+      query.selfOnly = "true";
     }
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.compOff.earn, {
       query: applyApiDateQuery(query, ["fromDate", "toDate"]),
@@ -122,6 +126,8 @@ export const compOffService = {
     toDate: string;
     page?: number;
     size?: number;
+    managerOnly?: boolean;
+    selfOnly?: boolean;
   }): Promise<Array<Record<string, unknown>>> {
     try {
       const res = await this.listEarnRequests(params);
