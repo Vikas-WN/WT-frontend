@@ -55,6 +55,7 @@ export const USER_REQUEST_FILTER_TYPE_OPTIONS = [
   { value: "WFH", label: "Work from home" },
   { value: "WFH_EXCEPTION", label: "Work from home (Custom)" },
   { value: "COMP_OFF_EARN", label: "Comp Off (earn)" },
+  { value: "COMP_OFF", label: "Comp Off" },
 ] as const;
 
 export function userRequestActionLabel(
