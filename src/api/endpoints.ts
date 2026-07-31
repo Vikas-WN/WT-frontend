@@ -10,6 +10,7 @@ export const endpoints = {
     activity: `${api}/auth/activity`,
     logout: `${api}/auth/logout`,
     me: `${api}/auth/me`,
+    roles: `${api}/roles`,
     oauthBypass: (email: string) => `${api}/oauth/bypass/${encodeURIComponent(email)}`,
   },
 
@@ -205,6 +206,7 @@ export const endpoints = {
     clients: `${api}/masters/clients`,
     clientById: (clientId: string | number) =>
       `${api}/masters/clients/${encodeURIComponent(String(clientId))}`,
+    opportunities: `${api}/masters/opportunities`,
     allocateProjectToClient: (projectId: string | number, clientId: string | number) =>
       `${api}/clients/allocate/${encodeURIComponent(String(projectId))}/client/${encodeURIComponent(String(clientId))}`,
   },

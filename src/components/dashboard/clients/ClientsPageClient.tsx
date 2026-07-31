@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Building2, FolderPlus, Pencil, Plus } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -30,11 +30,10 @@ import { ToolbarFilterSelect } from "@/components/dashboard/ui/ToolbarFilterSele
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { WtStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
-import { ClientFormDialog } from "@/components/allocation/ClientFormDialog";
-import { AllocateProjectToClientDialog } from "@/components/allocation/AllocateProjectToClientDialog";
+import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
-import { useClients, useInvalidateClients } from "@/hooks/clients/useClients";
+import { useClientsPage } from "@/hooks/clients/useClients";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import type { ClientRecord } from "@/types/client";
 
@@ -45,6 +44,8 @@ const STATUS_FILTER_OPTIONS = [
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
 ];
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 
 function PersonCell({
   name,
@@ -128,39 +129,32 @@ export function ClientsPageClient() {
   const { user, status: authStatus } = useAuth();
   const roles = user?.roles ?? [];
   const canView = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
-  const canEdit = canView;
   const queriesEnabled = authStatus === "authenticated" && canView;
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [clientDialogOpen, setClientDialogOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState<ClientRecord | null>(null);
-  const [allocateClient, setAllocateClient] = useState<ClientRecord | null>(null);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(25);
 
-  const { data: clients = [], isLoading, isError, refetch } = useClients({
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, statusFilter, pageSize]);
+
+  const { data, isLoading, isError, refetch, isFetching } = useClientsPage({
     enabled: queriesEnabled,
     search: debouncedSearch.trim() || undefined,
+    status: statusFilter === "all" ? undefined : statusFilter,
     includeProjects: true,
+    page,
+    size: pageSize,
   });
-  const invalidateClients = useInvalidateClients();
-
-  const filteredClients = useMemo(() => {
-    if (statusFilter === "active") return clients.filter((c) => c.isActive);
-    if (statusFilter === "inactive") return clients.filter((c) => !c.isActive);
-    return clients;
-  }, [clients, statusFilter]);
-
-  const stats = useMemo(() => {
-    const active = clients.filter((c) => c.isActive).length;
-    const withProjects = clients.filter((c) => c.projectCount > 0).length;
-    return {
-      total: clients.length,
-      active,
-      inactive: clients.length - active,
-      withProjects,
-    };
-  }, [clients]);
+  const clients = data?.items ?? [];
+  const totalItems = data?.total ?? 0;
+  const totalPages = Math.max(data?.totalPages ?? 1, 1);
+  const summary = data?.summary;
+  const rangeStart = totalItems === 0 ? 0 : page * pageSize + 1;
+  const rangeEnd = totalItems === 0 ? 0 : Math.min((page + 1) * pageSize, totalItems);
 
   if (authStatus !== "loading" && !canView) {
     return (
@@ -181,16 +175,6 @@ export function ClientsPageClient() {
     );
   }
 
-  function openCreateDialog() {
-    setEditingClient(null);
-    setClientDialogOpen(true);
-  }
-
-  function openEditDialog(client: ClientRecord) {
-    setEditingClient(client);
-    setClientDialogOpen(true);
-  }
-
   return (
     <DashboardPageShell className="wt-detail-page">
       <ManagementListCard
@@ -198,28 +182,14 @@ export function ClientsPageClient() {
         title="Clients"
         description="Manage client masters and link projects to the right account."
         headerAction={
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {canEdit ? (
-              <Button
-                variant="brand"
-                size="sm"
-                type="button"
-                className="h-9 gap-1.5 px-3.5"
-                onClick={openCreateDialog}
-              >
-                <Plus className="size-4" aria-hidden />
-                Create client
-              </Button>
-            ) : null}
-            <RefreshIconButton onClick={() => void refetch()} loading={isLoading} />
-          </div>
+          <RefreshIconButton onClick={() => void refetch()} loading={isLoading || isFetching} />
         }
         search={
           <SearchInput
             id="clients-search"
             value={search}
             onChange={setSearch}
-            placeholder="Search by client or SPOC"
+            placeholder="Search by client name"
             aria-label="Search clients"
             className="h-9 border-wt-border bg-wt-surface-1 shadow-sm"
           />
@@ -251,27 +221,27 @@ export function ClientsPageClient() {
           </div>
         ) : null}
 
-        {!isLoading && !isError ? (
+        {!isLoading && !isError && summary ? (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <StatChip label="Total" value={stats.total} />
-            <StatChip label="Active" value={stats.active} />
-            <StatChip label="Inactive" value={stats.inactive} />
-            <StatChip label="With projects" value={stats.withProjects} />
+            <StatChip label="Total" value={summary.total} />
+            <StatChip label="Active" value={summary.active} />
+            <StatChip label="Inactive" value={summary.inactive} />
+            <StatChip label="With projects" value={summary.withProjects} />
           </div>
         ) : null}
 
         <ManagementListContent
           isLoading={isLoading && !clients.length}
-          isEmpty={!isError && !filteredClients.length}
+          isEmpty={!isError && !clients.length}
           emptyTitle="No clients to show"
           emptyDescription={
             search.trim() || statusFilter !== "all"
               ? "Try adjusting your search or status filter."
-              : "Create a client to start linking projects."
+              : "Clients will appear here once synced from the catalog."
           }
           emptyIcon={<Building2 className="size-5" aria-hidden />}
           skeletonRows={8}
-          skeletonColumns={canEdit ? 7 : 6}
+          skeletonColumns={5}
         >
           <div className="wt-detail-scroll-section min-h-0">
             <ScrollableTable
@@ -283,22 +253,16 @@ export function ClientsPageClient() {
                 <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>Client</TableHead>
-                    <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>SPOC (External)</TableHead>
                     <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>Account Manager</TableHead>
                     <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>Delivery Manager</TableHead>
                     <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>Projects</TableHead>
                     <TableHead className={WT_TABLE_HEAD_COMPACT_CLASS}>Status</TableHead>
-                    {canEdit ? (
-                      <TableHead className={cn(WT_TABLE_HEAD_COMPACT_CLASS, "text-right")}>
-                        Actions
-                      </TableHead>
-                    ) : null}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredClients.map((client) => (
+                  {clients.map((client) => (
                     <TableRow
-                      key={client.id}
+                      key={String(client.id)}
                       className="transition hover:bg-blue-50/40 dark:hover:bg-wt-surface-2"
                     >
                       <TableCell className={cn(WT_TABLE_CELL_COMPACT_CLASS, "align-top")}>
@@ -315,12 +279,6 @@ export function ClientsPageClient() {
                             <p className="mt-0.5 text-xs text-wt-text-faint">No address</p>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell className={cn(WT_TABLE_CELL_COMPACT_CLASS, "align-top")}>
-                        <PersonCell
-                          name={client.spocExternalName}
-                          email={client.spocExternalEmail}
-                        />
                       </TableCell>
                       <TableCell className={cn(WT_TABLE_CELL_COMPACT_CLASS, "align-top")}>
                         <PersonCell
@@ -342,75 +300,33 @@ export function ClientsPageClient() {
                           {client.isActive ? "Active" : "Inactive"}
                         </WtStatusBadge>
                       </TableCell>
-                      {canEdit ? (
-                        <TableCell
-                          className={cn(WT_TABLE_CELL_COMPACT_CLASS, "align-top text-right")}
-                        >
-                          <div className="inline-flex items-center justify-end gap-1">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 gap-1.5 px-2.5"
-                              disabled={!client.isActive}
-                              title={
-                                client.isActive
-                                  ? "Allocate project to this client"
-                                  : "Activate the client before allocating projects"
-                              }
-                              onClick={() => setAllocateClient(client)}
-                            >
-                              <FolderPlus className="size-3.5" aria-hidden />
-                              <span className="hidden lg:inline">Allocate</span>
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 gap-1.5 px-2.5"
-                              title="Edit client"
-                              onClick={() => openEditDialog(client)}
-                            >
-                              <Pencil className="size-3.5" aria-hidden />
-                              <span className="hidden lg:inline">Edit</span>
-                            </Button>
-                          </div>
-                        </TableCell>
-                      ) : null}
                     </TableRow>
                   ))}
                 </TableBody>
               </WtTable>
             </ScrollableTable>
           </div>
+
+          {totalItems > 0 ? (
+            <ListPagination
+              page={page}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              rangeStart={rangeStart}
+              rangeEnd={rangeEnd}
+              pageSize={pageSize}
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(0);
+              }}
+              loading={isFetching}
+              className="mt-3"
+            />
+          ) : null}
         </ManagementListContent>
       </ManagementListCard>
-
-      {canEdit ? (
-        <>
-          <ClientFormDialog
-            open={clientDialogOpen}
-            editingClient={editingClient}
-            onClose={() => {
-              setClientDialogOpen(false);
-              setEditingClient(null);
-            }}
-            onSaved={async () => {
-              invalidateClients();
-              await refetch();
-            }}
-          />
-          <AllocateProjectToClientDialog
-            open={Boolean(allocateClient)}
-            client={allocateClient}
-            onClose={() => setAllocateClient(null)}
-            onSaved={async () => {
-              invalidateClients();
-              await refetch();
-            }}
-          />
-        </>
-      ) : null}
     </DashboardPageShell>
   );
 }

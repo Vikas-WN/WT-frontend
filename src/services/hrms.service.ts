@@ -610,6 +610,7 @@ export const hrmsService = {
         account_manager_email: payload.account_manager_email ?? payload.accountManagerEmail,
         start_date: payload.start_date ?? payload.startDate,
         end_date: payload.end_date ?? payload.endDate,
+        opportunity_ids: payload.opportunity_ids ?? payload.opportunityIds ?? [],
       },
       ["start_date", "end_date"]
     );
@@ -1022,6 +1023,17 @@ export const hrmsService = {
     });
   },
 
+  /** PATCH /employee-profile/{empId}/balances — admin edit of primary/secondary/carry-forward (ROLE_ADMIN). */
+  updateLeaveBalance(
+    empId: string,
+    payload: { primary?: number; secondary?: number; carry_forward?: number; year?: number; month?: number }
+  ) {
+    return apiClient.patch<ApiEnvelope<LeaveBalancesListItem>>(endpoints.profile.employeeBalances(empId), {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
   /** GET /manager-team-on-leave-today — ROLE_MANAGER. */
   getManagerTeamOnLeaveToday(params: { asOfDate?: string } = {}) {
     const query: Record<string, string> = {};
@@ -1122,12 +1134,40 @@ export const hrmsService = {
     return apiClient.get<unknown>(endpoints.masters.kpiDefinitions, { query: params });
   },
 
-  listClients(params: { search?: string; activeOnly?: boolean; includeProjects?: boolean } = {}) {
+  listClients(
+    params: {
+      search?: string;
+      status?: "active" | "inactive";
+      activeOnly?: boolean;
+      includeProjects?: boolean;
+      page?: number;
+      size?: number;
+    } = {},
+  ) {
     const query: Record<string, string> = {};
     if (params.search?.trim()) query.search = params.search.trim();
-    if (params.activeOnly) query.active_only = "true";
+    if (params.status === "active" || params.status === "inactive") {
+      query.status = params.status;
+    } else if (params.activeOnly) {
+      query.active_only = "true";
+    }
     if (params.includeProjects) query.include_projects = "true";
+    if (params.page != null) query.page = String(params.page);
+    if (params.size != null) query.size = String(params.size);
     return apiClient.get<unknown>(endpoints.masters.clients, { query });
+  },
+
+  listClientOpportunities(params: {
+    clientId: string | number;
+    search?: string;
+    status?: string[];
+  }) {
+    const query: Record<string, string> = {
+      client_id: String(params.clientId),
+    };
+    if (params.search?.trim()) query.search = params.search.trim();
+    if (params.status?.length) query.status = params.status.join(",");
+    return apiClient.get<unknown>(endpoints.masters.opportunities, { query });
   },
 
   getClient(clientId: number, params: { includeProjects?: boolean } = {}) {
@@ -1143,14 +1183,14 @@ export const hrmsService = {
     });
   },
 
-  updateClient(clientId: number, payload: Record<string, unknown>) {
+  updateClient(clientId: string | number, payload: Record<string, unknown>) {
     return apiClient.put<unknown>(endpoints.masters.clientById(clientId), {
       contentType: "application/json",
       body: JSON.stringify(payload),
     });
   },
 
-  allocateProjectToClient(projectId: number, clientId: number) {
+  allocateProjectToClient(projectId: number, clientId: string | number) {
     return apiClient.post<unknown>(endpoints.masters.allocateProjectToClient(projectId, clientId));
   },
 
