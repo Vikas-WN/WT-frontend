@@ -52,12 +52,12 @@ export function isLeaveRequestRow(row: Record<string, unknown>): boolean {
   return String(pickRowField(row, "request_type", "requestType") ?? "").trim().toUpperCase() === "LEAVE";
 }
 
-/** Leave or WFH rows that use the primary-manager approval workflow. */
+/** Leave, WFH, or OPTIONAL rows that use the primary-manager approval workflow. */
 export function isLeaveOrWfhRequestRow(row: Record<string, unknown>): boolean {
   const type = String(pickRowField(row, "request_type", "requestType") ?? "")
     .trim()
     .toUpperCase();
-  return type === "LEAVE" || type === "WFH";
+  return type === "LEAVE" || type === "WFH" || type === "OPTIONAL";
 }
 
 export function hasPrimaryLeaveManagers(row: Record<string, unknown>): boolean {

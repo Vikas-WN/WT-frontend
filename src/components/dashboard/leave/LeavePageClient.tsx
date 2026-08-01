@@ -161,6 +161,8 @@ import {
   mapEarnListRow,
   normalizeCompOffRequestType,
   pickRowField,
+  sameDayCompOffEarnDatesInUsageRange,
+  sameDayCompOffUsageErrorMessage,
 } from "@/utils/compOff";
 import { compOffService } from "@/services/compOff.service";
 import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
@@ -327,19 +329,24 @@ export function LeavePageClient() {
 
   const handleSubmitWfhException = useCallback(
     async (payload: { request_from_date: string; request_to_date: string; comments: string }) => {
-      const body = {
+      const body = buildUserRequestBody({
         request_from_date: payload.request_from_date,
         request_to_date: payload.request_to_date,
         request_type: "WFH_EXCEPTION",
         comments: payload.comments,
-      };
+        is_half_day: false,
+      });
       await apiClient.post(endpoints.userRequest.root, {
         contentType: "application/json",
         body: JSON.stringify(body),
       });
       showSuccessToast("Custom Work From Home request submitted to HR for approval.");
       invalidateLeaveBalance();
-      await loadMyLeaveRequests();
+      try {
+        await loadMyLeaveRequests();
+      } catch {
+        /* Request already created — refresh failure should not look like a submit failure. */
+      }
     },
     [invalidateLeaveBalance, loadMyLeaveRequests]
   );
@@ -523,24 +530,15 @@ export function LeavePageClient() {
       else setLeaveSubTab(isTeamLeaveRoute || tabFromQuery === "team" ? "team" : "my");
     }
 
-    if (deepLinkFrom && deepLinkTo) {
-      setEmployeeRequestFilters((prev) => ({
-        ...prev,
-        fromDate: deepLinkFrom,
-        toDate: deepLinkTo,
-      }));
-      setMyRequestsFromDate(deepLinkFrom);
-      setMyRequestsToDate(deepLinkTo);
-    } else {
-      // Empty UI filters → wide unfiltered API range (see unfilteredLeaveRequestRange).
-      setEmployeeRequestFilters((prev) => ({
-        ...prev,
-        fromDate: "",
-        toDate: "",
-      }));
-      setMyRequestsFromDate("");
-      setMyRequestsToDate("");
-    }
+    // Always use a wide unfiltered range so every leave request stays visible for review.
+    // Legacy URLs may still carry from/to; ignore them for filtering once a requestId is present.
+    setEmployeeRequestFilters((prev) => ({
+      ...prev,
+      fromDate: "",
+      toDate: "",
+    }));
+    setMyRequestsFromDate("");
+    setMyRequestsToDate("");
 
     setTeamLeaveSearch("");
     setMyLeaveSearch("");
@@ -993,6 +991,20 @@ export function LeavePageClient() {
       totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
     } else if (scope === "team") {
       const normalizedType = String(requestType || "ALL").trim().toUpperCase();
+
+      // Custom WFH is HR-approved; load org-wide for HR without requiring portfolio emails.
+      if (normalizedType === "WFH_EXCEPTION" && hasHrAccess) {
+        const result = await fetchPaginatedScopedUserRequests({
+          fromDate: from,
+          toDate: to,
+          requestType: "WFH_EXCEPTION",
+          page: 0,
+          size: Math.max(size, 200),
+        });
+        rows = applyListSort(result.rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
+        totalElements = rows.length;
+        totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
+      } else {
       const wantsManagerInbox =
         normalizedType === "ALL" ||
         normalizedType === "LEAVE" ||
@@ -1149,6 +1161,43 @@ export function LeavePageClient() {
           /* keep leave/WFH rows */
         }
       }
+
+      // Merge Custom WFH into All types for HR (portfolio-only ALL can miss org-wide exceptions).
+      if (normalizedType === "ALL" && hasHrAccess) {
+        try {
+          const exceptionRes = await fetchPaginatedScopedUserRequests({
+            fromDate: from,
+            toDate: to,
+            requestType: "WFH_EXCEPTION",
+            page: 0,
+            size: Math.max(size, 200),
+          });
+          if (exceptionRes.rows.length) {
+            const merged = [...rows, ...exceptionRes.rows];
+            rows = Array.from(
+              new Map(
+                merged.map((row) => {
+                  const key = String(
+                    row.user_request_id ??
+                      row.userRequestId ??
+                      row.request_id ??
+                      row.requestId ??
+                      row.id ??
+                      Math.random()
+                  );
+                  return [key, row] as const;
+                })
+              ).values()
+            );
+            rows = applyListSort(rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
+            totalElements = rows.length;
+            totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
+          }
+        } catch {
+          /* keep existing rows */
+        }
+      }
+      } // end else (non-WFH_EXCEPTION HR path)
     } else if (hasHrAccess) {
       // Load a full window for client-side pagination (same as team merge path).
       const result = await fetchPaginatedScopedUserRequests({
@@ -1467,6 +1516,45 @@ export function LeavePageClient() {
     [filteredEmployeeRequests, teamLeaveSortId]
   );
 
+  // When the notification only carries leave dates (no Request #), resolve the
+  // matching team/self row once data is loaded and highlight it.
+  useEffect(() => {
+    if (deepLinkRequestId || !deepLinkFrom || !deepLinkTo) return;
+    if (highlightRequestId) return;
+    const pools = [
+      ...sortedEmployeeRequests,
+      ...sortedLeaveTabRequests,
+      ...sortedWfhTabRequests,
+    ];
+    const match = pools.find((row) => {
+      const from = String(
+        row.request_from_date ?? row.requestFromDate ?? row.from_date ?? row.fromDate ?? ""
+      ).trim();
+      const to = String(
+        row.request_to_date ?? row.requestToDate ?? row.to_date ?? row.toDate ?? ""
+      ).trim();
+      return from === deepLinkFrom && to === deepLinkTo;
+    });
+    if (!match) return;
+    const id = String(
+      match.user_request_id ??
+        match.userRequestId ??
+        match.request_id ??
+        match.requestId ??
+        match.id ??
+        ""
+    ).trim();
+    if (id) setHighlightRequestId(id);
+  }, [
+    deepLinkFrom,
+    deepLinkRequestId,
+    deepLinkTo,
+    highlightRequestId,
+    sortedEmployeeRequests,
+    sortedLeaveTabRequests,
+    sortedWfhTabRequests,
+  ]);
+
   useEffect(() => {
     if (!highlightRequestId) return;
     const frame = window.requestAnimationFrame(() => {
@@ -1629,7 +1717,7 @@ export function LeavePageClient() {
                                           onClick={() => setWfhExceptionOpen(true)}
                                           className="text-xs text-[var(--wt-brand)] hover:text-[var(--wt-brand)] underline cursor-pointer"
                                         >
-                                          Need a custom WFH exception? Contact HR
+                                          Need more than 1 WFH day/week? Request a custom exception
                                         </button>
                                       </div>
                                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 max-w-xl">
@@ -1743,7 +1831,7 @@ export function LeavePageClient() {
                                                   throw new Error("Please provide a valid To date (dd/mm/yyyy).");
                                                 }
                                                 if (parseApiDate(toDate)! < parseApiDate(fromDate)!) {
-                                                  throw new Error("To date cannot be earlier than From date.");
+                                                  throw new Error("Start Date cannot be later than End Date.");
                                                 }
                                                 const comments = leaveRequestForm.comments.trim();
                                                 if (!comments) {
@@ -1923,7 +2011,7 @@ export function LeavePageClient() {
                                           throw new Error("Please provide valid dates (dd/mm/yyyy).");
                                         }
                                         if (compareApiDates(toDate, fromDate) < 0) {
-                                          throw new Error("To Date cannot be earlier than From Date.");
+                                          throw new Error("Start Date cannot be later than End Date.");
                                         }
                                         const comments = leaveRequestForm.comments.trim();
                                         if (!comments) {
@@ -1968,11 +2056,33 @@ export function LeavePageClient() {
                                           }
                                           const available =
                                             await compOffService.resolveAvailableUnits(fromDate);
+                                          if (!Number.isFinite(available) || available < days) {
+                                            try {
+                                              const grantsRes = await compOffService.getGrants();
+                                              const sameDay = sameDayCompOffEarnDatesInUsageRange(
+                                                compOffService.parseGrantsResponse(grantsRes),
+                                                fromDate,
+                                                toDate
+                                              );
+                                              if (sameDay.length > 0) {
+                                                throw new Error(
+                                                  sameDayCompOffUsageErrorMessage(sameDay)
+                                                );
+                                              }
+                                            } catch (err) {
+                                              if (err instanceof Error && err.message.includes("same date")) {
+                                                throw err;
+                                              }
+                                            }
+                                          }
+                                          if (!Number.isFinite(available) || available <= 0) {
+                                            throw new Error(
+                                              "No approved comp-off credits available. Submit an earn request and get it approved before applying for usage."
+                                            );
+                                          }
                                           if (available < days) {
                                             throw new Error(
-                                              `Insufficient comp-off balance. Available: ${
-                                                Number.isFinite(available) ? available : 0
-                                              }, requested: ${days} day(s).`
+                                              `Insufficient comp-off balance. Available: ${available}, requested: ${days} day(s).`
                                             );
                                           }
                                           const managerCompOffEmail =

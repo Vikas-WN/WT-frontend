@@ -26,8 +26,10 @@ type SkillsMultiSelectFieldProps = {
   dropdownMaxWidth?: number;
 };
 
-const DROPDOWN_MAX_HEIGHT = 208;
+const DROPDOWN_MAX_HEIGHT = 240;
 const DROPDOWN_GAP = 6;
+const VIEWPORT_MARGIN = 8;
+const SEARCH_HEADER_HEIGHT = 40;
 
 export function SkillsMultiSelectField({
   label,
@@ -43,6 +45,7 @@ export function SkillsMultiSelectField({
   dropdownMaxWidth = 320,
 }: SkillsMultiSelectFieldProps) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerWrapRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -78,34 +81,33 @@ export function SkillsMultiSelectField({
   }, []);
 
   useEffect(() => {
-    if (!open || !rootRef.current) return;
+    if (!open) return;
 
     const updatePosition = () => {
-      const root = rootRef.current;
-      if (!root) return;
-      const rect = root.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom - DROPDOWN_GAP;
-      const spaceAbove = rect.top - DROPDOWN_GAP;
+      const trigger = triggerWrapRef.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - DROPDOWN_GAP - VIEWPORT_MARGIN);
+      const spaceAbove = Math.max(0, rect.top - DROPDOWN_GAP - VIEWPORT_MARGIN);
       const openUpward = spaceBelow < DROPDOWN_MAX_HEIGHT && spaceAbove > spaceBelow;
-      const width = Math.min(rect.width, dropdownMaxWidth);
-
-      setDropdownStyle(
-        openUpward
-          ? {
-              position: "fixed",
-              left: `${rect.left}px`,
-              bottom: `${window.innerHeight - rect.top + DROPDOWN_GAP}px`,
-              width: `${width}px`,
-              zIndex: 9999,
-            }
-          : {
-              position: "fixed",
-              top: `${rect.bottom + DROPDOWN_GAP}px`,
-              left: `${rect.left}px`,
-              width: `${width}px`,
-              zIndex: 9999,
-            }
+      const available = openUpward ? spaceAbove : spaceBelow;
+      const maxHeight = Math.min(DROPDOWN_MAX_HEIGHT, Math.max(available, 1));
+      const width = Math.min(Math.max(rect.width, 180), dropdownMaxWidth);
+      const left = Math.min(
+        Math.max(VIEWPORT_MARGIN, rect.left),
+        Math.max(VIEWPORT_MARGIN, window.innerWidth - width - VIEWPORT_MARGIN)
       );
+
+      setDropdownStyle({
+        position: "fixed",
+        left: `${left}px`,
+        width: `${width}px`,
+        maxHeight: `${maxHeight}px`,
+        zIndex: 9999,
+        ...(openUpward
+          ? { bottom: `${window.innerHeight - rect.top + DROPDOWN_GAP}px`, top: "auto" }
+          : { top: `${rect.bottom + DROPDOWN_GAP}px`, bottom: "auto" }),
+      });
     };
 
     updatePosition();
@@ -115,7 +117,7 @@ export function SkillsMultiSelectField({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [open, dropdownMaxWidth]);
+  }, [open, dropdownMaxWidth, value.length, filteredOptions.length]);
 
   const toggleSkill = (skill: string, checked: boolean) => {
     const normalized = skill.trim();
@@ -132,10 +134,17 @@ export function SkillsMultiSelectField({
       ? `${value.length} selected`
       : placeholder ?? `Select ${label.toLowerCase()}…`;
 
+  const listMaxHeight = Math.max(
+    72,
+    (typeof dropdownStyle.maxHeight === "string"
+      ? Number.parseFloat(dropdownStyle.maxHeight)
+      : DROPDOWN_MAX_HEIGHT) - SEARCH_HEADER_HEIGHT
+  );
+
   return (
     <div className={cn(FORM_FIELD_CLASS, className)} ref={rootRef}>
       <FieldLabel label={label} required={required} />
-      <div className="relative">
+      <div className="relative" ref={triggerWrapRef}>
         <Button
           type="button"
           variant="outline"
@@ -155,9 +164,9 @@ export function SkillsMultiSelectField({
               <div
                 ref={dropdownRef}
                 style={dropdownStyle}
-                className="rounded-lg border border-border bg-popover text-popover-foreground shadow-lg"
+                className="flex flex-col overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-lg"
               >
-                <div className="flex items-center gap-2 border-b border-border px-3">
+                <div className="flex shrink-0 items-center gap-2 border-b border-border px-3">
                   <Search className="size-4 shrink-0 text-muted-foreground" />
                   <input
                     type="search"
@@ -170,7 +179,10 @@ export function SkillsMultiSelectField({
                     className="h-9 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                   />
                 </div>
-                <div className="max-h-52 overflow-y-auto p-1">
+                <div
+                  className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1"
+                  style={{ maxHeight: `${listMaxHeight}px` }}
+                >
                   {filteredOptions.length ? (
                     filteredOptions.map((option) => {
                       const checked = selectedSet.has(option.value);

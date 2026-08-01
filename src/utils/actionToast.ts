@@ -17,8 +17,8 @@ export function userRequestTypePhrase(type: unknown): string {
   const normalized = normalizeUserRequestType(type);
   if (normalized === "WFH") return "work-from-home";
   if (normalized === "WFH_EXCEPTION") return "custom work-from-home";
-  if (normalized === "COMP_OFF_EARN") return "comp-off earn";
-  if (normalized === "COMP_OFF") return "comp-off";
+  if (normalized === "COMP_OFF_EARN") return "comp-off credit";
+  if (normalized === "COMP_OFF") return "comp-off usage";
   if (normalized === "OPTIONAL") return "optional leave";
   return "leave";
 }
@@ -32,8 +32,8 @@ export function formatUserRequestTypeLabel(type: unknown, isHalfDay?: boolean): 
   if (upper === "ALL") return "All types";
   if (upper === "WFH" || upper === "WORK_FROM_HOME") return "Work from home";
   if (upper === "WFH_EXCEPTION" || upper === "WORK_FROM_HOME_EXCEPTION") return "Work from home (Custom)";
-  if (upper === "COMP_OFF" || upper === "COMPOFF") return "Comp off";
-  if (upper === "COMP_OFF_EARN" || upper === "COMPOFF_EARN") return "Comp off (earn)";
+  if (upper === "COMP_OFF" || upper === "COMPOFF") return "Comp Off Usage";
+  if (upper === "COMP_OFF_EARN" || upper === "COMPOFF_EARN") return "Comp Off Credit";
   if (upper === "LEAVE") return "Leave";
   if (upper === "OPTIONAL" || upper === "OPTIONAL_LEAVE") return "Optional Leave";
   return raw
@@ -54,7 +54,8 @@ export const USER_REQUEST_FILTER_TYPE_OPTIONS = [
   { value: "OPTIONAL", label: "Optional Leave" },
   { value: "WFH", label: "Work from home" },
   { value: "WFH_EXCEPTION", label: "Work from home (Custom)" },
-  { value: "COMP_OFF_EARN", label: "Comp Off (earn)" },
+  { value: "COMP_OFF_EARN", label: "Comp Off Credit" },
+  { value: "COMP_OFF", label: "Comp Off Usage" },
 ] as const;
 
 export function userRequestActionLabel(

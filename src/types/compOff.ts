@@ -19,6 +19,9 @@ export interface CompOffGrant {
 export interface CompOffBalanceData {
   available_units?: number;
   availableUnits?: number;
+  /** Units free to request after pending reservations (when API provides it). */
+  usable_units?: number;
+  usableUnits?: number;
   as_of_date?: string;
   asOfDate?: string;
 }

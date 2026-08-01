@@ -393,6 +393,10 @@ export function EmployeeDirectoryPageClient() {
                                 <EmployeeUserTypeSelect
                                   empId={empId}
                                   userType={record.user_type ?? record.userType}
+                                  bandId={record.band_id ?? record.bandId}
+                                  bandName={
+                                    record.band ?? record.band_name ?? record.bandName
+                                  }
                                   canEdit={canEditDirectory}
                                   options={directoryUserTypeOptions}
                                 />

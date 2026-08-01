@@ -43,18 +43,3 @@
   background: var(--wt-surface-1, #fff);
   resize: vertical;
 }
-
-.day-entry-form-error {
-  border-radius: 0.75rem;
-  border: 1px solid #fecaca;
-  background: #fff1f0;
-  padding: 0.75rem 1rem;
-  font-size: 0.875rem;
-  color: #991b1b;
-}
-
-:is(.dark, [data-theme="dark"]) .day-entry-form-error {
-  border-color: rgba(244, 63, 94, 0.35);
-  background: rgba(244, 63, 94, 0.12);
-  color: #fda4af;
-}

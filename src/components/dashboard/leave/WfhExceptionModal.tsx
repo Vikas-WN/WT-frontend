@@ -1,9 +1,12 @@
 "use client";
 
+import { ApiError } from "@/api/error";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TextAreaField } from "@/components/dashboard/ui/forms";
-import { useState } from "react";
+import { showErrorToast } from "@/lib/toast";
+import { compareApiDates, normalizeToApiDate, parseApiDate } from "@/utils/apiDate";
+import { useEffect, useState } from "react";
 
 type WfhExceptionModalProps = {
   open: boolean;
@@ -17,30 +20,74 @@ export function WfhExceptionModal({ open, onClose, onSubmit }: WfhExceptionModal
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (!open) {
+      setSaving(false);
+      return;
+    }
+    setFromDate("");
+    setToDate("");
+    setReason("");
+    setSaving(false);
+  }, [open]);
+
   if (!open) return null;
 
   const handleSubmit = async () => {
-    if (!fromDate || !toDate) return;
-    if (!reason.trim()) return;
+    const startDate = normalizeToApiDate(fromDate.trim());
+    const endDate = normalizeToApiDate(toDate.trim());
+
+    if (!startDate || !parseApiDate(startDate)) {
+      showErrorToast("Please provide a valid Start Date (dd/mm/yyyy).");
+      return;
+    }
+    if (!endDate || !parseApiDate(endDate)) {
+      showErrorToast("Please provide a valid End Date (dd/mm/yyyy).");
+      return;
+    }
+    if (compareApiDates(startDate, endDate) > 0) {
+      showErrorToast("Start Date cannot be later than End Date.");
+      return;
+    }
+    if (!reason.trim()) {
+      showErrorToast("Reason is required.");
+      return;
+    }
+    if (reason.trim().length > 200) {
+      showErrorToast("Reason must be 200 characters or less.");
+      return;
+    }
+
     setSaving(true);
     try {
-      await onSubmit({ request_from_date: fromDate, request_to_date: toDate, comments: reason });
-      setFromDate("");
-      setToDate("");
-      setReason("");
+      await onSubmit({
+        request_from_date: startDate,
+        request_to_date: endDate,
+        comments: reason.trim(),
+      });
       onClose();
-    } catch { } finally {
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Failed to submit request.";
+      showErrorToast(message || "Failed to submit Custom Work From Home request.");
+    } finally {
       setSaving(false);
     }
   };
 
-  const canSubmit = fromDate && toDate && reason.trim() && !saving;
+  const canSubmit = Boolean(fromDate.trim() && toDate.trim() && reason.trim()) && !saving;
 
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
       role="presentation"
-      onClick={onClose}
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !saving) onClose();
+      }}
     >
       <div
         role="dialog"
@@ -56,8 +103,22 @@ export function WfhExceptionModal({ open, onClose, onSubmit }: WfhExceptionModal
           Use this form to request more than the standard 1 WFH day per week. This request will be sent directly to HR for approval.
         </p>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <DatePicker label="Start Date" required value={fromDate} onChange={setFromDate} disabled={saving} />
-          <DatePicker label="End Date" required value={toDate} onChange={setToDate} disabled={saving} />
+          <DatePicker
+            label="Start Date"
+            required
+            value={fromDate}
+            onChange={setFromDate}
+            disabled={saving}
+            positionerClassName="z-[300]"
+          />
+          <DatePicker
+            label="End Date"
+            required
+            value={toDate}
+            onChange={setToDate}
+            disabled={saving}
+            positionerClassName="z-[300]"
+          />
         </div>
         <TextAreaField
           label="Reason"
@@ -70,7 +131,12 @@ export function WfhExceptionModal({ open, onClose, onSubmit }: WfhExceptionModal
           <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button type="button" variant="brand" onClick={handleSubmit} disabled={!canSubmit}>
+          <Button
+            type="button"
+            variant="brand"
+            onClick={() => void handleSubmit()}
+            disabled={!canSubmit}
+          >
             {saving ? "Submitting..." : "Submit"}
           </Button>
         </div>
