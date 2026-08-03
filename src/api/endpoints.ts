@@ -144,6 +144,8 @@ export const endpoints = {
 
   employees: {
     managers: `${api}/employees/managers`,
+    accountManagers: `${api}/employees/account-managers`,
+    deliveryManagers: `${api}/employees/delivery-managers`,
   },
 
   learning: {
