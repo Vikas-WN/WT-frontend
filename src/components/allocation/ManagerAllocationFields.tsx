@@ -4,6 +4,7 @@ import { InputField, SelectField } from "@/components/dashboard/ui/forms";
 import { AllocatedPercentSelect } from "@/components/allocation/AllocatedPercentSelect";
 import { CurrentAllocationHint } from "@/components/allocation/CurrentAllocationHint";
 import { InternalEmployeeSelect } from "@/components/allocation/InternalEmployeeSelect";
+import { RoleEmployeeSelect } from "@/components/allocation/RoleEmployeeSelect";
 import {
   ALLOCATION_STATUS_SELECT_OPTIONS,
   ALLOCATION_TYPE_SELECT_OPTIONS,
@@ -46,6 +47,7 @@ export function ManagerAllocationFields({
   percentDesignation,
   hideAllocatedPercent = false,
   managerContactOnly = false,
+  emailSource = "all",
 }: {
   title: string;
   state: ManagerAllocationFieldsState;
@@ -55,6 +57,8 @@ export function ManagerAllocationFields({
   percentDesignation: string;
   hideAllocatedPercent?: boolean;
   managerContactOnly?: boolean;
+  /** Restrict the Name picker to a portal role instead of the full employee directory. */
+  emailSource?: "all" | "deliveryManager";
 }) {
   const showLockedInDate = state.allocation_type === "LOCKED";
 
@@ -62,11 +66,23 @@ export function ManagerAllocationFields({
     return (
       <FormSubsection title={title}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <InternalEmployeeSelect
-            label="Name"
-            value={state.email}
-            onChange={(email) => onChange({ ...state, email })}
-          />
+          {emailSource === "deliveryManager" ? (
+            <RoleEmployeeSelect
+              label="Name"
+              role="DM"
+              required
+              value={state.email}
+              onChange={(email) => onChange({ ...state, email })}
+              extraEmails={[state.email]}
+            />
+          ) : (
+            <InternalEmployeeSelect
+              label="Name"
+              required
+              value={state.email}
+              onChange={(email) => onChange({ ...state, email })}
+            />
+          )}
         </div>
       </FormSubsection>
     );
@@ -75,12 +91,23 @@ export function ManagerAllocationFields({
   return (
     <FormSubsection title={title}>
       <div className="grid gap-4 sm:grid-cols-2">
-        <InternalEmployeeSelect
-          label="Name"
-          required
-          value={state.email}
-          onChange={(email) => onChange({ ...state, email })}
-        />
+        {emailSource === "deliveryManager" ? (
+          <RoleEmployeeSelect
+            label="Name"
+            role="DM"
+            required
+            value={state.email}
+            onChange={(email) => onChange({ ...state, email })}
+            extraEmails={[state.email]}
+          />
+        ) : (
+          <InternalEmployeeSelect
+            label="Name"
+            required
+            value={state.email}
+            onChange={(email) => onChange({ ...state, email })}
+          />
+        )}
         {hideAllocatedPercent ? null : (
           <AllocatedPercentSelect
             required
