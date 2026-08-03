@@ -79,15 +79,20 @@ export function HrLeaveBalancesPanel({
       ? MONTH_OPTIONS.filter((opt) => Number(opt.value) <= currentMonth)
       : MONTH_OPTIONS;
 
+  const periodReady = Boolean(year.trim() && month.trim());
+
   const balancesQ = useHrLeaveBalancesList({
     year,
     month,
     page,
     pageSize,
     search: appliedSearch,
+    enabled: periodReady,
   });
 
   useEffect(() => {
+    // Only clamp future months — never re-fill a deliberately cleared Month field.
+    if (!month.trim()) return;
     if (Number(year) === currentYear && Number(month) > currentMonth) {
       setMonth(String(currentMonth));
     }
@@ -169,6 +174,7 @@ export function HrLeaveBalancesPanel({
                   setPage(0);
                 }}
                 options={monthOptions}
+                placeholder="Select month"
                 contentClassName="w-auto min-w-[11rem]"
               />
             </div>
@@ -284,7 +290,9 @@ export function HrLeaveBalancesPanel({
                       <span className="max-w-sm text-sm text-muted-foreground">
                         {loadError
                           ? "Adjust the period or try again."
-                          : "Try a different search, year, or month."}
+                          : !periodReady
+                            ? "Select a year and month to view leave balances."
+                            : "Try a different search, year, or month."}
                       </span>
                     </div>
                   </TableCell>

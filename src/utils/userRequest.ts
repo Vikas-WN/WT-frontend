@@ -450,6 +450,12 @@ export function hrTeamActionBlockedHint(
   }
 
   if (isCompOffEarnRequestType(requestType)) {
+    // Earn is manager-final: once approved/rejected, Actions should not keep saying
+    // "Awaiting manager approval".
+    const final = requestFinalStatus(row);
+    const mgr = requestManagerStatus(row);
+    if (final === "APPROVED" || mgr === "APPROVED") return null;
+    if (final === "REJECTED" || mgr === "REJECTED") return "Manager rejected";
     return "Awaiting manager approval";
   }
 

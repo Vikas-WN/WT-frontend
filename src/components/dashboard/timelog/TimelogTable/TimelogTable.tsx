@@ -26,6 +26,7 @@ export function TimelogTable({
   size,
   loading,
   onPageChange,
+  projectOptions = [],
 }: TimelogTableProps) {
   const totalPages = Math.max(1, Math.ceil(total / size));
   const startItem = total === 0 ? 0 : page * size + 1;
@@ -69,7 +70,10 @@ export function TimelogTable({
                     {formatTimelogTableDate(entry.log_date)}
                   </td>
                   <td className="whitespace-nowrap font-medium">
-                    {entry.project_name?.trim() || "\u2014"}
+                    {entry.project_name?.trim() 
+                    || projectOptions.find((p) => p.project_code === entry.project_code)?.project_name 
+                    || entry.project_code
+                    || "\u2014"}
                   </td>
                   <td className="whitespace-nowrap">{taskLabel}</td>
                   <td className="whitespace-nowrap">

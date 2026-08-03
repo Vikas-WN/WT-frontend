@@ -24,6 +24,7 @@ import {
   buildAllocateHref,
   formatTalentPoolPreviousProject,
   type AllocateTarget,
+  type UnallocatedTalentPoolItem,
 } from "@/utils/talentPool";
 
 export function TalentPoolPageClient() {
@@ -39,6 +40,7 @@ export function TalentPoolPageClient() {
     setSearch,
     loading,
     error,
+    loadOnBenchPage,
     loadUnallocatedPage,
   } = useTalentPoolTables(queriesEnabled);
 
@@ -61,6 +63,7 @@ export function TalentPoolPageClient() {
     );
   }
 
+  const onBench = data?.on_bench;
   const unallocated = data?.unallocated;
 
   return (
@@ -89,58 +92,99 @@ export function TalentPoolPageClient() {
 
           {loading && !data ? (
             <TableRowsSkeleton rows={6} columns={4} />
-          ) : unallocated ? (
-            <TalentPoolSection
-              title={unallocated.label ?? "Talent Pool"}
-              loading={loading}
-              page={pages.unallocated}
-              totalPages={unallocated.total_pages}
-              totalItems={unallocated.total_elements}
-              pageSize={unallocated.page_size}
-              onPageChange={(p) => void loadUnallocatedPage(p)}
-            >
-              {unallocated.items.length ? (
-                <WtTable>
-                  <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead>Name</TableHead>
-                      <TableHead>Days without project</TableHead>
-                      <TableHead>Previous project</TableHead>
-                      <TableHead className="text-right">Allocate</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {unallocated.items.map((row) => (
-                      <TableRow
-                        key={`unalloc-${row.user_id}-${row.employee_email}`}
-                      >
-                        <TableCell className="px-3 py-2 whitespace-nowrap">
-                          {row.employee_name || "—"}
-                        </TableCell>
-                        <TableCell className="px-3 py-2 whitespace-nowrap">
-                          {row.days_without_project_allocation ?? "—"}
-                        </TableCell>
-                        <TableCell className="px-3 py-2 whitespace-nowrap">
-                          {formatTalentPoolPreviousProject(
-                            row.previous_project_code,
-                            row.previous_project_name
-                          )}
-                        </TableCell>
-                        <TableCell className="px-3 py-2 text-right">
-                          <AllocateButton item={row} displayName={row.employee_name} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </WtTable>
-              ) : (
-                <EmptyRow label="No employees not allocated to a client project." />
-              )}
-            </TalentPoolSection>
-          ) : null}
+          ) : (
+            <>
+              {onBench ? (
+                <TalentPoolSection
+                  title={onBench.label ?? "On bench"}
+                  loading={loading}
+                  page={pages.onBench}
+                  totalPages={onBench.total_pages}
+                  totalItems={onBench.total_elements}
+                  pageSize={onBench.page_size}
+                  onPageChange={(p) => void loadOnBenchPage(p)}
+                >
+                  {onBench.items.length ? (
+                    <TalentPoolTable
+                      rows={onBench.items}
+                      daysHeader="Days on bench"
+                      emptyLabel="No employees currently on bench."
+                    />
+                  ) : (
+                    <EmptyRow label="No employees currently on bench." />
+                  )}
+                </TalentPoolSection>
+              ) : null}
+
+              {unallocated ? (
+                <TalentPoolSection
+                  title={unallocated.label ?? "Not allocated to project"}
+                  loading={loading}
+                  page={pages.unallocated}
+                  totalPages={unallocated.total_pages}
+                  totalItems={unallocated.total_elements}
+                  pageSize={unallocated.page_size}
+                  onPageChange={(p) => void loadUnallocatedPage(p)}
+                >
+                  {unallocated.items.length ? (
+                    <TalentPoolTable
+                      rows={unallocated.items}
+                      daysHeader="Days without project"
+                      emptyLabel="No employees not allocated to a client project."
+                    />
+                  ) : (
+                    <EmptyRow label="No employees not allocated to a client project." />
+                  )}
+                </TalentPoolSection>
+              ) : null}
+            </>
+          )}
         </div>
       </div>
     </DashboardPageShell>
+  );
+}
+
+function TalentPoolTable({
+  rows,
+  daysHeader,
+}: {
+  rows: UnallocatedTalentPoolItem[];
+  daysHeader: string;
+  emptyLabel: string;
+}) {
+  return (
+    <WtTable>
+      <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+        <TableRow className="hover:bg-transparent">
+          <TableHead>Name</TableHead>
+          <TableHead>{daysHeader}</TableHead>
+          <TableHead>Previous project</TableHead>
+          <TableHead className="text-right">Allocate</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row) => (
+          <TableRow key={`tp-${row.user_id}-${row.employee_email}`}>
+            <TableCell className="px-3 py-2 whitespace-nowrap">
+              {row.employee_name || "—"}
+            </TableCell>
+            <TableCell className="px-3 py-2 whitespace-nowrap">
+              {row.days_without_project_allocation ?? "—"}
+            </TableCell>
+            <TableCell className="px-3 py-2 whitespace-nowrap">
+              {formatTalentPoolPreviousProject(
+                row.previous_project_code,
+                row.previous_project_name
+              )}
+            </TableCell>
+            <TableCell className="px-3 py-2 text-right">
+              <AllocateButton item={row} displayName={row.employee_name} />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </WtTable>
   );
 }
 

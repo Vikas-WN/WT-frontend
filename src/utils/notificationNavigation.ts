@@ -77,6 +77,8 @@ function withLeaveDeepLink(
   const { requestId, from, to } = parseLeaveNotificationDeepLink(readNotificationMessage(row));
   const params = new URLSearchParams();
   params.set("tab", tab);
+  // Prefer request id when present (legacy messages). Otherwise pass dates so the
+  // leave page can highlight the matching row without clamping list filters.
   if (requestId) params.set("requestId", requestId);
   if (from) params.set("from", from);
   if (to) params.set("to", to);

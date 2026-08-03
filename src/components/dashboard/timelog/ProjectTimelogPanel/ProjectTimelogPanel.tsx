@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -129,12 +129,30 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
     reload,
   } = useProjectTimelogs(enabled);
 
+  const selectedEmployeeName = useMemo(() => {
+    if (!selectedEmployee) return null;
+    const email = selectedEmployee.trim().toLowerCase();
+    for (const project of projects){
+      const match = project.employees.find(
+        (emp) => emp.email.trim().toLowerCase() === email
+      );
+      if (match?.name?.trim()) return match.name.trim();
+    }
+    return selectedEmployee;
+  }, [projects, selectedEmployee]);
+
   const { actionLoading, runAction } = useDashboardAction();
   const [rejectAction, setRejectAction] = useState<{ entryId: number } | null>(null);
 
   // Employee detail always shows every project for that person (not only the
   // accordion project they were opened from).
-  const filteredAllEntries = employeeEntries;
+  const filteredAllEntries = useMemo(() => {
+    if(!expandedProject) return employeeEntries;
+    const code = expandedProject.trim().toUpperCase();
+    return employeeEntries.filter(
+      (entry) => entry.project_code.trim().toUpperCase() === code
+    );
+  }, [employeeEntries, expandedProject]);
 
   const refreshAfterStatusChange = useCallback(async () => {
     if (selectedEmployee) {
@@ -225,7 +243,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
               <Button variant="outline" size="sm" type="button" onClick={handleBackFromEmployee}>
                 ← Back
               </Button>
-              <CardTitle className="text-base">{selectedEmployee}</CardTitle>
+              <CardTitle className="text-base">{selectedEmployeeName}</CardTitle>
             </div>
             <div className="flex items-end gap-2">
               <TimelogDateRangeFields
@@ -276,7 +294,10 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                             {entry.log_date}
                           </td>
                           <td className="px-2 py-2 whitespace-nowrap">
-                            {entry.project_name?.trim() || "—"}
+                            {entry.project_name?.trim() 
+                            || projects.find((p) => p.project_code === entry.project_code)?.project_name 
+                            || entry.project_code 
+                            || "-"}
                           </td>
                           <td className="px-2 py-2 whitespace-nowrap">
                             {TASK_CATEGORY_LABELS[entry.task_category] ?? entry.task_category}
