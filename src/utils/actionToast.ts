@@ -162,7 +162,7 @@ export function formatActionSuccessMessage(label: string): string {
     return `${titleCasePhrase(rest)} marked.`;
   }
   if (/^deallocate$/i.test(l)) {
-    return "Employee deallocated. Capacity returned to the talent pool.";
+    return "Employee deallocated successfully.";
   }
 
   return `${l} completed.`;

@@ -66,7 +66,7 @@ export function ProjectEmployeesDetailDialog({
     setDeallocatingId(allocationId);
     try {
       await hrmsService.deleteAllocation(String(allocationId));
-      showSuccessToast("Employee deallocated. Capacity returned to the talent pool.");
+      showSuccessToast("Employee deallocated successfully.");
       await employeesQ.refetch();
     } catch (error) {
       showErrorToast(error instanceof Error ? error.message : "Could not deallocate employee.");

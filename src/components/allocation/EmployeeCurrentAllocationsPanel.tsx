@@ -97,7 +97,7 @@ export function EmployeeCurrentAllocationsPanel({
     setDeallocatingId(allocationId);
     try {
       await hrmsService.deleteAllocation(allocationId);
-      showSuccessToast("Employee deallocated. Capacity returned to the talent pool.");
+      showSuccessToast("Employee deallocated successfully.");
       await loadAllocations();
       await onChanged?.();
     } catch (error) {
