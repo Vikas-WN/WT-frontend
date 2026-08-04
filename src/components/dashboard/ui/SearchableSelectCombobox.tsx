@@ -10,6 +10,7 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 import { cn } from "@/lib/utils";
+import { useModalPanel } from "@/components/dashboard/ui/ModalPanelContext";
 
 export type SearchableSelectOption = { value: string; label: string };
 
@@ -70,6 +71,8 @@ export function SearchableSelectCombobox({
   const selected = value ? items.find((opt) => opt.value === value) ?? null : null;
   const selectedLabel = selected?.label ?? "";
   const isDisabled = disabled || loading;
+
+  const modalPanel = useModalPanel();
 
   const [isFiltering, setIsFiltering] = useState(false);
   const [filterText, setFilterText] = useState("");
@@ -175,6 +178,7 @@ export function SearchableSelectCombobox({
       <ComboboxContent
         side="bottom"
         sideOffset={4}
+        container={modalPanel}
         className={cn(
           "max-w-[min(calc(100vw-2rem),28rem)]",
           contentClassName

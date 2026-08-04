@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useSelfProfile, selfProfileQueryKey } from "@/hooks/useSelfProfile";
-import { hasDmRole, hasManagerRole, normalizeRoleName } from "@/utils/roles";
+import { hasDmRole, hasManagerRole } from "@/utils/roles";
 import {
   isOffboardedUserStatus,
   isServingNoticeUserStatus,
@@ -14,19 +14,6 @@ import {
   shouldShowExitSurveyForStatus,
 } from "@/utils/userStatus";
 import { isPortalLockedProfile } from "@/utils/portalLock";
-
-const STAFF_PORTAL_ROLES = new Set([
-  "ROLE_MANAGER",
-  "ROLE_DM",
-  "ROLE_HR",
-  "ROLE_ADMIN",
-  "ROLE_AM",
-  "ROLE_FINANCE",
-]);
-
-function hasStaffPortalRole(roles: string[]): boolean {
-  return roles.some((role) => STAFF_PORTAL_ROLES.has(normalizeRoleName(role)));
-}
 
 export function useDashboardAccess() {
   const queryClient = useQueryClient();
@@ -39,19 +26,17 @@ export function useDashboardAccess() {
   const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
   const isAccountManagerOnly =
     hasAccountManagerAccess && !hasHrAccess && !hasManagerAccess;
-  const restrictForPendingOnboarding =
-    isEmployee && !hasStaffPortalRole(userRoles);
   const initialStatus = normalizeUserStatus(user?.status);
   const [profileStatus, setProfileStatus] = useState(initialStatus);
   const [isSelfOnboarded, setIsSelfOnboarded] = useState(
-    () => !shouldRequireSelfOnboarding(initialStatus, userRoles)
+    () => !shouldRequireSelfOnboarding(initialStatus)
   );
   const profileQ = useSelfProfile(Boolean(user));
   /** Employment ended — applies regardless of manager/AM roles on the account. */
   const isOffboarded = isOffboardedUserStatus(profileStatus);
   const isServingNotice = isServingNoticeUserStatus(profileStatus);
   const isPortalLocked = isPortalLockedProfile(profileQ.data ?? null);
-  const requiresSelfOnboarding = shouldRequireSelfOnboarding(profileStatus, userRoles);
+  const requiresSelfOnboarding = shouldRequireSelfOnboarding(profileStatus);
   const requiresExitSurvey = shouldShowExitSurveyForStatus(profileStatus, userRoles);
   const isExitSurveyOnlyAccess = requiresExitSurvey;
   // Own Profile self-edit: employees and HR/Admin personas (HR was previously excluded).
@@ -73,13 +58,13 @@ export function useDashboardAccess() {
     if (!profile) {
       const status = normalizeUserStatus(user?.status);
       setProfileStatus(status);
-      setIsSelfOnboarded(!shouldRequireSelfOnboarding(status, userRoles));
+      setIsSelfOnboarded(!shouldRequireSelfOnboarding(status));
       return;
     }
 
     const status = resolveProfileStatus(profile, user);
     setProfileStatus(status);
-    setIsSelfOnboarded(!shouldRequireSelfOnboarding(status, userRoles));
+    setIsSelfOnboarded(!shouldRequireSelfOnboarding(status));
     if (normalizeUserStatus(user.status) !== status) {
       void refreshSession();
     }
@@ -91,12 +76,12 @@ export function useDashboardAccess() {
     if (!profile) {
       const status = normalizeUserStatus(user?.status);
       setProfileStatus(status);
-      setIsSelfOnboarded(!shouldRequireSelfOnboarding(status, userRoles));
+      setIsSelfOnboarded(!shouldRequireSelfOnboarding(status));
       return null;
     }
     const status = resolveProfileStatus(profile, user);
     setProfileStatus(status);
-    setIsSelfOnboarded(!shouldRequireSelfOnboarding(status, userRoles));
+    setIsSelfOnboarded(!shouldRequireSelfOnboarding(status));
     if (user && normalizeUserStatus(user.status) !== status) {
       void refreshSession();
     }

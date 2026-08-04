@@ -105,21 +105,10 @@ function normalizeRoleName(role: string): string {
   return token.startsWith("ROLE_") ? token : `ROLE_${token}`;
 }
 
-/** Employee self-service onboarding — INVITED only; not ACTIVE, offboarded, or serving notice. */
-export function shouldRequireSelfOnboarding(
-  status: unknown,
-  roles: string[] | undefined
-): boolean {
-  const userRoles = roles ?? [];
-  const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
-  const hasStaffAccess = hasStaffPortalRole(userRoles);
-  const restrictForPendingOnboarding = isEmployee && !hasStaffAccess;
-
-  if (!restrictForPendingOnboarding) return false;
-
+/** Employee self-service onboarding — INVITED/ONBOARDING only; not ACTIVE, offboarded, or serving notice. */
+export function shouldRequireSelfOnboarding(status: unknown): boolean {
   const statusKey = normalizeEmployeeStatusKey(status);
   if (statusKey === "INACTIVE" || statusKey === "SERVING_NOTICE") return false;
-
   return statusKey !== "ACTIVE";
 }
 

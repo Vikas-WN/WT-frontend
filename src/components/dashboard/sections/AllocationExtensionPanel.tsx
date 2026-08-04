@@ -340,8 +340,8 @@ export function AllocationExtensionPanel() {
       if (createdIds.length) {
         showSuccessToast(
           createdIds.length === 1
-            ? `Extension request created (ID: ${createdIds[0]}).`
-            : `${createdIds.length} extension requests created.`
+            ? "Extension request created successfully."
+            : `${createdIds.length} extension requests created successfully.`
         );
       }
       if (failures.length) {

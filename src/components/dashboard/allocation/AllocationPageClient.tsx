@@ -168,6 +168,9 @@ export function AllocationPageClient() {
   const queryClient = useQueryClient();
   const talentPoolPrefillHandled = useRef<string | null>(null);
   const createProjectDeepLinkHandled = useRef(false);
+  const rowAllocationsRequestSeq = useRef(0);
+  const pickerAllocationsRequestSeq = useRef(0);
+  const allocationForecastRequestSeq = useRef(0);
     const [actionLoading, setActionLoading] = useState(false);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
@@ -182,8 +185,10 @@ export function AllocationPageClient() {
   } | null>(null);
   const invitedListFromDateRef = useRef(invitedListFromDate);
   const invitedListToDateRef = useRef(invitedListToDate);
-  invitedListFromDateRef.current = invitedListFromDate;
-  invitedListToDateRef.current = invitedListToDate;
+  useEffect(() => {
+    invitedListFromDateRef.current = invitedListFromDate;
+    invitedListToDateRef.current = invitedListToDate;
+  }, [invitedListFromDate, invitedListToDate]);
   const [allocations, setAllocations] = useState<Array<Record<string, unknown>>>([]);
   const [allocationsLoading, setAllocationsLoading] = useState(false);
   const [allocationsLoadError, setAllocationsLoadError] = useState<string | null>(null);
@@ -524,6 +529,90 @@ export function AllocationPageClient() {
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) && n > 0;
   }, [selfOnboardForm.yoe]);
+
+  function normalizeAssignedProjects(rows: Array<Record<string, unknown>>) {
+    return rows.map((row) => {
+      const isManagerRaw = row.is_manager ?? null;
+      const isManager =
+        isManagerFlagTruthy(isManagerRaw) || isManagerRoleLabel(row.role ?? row.designation)
+          ? "Yes"
+          : "No";
+
+      return {
+        project_code: row.project_code ?? row.projectCode ?? row.code ?? "—",
+        project_name: row.project_name ?? row.projectName ?? row.name ?? "—",
+        project_type: row.project_type ?? row.projectType ?? "—",
+        role: row.role ?? row.designation ?? "—",
+        allocated_hours: row.allocated_hours ?? row.allocatedHours ?? row.hours ?? "—",
+        billing_status: row.billing_status ?? row.billingStatus ?? "—",
+        is_manager: isManager,
+        start_date: row.start_date ?? row.startDate ?? "—",
+        end_date: row.end_date ?? row.endDate ?? "—",
+      } as Record<string, unknown>;
+    });
+  }
+
+  function mergeProjectAndAllocationData(
+    projectsRows: Array<Record<string, unknown>>,
+    allocationRows: Array<Record<string, unknown>>
+  ) {
+    const allocationByProject = allocationRows.reduce<Record<string, Record<string, unknown>>>(
+      (acc, row) => {
+        const key = String(row.project_code ?? row.projectCode ?? "").trim();
+        if (!key) return acc;
+        const existing = acc[key];
+        if (!existing) {
+          acc[key] = row;
+          return acc;
+        }
+        const existingIsManager =
+          isManagerFlagTruthy(existing.is_manager) ||
+          isManagerRoleLabel(existing.role ?? existing.designation);
+        const nextIsManager =
+          isManagerFlagTruthy(row.is_manager) ||
+          isManagerRoleLabel(row.role ?? row.designation);
+        // Prefer a manager allocation row when multiple users share a project code.
+        acc[key] = nextIsManager && !existingIsManager ? row : existing;
+        return acc;
+      },
+      {}
+    );
+
+    return projectsRows.map((row) => {
+      const projectKey = String(row.project_code ?? "").trim();
+      const allocation = allocationByProject[projectKey] ?? {};
+      return {
+        ...row,
+        role: row.role === "—" ? allocation.role ?? allocation.designation ?? "—" : row.role,
+        allocated_hours:
+          row.allocated_hours === "—"
+            ? allocation.allocated_hours ?? allocation.allocatedHours ?? allocation.hours ?? "—"
+            : row.allocated_hours,
+        billing_status:
+          row.billing_status === "—"
+            ? allocation.billing_status ?? allocation.billingStatus ?? "—"
+            : row.billing_status,
+        is_manager:
+          row.is_manager === "No" &&
+          (allocation.is_manager !== undefined || isManagerRoleLabel(allocation.role ?? allocation.designation))
+            ? (() => {
+                const raw = allocation.is_manager;
+                return isManagerFlagTruthy(raw) || isManagerRoleLabel(allocation.role ?? allocation.designation);
+              })()
+              ? "Yes"
+              : "No"
+            : row.is_manager,
+        start_date:
+          row.start_date === "—"
+            ? allocation.start_date ?? allocation.startDate ?? "—"
+            : row.start_date,
+        end_date:
+          row.end_date === "—"
+            ? allocation.end_date ?? allocation.endDate ?? "—"
+            : row.end_date,
+      } as Record<string, unknown>;
+    });
+  }
 
   useEffect(() => {
         if (requiresSelfOnboarding) return;
@@ -995,90 +1084,6 @@ export function AllocationPageClient() {
     });
   }
 
-  function normalizeAssignedProjects(rows: Array<Record<string, unknown>>) {
-    return rows.map((row) => {
-      const isManagerRaw = row.is_manager ?? null;
-      const isManager =
-        isManagerFlagTruthy(isManagerRaw) || isManagerRoleLabel(row.role ?? row.designation)
-          ? "Yes"
-          : "No";
-
-      return {
-        project_code: row.project_code ?? row.projectCode ?? row.code ?? "—",
-        project_name: row.project_name ?? row.projectName ?? row.name ?? "—",
-        project_type: row.project_type ?? row.projectType ?? "—",
-        role: row.role ?? row.designation ?? "—",
-        allocated_hours: row.allocated_hours ?? row.allocatedHours ?? row.hours ?? "—",
-        billing_status: row.billing_status ?? row.billingStatus ?? "—",
-        is_manager: isManager,
-        start_date: row.start_date ?? row.startDate ?? "—",
-        end_date: row.end_date ?? row.endDate ?? "—",
-      } as Record<string, unknown>;
-    });
-  }
-
-  function mergeProjectAndAllocationData(
-    projectsRows: Array<Record<string, unknown>>,
-    allocationRows: Array<Record<string, unknown>>
-  ) {
-    const allocationByProject = allocationRows.reduce<Record<string, Record<string, unknown>>>(
-      (acc, row) => {
-        const key = String(row.project_code ?? row.projectCode ?? "").trim();
-        if (!key) return acc;
-        const existing = acc[key];
-        if (!existing) {
-          acc[key] = row;
-          return acc;
-        }
-        const existingIsManager =
-          isManagerFlagTruthy(existing.is_manager) ||
-          isManagerRoleLabel(existing.role ?? existing.designation);
-        const nextIsManager =
-          isManagerFlagTruthy(row.is_manager) ||
-          isManagerRoleLabel(row.role ?? row.designation);
-        // Prefer a manager allocation row when multiple users share a project code.
-        acc[key] = nextIsManager && !existingIsManager ? row : existing;
-        return acc;
-      },
-      {}
-    );
-
-    return projectsRows.map((row) => {
-      const projectKey = String(row.project_code ?? "").trim();
-      const allocation = allocationByProject[projectKey] ?? {};
-      return {
-        ...row,
-        role: row.role === "—" ? allocation.role ?? allocation.designation ?? "—" : row.role,
-        allocated_hours:
-          row.allocated_hours === "—"
-            ? allocation.allocated_hours ?? allocation.allocatedHours ?? allocation.hours ?? "—"
-            : row.allocated_hours,
-        billing_status:
-          row.billing_status === "—"
-            ? allocation.billing_status ?? allocation.billingStatus ?? "—"
-            : row.billing_status,
-        is_manager:
-          row.is_manager === "No" &&
-          (allocation.is_manager !== undefined || isManagerRoleLabel(allocation.role ?? allocation.designation))
-            ? (() => {
-                const raw = allocation.is_manager;
-                return isManagerFlagTruthy(raw) || isManagerRoleLabel(allocation.role ?? allocation.designation);
-              })()
-              ? "Yes"
-              : "No"
-            : row.is_manager,
-        start_date:
-          row.start_date === "—"
-            ? allocation.start_date ?? allocation.startDate ?? "—"
-            : row.start_date,
-        end_date:
-          row.end_date === "—"
-            ? allocation.end_date ?? allocation.endDate ?? "—"
-            : row.end_date,
-      } as Record<string, unknown>;
-    });
-  }
-
   function managerProjectCode(row: Record<string, unknown>) {
     const nestedProject = row.project as Record<string, unknown> | undefined;
     return String(
@@ -1330,24 +1335,6 @@ export function AllocationPageClient() {
       ),
     [allocationProjects, hrProjectRawRows]
   );
-  useEffect(() => {
-    const code = allocationForm.project_code.trim();
-    if (!code) return;
-    const pt = resolveProjectTypeForProjectCode(code, { projects: hrProjectRawRows, allocationProjects });
-    setAllocationForm((prev) => {
-      let next = prev;
-      if (pt === "PRODUCT" && prev.billing_status !== "INVESTMENT") {
-        next = { ...next, billing_status: "INVESTMENT" };
-      }
-      if (isStaffingProjectTypeCode(pt) && prev.allocation_type !== "STAFFING") {
-        next = { ...next, allocation_type: "STAFFING" };
-      }
-      if (!isStaffingProjectTypeCode(pt) && prev.allocation_type === "STAFFING") {
-        next = { ...next, allocation_type: "" };
-      }
-      return next;
-    });
-  }, [allocationForm.project_code, hrProjectRawRows, allocationProjects]);
   useEffect(() => {
     if (!allocationEmployeePickerOpen) return;
     const onPointerDown = (e: MouseEvent | PointerEvent) => {
@@ -2282,6 +2269,7 @@ export function AllocationPageClient() {
 
       if (!employeeEmail && !Number.isFinite(userId)) return;
 
+      const requestSeq = ++rowAllocationsRequestSeq.current;
       setEmployeeAllocationsLoading(true);
       setEmployeeAllocationsError(null);
 
@@ -2291,6 +2279,7 @@ export function AllocationPageClient() {
             ? { userEmail: employeeEmail, scope: "all" }
             : { userId: userId!, scope: "all" }
         );
+        if (requestSeq !== rowAllocationsRequestSeq.current) return;
         const parsed = parseEmployeeAllocationsResponse(res);
         if (!parsed) throw new Error("Could not load employee allocations.");
         const enriched = sortAllocationListForDisplay(
@@ -2306,12 +2295,15 @@ export function AllocationPageClient() {
           highlightedAllocationId,
         });
       } catch (err) {
+        if (requestSeq !== rowAllocationsRequestSeq.current) return;
         setSelectedEmployeeAllocations(null);
         setEmployeeAllocationsError(
           err instanceof Error ? err.message : "Could not load employee allocations."
         );
       } finally {
-        setEmployeeAllocationsLoading(false);
+        if (requestSeq === rowAllocationsRequestSeq.current) {
+          setEmployeeAllocationsLoading(false);
+        }
       }
     },
     [enrichAllocationRowsWithContext]
@@ -2321,11 +2313,13 @@ export function AllocationPageClient() {
     async (employeeEmail: string, employeeName: string) => {
       const normalizedEmail = employeeEmail.trim().toLowerCase();
       if (!normalizedEmail) {
+        pickerAllocationsRequestSeq.current += 1;
         setPickerEmployeeAllocations(null);
         setPickerEmployeeAllocationsError(null);
         return;
       }
 
+      const requestSeq = ++pickerAllocationsRequestSeq.current;
       setPickerEmployeeAllocationsLoading(true);
       setPickerEmployeeAllocationsError(null);
 
@@ -2334,6 +2328,7 @@ export function AllocationPageClient() {
           userEmail: normalizedEmail,
           scope: "all",
         });
+        if (requestSeq !== pickerAllocationsRequestSeq.current) return;
         const parsed = parseEmployeeAllocationsResponse(res);
         if (!parsed) throw new Error("Could not load employee allocations.");
         const enriched = sortAllocationListForDisplay(
@@ -2346,12 +2341,15 @@ export function AllocationPageClient() {
           allocations: enriched,
         });
       } catch (err) {
+        if (requestSeq !== pickerAllocationsRequestSeq.current) return;
         setPickerEmployeeAllocations(null);
         setPickerEmployeeAllocationsError(
           err instanceof Error ? err.message : "Could not load employee allocations."
         );
       } finally {
-        setPickerEmployeeAllocationsLoading(false);
+        if (requestSeq === pickerAllocationsRequestSeq.current) {
+          setPickerEmployeeAllocationsLoading(false);
+        }
       }
     },
     [enrichAllocationRowsWithContext]
@@ -2385,6 +2383,7 @@ export function AllocationPageClient() {
   }, [allocationForecastDaysInput]);
 
   const loadAllocationForecasting = useCallback(async () => {
+    const requestSeq = ++allocationForecastRequestSeq.current;
     setAllocationForecastLoading(true);
     setAllocationForecastLoadError(null);
     try {
@@ -2393,6 +2392,7 @@ export function AllocationPageClient() {
         page: Number(ALLOCATION_FORECAST_PAGE),
         size: Number(ALLOCATION_FORECAST_SIZE),
       });
+      if (requestSeq !== allocationForecastRequestSeq.current) return;
       const rawRows = parseAllocationForecastRows(
         (forecastRes as { data?: unknown }).data ?? forecastRes
       );
@@ -2417,18 +2417,22 @@ export function AllocationPageClient() {
         projectRows = [];
       }
 
+      if (requestSeq !== allocationForecastRequestSeq.current) return;
       const emailToName = buildEmailToNameMap(onboardUsers);
       const projectDisplayByCode = buildProjectCodeDisplayMap(projectRows);
       setAllocationForecastRows(
         normalizeForecastRows(rawRows, { emailToName, projectDisplayByCode })
       );
     } catch (err) {
+      if (requestSeq !== allocationForecastRequestSeq.current) return;
       setAllocationForecastRows([]);
       setAllocationForecastLoadError(
         err instanceof Error ? err.message : "Could not load allocation forecasting."
       );
     } finally {
-      setAllocationForecastLoading(false);
+      if (requestSeq === allocationForecastRequestSeq.current) {
+        setAllocationForecastLoading(false);
+      }
     }
   }, [queryClient, allocationForecastDays]);
 
@@ -2517,7 +2521,7 @@ export function AllocationPageClient() {
   }, [hrProjectRawRows, projectFilters, projectSortId]);
   const projectPagination = useClientPagination(filteredProjects, {
     pageSize: 10,
-    pageSizeOptions: [10, 25, 50],
+    pageSizeOptions: [10, 25, 50, 100],
     resetKeys: [projectFilters.search, projectFilters.project_type, projectSortId],
   });
   const filteredAllocations = useMemo(
@@ -3436,10 +3440,6 @@ export function AllocationPageClient() {
                                   setAllocationHrSubTab(
                                     value as "project" | "allocate" | "list"
                                   );
-                                  if (value === "list") {
-                                    void loadAllocationsForHr();
-                                    void loadAllocationForecasting();
-                                  }
                                 }}
                                 items={[
                                   { value: "project", label: "Projects" },
@@ -3507,7 +3507,7 @@ export function AllocationPageClient() {
                                   </div>
                                   {filteredProjects.length ? (
                                     <>
-                                    <ScrollableTable maxHeightClass="max-h-[min(50vh,420px)]">
+                                    <ScrollableTable maxHeightClass="max-h-[min(50vh,420px)]" scrollChain>
                                       <WtTable>
                                         <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
                                           <TableRow className="hover:bg-transparent">
@@ -4111,9 +4111,6 @@ export function AllocationPageClient() {
                                                                     await hrmsService.deleteAllocation(
                                                                       allocationId
                                                                     );
-                                                                    showSuccessToast(
-                                                                      "Employee deallocated. Capacity returned to the talent pool."
-                                                                    );
                                                                     setAllocations((prev) =>
                                                                       prev.filter(
                                                                         (r) =>
@@ -4121,9 +4118,26 @@ export function AllocationPageClient() {
                                                                           allocationId
                                                                       )
                                                                     );
+                                                                    setSelectedEmployeeAllocations(
+                                                                      (prev) =>
+                                                                        prev
+                                                                          ? {
+                                                                              ...prev,
+                                                                              allocations:
+                                                                                prev.allocations.filter(
+                                                                                  (r) =>
+                                                                                    allocationRowId(
+                                                                                      r
+                                                                                    ) !==
+                                                                                    allocationId
+                                                                                ),
+                                                                            }
+                                                                          : null
+                                                                    );
                                                                     invalidateAllocationDependentQueries(
                                                                       queryClient
                                                                     );
+                                                                    await loadAllocationsForHr();
                                                                   });
                                                                 }}
                                                               >
@@ -4189,7 +4203,7 @@ export function AllocationPageClient() {
                                             </Button>
                                           </div>
                                         </div>
-                                        <ScrollableTable maxHeightClass="max-h-[min(50vh,360px)]">
+                                        <ScrollableTable maxHeightClass="max-h-[min(50vh,360px)]" scrollChain>
                                           <WtTable>
                                             <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
                                               <TableRow className="hover:bg-transparent">
@@ -4285,9 +4299,6 @@ export function AllocationPageClient() {
                                                             if (!detailId) return;
                                                             runAction("Deallocate", async () => {
                                                               await hrmsService.deleteAllocation(detailId);
-                                                              showSuccessToast(
-                                                                "Employee deallocated. Capacity returned to the talent pool."
-                                                              );
                                                               setSelectedEmployeeAllocations((prev) =>
                                                                 prev
                                                                   ? {

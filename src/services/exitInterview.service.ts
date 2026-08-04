@@ -10,6 +10,7 @@ import type {
   ExitInterviewSubmissionsQuery,
   ExitInterviewSubmitBody,
   ExitInterviewSubmitResult,
+  ExitSurveyMagicLinkContext,
 } from "@/types/exit-interview";
 import type { ExitSurveyFollowUpListData, OffboardListQuery } from "@/types/offboard";
 
@@ -28,6 +29,24 @@ export const exitInterviewService = {
   getFormDefinition() {
     return apiClient.get<ApiEnvelope<ExitInterviewFormDefinition>>(
       endpoints.exitInterview.formDefinition
+    );
+  },
+
+  /** Public magic-link context for the emailed exit survey link (no session required). */
+  getMagicLinkContext(token: string) {
+    return apiClient.get<ApiEnvelope<ExitSurveyMagicLinkContext>>(
+      endpoints.exitInterview.magicLinkContext(token)
+    );
+  },
+
+  /** Public magic-link submission for the emailed exit survey link (no session required). */
+  submitViaMagicLink(token: string, body: ExitInterviewSubmitBody) {
+    return apiClient.post<ApiEnvelope<ExitInterviewSubmitResult>>(
+      endpoints.exitInterview.magicLinkContext(token),
+      {
+        contentType: "application/json",
+        body: JSON.stringify(body),
+      }
     );
   },
 

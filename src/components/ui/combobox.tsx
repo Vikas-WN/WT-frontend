@@ -92,14 +92,18 @@ function ComboboxContent({
   align = "start",
   alignOffset = 0,
   anchor,
+  container,
   ...props
 }: ComboboxPrimitive.Popup.Props &
   Pick<
     ComboboxPrimitive.Positioner.Props,
     "side" | "align" | "sideOffset" | "alignOffset" | "anchor"
-  >) {
+  > & {
+    /** Optional portal target. Defaults to <body> (floating above everything). */
+    container?: HTMLElement | null;
+  }) {
   return (
-    <ComboboxPrimitive.Portal>
+    <ComboboxPrimitive.Portal container={container ?? undefined}>
       <ComboboxPrimitive.Positioner
         side={side}
         sideOffset={sideOffset}
@@ -126,7 +130,7 @@ const ComboboxList = forwardRef<HTMLDivElement, ComboboxPrimitive.List.Props>(
         ref={ref}
         data-slot="combobox-list"
         className={cn(
-          "no-scrollbar max-h-[min(calc(--spacing(72)---spacing(9)),calc(var(--available-height)---spacing(9)))] scroll-py-1 overflow-y-auto overscroll-contain p-1.5 data-empty:p-0",
+          "wt-combobox-scroll max-h-[min(calc(--spacing(72)---spacing(9)),calc(var(--available-height)---spacing(9)))] scroll-py-1 overflow-y-auto overscroll-contain p-1.5 data-empty:p-0",
           className
         )}
         {...props}

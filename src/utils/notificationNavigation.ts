@@ -137,6 +137,7 @@ export function notificationCategoryLabel(
     case "EXIT_INTERVIEW_SUBMITTED":
       return "Exit Survey";
     case "ONBOARDING_INVITE":
+    case "ONBOARDING_COMPLETED":
     case "ONBOARDING_PROFILE_PENDING":
       return "Onboarding";
     case "IMPORT_JOB_COMPLETED":
@@ -233,6 +234,7 @@ export function resolveNotificationHref(
       return isHrOrAdmin(roles) ? DASHBOARD_ROUTES.offboarding : DASHBOARD_ROUTES["exit-interview"];
 
     case "ONBOARDING_INVITE":
+    case "ONBOARDING_COMPLETED":
     case "ONBOARDING_PROFILE_PENDING":
       return DASHBOARD_ROUTES.employee;
 

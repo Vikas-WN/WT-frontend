@@ -103,7 +103,7 @@ export function ProjectEmployeesDetailDialog({
               </p>
             ) : null}
             <RefreshIconButton
-              onClick={() => void employeesQ.refetch()}
+              onClick={() => void employeesQ.refetch().catch(() => {})}
               loading={employeesQ.isFetching}
               label="Refresh project employees"
             />

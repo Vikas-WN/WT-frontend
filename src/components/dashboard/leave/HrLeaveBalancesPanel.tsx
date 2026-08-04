@@ -67,7 +67,7 @@ export function HrLeaveBalancesPanel({
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
   const [editingEmployee, setEditingEmployee] = useState<LeaveBalancesListItem | null>(null);
 
   const { user } = useAuth();
@@ -305,14 +305,14 @@ export function HrLeaveBalancesPanel({
         {totalElements > 0 ? (
           <div className="border-t border-border/40 pt-4">
             <ListPagination
-              page={page + 1}
+              page={page}
               totalPages={totalPages}
               totalItems={totalElements}
               rangeStart={rangeStart}
               rangeEnd={rangeEnd}
               pageSize={pageSize}
-              pageSizeOptions={[25, 50, 100]}
-              onPageChange={(p) => setPage(Math.max(0, p - 1))}
+              pageSizeOptions={[10, 25, 50, 100]}
+              onPageChange={setPage}
               onPageSizeChange={(size) => {
                 setPageSize(size);
                 setPage(0);

@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Users, Bell, Clock, CalendarDays } from "lucide-react";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
@@ -366,9 +367,7 @@ export function OverviewPageClient() {
     userRoles.includes("ROLE_HR") && !hasManagerAccess;
   const canExportTimelog = hasHrAccess || hasManagerAccess;
   const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
-  const restrictForPendingOnboarding =
-    isEmployee && !hasHrAccess && !hasManagerAccess;
-  const requiresSelfOnboarding = restrictForPendingOnboarding && !isSelfOnboarded;
+  const requiresSelfOnboarding = !isSelfOnboarded;
   /** Self-service profile + onboarding (non-HR employees only) */
   const employeeSelfServeProfile = isEmployee || hasHrAccess;
   const canAccessProfile = Boolean(user);
@@ -3159,14 +3158,30 @@ export function OverviewPageClient() {
                 description="Key metrics and activity across your workspace."
               />
               <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <MetricCard label="Total Onboarded" value={metrics.totalOnboarded} loading={loading} />
+                <MetricCard
+                  label="Total Onboarded"
+                  value={metrics.totalOnboarded}
+                  loading={loading}
+                  icon={Users}
+                />
                 <MetricCard
                   label="Unread Notifications"
                   value={metrics.unreadNotifications}
                   loading={loading}
+                  icon={Bell}
                 />
-                <MetricCard label="Time Log Entries" value={metrics.timelogItems} loading={loading} />
-                <MetricCard label="Leave Records" value={metrics.leaveRecords} loading={loading} />
+                <MetricCard
+                  label="Time Log Entries"
+                  value={metrics.timelogItems}
+                  loading={loading}
+                  icon={Clock}
+                />
+                <MetricCard
+                  label="Leave Records"
+                  value={metrics.leaveRecords}
+                  loading={loading}
+                  icon={CalendarDays}
+                />
               </div>
             </div>
           </ContentCard>

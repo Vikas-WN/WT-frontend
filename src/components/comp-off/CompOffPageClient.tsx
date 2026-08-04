@@ -480,7 +480,7 @@ export function CompOffPageClient({
           fromDate: from,
           toDate: to,
           requestType: COMP_OFF_USAGE_LIST_TYPE,
-          empEmails: userEmail,
+          selfOnly: true,
         });
         usageRows = compOffService.parseRequestRows(usageRes).filter((row) => {
           const t = normalizeCompOffRequestType(row.request_type ?? row.requestType);

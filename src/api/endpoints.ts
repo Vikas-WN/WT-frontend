@@ -248,6 +248,8 @@ export const endpoints = {
     submit: `${api}/exit-interview`,
     submissions: `${api}/exit-interview/submissions`,
     followUp: `${api}/exit-interview/follow-up`,
+    magicLinkContext: (token: string) =>
+      `${api}/exit-interview/magic/${encodeURIComponent(token)}`,
     submissionByLookupId: (lookupId: string) =>
       `${api}/exit-interview/submissions/${encodeURIComponent(lookupId)}`,
     minutesOfMeetingByLookupId: (lookupId: string) =>

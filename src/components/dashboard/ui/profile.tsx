@@ -42,6 +42,34 @@ export function resolveProfilePhotoSrc(profile: Record<string, unknown> | null |
   return raw.startsWith("/") ? `${base}${raw}` : `${base}/${raw}`;
 }
 
+/** Indigo/violet gradient pairs using theme tokens — cohesive with the app brand. */
+const AVATAR_GRADIENT_STOPS = [
+  "var(--wt-indigo-500),var(--wt-violet-500)",
+  "var(--wt-indigo-600),var(--wt-violet-400)",
+  "var(--wt-brand),var(--wt-indigo-500)",
+  "var(--wt-violet-500),var(--wt-indigo-400)",
+  "var(--wt-indigo-700),var(--wt-indigo-400)",
+  "var(--wt-indigo-400),var(--wt-violet-500)",
+] as const;
+
+/** First letter of first name + first letter of last name (e.g. "Sanketh" → "S"). */
+export function avatarInitials(displayName: string): string {
+  const parts = String(displayName ?? "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  const first = (parts[0].charAt(0) || "").toUpperCase();
+  const last = parts.length > 1 ? (parts[parts.length - 1].charAt(0) || "").toUpperCase() : "";
+  return first + last || "?";
+}
+
+/** Deterministic gradient class for a name, so each person keeps a stable, varied color. */
+export function avatarGradientClass(displayName: string): string {
+  const seed = String(displayName ?? "").trim().toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  const stops = AVATAR_GRADIENT_STOPS[hash % AVATAR_GRADIENT_STOPS.length];
+  return `bg-[linear-gradient(135deg,${stops})]`;
+}
+
 export function readProfileField(
   profile: Record<string, unknown> | null | undefined,
   snakeKey: string,
@@ -107,7 +135,7 @@ export function UserAvatar({
   const [imageFailed, setImageFailed] = useState(false);
   const src = resolveProfilePhotoSrc(profile);
   const displayName = String(profile?.name ?? fallbackName ?? "User").trim();
-  const initial = (displayName.charAt(0) || "?").toUpperCase();
+  const showFallback = !src || imageFailed;
   const sizeClass =
     size === "xs" ? "h-6 w-6" : size === "sm" ? "h-8 w-8" : "h-10 w-10";
   const textClass =
@@ -115,7 +143,7 @@ export function UserAvatar({
 
   return (
     <div
-      className={`${sizeClass} flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-wt-border bg-wt-surface-2 ${className}`.trim()}
+      className={`${sizeClass} flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-wt-border ${showFallback ? avatarGradientClass(displayName) : "bg-wt-surface-2"} ${className}`.trim()}
       aria-hidden
     >
       {src && !imageFailed ? (
@@ -126,7 +154,9 @@ export function UserAvatar({
           onError={() => setImageFailed(true)}
         />
       ) : (
-        <span className={`${textClass} font-semibold text-wt-text-muted`}>{initial}</span>
+        <span className={`${textClass} font-semibold text-white`}>
+          {avatarInitials(displayName)}
+        </span>
       )}
     </div>
   );
@@ -142,12 +172,12 @@ export function ProfilePhotoAvatar({
   const [imageFailed, setImageFailed] = useState(false);
   const src = resolveProfilePhotoSrc(profile);
   const displayName = String(profile?.name ?? fallbackName ?? "User").trim();
-  const initial = (displayName.charAt(0) || "?").toUpperCase();
+  const showFallback = !src || imageFailed;
 
   return (
     <div className="flex flex-col items-center gap-2">
       <div
-        className="h-28 w-28 shrink-0 overflow-hidden rounded-full border border-wt-border bg-wt-surface-2 flex items-center justify-center"
+        className={`h-28 w-28 shrink-0 overflow-hidden rounded-full border border-wt-border ${showFallback ? avatarGradientClass(displayName) : "bg-wt-surface-2"} flex items-center justify-center`}
         aria-hidden={!src || imageFailed}
       >
         {src && !imageFailed ? (
@@ -158,7 +188,7 @@ export function ProfilePhotoAvatar({
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <span className="text-3xl font-semibold text-wt-text-muted">{initial}</span>
+          <span className="text-3xl font-semibold text-white">{avatarInitials(displayName)}</span>
         )}
       </div>
 

@@ -161,6 +161,9 @@ export function formatActionSuccessMessage(label: string): string {
     const rest = l.replace(/^mark /i, "").trim();
     return `${titleCasePhrase(rest)} marked.`;
   }
+  if (/^deallocate$/i.test(l)) {
+    return "Employee deallocated. Capacity returned to the talent pool.";
+  }
 
   return `${l} completed.`;
 }

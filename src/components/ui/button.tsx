@@ -11,9 +11,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[var(--wt-brand)] text-[var(--wt-brand-text)] shadow-sm hover:bg-[var(--wt-brand-hover)] active:bg-[var(--wt-brand-active)]",
+          "bg-[var(--wt-brand)] text-[var(--wt-brand-text)] shadow-sm hover:bg-[var(--wt-brand-hover)] hover:shadow-[0_4px_16px_rgba(53,80,149,0.32)] active:bg-[var(--wt-brand-active)] active:shadow-none",
         brand:
-          "bg-[var(--wt-brand)] text-[var(--wt-brand-text)] shadow-sm hover:bg-[var(--wt-brand-hover)] active:bg-[var(--wt-brand-active)]",
+          "bg-[var(--wt-brand)] text-[var(--wt-brand-text)] shadow-sm hover:bg-[var(--wt-brand-hover)] hover:shadow-[0_4px_16px_rgba(53,80,149,0.32)] active:bg-[var(--wt-brand-active)] active:shadow-none",
         outline:
           "border-wt-border bg-wt-surface-1 text-wt-text hover:bg-wt-surface-2 hover:text-wt-text aria-expanded:bg-wt-surface-2 dark:border-wt-border dark:bg-wt-surface-1 dark:hover:bg-wt-surface-2",
         secondary:

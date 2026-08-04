@@ -110,7 +110,6 @@ import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAc
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import {
   compareApiDates,
-  formatApiDate,
   normalizeToApiDate,
   parseApiDate,
   todayApiDate,
@@ -132,7 +131,6 @@ import {
   formatApprovalStageLabel,
   formatStageRejectionReason,
   isCompOffEarnRequestType,
-  listScopedUserRequests,
   fetchPaginatedScopedUserRequests,
   mergeStatusUpdateIntoRow,
   applyLeaveTeamRequestDecisions,
@@ -669,43 +667,7 @@ export function LeavePageClient() {
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
   const hasDmAccess = hasDmRole(userRoles);
 
-  const [hasPrimaryLeaveInbox, setHasPrimaryLeaveInbox] = useState(false);
-
-  useEffect(() => {
-    if (hasManagerAccess || hasHrAccess || hasDmAccess || !userEmail) {
-      setHasPrimaryLeaveInbox(false);
-      return;
-    }
-    let cancelled = false;
-    const selfEmail = userEmail.trim().toLowerCase();
-    void (async () => {
-      try {
-        const now = new Date();
-        const from = formatApiDate(new Date(now.getFullYear() - 1, 0, 1));
-        const to = formatApiDate(new Date(now.getFullYear() + 1, 11, 31));
-        const rows = await listScopedUserRequests({
-          fromDate: from,
-          toDate: to,
-          requestType: "LEAVE",
-          size: 5,
-        });
-        // Without manager role, /userRequest may fall back to the actor's own leave —
-        // only treat other employees' leave as a primary-manager inbox.
-        const inboxRows = rows.filter((row) => {
-          const email = requestRowEmail(row).trim().toLowerCase();
-          return Boolean(email) && email !== selfEmail;
-        });
-        if (!cancelled) setHasPrimaryLeaveInbox(inboxRows.length > 0);
-      } catch {
-        if (!cancelled) setHasPrimaryLeaveInbox(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [userEmail, hasManagerAccess, hasHrAccess, hasDmAccess]);
-
-  const canViewTeamLeave = hasManagerAccess || hasHrAccess || hasDmAccess || hasPrimaryLeaveInbox;
+  const canViewTeamLeave = hasManagerAccess || hasHrAccess || hasDmAccess;
   const firstLineStatusColumnLabel = hasHrAccess
     ? "Manager/DM status"
     : hasDmAccess && !hasManagerAccess
@@ -973,7 +935,7 @@ export function LeavePageClient() {
       // Earn requests are not listed on /userRequest (API returns 400). Use /comp-off/earn.
       if (isCompOffEarnFilter) {
         const managerOnly =
-          !hasHrAccess && (hasManagerAccess || hasDmAccess || hasPrimaryLeaveInbox);
+          !hasHrAccess && (hasManagerAccess || hasDmAccess);
         try {
           const earnRes = await compOffService.listEarnRequests({
             fromDate: from,
@@ -1017,7 +979,7 @@ export function LeavePageClient() {
                 ? ([normalizedType] as const)
                 : ([] as const);
           const canLoadManagerInbox =
-            hasManagerAccess || hasDmAccess || hasHrAccess || hasPrimaryLeaveInbox;
+            hasManagerAccess || hasDmAccess || hasHrAccess;
 
           const portfolioPromise = emailCsv
             ? fetchPaginatedScopedUserRequests({
@@ -1124,10 +1086,10 @@ export function LeavePageClient() {
           }
 
           // Comp-off earn is not on /userRequest — merge from /comp-off/earn when viewing All types.
-          if (normalizedType === "ALL" && (hasManagerAccess || hasHrAccess || hasDmAccess || hasPrimaryLeaveInbox)) {
+          if (normalizedType === "ALL" && (hasManagerAccess || hasHrAccess || hasDmAccess)) {
             try {
               const managerOnly =
-                !hasHrAccess && (hasManagerAccess || hasDmAccess || hasPrimaryLeaveInbox);
+                !hasHrAccess && (hasManagerAccess || hasDmAccess);
               const earnRes = await compOffService.listEarnRequests({
                 fromDate: from,
                 toDate: to,
@@ -1305,7 +1267,7 @@ export function LeavePageClient() {
         totalElements,
       });
     },
-    [employeeRequestFilters, hasHrAccess, hasManagerAccess, hasDmAccess, hasPrimaryLeaveInbox, loadScopeEmployees, userEmail]
+    [employeeRequestFilters, hasHrAccess, hasManagerAccess, hasDmAccess, loadScopeEmployees, userEmail]
   );
 
   /** All Employee Requests (HR org view) is read-only — no Actions column. */

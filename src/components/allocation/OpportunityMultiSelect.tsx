@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { Popover } from "@base-ui/react";
 import { Check, ChevronsUpDown, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
+import { useModalPanel } from "@/components/dashboard/ui/ModalPanelContext";
 import { useClientOpportunities } from "@/hooks/clients/useClientOpportunities";
 import { formatOpportunityLabel } from "@/utils/opportunity";
 import type { OpportunityRecord } from "@/types/opportunity";
@@ -33,11 +34,12 @@ export function OpportunityMultiSelect({
   disabled?: boolean;
   required?: boolean;
 }) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const [popupWidth, setPopupWidth] = useState(280);
+  const modalPanel = useModalPanel();
 
   const resolvedClientId = clientId.trim();
   const { data, isLoading, isError } = useClientOpportunities({
@@ -65,33 +67,15 @@ export function OpportunityMultiSelect({
   );
 
   useEffect(() => {
-    const onDocClick = (event: MouseEvent) => {
-      if (
-        rootRef.current &&
-        !rootRef.current.contains(event.target as Node) &&
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, []);
-
-  useEffect(() => {
-    if (open && rootRef.current) {
-      const rect = rootRef.current.getBoundingClientRect();
-      setDropdownStyle({
-        position: "fixed",
-        top: `${rect.bottom + 6}px`,
-        left: `${rect.left}px`,
-        width: `${Math.max(rect.width, 280)}px`,
-        // Above WtFormDialog overlay (z-[100]).
-        zIndex: 9999,
-      });
-    }
+    if (open) searchRef.current?.focus();
   }, [open]);
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (next && triggerRef.current) {
+      setPopupWidth(Math.max(triggerRef.current.offsetWidth, 280));
+    }
+  }
 
   function toggle(id: string) {
     if (selectedSet.has(id)) {
@@ -115,72 +99,57 @@ export function OpportunityMultiSelect({
   return (
     <label className="flex flex-col gap-1 text-xs text-wt-text-muted sm:col-span-2">
       <FieldLabel label="Opportunities" required={required} />
-      <div ref={rootRef} className="relative">
-        <Button
-          type="button"
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          aria-required={required || undefined}
-          disabled={disabled || isLoading}
-          className="h-10 w-full justify-between rounded-lg border-wt-border bg-wt-surface-1 px-3 text-left text-sm font-normal text-wt-text"
-          onClick={() => setOpen((prev) => !prev)}
-        >
-          <span className="truncate">
-            {isLoading
-              ? "Loading opportunities…"
-              : isError
-                ? "Could not load opportunities"
-                : selectedRows.length
-                  ? `${selectedRows.length} selected`
-                  : opportunities.length
-                    ? "Select opportunities"
-                    : "No opportunities for this client"}
-          </span>
-          <ChevronsUpDown className="size-4 shrink-0 opacity-60" aria-hidden />
-        </Button>
+      <div className="relative">
+        <Popover.Root open={open} onOpenChange={handleOpenChange}>
+          <Popover.Trigger
+            render={
+              <Button
+                ref={triggerRef}
+                type="button"
+                variant="outline"
+                role="combobox"
+                aria-required={required || undefined}
+                disabled={disabled || isLoading}
+                className="h-10 w-full justify-between rounded-lg border-wt-border bg-wt-surface-1 px-3 text-left text-sm font-normal text-wt-text"
+              />
+            }
+          >
+            <span className="truncate">
+              {isLoading
+                ? "Loading opportunities…"
+                : isError
+                  ? "Could not load opportunities"
+                  : selectedRows.length
+                    ? `${selectedRows.length} selected`
+                    : opportunities.length
+                      ? "Select opportunities"
+                      : "No opportunities for this client"}
+            </span>
+            <ChevronsUpDown className="size-4 shrink-0 opacity-60" aria-hidden />
+          </Popover.Trigger>
 
-        {selectedRows.length ? (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {selectedRows.map((row) => (
-              <span
-                key={row.id}
-                className={`inline-flex max-w-full items-center gap-1 rounded-md px-2 py-1 text-[11px] ${filledBadgeClass("info")}`}
-              >
-                <span className="truncate" title={row.opportunityName}>
-                  {row.opportunityName}
-                </span>
-                <button
-                  type="button"
-                  className="shrink-0 opacity-70 hover:opacity-100"
-                  aria-label={`Remove ${row.opportunityName}`}
-                  onClick={() => toggle(row.id)}
-                >
-                  <X className="size-3" aria-hidden />
-                </button>
-              </span>
-            ))}
-          </div>
-        ) : null}
-
-        {open
-          ? createPortal(
-              <div
-                ref={dropdownRef}
-                style={dropdownStyle}
+          <Popover.Portal container={modalPanel}>
+            <Popover.Positioner
+              side="bottom"
+              sideOffset={6}
+              align="start"
+              className="isolate z-[200]"
+            >
+              <Popover.Popup
+                style={{ width: popupWidth }}
                 className="overflow-hidden rounded-xl border border-wt-border bg-wt-surface-1 shadow-lg"
               >
                 <div className="flex items-center gap-2 border-b border-wt-border px-3 py-2">
                   <Search className="size-3.5 text-wt-text-muted" aria-hidden />
                   <input
+                    ref={searchRef}
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Search opportunities…"
                     className="w-full bg-transparent text-sm text-wt-text outline-none placeholder:text-wt-text-muted"
-                    autoFocus
                   />
                 </div>
-                <div className="max-h-56 overflow-y-auto p-1">
+                <div className="wt-combobox-scroll max-h-56 overflow-y-auto p-1">
                   {filtered.length ? (
                     filtered.map((row) => {
                       const selected = selectedSet.has(row.id);
@@ -214,13 +183,38 @@ export function OpportunityMultiSelect({
                       );
                     })
                   ) : (
-                    <p className="px-3 py-4 text-sm text-wt-text-muted">No matching opportunities.</p>
+                    <p className="px-3 py-4 text-sm text-wt-text-muted">
+                      No matching opportunities.
+                    </p>
                   )}
                 </div>
-              </div>,
-              document.body
-            )
-          : null}
+              </Popover.Popup>
+            </Popover.Positioner>
+          </Popover.Portal>
+        </Popover.Root>
+
+        {selectedRows.length ? (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {selectedRows.map((row) => (
+              <span
+                key={row.id}
+                className={`inline-flex max-w-full items-center gap-1 rounded-md px-2 py-1 text-[11px] ${filledBadgeClass("info")}`}
+              >
+                <span className="truncate" title={row.opportunityName}>
+                  {row.opportunityName}
+                </span>
+                <button
+                  type="button"
+                  className="shrink-0 opacity-70 hover:opacity-100"
+                  aria-label={`Remove ${row.opportunityName}`}
+                  onClick={() => toggle(row.id)}
+                >
+                  <X className="size-3" aria-hidden />
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
     </label>
   );
