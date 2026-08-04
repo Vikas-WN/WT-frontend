@@ -3848,7 +3848,6 @@ export function AllocationPageClient() {
                                                     ? "max-h-[min(40vh,320px)]"
                                                     : "max-h-none"
                                                 }
-                                                scrollChain={group.rows.length > 12}
                                                 className="rounded-none border-x-0 border-b-0 border-t border-wt-border"
                                               >
                                                 <WtTable>

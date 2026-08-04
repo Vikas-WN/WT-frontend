@@ -14,7 +14,7 @@ export const SCROLLABLE_TABLE_SHELL_CHAIN_CLASS =
 
 type ScrollableTableProps = HTMLAttributes<HTMLDivElement> & {
   maxHeightClass?: string;
-  /** Allow scroll to continue on the parent once this region hits its edge. */
+  /** Allow scroll to continue on the parent once this region hits its edge. Default on for page tables. */
   scrollChain?: boolean;
   /**
    * `both` (default) — horizontal + vertical.
@@ -28,7 +28,7 @@ export function ScrollableTable({
   children,
   className = "",
   maxHeightClass = DEFAULT_TABLE_MAX_HEIGHT,
-  scrollChain = false,
+  scrollChain = true,
   axis = "both",
   ...props
 }: ScrollableTableProps) {
