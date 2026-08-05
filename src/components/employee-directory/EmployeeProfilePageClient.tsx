@@ -36,6 +36,7 @@ import {
   bandSelectOptions,
   bandsForDepartment,
   isInternOnlyBand,
+  isValidPersonName,
 } from "@/utils/dashboard/validation";
 import {
   PHONE_COUNTRY_OPTIONS,
@@ -327,6 +328,9 @@ export function EmployeeProfilePageClient() {
       statusOnlyEdit ? "Update employee status" : "Update employee profile",
       async () => {
         if (!statusOnlyEdit) {
+          if (!isValidPersonName(editForm.name.trim())) {
+            throw new Error("Name should be 2–120 characters and contain letters (and spaces) only.");
+          }
           const workEmailError = validateWorkEmail(editForm.email);
           if (workEmailError) throw new Error(workEmailError);
           const personalError = validatePersonalEmail(editForm.email, editForm.personal_email, {

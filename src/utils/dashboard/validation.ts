@@ -1,10 +1,10 @@
 import { allocatedHoursToPercent, MAX_ALLOCATION_HOURS_PER_DAY, resolveAllocatedPercentFromRow } from "@/utils/allocationPercent";
 
-/** Letters, spaces, common punctuation; 2–120 chars */
+/** Letters and spaces only; 2–120 chars (matches HR onboarding). */
 export function isValidPersonName(name: string): boolean {
   const t = name.trim();
   if (t.length < 2 || t.length > 120) return false;
-  return /^[a-zA-ZÀ-ÿ][a-zA-ZÀ-ÿ\s.'-]*$/u.test(t);
+  return /^[a-zA-ZÀ-ÿ]+(?: [a-zA-ZÀ-ÿ]+)*$/u.test(t);
 }
 
 /** Collapse spaces/dashes so "B8 - Intern", "B8-intern", and "B8 Intern" all match B8INTERN. */

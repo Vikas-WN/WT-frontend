@@ -2016,27 +2016,17 @@ export function LeavePageClient() {
                                     if (days < 1) {
                                       throw new Error("Select at least one calendar day.");
                                     }
+                                    const grantsRes = await compOffService.getGrants();
+                                    const sameDay = sameDayCompOffEarnDatesInUsageRange(
+                                      compOffService.parseGrantsResponse(grantsRes),
+                                      fromDate,
+                                      toDate
+                                    );
+                                    if (sameDay.length > 0) {
+                                      throw new Error(sameDayCompOffUsageErrorMessage(sameDay));
+                                    }
                                     const available =
                                       await compOffService.resolveAvailableUnits(fromDate);
-                                    if (!Number.isFinite(available) || available < days) {
-                                      try {
-                                        const grantsRes = await compOffService.getGrants();
-                                        const sameDay = sameDayCompOffEarnDatesInUsageRange(
-                                          compOffService.parseGrantsResponse(grantsRes),
-                                          fromDate,
-                                          toDate
-                                        );
-                                        if (sameDay.length > 0) {
-                                          throw new Error(
-                                            sameDayCompOffUsageErrorMessage(sameDay)
-                                          );
-                                        }
-                                      } catch (err) {
-                                        if (err instanceof Error && err.message.includes("same date")) {
-                                          throw err;
-                                        }
-                                      }
-                                    }
                                     if (!Number.isFinite(available) || available <= 0) {
                                       throw new Error(
                                         "No approved comp-off credits available. Submit an earn request and get it approved before applying for usage."

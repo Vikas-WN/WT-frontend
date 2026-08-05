@@ -883,13 +883,10 @@ export function CompOffPageClient({
     const days = calendarDaysInclusive(fromDate, toDate);
     if (days < 1) throw new Error("Select at least one calendar day.");
     const sameDayEarnDates = sameDayCompOffEarnDatesInUsageRange(grants, fromDate, toDate);
-    const available = await compOffService.resolveAvailableUnits(fromDate);
-    if (
-      (!Number.isFinite(available) || available < days) &&
-      sameDayEarnDates.length > 0
-    ) {
+    if (sameDayEarnDates.length > 0) {
       throw new Error(sameDayCompOffUsageErrorMessage(sameDayEarnDates));
     }
+    const available = await compOffService.resolveAvailableUnits(fromDate);
     if (!Number.isFinite(available) || available <= 0) {
       throw new Error(
         "No approved comp-off credits available. Submit an earn request and get it approved before applying for usage."

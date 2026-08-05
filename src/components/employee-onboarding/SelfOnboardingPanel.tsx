@@ -100,10 +100,19 @@ export function SelfOnboardingPanel({
       if (!dateOfBirth) {
         throw new Error("Date of birth is required. Use DD/MM/YYYY.");
       }
+      const dob = fromApiDate(dateOfBirth);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      if (fromApiDate(dateOfBirth) > today) {
+      if (dob > today) {
         throw new Error("Date of birth cannot be in the future.");
+      }
+      let age = today.getFullYear() - dob.getFullYear();
+      const monthDiff = today.getMonth() - dob.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+        age -= 1;
+      }
+      if (age < 18) {
+        throw new Error("Employee must be at least 18 years old.");
       }
 
       const yoeRaw = form.yoe.trim();
