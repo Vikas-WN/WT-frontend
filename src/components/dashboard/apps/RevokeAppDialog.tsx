@@ -19,16 +19,14 @@ export function RevokeAppDialog({
     <WtFormDialog
       open={open}
       title="Revoke app"
-      description={`Revoke "${appName}"? The key will stop authenticating requests immediately. The row is soft-deleted and preserved for audit.`}
+      description={`Revoke "${appName}"?`}
       onClose={onClose}
       onSubmit={onConfirm}
       submitLabel="Revoke"
       submittingLabel="Revoking…"
       loading={loading}
     >
-      <p className="text-sm text-wt-text-muted">
-        This cannot be undone via the UI. You can create a new key with the same roles if needed.
-      </p>
+      <></>
     </WtFormDialog>
   );
 }
