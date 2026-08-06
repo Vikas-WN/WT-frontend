@@ -288,6 +288,13 @@ export const endpoints = {
     jobs: `${api}/jobs`,
     root: `${api}/referrals`,
   },
+
+  apps: {
+    base: `${api}/admin/api-keys`,
+    byId: (id: number) => `${api}/admin/api-keys/${id}`,
+    roles: (id: number) => `${api}/admin/api-keys/${id}/roles`,
+    rotate: (id: number) => `${api}/admin/api-keys/${id}/rotate`,
+  },
 } as const;
 
 export type EndpointRegistry = typeof endpoints;

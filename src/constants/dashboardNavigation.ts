@@ -192,6 +192,7 @@ export const dashboardNavigation: NavItem[] = [
     ],
   },
   { kind: "link", id: "uploads", label: "Uploads", roles: ["ROLE_HR", "ROLE_ADMIN"], icon: "upload" },
+  { kind: "link", id: "apps", label: "Apps", roles: ["ROLE_ADMIN"], icon: "code" },
   {
     kind: "link",
     id: "referral",
