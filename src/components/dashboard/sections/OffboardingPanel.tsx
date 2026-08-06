@@ -337,11 +337,15 @@ export function OffboardingPanel() {
     const candidate = offboardCandidates.find((row) => row.emp_id === empId);
     const isIntern = candidate?.user_type === "INTERN";
     const isConsultant = candidate?.user_type === "CONSULTANT";
+    const skills = Array.isArray(candidate?.primary_skills)
+      ? candidate.primary_skills.join(", ")
+      : "";
     setOffboardingForm((prev) => {
       const next = {
         ...createEmptyOffboardingForm(),
         emp_id: empId,
         exit_type: (isConsultant ? CONSULTANT_EXIT_TYPE : "") as "" | ExitType,
+        critical_skill: skills,
       };
       if (isIntern && prev.last_working_day.trim()) {
         next.last_working_day = prev.last_working_day;
