@@ -35,6 +35,7 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useOnboardOptions } from "@/hooks/useOnboardOptions";
 import { parseBandsList } from "@/utils/masters";
 import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
+import { ApiError } from "@/api/error";
 
 function invitedDateRangeError(from: string, to: string): string | null {
   const fromTrimmed = from.trim();
@@ -48,8 +49,16 @@ function invitedDateRangeError(from: string, to: string): string | null {
   return null;
 }
 
+function isInsufficientRoleError(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    error.status === 403 &&
+    /insufficient role/i.test(error.message ?? "")
+  );
+}
+
 export function EmployeePageClient() {
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const router = useRouter();
   const userRoles = user?.roles ?? [];
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
@@ -81,6 +90,39 @@ export function EmployeePageClient() {
   const invitedListToDateRef = useRef(invitedListToDate);
   invitedListFromDateRef.current = invitedListFromDate;
   invitedListToDateRef.current = invitedListToDate;
+
+  const roleRetryRef = useRef(false);
+
+  /**
+   * HR-scoped onboarding calls can hit a 403 "Insufficient role" when the
+   * browser holds a stale role snapshot (roles granted mid-session are only
+   * picked up via /auth/me + an explicit refresh). On such a 403, refresh the
+   * session once and retry the call before surfacing the error.
+   */
+  const runHrAction = useCallback(
+    async (fn: () => Promise<void>) => {
+      try {
+        await fn();
+        return;
+      } catch (error) {
+        if (!isInsufficientRoleError(error) || roleRetryRef.current) {
+          throw error;
+        }
+        roleRetryRef.current = true;
+        try {
+          const freshUser = await refresh();
+          if (freshUser) {
+            await fn();
+            return;
+          }
+        } finally {
+          roleRetryRef.current = false;
+        }
+        throw error;
+      }
+    },
+    [refresh]
+  );
 
   const onboardOptionsQ = useOnboardOptions(hasHrAccess);
   const bandsQ = useQuery({
@@ -130,7 +172,7 @@ export function EmployeePageClient() {
   async function runFormAction(label: string, fn: () => Promise<void>) {
     setFormSubmitting(true);
     try {
-      await fn();
+      await runHrAction(fn);
       showSuccessToast(formatActionSuccessMessage(label));
     } catch (error) {
       showErrorToast(
@@ -152,28 +194,30 @@ export function EmployeePageClient() {
 
       setInvitedListLoading(true);
       try {
-        const res = await hrmsService.getInvitedUsers({
-          fromDate: from,
-          toDate: to,
-          page: "0",
-          size: "200",
+        await runHrAction(async () => {
+          const res = await hrmsService.getInvitedUsers({
+            fromDate: from,
+            toDate: to,
+            page: "0",
+            size: "200",
+          });
+          const payload = ((res as { data?: unknown }).data ?? res) as Record<string, unknown>;
+          const respFrom = formatApiDateDisplay(String(payload.from_date ?? "").trim());
+          const respTo = formatApiDateDisplay(String(payload.to_date ?? "").trim());
+          const rawRows = toPagedRows(payload.items ?? payload);
+          const filteredRows = filterInvitedRowsByCreatedAtRange(rawRows, from, to);
+          const serverRangeMismatch =
+            Boolean(respFrom && respTo) && (respFrom !== from || respTo !== to);
+          setInvitedApiServerRange(
+            serverRangeMismatch ? { from: respFrom, to: respTo } : null
+          );
+          setInviteOnboardingRows(formatInvitedEmployeeTableRows(filteredRows));
         });
-        const payload = ((res as { data?: unknown }).data ?? res) as Record<string, unknown>;
-        const respFrom = formatApiDateDisplay(String(payload.from_date ?? "").trim());
-        const respTo = formatApiDateDisplay(String(payload.to_date ?? "").trim());
-        const rawRows = toPagedRows(payload.items ?? payload);
-        const filteredRows = filterInvitedRowsByCreatedAtRange(rawRows, from, to);
-        const serverRangeMismatch =
-          Boolean(respFrom && respTo) && (respFrom !== from || respTo !== to);
-        setInvitedApiServerRange(
-          serverRangeMismatch ? { from: respFrom, to: respTo } : null
-        );
-        setInviteOnboardingRows(formatInvitedEmployeeTableRows(filteredRows));
       } finally {
         setInvitedListLoading(false);
       }
     },
-    []
+    [runHrAction]
   );
 
   const refreshInvitedList = useCallback(
@@ -224,24 +268,29 @@ export function EmployeePageClient() {
     showErrorToast(message);
   }, []);
 
-  const resendOnboardInvite = useCallback((email: string) => {
-    const normalized = email.trim().toLowerCase();
-    if (!normalized) return;
+  const resendOnboardInvite = useCallback(
+    (email: string) => {
+      const normalized = email.trim().toLowerCase();
+      if (!normalized) return;
 
-    void (async () => {
-      setResendingInviteEmail(normalized);
-      try {
-        await hrmsService.resendOnboardInvite({ email: normalized });
-        showSuccessToast(`Onboarding invite resent to ${normalized}.`, `resend-invite-${normalized}`);
-      } catch (error) {
-        showErrorToast(
-          toUserFriendlyApiErrorMessage(error, "Failed to resend onboarding invite.")
-        );
-      } finally {
-        setResendingInviteEmail(null);
-      }
-    })();
-  }, []);
+      void (async () => {
+        setResendingInviteEmail(normalized);
+        try {
+          await runHrAction(async () => {
+            await hrmsService.resendOnboardInvite({ email: normalized });
+          });
+          showSuccessToast(`Onboarding invite resent to ${normalized}.`, `resend-invite-${normalized}`);
+        } catch (error) {
+          showErrorToast(
+            toUserFriendlyApiErrorMessage(error, "Failed to resend onboarding invite.")
+          );
+        } finally {
+          setResendingInviteEmail(null);
+        }
+      })();
+    },
+    [runHrAction]
+  );
 
   const resendOnboardInvitesBulk = useCallback(async (emails: string[]) => {
     const unique = [
@@ -257,7 +306,9 @@ export function EmployeePageClient() {
       for (const email of unique) {
         setResendingInviteEmail(email);
         try {
-          await hrmsService.resendOnboardInvite({ email });
+          await runHrAction(async () => {
+            await hrmsService.resendOnboardInvite({ email });
+          });
           sent += 1;
         } catch {
           failed += 1;
@@ -283,7 +334,7 @@ export function EmployeePageClient() {
     showErrorToast(
       `${sent} invite${sent === 1 ? "" : "s"} sent, ${failed} failed.`
     );
-  }, [bulkResendingInvites]);
+  }, [bulkResendingInvites, runHrAction]);
 
   useEffect(() => {
     if (!hasHrAccess) return;

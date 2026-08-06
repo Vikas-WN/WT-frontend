@@ -95,7 +95,10 @@ export function TimelogCalendar({
           ) : null}
           <SearchableSelectCombobox
             value={String(viewMonth)}
-            onChange={(value) => onGoToMonth(viewYear, Number(value))}
+            onChange={(value) => {
+              if (!value.trim()) return;
+              onGoToMonth(viewYear, Number(value));
+            }}
             options={monthOptions.map((value) => ({
               value: String(value),
               label: MONTH_OPTIONS[value],
@@ -104,10 +107,14 @@ export function TimelogCalendar({
             inputClassName="timelog-calendar-select"
             aria-label="Month"
             showChevron
+            clearSelectionOnEmptyInput={false}
           />
           <SearchableSelectCombobox
             value={String(viewYear)}
-            onChange={(value) => onGoToMonth(Number(value), viewMonth)}
+            onChange={(value) => {
+              if (!value.trim()) return;
+              onGoToMonth(Number(value), viewMonth);
+            }}
             options={yearOptions.map((value) => ({
               value: String(value),
               label: String(value),
@@ -116,6 +123,7 @@ export function TimelogCalendar({
             inputClassName="timelog-calendar-select"
             aria-label="Year"
             showChevron
+            clearSelectionOnEmptyInput={false}
           />
           <Button
             variant="outline"

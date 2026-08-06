@@ -195,11 +195,53 @@ export const compOffService = {
     }
   },
 
+  parseBalanceResponse(res: ApiEnvelope<unknown>): CompOffBalanceData | null {
+    const data = res.data;
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+      const record = data as Record<string, unknown>;
+      const direct = Number(record.available_units ?? record.availableUnits);
+      const usableRaw = Number(record.usable_units ?? record.usableUnits);
+      const usable = Number.isFinite(usableRaw) ? usableRaw : undefined;
+      if (Number.isFinite(direct)) {
+        const asOf = String(record.as_of_date ?? record.asOfDate ?? "").trim();
+        return {
+          available_units: direct,
+          availableUnits: direct,
+          ...(usable !== undefined
+            ? { usable_units: usable, usableUnits: usable }
+            : {}),
+          ...(asOf ? { as_of_date: asOf, asOfDate: asOf } : {}),
+        };
+      }
+    }
+    const expiry = this.parseExpiryResponse(res);
+    // expiry.total is a grant COUNT from the API, not available units — always sum remaining.
+    const units = expiry.rows.reduce((sum, row) => {
+      const status = String(row.status ?? "")
+        .trim()
+        .toUpperCase();
+      if (status === "EXPIRED" || status === "EXHAUSTED" || status === "CONSUMED") {
+        return sum;
+      }
+      const n = Number(row.remaining_units ?? row.remainingUnits ?? row.units ?? 0);
+      return sum + (Number.isFinite(n) ? Math.max(0, n) : 0);
+    }, 0);
+    if (!Number.isFinite(units)) return null;
+    return {
+      available_units: units,
+      availableUnits: units,
+      ...(expiry.asOfDate ? { as_of_date: expiry.asOfDate, asOfDate: expiry.asOfDate } : {}),
+    };
+  },
+
   async resolveAvailableUnits(asOfDate: string): Promise<number> {
     const asOf = toApiDateParam(asOfDate) ?? asOfDate.trim();
     try {
       const res = await this.getBalance(asOf);
       const balance = this.parseBalanceResponse(res);
+      // Prefer usable (after pending reservations); fall back to credit inventory.
+      const usable = Number(balance?.usable_units ?? balance?.usableUnits);
+      if (Number.isFinite(usable)) return usable;
       const units = Number(balance?.available_units ?? balance?.availableUnits);
       if (Number.isFinite(units)) return units;
     } catch {
@@ -211,43 +253,6 @@ export const compOffService = {
     } catch {
       return 0;
     }
-  },
-
-  parseBalanceResponse(res: ApiEnvelope<unknown>): CompOffBalanceData | null {
-    const data = res.data;
-    if (data && typeof data === "object" && !Array.isArray(data)) {
-      const record = data as Record<string, unknown>;
-      const direct = Number(record.available_units ?? record.availableUnits);
-      if (Number.isFinite(direct)) {
-        const asOf = String(record.as_of_date ?? record.asOfDate ?? "").trim();
-        return {
-          available_units: direct,
-          availableUnits: direct,
-          ...(asOf ? { as_of_date: asOf, asOfDate: asOf } : {}),
-        };
-      }
-    }
-    const expiry = this.parseExpiryResponse(res);
-    const rows = expiry.rows;
-    let units = Number(expiry.total);
-    if (!Number.isFinite(units) || units < 0) {
-      units = rows.reduce((sum, row) => {
-        const status = String(row.status ?? "")
-          .trim()
-          .toUpperCase();
-        if (status === "EXPIRED" || status === "EXHAUSTED" || status === "CONSUMED") {
-          return sum;
-        }
-        const n = Number(row.remaining_units ?? row.remainingUnits ?? row.units ?? 0);
-        return sum + (Number.isFinite(n) ? Math.max(0, n) : 0);
-      }, 0);
-    }
-    if (!Number.isFinite(units)) return null;
-    return {
-      available_units: units,
-      availableUnits: units,
-      ...(expiry.asOfDate ? { as_of_date: expiry.asOfDate, asOfDate: expiry.asOfDate } : {}),
-    };
   },
 
   parseExpiryResponse(res: ApiEnvelope<unknown>): {
@@ -275,10 +280,11 @@ export const compOffService = {
     toDate: string;
     requestType: string;
     empEmails?: string;
+    selfOnly?: boolean;
     page?: number;
     size?: number;
   }) {
-    const { fromDate, toDate, requestType, empEmails, page = 0, size = 200 } = params;
+    const { fromDate, toDate, requestType, empEmails, selfOnly, page = 0, size = 200 } = params;
     const normalizedFrom = toApiDateParam(fromDate) ?? fromDate.trim();
     const normalizedTo = toApiDateParam(toDate) ?? toDate.trim();
     return apiClient
@@ -290,6 +296,7 @@ export const compOffService = {
             requestType,
             page: String(page),
             size: String(size),
+            ...(selfOnly ? { selfOnly: "true" } : {}),
           },
           ["fromDate", "toDate"]
         ),

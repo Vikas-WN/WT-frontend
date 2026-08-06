@@ -179,6 +179,10 @@ export class HttpClient {
         }
       }
 
+      // Do NOT refresh on 403 Insufficient role. That raced with AuthContext refresh,
+      // rotated the refresh token twice, and the losing request cleared session cookies.
+      // Mid-session role grants are picked up via /auth/me + explicit refresh.
+
       if (!response.ok) {
         const payload = await this.tryReadBody(response);
 

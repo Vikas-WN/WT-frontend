@@ -40,6 +40,7 @@ import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import { useClientPagination } from "@/hooks/useClientPagination";
+import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import {
   activeSortDirectionForColumn,
   applyListSort,
@@ -217,7 +218,8 @@ export function EmployeeDirectoryPageClient() {
 
   return (
     <DashboardPageShell className="wt-detail-page">
-      <ManagementListCard
+      <OnboardingGate>
+        <ManagementListCard
         density="compact"
         title="All Employees"
         description="Browse and manage employee profiles across the organization."
@@ -393,6 +395,10 @@ export function EmployeeDirectoryPageClient() {
                                 <EmployeeUserTypeSelect
                                   empId={empId}
                                   userType={record.user_type ?? record.userType}
+                                  bandId={record.band_id ?? record.bandId}
+                                  bandName={
+                                    record.band ?? record.band_name ?? record.bandName
+                                  }
                                   canEdit={canEditDirectory}
                                   options={directoryUserTypeOptions}
                                 />
@@ -417,10 +423,12 @@ export function EmployeeDirectoryPageClient() {
                 rangeEnd={pagination.rangeEnd}
                 pageSize={pagination.pageSize}
                 onPageChange={pagination.setPage}
+                onPageSizeChange={pagination.setPageSize}
               />
           </>
         </ManagementListContent>
       </ManagementListCard>
+      </OnboardingGate>
     </DashboardPageShell>
   );
 }

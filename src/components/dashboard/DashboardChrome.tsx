@@ -15,6 +15,7 @@ import {
   notificationRowId,
   notificationTitle,
   parseNotificationItems,
+  dedupeLeaveRequestNotifications,
 } from "@/utils/notifications";
 import { toPagedRows } from "@/utils/apiRows";
 import {
@@ -258,10 +259,12 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     setNotificationsError(null);
     try {
       const [res, projectsRes] = await Promise.all([
-        hrmsService.getNotifications({ page: "0", size: "20" }),
+        hrmsService.getNotifications({ page: "0", size: "50" }),
         hrmsService.getAllProjects({ page: "0", size: "500" }).catch(() => null),
       ]);
-      const items = parseNotificationItems(res.data ?? res);
+      const items = dedupeLeaveRequestNotifications(
+        parseNotificationItems(res.data ?? res)
+      );
       setNotifications(items);
 
       if (projectsRes) {
@@ -562,7 +565,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
 
                       return (
                         <div
-                          key={id || `notification-${idx}`}
+                          key={id ? `notification-${id}` : `notification-${idx}`}
                           role={isNavigable ? "button" : undefined}
                           tabIndex={isNavigable ? 0 : undefined}
                           onClick={() => {

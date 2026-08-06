@@ -103,6 +103,7 @@ export function MyWeeklyTimesheet() {
                 loading={loading}
                 actionLoading={actionLoading}
                 error={error}
+                projectOptions={projectOptions}
                 onAdd={openAddForm}
                 onEdit={openEditForm}
                 onDelete={deleteEntry}
@@ -119,6 +120,7 @@ export function MyWeeklyTimesheet() {
             size={tablePageSize}
             loading={tableLoading}
             onPageChange={onTablePageChange}
+            projectOptions={projectOptions}
           />
         )}
       </CardContent>

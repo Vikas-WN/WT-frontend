@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
-import { resolveProfilePhotoSrc } from "@/components/dashboard/ui/profile";
+import { resolveProfilePhotoSrc, avatarInitials, avatarGradientClass } from "@/components/dashboard/ui/profile";
 import { EmployeeResumeLink } from "@/components/resumes/EmployeeResumeLink";
 import {
   formatProfileDisplayValue,
@@ -21,10 +21,12 @@ function ProfileHeaderAvatar({
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   const photoSrc = resolveProfilePhotoSrc(profile);
-  const initial = (displayName.charAt(0) || "?").toUpperCase();
+  const showFallback = !photoSrc || imageFailed;
 
   return (
-    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-wt-border bg-wt-surface-2 sm:h-[5.5rem] sm:w-[5.5rem]">
+    <div
+      className={`flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-wt-border ${showFallback ? avatarGradientClass(displayName) : "bg-wt-surface-2"} sm:h-[5.5rem] sm:w-[5.5rem]`}
+    >
       {photoSrc && !imageFailed ? (
         <img
           src={photoSrc}
@@ -33,7 +35,7 @@ function ProfileHeaderAvatar({
           onError={() => setImageFailed(true)}
         />
       ) : (
-        <span className="text-2xl font-semibold text-wt-text-muted">{initial}</span>
+        <span className="text-2xl font-semibold text-white">{avatarInitials(displayName)}</span>
       )}
     </div>
   );

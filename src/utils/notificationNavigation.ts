@@ -77,6 +77,8 @@ function withLeaveDeepLink(
   const { requestId, from, to } = parseLeaveNotificationDeepLink(readNotificationMessage(row));
   const params = new URLSearchParams();
   params.set("tab", tab);
+  // Prefer request id when present (legacy messages). Otherwise pass dates so the
+  // leave page can highlight the matching row without clamping list filters.
   if (requestId) params.set("requestId", requestId);
   if (from) params.set("from", from);
   if (to) params.set("to", to);
@@ -135,6 +137,7 @@ export function notificationCategoryLabel(
     case "EXIT_INTERVIEW_SUBMITTED":
       return "Exit Survey";
     case "ONBOARDING_INVITE":
+    case "ONBOARDING_COMPLETED":
     case "ONBOARDING_PROFILE_PENDING":
       return "Onboarding";
     case "IMPORT_JOB_COMPLETED":
@@ -231,6 +234,7 @@ export function resolveNotificationHref(
       return isHrOrAdmin(roles) ? DASHBOARD_ROUTES.offboarding : DASHBOARD_ROUTES["exit-interview"];
 
     case "ONBOARDING_INVITE":
+    case "ONBOARDING_COMPLETED":
     case "ONBOARDING_PROFILE_PENDING":
       return DASHBOARD_ROUTES.employee;
 

@@ -152,6 +152,7 @@ export function ExitInterviewFormFields({
   errors,
   onChange,
   disabled = false,
+  reportingManagersAsText = false,
 }: {
   fields: FormField[];
   autofill: Record<string, string>;
@@ -159,6 +160,8 @@ export function ExitInterviewFormFields({
   errors: Record<string, string>;
   onChange: (key: string, value: unknown) => void;
   disabled?: boolean;
+  /** Anonymous (magic-link) flow: no auth-backed manager autocomplete, use free text. */
+  reportingManagersAsText?: boolean;
 }) {
   return (
     <div className="space-y-6">
@@ -220,12 +223,22 @@ export function ExitInterviewFormFields({
               ) : null}
 
               {field.key === "reporting_managers" ? (
-                <ExitInterviewReportingManagersSelector
-                  value={String(answers[field.key] ?? "")}
-                  onChange={(next) => onChange(field.key, next)}
-                  disabled={disabled}
-                  required={field.required}
-                />
+                reportingManagersAsText ? (
+                  <Textarea
+                    className="mt-0 min-h-[70px]"
+                    value={String(answers[field.key] ?? "")}
+                    placeholder="Enter your reporting manager name(s)"
+                    disabled={disabled}
+                    onChange={(e) => onChange(field.key, e.target.value)}
+                  />
+                ) : (
+                  <ExitInterviewReportingManagersSelector
+                    value={String(answers[field.key] ?? "")}
+                    onChange={(next) => onChange(field.key, next)}
+                    disabled={disabled}
+                    required={field.required}
+                  />
+                )
               ) : null}
 
               {field.widget === "textarea" && field.key !== "reporting_managers" ? (

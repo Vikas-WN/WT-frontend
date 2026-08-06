@@ -235,6 +235,16 @@ export function filterVisibleNavigation(
   const result: NavItem[] = [];
   for (const item of items) {
     if (item.kind === "group") {
+      // The Employee module (onboarding, directory, HR/manager team views) is an
+      // HR/admin/manager surface — never show it to plain employees or non-staff roles.
+      if (
+        item.id === "employee" &&
+        !["ROLE_HR", "ROLE_ADMIN", "ROLE_MANAGER", "ROLE_DM"].some((role) =>
+          userRoles.includes(role)
+        )
+      ) {
+        continue;
+      }
       const children = item.children.filter((child) => childVisible(child, userRoles, options));
       if (children.length) result.push({ ...item, children });
       continue;

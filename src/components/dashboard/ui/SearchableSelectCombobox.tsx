@@ -10,6 +10,7 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 import { cn } from "@/lib/utils";
+import { useModalPanel } from "@/components/dashboard/ui/ModalPanelContext";
 
 export type SearchableSelectOption = { value: string; label: string };
 
@@ -71,10 +72,19 @@ export function SearchableSelectCombobox({
   const selectedLabel = selected?.label ?? "";
   const isDisabled = disabled || loading;
 
+  const modalPanel = useModalPanel();
+
   const [isFiltering, setIsFiltering] = useState(false);
   const [filterText, setFilterText] = useState("");
 
   useEffect(() => {
+    // When the controlled value becomes empty after a clear, keep showing a blank
+    // input (filter mode) so the field can remain unset. Otherwise exit filter mode.
+    if (!value) {
+      setIsFiltering(true);
+      setFilterText("");
+      return;
+    }
     setIsFiltering(false);
     setFilterText("");
   }, [value]);
@@ -87,11 +97,12 @@ export function SearchableSelectCombobox({
       const sanitized = sanitizeInput ? sanitizeInput(next) : next;
 
       // Clearing the input (Backspace/Delete to empty, or the clear button) must clear the
-      // selection once. Snapping back to selectedLabel while the library keeps emitting ""
-      // causes an infinite controlled-input loop.
+      // selection once. Stay in filter mode with an empty string until the parent `value`
+      // updates — flipping isFiltering off here snaps inputValue back to selectedLabel
+      // (still the old month on this render) and the combobox re-commits that selection.
       if (reason === "clear-press" || sanitized === "") {
         if (clearSelectionOnEmptyInput) {
-          setIsFiltering(false);
+          setIsFiltering(true);
           setFilterText("");
           if (value) onChange("");
           return;
@@ -108,16 +119,31 @@ export function SearchableSelectCombobox({
     [onChange, value, sanitizeInput, clearSelectionOnEmptyInput]
   );
 
-  const handleOpenChange = useCallback((open: boolean) => {
-    if (!open) {
-      setIsFiltering(false);
-      setFilterText("");
-    }
-  }, []);
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        // If the selection was cleared, keep the empty filter so blur does not
+        // restore the previous label before the controlled value catches up.
+        if (!value) {
+          setIsFiltering(true);
+          setFilterText("");
+          return;
+        }
+        setIsFiltering(false);
+        setFilterText("");
+      }
+    },
+    [value]
+  );
 
   const handleValueChange = useCallback(
     (item: SearchableSelectOption | null) => {
       onChange(item?.value ?? "");
+      if (!item) {
+        setIsFiltering(true);
+        setFilterText("");
+        return;
+      }
       setIsFiltering(false);
       setFilterText("");
     },
@@ -152,6 +178,7 @@ export function SearchableSelectCombobox({
       <ComboboxContent
         side="bottom"
         sideOffset={4}
+        container={modalPanel}
         className={cn(
           "max-w-[min(calc(100vw-2rem),28rem)]",
           contentClassName

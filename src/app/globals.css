@@ -48,8 +48,9 @@
   --wt-border-md: rgba(15, 23, 42, 0.12);
 
   /* Soft elevation */
-  --wt-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.03);
-  --wt-shadow-md: 0 4px 16px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --wt-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --wt-shadow-md: 0 2px 4px rgba(15, 23, 42, 0.05), 0 8px 24px rgba(53, 80, 149, 0.08);
+  --wt-shadow-lg: 0 4px 8px rgba(15, 23, 42, 0.06), 0 16px 40px rgba(53, 80, 149, 0.12);
 
   /* Accent glow — brand-tinted (not indigo/violet) */
   --wt-glow-indigo: 0 8px 24px rgba(53, 80, 149, 0.16);
@@ -274,6 +275,16 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+::selection {
+  background: color-mix(in srgb, var(--wt-brand) 18%, transparent);
+  color: var(--wt-text);
+}
+
+:is(.dark, [data-theme="dark"]) ::selection {
+  background: color-mix(in srgb, var(--wt-brand) 32%, transparent);
+  color: #fff;
+}
+
 body::-webkit-scrollbar {
   display: none;
 }
@@ -443,6 +454,28 @@ body::-webkit-scrollbar {
   background: transparent;
 }
 
+/* Dropdown option list (combobox): thin visible scrollbar so extra options are discoverable. */
+.wt-combobox-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--wt-text-muted) 45%, transparent) transparent;
+}
+
+.wt-combobox-scroll::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+}
+
+.wt-combobox-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--wt-text-muted) 45%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.wt-combobox-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 /* Sticky headers for all data tables */
 .wt-scrollable-table,
 [data-slot="table"] {
@@ -466,6 +499,27 @@ body::-webkit-scrollbar {
   background-color: var(--wt-surface-2);
   background-clip: padding-box;
   box-shadow: 0 1px 0 var(--wt-border);
+}
+
+.wt-table-sticky-head th::after,
+.wt-scroll-both .wt-scrollable-table thead th::after,
+.wt-scroll-both [data-slot="table"] thead th::after,
+.wt-scroll-both-chain .wt-scrollable-table thead th::after,
+.wt-scroll-both-chain [data-slot="table"] thead th::after,
+.wt-scroll-chain .wt-scrollable-table thead th::after,
+.wt-scroll-chain [data-slot="table"] thead th::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--wt-brand) 60%, transparent),
+    transparent 55%
+  );
+  opacity: 0.9;
 }
 
 :is(.dark, [data-theme="dark"]) .wt-scroll-both .wt-scrollable-table thead th,

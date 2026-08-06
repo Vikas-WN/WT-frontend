@@ -308,7 +308,7 @@ export const hrmsService = {
 
   updateEmployeeUserType(
     empId: string,
-    payload: { user_type: string; transition_date?: string }
+    payload: { user_type: string; transition_date?: string; band_id?: number }
   ) {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.profile.employeeUserType(empId), {
       contentType: "application/json",
@@ -380,7 +380,7 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.byId(allocationId));
   },
 
-  /** GET /allocation/talent-pool — alias of unallocated list (ROLE_HR). */
+  /** GET /allocation/talent-pool — active BENCH roster (ROLE_HR). */
   getTalentPool(params: { page?: number; size?: number; search?: string } = {}) {
     const query: Record<string, string | number> = {
       page: params.page ?? 0,
@@ -402,15 +402,19 @@ export const hrmsService = {
     });
   },
 
-  /** GET /allocation/talent-pool/dashboard — initial load; read data.unallocated.items. */
+  /** GET /allocation/talent-pool/dashboard — initial load; read data.on_bench + data.unallocated. */
   getTalentPoolDashboard(
     params: {
       search?: string;
+      onBenchPage?: number;
+      onBenchSize?: number;
       unallocatedPage?: number;
       unallocatedSize?: number;
     } = {}
   ) {
     const query: Record<string, string | number> = {
+      onBenchPage: params.onBenchPage ?? 0,
+      onBenchSize: params.onBenchSize ?? 50,
       unallocatedPage: params.unallocatedPage ?? 0,
       unallocatedSize: params.unallocatedSize ?? 50,
     };
@@ -1155,6 +1159,18 @@ export const hrmsService = {
     if (params.page != null) query.page = String(params.page);
     if (params.size != null) query.size = String(params.size);
     return apiClient.get<unknown>(endpoints.masters.clients, { query });
+  },
+
+  listAccountManagers(search?: string) {
+    const query: Record<string, string> = {};
+    if (search?.trim()) query.search = search.trim();
+    return apiClient.get<unknown>(endpoints.employees.accountManagers, { query });
+  },
+
+  listDeliveryManagers(search?: string) {
+    const query: Record<string, string> = {};
+    if (search?.trim()) query.search = search.trim();
+    return apiClient.get<unknown>(endpoints.employees.deliveryManagers, { query });
   },
 
   listClientOpportunities(params: {

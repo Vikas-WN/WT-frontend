@@ -31,6 +31,7 @@ export function DayEntriesPanel({
   loading,
   actionLoading,
   error,
+  projectOptions = [],
   onAdd,
   onEdit,
   onDelete,
@@ -93,7 +94,10 @@ export function DayEntriesPanel({
                   <div className="day-entries-card-header">
                     <div>
                       <div className="day-entries-card-project">
-                        {entry.project_name?.trim() || "—"}
+                        {entry.project_name?.trim() 
+                        || projectOptions.find((p) => p.project_code === entry.project_code)?.project_name
+                        || entry.project_code
+                        || "—"}
                       </div>
                       {projectManagerEmail ? (
                         <div className="day-entries-card-task">

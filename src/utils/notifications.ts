@@ -50,8 +50,22 @@ export function notificationIsRead(row: NotificationItem | Record<string, unknow
 
 export function notificationMessage(row: NotificationItem | Record<string, unknown>): string {
   const message = String(row.message ?? (row as Record<string, unknown>).body ?? "").trim();
-  if (message) return message;
-  return String(row.title ?? "").trim() || "—";
+  if (message) return stripInternalRequestIds(message);
+  const title = String(row.title ?? "").trim();
+  return title ? stripInternalRequestIds(title) : "—";
+}
+
+/**
+ * Hide internal request identifiers (e.g. "Request #11") from end-user copy.
+ * Raw message text is still available on the row for deep-link parsing.
+ */
+export function stripInternalRequestIds(text: string): string {
+  return String(text ?? "")
+    .replace(/\s*\(\s*request\s*#\s*\d+\s*\)/gi, "")
+    .replace(/\s*request\s*#\s*\d+/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([.,;:])/g, "$1")
+    .trim();
 }
 
 /**
@@ -62,7 +76,7 @@ export function humanizeNotificationProjectRefs(
   message: string,
   projectNameByCode: Map<string, string> | Record<string, string>
 ): string {
-  const text = String(message ?? "").trim();
+  const text = stripInternalRequestIds(String(message ?? "").trim());
   if (!text) return text;
   const lookup =
     projectNameByCode instanceof Map
@@ -96,5 +110,48 @@ function escapeRegExp(value: string): string {
 }
 
 export function notificationTitle(row: NotificationItem | Record<string, unknown>): string {
-  return String(row.title ?? "").trim();
+  return stripInternalRequestIds(String(row.title ?? "").trim());
+}
+
+/**
+ * Keep one row per leave/WFH request when the same receiver got duplicate
+ * manager/HR fan-out copies. Prefer Request # when present; else type+dates+body.
+ */
+export function dedupeLeaveRequestNotifications(
+  items: NotificationItem[]
+): NotificationItem[] {
+  const seenRequestKeys = new Set<string>();
+  const result: NotificationItem[] = [];
+
+  for (const row of items) {
+    const type = String(row.type ?? "")
+      .trim()
+      .toUpperCase();
+    const isLeaveFamily =
+      type === "LEAVE_REQUEST" ||
+      type === "WFH_REQUEST" ||
+      type === "LOP_LEAVE_REQUEST";
+    if (!isLeaveFamily) {
+      result.push(row);
+      continue;
+    }
+
+    const rawMessage = String(
+      row.message ?? (row as unknown as Record<string, unknown>).body ?? ""
+    ).trim();
+    const idMatch = rawMessage.match(/request\s*#\s*(\d+)/i);
+    const rangeMatch = rawMessage.match(
+      /from\s+(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/i
+    );
+    const key = idMatch?.[1]
+      ? `${type}:${idMatch[1]}`
+      : rangeMatch
+        ? `${type}:${rangeMatch[1]}:${rangeMatch[2]}:${stripInternalRequestIds(rawMessage)}`
+        : `${type}:${notificationRowId(row)}`;
+    if (seenRequestKeys.has(key)) continue;
+    seenRequestKeys.add(key);
+    result.push(row);
+  }
+
+  return result;
 }

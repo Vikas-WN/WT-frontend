@@ -89,6 +89,8 @@ export function buildUserRequestBody(
     (requestType === "LEAVE" || requestType === "OPTIONAL") &&
     !options?.routesToHr
   ) {
+    // Manager-routed leave/optional requires secondary managers.
+    // Talent-pool (routesToHr) skips secondary managers in the UI.
     throw new Error("secondaryManagerEmails is required");
   }
   if (options?.userRequestId != null) {

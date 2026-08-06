@@ -50,7 +50,6 @@ import type { CompOffGrant } from "@/types/compOff";
 import {
   COMP_OFF_EARN_LIST_TYPE,
   COMP_OFF_USAGE_LIST_TYPE,
-  availableUnitsFromGrants,
   calendarDaysInclusive,
   grantExpiryDate,
   grantRemainingUnits,
@@ -66,9 +65,12 @@ import {
   normalizeRequestStatus,
   pickRowField,
   isPendingRequestStatus,
+  remainingCreditUnitsFromGrants,
   requestEarnManagerStatus,
   requestRowId,
   requestRowStatus,
+  sameDayCompOffEarnDatesInUsageRange,
+  sameDayCompOffUsageErrorMessage,
   sortGrantsFifo,
 } from "@/utils/compOff";
 import {
@@ -83,6 +85,7 @@ import {
   formatApiDate,
   formatApiDateDisplay,
   normalizeToApiDate,
+  parseApiDate,
 } from "@/utils/apiDate";
 import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
 import {
@@ -239,7 +242,7 @@ export function CompOffPageClient({
   }, [usageForm.request_from_date, usageForm.request_to_date]);
 
   const computedBalance = useMemo(
-    () => availableUnitsFromGrants(grants, balanceAsOf),
+    () => remainingCreditUnitsFromGrants(grants, balanceAsOf),
     [grants, balanceAsOf]
   );
 
@@ -269,12 +272,13 @@ export function CompOffPageClient({
   }, [myRequests]);
 
   const displayBalance = useMemo(() => {
-    if (balanceUnits !== null && balanceUnits > 0) return balanceUnits;
-    const apiComputed = computedBalance;
-    if (apiComputed > 0) return apiComputed;
-    return derivedBalanceFromRequests;
-  }, [balanceUnits, computedBalance, derivedBalanceFromRequests]);
-  const usingDerivedBalance = displayBalance === derivedBalanceFromRequests && displayBalance > 0;
+    // Prefer authoritative API balance, including zero (do not fall through to derived).
+    if (balanceUnits !== null) return Math.max(0, balanceUnits);
+    if (computedBalance > 0 || grants.length > 0) return Math.max(0, computedBalance);
+    return Math.max(0, derivedBalanceFromRequests);
+  }, [balanceUnits, computedBalance, derivedBalanceFromRequests, grants.length]);
+  const usingDerivedBalance =
+    balanceUnits === null && computedBalance <= 0 && displayBalance === derivedBalanceFromRequests && displayBalance > 0;
   const canUseCompOff = displayBalance > 0;
   const nearestExpiryDate = useMemo(() => {
     const asOf = normalizeToApiDate(balanceAsOf) || balanceAsOf;
@@ -348,7 +352,7 @@ export function CompOffPageClient({
         setGrants([]);
       }
       if (units === null && grantList.length) {
-        units = availableUnitsFromGrants(grantList, asOf);
+        units = remainingCreditUnitsFromGrants(grantList, asOf);
       }
       setBalanceUnits(units);
     } finally {
@@ -476,7 +480,7 @@ export function CompOffPageClient({
           fromDate: from,
           toDate: to,
           requestType: COMP_OFF_USAGE_LIST_TYPE,
-          empEmails: userEmail,
+          selfOnly: true,
         });
         usageRows = compOffService.parseRequestRows(usageRes).filter((row) => {
           const t = normalizeCompOffRequestType(row.request_type ?? row.requestType);
@@ -591,11 +595,14 @@ export function CompOffPageClient({
           throw error;
         }
         patchTeamRequestStatus(requestId, status);
+        if (status === "APPROVED" && flow === "COMP_OFF") {
+          void loadBalanceAndGrants();
+        }
       } finally {
         setTeamRequestUpdatingId(null);
       }
     },
-    [hasManagerAccess, isHrOnly, patchTeamRequestStatus]
+    [hasManagerAccess, isHrOnly, patchTeamRequestStatus, loadBalanceAndGrants]
   );
 
   const loadTeamRequests = useCallback(async (opts?: { raiseOnError?: boolean }) => {
@@ -860,21 +867,34 @@ export function CompOffPageClient({
   async function submitUsage() {
     if (!canUseCompOff) {
       throw new Error(
-        "You have no comp-off balance. Submit an earn request and get manager approval first."
+        "No approved comp-off credits available. Submit an earn request and get it approved before applying for usage."
       );
     }
-    const fromDate = usageForm.request_from_date.trim();
-    const toDate = usageForm.request_to_date.trim();
+    const fromDate = normalizeToApiDate(usageForm.request_from_date.trim());
+    const toDate = normalizeToApiDate(usageForm.request_to_date.trim());
     const comments = usageForm.comments.trim();
     if (!fromDate || !toDate) throw new Error("From date and to date are required.");
-    if (Date.parse(toDate) < Date.parse(fromDate)) {
-      throw new Error("To date cannot be earlier than from date.");
+    if (!parseApiDate(fromDate) || !parseApiDate(toDate)) {
+      throw new Error("Please provide valid dates (dd/mm/yyyy).");
+    }
+    if (compareApiDates(fromDate, toDate) > 0) {
+      throw new Error("Start Date cannot be later than End Date.");
     }
     const days = calendarDaysInclusive(fromDate, toDate);
     if (days < 1) throw new Error("Select at least one calendar day.");
-    if (displayBalance < days) {
+    const sameDayEarnDates = sameDayCompOffEarnDatesInUsageRange(grants, fromDate, toDate);
+    if (sameDayEarnDates.length > 0) {
+      throw new Error(sameDayCompOffUsageErrorMessage(sameDayEarnDates));
+    }
+    const available = await compOffService.resolveAvailableUnits(fromDate);
+    if (!Number.isFinite(available) || available <= 0) {
       throw new Error(
-        `Insufficient comp-off balance. Available: ${displayBalance}, requested: ${days} day(s).`
+        "No approved comp-off credits available. Submit an earn request and get it approved before applying for usage."
+      );
+    }
+    if (available < days) {
+      throw new Error(
+        `Insufficient comp-off balance. Available: ${available}, requested: ${days} day(s).`
       );
     }
     if (comments.length > 200) throw new Error("Comments must be 200 characters or less.");

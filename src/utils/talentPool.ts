@@ -2,14 +2,14 @@ import type { ApiEnvelope } from "@/api/httpClient";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 
-export type TalentPoolTableKey = "unallocated";
+export type TalentPoolTableKey = "onBench" | "unallocated";
 
 export type AllocateTarget = {
   employee_email: string;
   allocate_employee_email: string;
 };
 
-/** GET /allocation/talent-pool — unallocated / not on client project. */
+/** Shared row shape for talent-pool tables (on-bench + unallocated). */
 export type UnallocatedTalentPoolItem = AllocateTarget & {
   user_id: number | null;
   employee_name: string;
@@ -33,6 +33,7 @@ export type TalentPoolTablePage<T> = {
 
 export type TalentPoolDashboardData = {
   label: string;
+  on_bench: TalentPoolTablePage<UnallocatedTalentPoolItem>;
   unallocated: TalentPoolTablePage<UnallocatedTalentPoolItem>;
 };
 
@@ -96,13 +97,17 @@ export function normalizeUnallocatedItem(raw: Record<string, unknown>): Unalloca
   };
 }
 
-function parseUnallocatedTablePage(data: Record<string, unknown>): TalentPoolTablePage<UnallocatedTalentPoolItem> {
+function parseUnallocatedTablePage(
+  data: Record<string, unknown>,
+  fallbackKey = "unallocated"
+): TalentPoolTablePage<UnallocatedTalentPoolItem> {
   const itemsRaw = Array.isArray(data.items) ? data.items : [];
   const meta = parsePagedMeta(data, itemsRaw.length);
-  const keyRaw = String(data.table_key ?? data.tableKey ?? "unallocated").trim();
+  const keyRaw = String(data.table_key ?? data.tableKey ?? fallbackKey).trim();
 
   return {
-    table_key: keyRaw || "unallocated",
+    table_key: keyRaw || fallbackKey,
+    label: typeof data.label === "string" ? data.label : undefined,
     ...meta,
     items: itemsRaw
       .filter((row): row is Record<string, unknown> => row !== null && typeof row === "object")
@@ -117,13 +122,22 @@ export function parseUnallocatedPage(
   return parseUnallocatedTablePage(data);
 }
 
+export function parseOnBenchPage(
+  res: ApiEnvelope<unknown>
+): TalentPoolTablePage<UnallocatedTalentPoolItem> {
+  const data = (res.data ?? {}) as Record<string, unknown>;
+  return parseUnallocatedTablePage(data, "onBench");
+}
+
 export function parseTalentPoolDashboard(res: ApiEnvelope<unknown>): TalentPoolDashboardData {
   const data = (res.data ?? {}) as Record<string, unknown>;
-  const unallocatedRaw = (data.unallocated ?? data) as Record<string, unknown>;
+  const onBenchRaw = (data.on_bench ?? data.onBench ?? {}) as Record<string, unknown>;
+  const unallocatedRaw = (data.unallocated ?? {}) as Record<string, unknown>;
 
   return {
     label: String(data.label ?? "Talent Pool").trim() || "Talent Pool",
-    unallocated: parseUnallocatedTablePage(unallocatedRaw),
+    on_bench: parseUnallocatedTablePage(onBenchRaw, "onBench"),
+    unallocated: parseUnallocatedTablePage(unallocatedRaw, "unallocated"),
   };
 }
 
@@ -132,7 +146,33 @@ export function dashboardFromUnallocatedPage(
 ): TalentPoolDashboardData {
   return {
     label: "Talent Pool",
+    on_bench: {
+      table_key: "onBench",
+      current_page: 0,
+      total_pages: 0,
+      page_size: page.page_size,
+      total_elements: 0,
+      items: [],
+    },
     unallocated: page,
+  };
+}
+
+export function dashboardFromOnBenchPage(
+  page: TalentPoolTablePage<UnallocatedTalentPoolItem>,
+  previous?: TalentPoolDashboardData | null
+): TalentPoolDashboardData {
+  return {
+    label: previous?.label ?? "Talent Pool",
+    on_bench: page,
+    unallocated: previous?.unallocated ?? {
+      table_key: "unallocated",
+      current_page: 0,
+      total_pages: 0,
+      page_size: page.page_size,
+      total_elements: 0,
+      items: [],
+    },
   };
 }
 

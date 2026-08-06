@@ -1,29 +1,52 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DropdownSelect } from "@/components/dashboard/ui/DropdownSelect";
-import { UserTypeTransitionDialog } from "@/components/employee-directory/UserTypeTransitionDialog";
+import {
+  UserTypeTransitionDialog,
+  type UserTypeTransitionConfirmPayload,
+} from "@/components/employee-directory/UserTypeTransitionDialog";
 import { hrmsService } from "@/services/hrms.service";
+import { ApiError } from "@/api/error";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { formatUserTypeLabel } from "@/utils/offboardingFormState";
 import type { OnboardOptionItem } from "@/types/onboard-options";
 import { requiresUserTypeTransitionDialog, normalizeDirectoryUserType } from "@/utils/userTypeTransition";
+import {
+  bandDisplayLabel,
+  bandSelectOptions,
+  isInternOnlyBand,
+} from "@/utils/dashboard/validation";
+import { toRows } from "@/utils/apiRows";
 
 type Props = {
   empId: string;
   userType: unknown;
+  bandId?: unknown;
+  bandName?: unknown;
   canEdit: boolean;
   options: OnboardOptionItem[];
 };
 
-export function EmployeeUserTypeSelect({ empId, userType, canEdit, options }: Props) {
+export function EmployeeUserTypeSelect({
+  empId,
+  userType,
+  bandName,
+  canEdit,
+  options,
+}: Props) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [pendingType, setPendingType] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [bandRows, setBandRows] = useState<Array<Record<string, unknown>>>([]);
+  const [bandsLoading, setBandsLoading] = useState(false);
 
   const currentType = normalizeDirectoryUserType(userType);
+  const currentBandLabel = String(bandName ?? "").trim();
+  const needsFulltimeBand = isInternOnlyBand(currentBandLabel);
+
   const selectOptions = useMemo(
     () =>
       options.map((option) => ({
@@ -34,7 +57,38 @@ export function EmployeeUserTypeSelect({ empId, userType, canEdit, options }: Pr
   );
   const displayLabel = formatUserTypeLabel(currentType);
 
-  const persistUserType = async (nextType: string, transitionDate?: string) => {
+  const fulltimeBandOptions = useMemo(() => {
+    const nonIntern = bandRows.filter(
+      (row) => !isInternOnlyBand(bandDisplayLabel(row))
+    );
+    return bandSelectOptions(nonIntern);
+  }, [bandRows]);
+
+  useEffect(() => {
+    if (!dialogOpen || !needsFulltimeBand) return;
+    let cancelled = false;
+    setBandsLoading(true);
+    void (async () => {
+      try {
+        const res = await hrmsService.getBands({ userType: "FULLTIME" });
+        if (cancelled) return;
+        setBandRows(toRows((res as { data?: unknown }).data ?? res));
+      } catch {
+        if (!cancelled) setBandRows([]);
+      } finally {
+        if (!cancelled) setBandsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [dialogOpen, needsFulltimeBand]);
+
+  const persistUserType = async (
+    nextType: string,
+    transitionDate?: string,
+    nextBandId?: number
+  ) => {
     const normalizedNext = normalizeDirectoryUserType(nextType);
     if (!empId.trim() || !normalizedNext || normalizedNext === currentType) return;
 
@@ -43,6 +97,9 @@ export function EmployeeUserTypeSelect({ empId, userType, canEdit, options }: Pr
       await hrmsService.updateEmployeeUserType(empId, {
         user_type: normalizedNext,
         transition_date: transitionDate,
+        ...(nextBandId != null && Number.isFinite(nextBandId)
+          ? { band_id: nextBandId }
+          : {}),
       });
       await queryClient.invalidateQueries({ queryKey: ["employee-directory", "onboard"] });
       await queryClient.invalidateQueries({ queryKey: ["employee-profile"] });
@@ -50,7 +107,13 @@ export function EmployeeUserTypeSelect({ empId, userType, canEdit, options }: Pr
       setDialogOpen(false);
       setPendingType(null);
     } catch (err) {
-      showErrorToast(err instanceof Error ? err.message : "Could not update user type.");
+      const msg =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Could not update user type.";
+      showErrorToast(msg);
     } finally {
       setSaving(false);
     }
@@ -67,6 +130,15 @@ export function EmployeeUserTypeSelect({ empId, userType, canEdit, options }: Pr
     }
 
     void persistUserType(normalizedNext);
+  };
+
+  const handleConfirm = (payload: UserTypeTransitionConfirmPayload) => {
+    if (!pendingType) return;
+    if (needsFulltimeBand && pendingType === "FULLTIME" && payload.bandId == null) {
+      showErrorToast("Select a valid full-time band before converting to Full-time.");
+      return;
+    }
+    void persistUserType(pendingType, payload.transitionDate, payload.bandId);
   };
 
   if (!canEdit) {
@@ -98,15 +170,15 @@ export function EmployeeUserTypeSelect({ empId, userType, canEdit, options }: Pr
         fromType={currentType}
         toType={pendingType ?? ""}
         saving={saving}
+        requireBand={Boolean(pendingType === "FULLTIME" && needsFulltimeBand)}
+        bandOptions={fulltimeBandOptions}
+        bandsLoading={bandsLoading}
         onClose={() => {
           if (saving) return;
           setDialogOpen(false);
           setPendingType(null);
         }}
-        onConfirm={(transitionDate) => {
-          if (!pendingType) return;
-          void persistUserType(pendingType, transitionDate);
-        }}
+        onConfirm={handleConfirm}
       />
     </>
   );

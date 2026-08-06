@@ -42,7 +42,7 @@ export function EmployeePortalRoleSelect({
   compact = false,
 }: Props) {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const [saving, setSaving] = useState(false);
   const [optimisticRole, setOptimisticRole] = useState<string | null>(null);
   const roles = useMemo(() => normalizePortalRoles(portalRoles), [portalRoles]);
@@ -72,9 +72,14 @@ export function EmployeePortalRoleSelect({
     }
   }, [propRole, optimisticRole]);
 
-  const patchCachedPortalRole = (targetEmail: string, nextRole: string) => {
+  const patchCachedPortalRole = (
+    targetEmail: string,
+    nextRole: string,
+    employeeStatus?: string | null
+  ) => {
     const nextRoles = rolesForPortalSelection(nextRole);
     const emailKey = targetEmail.trim().toLowerCase();
+    const nextStatus = employeeStatus?.trim() || null;
 
     queryClient.setQueriesData<OnboardListItem[]>(
       { queryKey: ["employee-directory", "onboard"] },
@@ -89,6 +94,11 @@ export function EmployeePortalRoleSelect({
             ...row,
             portal_roles: nextRoles,
             portalRoles: nextRoles,
+            ...(nextStatus
+              ? {
+                  status: nextStatus,
+                }
+              : {}),
           };
         });
       }
@@ -106,6 +116,11 @@ export function EmployeePortalRoleSelect({
           ...old,
           portal_roles: nextRoles,
           portalRoles: nextRoles,
+          ...(nextStatus
+            ? {
+                status: nextStatus,
+              }
+            : {}),
         };
       }
     );
@@ -122,9 +137,24 @@ export function EmployeePortalRoleSelect({
     }
     setSaving(true);
     try {
-      await hrmsService.setPortalRole({ target_email: targetEmail, role: nextRole });
+      const res = await hrmsService.setPortalRole({ target_email: targetEmail, role: nextRole });
+      const envelope = res as unknown as Record<string, unknown>;
+      const data =
+        envelope.data && typeof envelope.data === "object" && !Array.isArray(envelope.data)
+          ? (envelope.data as Record<string, unknown>)
+          : envelope;
+      const onboardingReopened = Boolean(data.onboarding_reopened ?? data.onboardingReopened);
+      const nextStatus = String(
+        data.employee_status ?? data.employeeStatus ?? (onboardingReopened ? "INVITED" : "")
+      ).trim();
       setOptimisticRole(nextRole);
-      patchCachedPortalRole(targetEmail, nextRole);
+      patchCachedPortalRole(targetEmail, nextRole, nextStatus || null);
+      // When an administrator changes their own portal role, rotate the session
+      // immediately so its access-token claims cannot retain the previous role.
+      // Other users reconcile on their next application bootstrap via /roles.
+      if (user?.email?.trim().toLowerCase() === targetEmail.toLowerCase()) {
+        await refresh();
+      }
       // Avoid refetching the directory list — onboard list often omits/lags portal_roles
       // and would overwrite the optimistic cache update.
       await queryClient.invalidateQueries({
@@ -132,7 +162,13 @@ export function EmployeePortalRoleSelect({
         refetchType: "none",
       });
       await queryClient.invalidateQueries({ queryKey: ["employee-profile"] });
-      showSuccessToast("Portal role updated successfully.");
+      const successMessage =
+        typeof data.message === "string" && data.message.trim()
+          ? data.message.trim()
+          : onboardingReopened
+            ? "Portal role set to Employee. Onboarding was reopened — ask them to sign in and complete the form."
+            : "Portal role updated successfully.";
+      showSuccessToast(successMessage);
     } catch (err) {
       setOptimisticRole(null);
       showErrorToast(err instanceof Error ? err.message : "Could not update portal role.");

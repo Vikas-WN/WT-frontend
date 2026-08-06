@@ -55,7 +55,7 @@ function formatTrainingScoresLabel(overall: number | null, hasAssessments: boole
 
 function TrainingScoresTable({
   rows,
-  scrollChain = false,
+  scrollChain = true,
   detailed = false,
 }: {
   rows: Array<{
@@ -108,7 +108,7 @@ function TrainingScoresTable({
 
 function EmployeeTrainingMarksCardEmployee({
   enabled = true,
-  scrollChain = false,
+  scrollChain = true,
 }: {
   enabled?: boolean;
   scrollChain?: boolean;
@@ -188,7 +188,7 @@ function EmployeeTrainingMarksCardHr({
   targetUserId,
   targetEmail,
   enabled = true,
-  scrollChain = false,
+  scrollChain = true,
 }: {
   targetUserId?: string;
   targetEmail?: string;
@@ -314,7 +314,7 @@ export function EmployeeTrainingMarksCard({
   targetUserId,
   targetEmail,
   enabled = true,
-  scrollChain = false,
+  scrollChain = true,
 }: {
   variant: "employee" | "hr";
   targetUserId?: string;

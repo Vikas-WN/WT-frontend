@@ -67,7 +67,7 @@ export function HrLeaveBalancesPanel({
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
   const [editingEmployee, setEditingEmployee] = useState<LeaveBalancesListItem | null>(null);
 
   const { user } = useAuth();
@@ -79,15 +79,20 @@ export function HrLeaveBalancesPanel({
       ? MONTH_OPTIONS.filter((opt) => Number(opt.value) <= currentMonth)
       : MONTH_OPTIONS;
 
+  const periodReady = Boolean(year.trim() && month.trim());
+
   const balancesQ = useHrLeaveBalancesList({
     year,
     month,
     page,
     pageSize,
     search: appliedSearch,
+    enabled: periodReady,
   });
 
   useEffect(() => {
+    // Only clamp future months — never re-fill a deliberately cleared Month field.
+    if (!month.trim()) return;
     if (Number(year) === currentYear && Number(month) > currentMonth) {
       setMonth(String(currentMonth));
     }
@@ -169,6 +174,7 @@ export function HrLeaveBalancesPanel({
                   setPage(0);
                 }}
                 options={monthOptions}
+                placeholder="Select month"
                 contentClassName="w-auto min-w-[11rem]"
               />
             </div>
@@ -284,7 +290,9 @@ export function HrLeaveBalancesPanel({
                       <span className="max-w-sm text-sm text-muted-foreground">
                         {loadError
                           ? "Adjust the period or try again."
-                          : "Try a different search, year, or month."}
+                          : !periodReady
+                            ? "Select a year and month to view leave balances."
+                            : "Try a different search, year, or month."}
                       </span>
                     </div>
                   </TableCell>
@@ -297,14 +305,14 @@ export function HrLeaveBalancesPanel({
         {totalElements > 0 ? (
           <div className="border-t border-border/40 pt-4">
             <ListPagination
-              page={page + 1}
+              page={page}
               totalPages={totalPages}
               totalItems={totalElements}
               rangeStart={rangeStart}
               rangeEnd={rangeEnd}
               pageSize={pageSize}
-              pageSizeOptions={[25, 50, 100]}
-              onPageChange={(p) => setPage(Math.max(0, p - 1))}
+              pageSizeOptions={[10, 25, 50, 100]}
+              onPageChange={setPage}
               onPageSizeChange={(size) => {
                 setPageSize(size);
                 setPage(0);

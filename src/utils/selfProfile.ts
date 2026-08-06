@@ -76,6 +76,6 @@ export async function loadSelfProfileState(
   return {
     profile,
     // SERVING_NOTICE employees already completed onboarding — do not gate Leave/Profile.
-    isSelfOnboarded: !shouldRequireSelfOnboarding(status, roles),
+    isSelfOnboarded: !shouldRequireSelfOnboarding(status),
   };
 }

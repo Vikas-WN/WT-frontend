@@ -358,9 +358,7 @@ export function MastersPageClient() {
     userRoles.includes("ROLE_HR") && !hasManagerAccess;
   const canExportTimelog = hasHrAccess || hasManagerAccess;
   const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
-  const restrictForPendingOnboarding =
-    isEmployee && !hasHrAccess && !hasManagerAccess;
-  const requiresSelfOnboarding = restrictForPendingOnboarding && !isSelfOnboarded;
+  const requiresSelfOnboarding = !isSelfOnboarded;
   /** Self-service profile + onboarding (non-HR employees only) */
   const employeeSelfServeProfile = isEmployee || hasHrAccess;
   const canAccessProfile = Boolean(user);

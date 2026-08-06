@@ -61,6 +61,17 @@ export type ExitInterviewSubmitResult = {
   submitted_at: string;
 };
 
+/** Context returned by the public magic-link endpoint for a valid survey token. */
+export type ExitSurveyMagicLinkContext = {
+  form: ExitInterviewFormDefinition;
+  prefill: Record<string, string>;
+  employee_name: string | null;
+  email: string | null;
+  last_working_day: string | null;
+  resignation_date: string | null;
+  expires_at: string | null;
+};
+
 export type ExitInterviewSubmissionStatus = "SUBMITTED" | "PENDING";
 
 export type ExitInterviewResponseField = {
