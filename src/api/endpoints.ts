@@ -32,6 +32,8 @@ export const endpoints = {
       `${api}/employee-profile/${encodeURIComponent(empId)}/user-type`,
     employeeBalances: (empId: string) =>
       `${api}/employee-profile/${encodeURIComponent(empId)}/balances`,
+    deleteEmployee: (empId: string) =>
+      `${api}/employee-profile/${encodeURIComponent(empId)}`,
   },
 
   employeeResume: {
