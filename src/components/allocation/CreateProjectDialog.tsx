@@ -297,21 +297,29 @@ export function CreateProjectDialog({
                 projectCode: code,
               });
             } catch {
-              await allocateManagerOnProject({
-                email: nextPm,
-                fields: {
-                  ...pmFields,
+              try {
+                await allocateManagerOnProject({
                   email: nextPm,
-                  role: "Project Manager",
-                  start_date: pmFields.start_date || form.start_date,
-                  end_date: pmFields.end_date || form.end_date,
-                },
-                projectCode: code,
-                projectStart: startDate,
-                projectEnd: endDate,
-                isManager: true,
-                allocationPercentOptions: pmPercentOptions,
-              });
+                  fields: {
+                    ...pmFields,
+                    email: nextPm,
+                    role: "Project Manager",
+                    start_date: pmFields.start_date || form.start_date,
+                    end_date: pmFields.end_date || form.end_date,
+                  },
+                  projectCode: code,
+                  projectStart: startDate,
+                  projectEnd: endDate,
+                  isManager: true,
+                  allocationPercentOptions: pmPercentOptions,
+                });
+              } catch (error) {
+                showErrorToast(
+                  `Project updated, but failed to allocate Project Manager: ${
+                    error instanceof Error ? error.message : "unknown error"
+                  }.`
+                );
+              }
             }
           }
         }
@@ -335,22 +343,35 @@ export function CreateProjectDialog({
       });
 
       // Delivery Manager is contact-only on create (no allocation). PM is allocated.
+      // A PM-allocation failure must not abort or misreport the (already persisted)
+      // project creation — otherwise retrying would create a duplicate project.
       if (pmEmail) {
-        await allocateManagerOnProject({
-          email: pmEmail,
-          fields: {
-            ...pmFields,
+        try {
+          await allocateManagerOnProject({
             email: pmEmail,
-            role: "Project Manager",
-            start_date: pmFields.start_date || form.start_date,
-            end_date: pmFields.end_date || form.end_date,
-          },
-          projectCode,
-          projectStart: startDate,
-          projectEnd: endDate,
-          isManager: true,
-          allocationPercentOptions: pmPercentOptions,
-        });
+            fields: {
+              ...pmFields,
+              email: pmEmail,
+              role: "Project Manager",
+              start_date: pmFields.start_date || form.start_date,
+              end_date: pmFields.end_date || form.end_date,
+            },
+            projectCode,
+            projectStart: startDate,
+            projectEnd: endDate,
+            isManager: true,
+            allocationPercentOptions: pmPercentOptions,
+          });
+        } catch (error) {
+          showErrorToast(
+            `Project created, but failed to allocate Project Manager: ${
+              error instanceof Error ? error.message : "unknown error"
+            }.`
+          );
+          onCreated();
+          onClose();
+          return;
+        }
       }
 
       showSuccessToast("Project created successfully.");

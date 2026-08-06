@@ -18,10 +18,14 @@ import Link from "next/link";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useCallback } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/context/AuthContext";
+import { hrmsService } from "@/services/hrms.service";
 import { DASHBOARD_ROUTES, employeeDirectoryProfilePath } from "@/constants/routes";
 import { useEmployeeDirectoryAccess } from "@/hooks/employee-directory/useEmployeeDirectoryAccess";
 import { useEmployeeDirectoryList } from "@/hooks/employee-directory/useEmployeeDirectoryList";
 import { useOnboardOptions } from "@/hooks/useOnboardOptions";
+import { EmployeeDeleteDialog } from "@/components/employee-directory/EmployeeDeleteDialog";
 import { EmployeePortalRoleSelect } from "@/components/employee-directory/EmployeePortalRoleSelect";
 import { EmployeeUserTypeSelect } from "@/components/employee-directory/EmployeeUserTypeSelect";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
@@ -40,6 +44,8 @@ import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import { useClientPagination } from "@/hooks/useClientPagination";
+import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
+import { IconTrash } from "@/components/dashboard/ui/icons";
 import {
   activeSortDirectionForColumn,
   applyListSort,
@@ -128,10 +134,17 @@ function CopyValueButton({
 
 export function EmployeeDirectoryPageClient() {
   const router = useRouter();
+  const { user: authUser } = useAuth();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
   const [userTypeFilter, setUserTypeFilter] = useState("");
   const [sortId, setSortId] = useState("doj_desc");
+  const [deleteTarget, setDeleteTarget] = useState<{
+    empId: string;
+    name: string;
+    email: string;
+  } | null>(null);
   const onboardOptionsQ = useOnboardOptions();
   const userTypeSelectOptions = useMemo(
     () => directoryUserTypeFilterOptions(onboardOptionsQ.data),
@@ -141,8 +154,13 @@ export function EmployeeDirectoryPageClient() {
     () => resolveDirectoryUserTypes(onboardOptionsQ.data ?? FALLBACK_ONBOARD_OPTIONS),
     [onboardOptionsQ.data]
   );
-  const { authStatus, canView: canViewDirectory, canEdit: canEditDirectory, queriesEnabled } =
-    useEmployeeDirectoryAccess();
+  const {
+    authStatus,
+    canView: canViewDirectory,
+    canEdit: canEditDirectory,
+    canDelete,
+    queriesEnabled,
+  } = useEmployeeDirectoryAccess();
   const { data: rows = [], isLoading, isError, error, refetch } = useEmployeeDirectoryList({
     enabled: queriesEnabled,
   });
@@ -199,6 +217,38 @@ export function EmployeeDirectoryPageClient() {
     []
   );
 
+  const deleteEmployeeMutation = useMutation({
+    mutationFn: (empId: string) => hrmsService.deleteEmployee(empId),
+    onSuccess: async () => {
+      showSuccessToast("Employee deleted successfully");
+      setDeleteTarget(null);
+      await queryClient.invalidateQueries({ queryKey: ["employee-directory", "onboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["offboarding"] });
+    },
+    onError: (error: unknown) => {
+      showErrorToast(error instanceof Error ? error.message : "Could not delete employee.");
+    },
+  });
+
+  const actorEmail = (authUser?.email ?? "").trim().toLowerCase();
+
+  const handleRequestDelete = useCallback(
+    (empId: string, name: string, email: string) => {
+      if (email.trim().toLowerCase() === actorEmail) {
+        showErrorToast("You cannot delete your own account.");
+        return;
+      }
+      setDeleteTarget({ empId, name: cleanEmployeeName({ name }) || name, email });
+    },
+    [actorEmail]
+  );
+
+  const handleConfirmDelete = useCallback(() => {
+    if (deleteTarget?.empId) {
+      deleteEmployeeMutation.mutate(deleteTarget.empId);
+    }
+  }, [deleteTarget, deleteEmployeeMutation]);
+
   if (authStatus !== "loading" && !canViewDirectory) {
     return (
       <DashboardPageShell>
@@ -217,7 +267,8 @@ export function EmployeeDirectoryPageClient() {
 
   return (
     <DashboardPageShell className="wt-detail-page">
-      <ManagementListCard
+      <OnboardingGate>
+        <ManagementListCard
         density="compact"
         title="All Employees"
         description="Browse and manage employee profiles across the organization."
@@ -322,6 +373,16 @@ export function EmployeeDirectoryPageClient() {
                           </TableHead>
                         );
                       })}
+                      {canDelete ? (
+                        <TableHead
+                          className={cn(
+                            WT_TABLE_HEAD_COMPACT_CLASS,
+                            "whitespace-nowrap text-right"
+                          )}
+                        >
+                          <span className="px-1.5">Actions</span>
+                        </TableHead>
+                      ) : null}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -405,6 +466,44 @@ export function EmployeeDirectoryPageClient() {
                               )}
                             </TableCell>
                           ))}
+                          {canDelete ? (
+                            <TableCell
+                              className={cn(
+                                WT_TABLE_CELL_COMPACT_CLASS,
+                                "whitespace-nowrap text-right"
+                              )}
+                            >
+                              {display.email.trim().toLowerCase() === actorEmail ? (
+                                <span
+                                  className="text-xs text-wt-text-muted"
+                                  title="You cannot delete your own account"
+                                >
+                                  —
+                                </span>
+                              ) : (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  className="text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-40"
+                                  disabled={deleteEmployeeMutation.isPending}
+                                  aria-label={`Delete ${display.name}`}
+                                  title="Delete employee"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRequestDelete(
+                                      empId,
+                                      String(record.name ?? display.name ?? ""),
+                                      String(record.email ?? display.email ?? "")
+                                    );
+                                  }}
+                                  onKeyDown={(e) => e.stopPropagation()}
+                                >
+                                  <IconTrash />
+                                </Button>
+                              )}
+                            </TableCell>
+                          ) : null}
                         </TableRow>
                       );
                     })}
@@ -421,10 +520,20 @@ export function EmployeeDirectoryPageClient() {
                 rangeEnd={pagination.rangeEnd}
                 pageSize={pagination.pageSize}
                 onPageChange={pagination.setPage}
+                onPageSizeChange={pagination.setPageSize}
               />
           </>
         </ManagementListContent>
       </ManagementListCard>
+      </OnboardingGate>
+      <EmployeeDeleteDialog
+        open={deleteTarget !== null}
+        employeeName={deleteTarget?.name ?? ""}
+        employeeEmail={deleteTarget?.email ?? ""}
+        loading={deleteEmployeeMutation.isPending}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </DashboardPageShell>
   );
 }

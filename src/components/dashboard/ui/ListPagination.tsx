@@ -11,9 +11,8 @@ import {
 import { UI_COPY } from "@/constants/uiCopy";
 import { TOOLBAR_SELECT_TRIGGER_COMPACT_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { buildPaginationTokens } from "@/utils/pagination";
+import { PAGE_SIZE_OPTIONS } from "@/hooks/useClientPagination";
 import { cn } from "@/lib/utils";
-
-const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 
 function ChevronLeftIcon({ className = "" }: { className?: string }) {
   return (

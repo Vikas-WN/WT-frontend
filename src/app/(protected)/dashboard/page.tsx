@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { defaultDashboardPathForRoles } from "@/constants/routes";
+import { DASHBOARD_ROUTES, defaultDashboardPathForRoles } from "@/constants/routes";
+import { shouldRequireSelfOnboarding } from "@/utils/userStatus";
 
 export default function DashboardPage() {
   const { user, status } = useAuth();
@@ -11,6 +12,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (status !== "authenticated" || !user) return;
+    // INVITED/ONBOARDING users must complete the onboarding form first — route
+    // them to Profile (the only page that renders the form) regardless of role.
+    if (shouldRequireSelfOnboarding(user.status)) {
+      router.replace(DASHBOARD_ROUTES.profile);
+      return;
+    }
     router.replace(defaultDashboardPathForRoles(user.roles));
   }, [status, user, router]);
 

@@ -173,6 +173,7 @@ export function AllocateEmployeeDialog({
   }
 
   async function handleSubmit() {
+    if (loading) return;
     const employeeEmail = form.employee_email.trim();
     const projectCode = form.project_code.trim();
     const role = resolvedRole;
@@ -226,6 +227,9 @@ export function AllocateEmployeeDialog({
     }
 
     const nextPercent = Number(form.allocated_percent);
+    // Lock the submit button before the availability round-trip so a fast
+    // double-click cannot fire two createAllocation calls.
+    setLoading(true);
     try {
       const res = await hrmsService.getEmployeeAllocations({ userEmail: employeeEmail });
       const parsed = parseEmployeeAllocationsResponse(res.data ?? res);
@@ -245,13 +249,13 @@ export function AllocateEmployeeDialog({
           showErrorToast(
             `Only ${available}% is available to allocate (projects use ${current}%; talent pool is free capacity).`
           );
+        setLoading(false);
         return;
       }
     } catch {
       /* allow submit if lookup fails */
     }
 
-    setLoading(true);
     try {
       const allocationType = staffing ? "STAFFING" : form.allocation_type;
       const lockedInDate =

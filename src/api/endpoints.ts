@@ -32,6 +32,8 @@ export const endpoints = {
       `${api}/employee-profile/${encodeURIComponent(empId)}/user-type`,
     employeeBalances: (empId: string) =>
       `${api}/employee-profile/${encodeURIComponent(empId)}/balances`,
+    deleteEmployee: (empId: string) =>
+      `${api}/employee-profile/${encodeURIComponent(empId)}`,
   },
 
   employeeResume: {
@@ -248,6 +250,8 @@ export const endpoints = {
     submit: `${api}/exit-interview`,
     submissions: `${api}/exit-interview/submissions`,
     followUp: `${api}/exit-interview/follow-up`,
+    magicLinkContext: (token: string) =>
+      `${api}/exit-interview/magic/${encodeURIComponent(token)}`,
     submissionByLookupId: (lookupId: string) =>
       `${api}/exit-interview/submissions/${encodeURIComponent(lookupId)}`,
     minutesOfMeetingByLookupId: (lookupId: string) =>

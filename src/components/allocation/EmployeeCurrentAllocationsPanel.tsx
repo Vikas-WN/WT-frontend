@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
@@ -41,6 +41,7 @@ export function EmployeeCurrentAllocationsPanel({
   const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
   const [loading, setLoading] = useState(false);
   const [deallocatingId, setDeallocatingId] = useState("");
+  const cancelledRef = useRef(false);
 
   const loadAllocations = useCallback(async () => {
     const normalized = email.trim().toLowerCase();
@@ -52,23 +53,31 @@ export function EmployeeCurrentAllocationsPanel({
     setLoading(true);
     try {
       const res = await hrmsService.getEmployeeAllocations({ userEmail: normalized });
+      if (cancelledRef.current) return;
       const parsed = parseEmployeeAllocationsResponse(res.data ?? res);
       const allocations = (parsed?.allocations ?? []).filter(
         (row) => !isSystemProjectAllocationRow(row)
       );
       setRows(allocations);
     } catch (error) {
+      if (cancelledRef.current) return;
       setRows([]);
       showErrorToast(
         error instanceof Error ? error.message : "Could not load current allocations."
       );
     } finally {
-      setLoading(false);
+      if (!cancelledRef.current) {
+        setLoading(false);
+      }
     }
   }, [email]);
 
   useEffect(() => {
+    cancelledRef.current = false;
     void loadAllocations();
+    return () => {
+      cancelledRef.current = true;
+    };
   }, [loadAllocations]);
 
   const summary = useMemo(() => {
@@ -88,7 +97,7 @@ export function EmployeeCurrentAllocationsPanel({
     setDeallocatingId(allocationId);
     try {
       await hrmsService.deleteAllocation(allocationId);
-      showSuccessToast("Employee deallocated. Capacity returned to the talent pool.");
+      showSuccessToast("Employee deallocated successfully.");
       await loadAllocations();
       await onChanged?.();
     } catch (error) {

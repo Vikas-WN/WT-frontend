@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/context/AuthContext";
 import {
+  canDeleteEmployee,
   canEditEmployeeDirectory,
   canEditEmployeeProfile,
   canEditEmployeeProfileStatusOnly,
@@ -18,6 +19,7 @@ export function useEmployeeDirectoryAccess() {
   const canEditProfile = canEditEmployeeProfile(roles);
   const canEditProfileStatusOnly = canEditEmployeeProfileStatusOnly(roles);
   const canOpenProfileEditor = canOpenEmployeeProfileEditor(roles);
+  const canDelete = canDeleteEmployee(roles);
   const queriesEnabled = authStatus === "authenticated" && canView;
 
   return {
@@ -27,6 +29,7 @@ export function useEmployeeDirectoryAccess() {
     canEditProfile,
     canEditProfileStatusOnly,
     canOpenProfileEditor,
+    canDelete,
     queriesEnabled,
     roles,
   };
