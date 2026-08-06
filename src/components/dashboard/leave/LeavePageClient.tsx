@@ -2129,6 +2129,7 @@ export function LeavePageClient() {
                           <MyLeaveRequestsView
                             rows={filteredLeaveTabRequests}
                             loading={myLeaveRequestsLoading}
+                            showRequestType
                             sortId={myLeaveSortId}
                             onSortChange={setMyLeaveSortId}
                             sortOptions={LEAVE_REQUEST_SORT_OPTIONS}
