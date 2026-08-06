@@ -184,6 +184,7 @@ export function DesignationCombobox({
           aria-controls={listId}
           aria-autocomplete="list"
           placeholder={placeholder}
+          maxLength={50}
           onFocus={() => {
             if (!isDisabled) setIsOpen(true);
           }}
