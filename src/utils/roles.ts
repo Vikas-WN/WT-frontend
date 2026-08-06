@@ -176,6 +176,11 @@ export function canEditEmployeeDirectory(roles: string[]): boolean {
   return hasHrRole(roles);
 }
 
+/** DELETE /employee-profile/{empId} — soft-delete (ROLE_ADMIN only). */
+export function canDeleteEmployee(roles: string[]): boolean {
+  return normalizeRoles(roles).includes("ROLE_ADMIN");
+}
+
 /** PUT /employee-profile/{empId} — full profile (ROLE_HR). */
 export function canEditEmployeeProfile(roles: string[]): boolean {
   return roles.includes("ROLE_HR");
