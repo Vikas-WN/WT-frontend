@@ -113,6 +113,10 @@ export const compOffService = {
       managerCompOffEmail:
         payload.managerCompOffEmail ?? payload.manager_comp_off_email ?? "",
       isHalfDay: false,
+      primaryManagerEmails: payload.primary_manager_emails ?? payload.primaryManagerEmails ?? [],
+      secondaryManagerEmails: payload.secondary_manager_emails ?? payload.secondaryManagerEmails ?? [],
+      primary_manager_emails: payload.primary_manager_emails ?? payload.primaryManagerEmails ?? [],
+      secondary_manager_emails: payload.secondary_manager_emails ?? payload.secondaryManagerEmails ?? [],
     };
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.userRequest.root, {
       contentType: "application/json",
