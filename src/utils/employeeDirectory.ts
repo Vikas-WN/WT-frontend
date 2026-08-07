@@ -145,6 +145,31 @@ export function formatYoeDisplay(value: unknown): string {
   return text;
 }
 
+export function extractSkillNames(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const names: string[] = [];
+  for (const item of raw) {
+    if (item && typeof item === "object") {
+      const skill = String(
+        (item as Record<string, unknown>).skill ??
+          (item as Record<string, unknown>).name ??
+          ""
+      ).trim();
+      if (skill) names.push(skill);
+      continue;
+    }
+    const text = String(item ?? "").trim();
+    if (text) names.push(text);
+  }
+  return names;
+}
+
+export function rowHasSkill(raw: unknown, skillFilter: string): boolean {
+  const needle = skillFilter.trim().toLowerCase();
+  if (!needle) return true;
+  return extractSkillNames(raw).some((skill) => skill.toLowerCase() === needle);
+}
+
 export function formatProfileDisplayValue(value: unknown): string {
   if (value === null || value === undefined) return "—";
   if (Array.isArray(value)) {
@@ -153,14 +178,14 @@ export function formatProfileDisplayValue(value: unknown): string {
         if (item && typeof item === "object") {
           const rec = item as Record<string, unknown>;
           const skill = String(rec.skill ?? rec.name ?? "").trim();
-          const selfRating = rec.self_rating ?? rec.rating ?? rec.level;
-          const webknotRating = rec.webknot_rating;
+          const selfRating = rec.self_rating ?? rec.selfRating ?? rec.rating ?? rec.level;
+          const webknotRating = rec.webknot_rating ?? rec.webknotRating;
           if (!skill) return "";
           let ratingStr = "";
-          if (webknotRating !== undefined && webknotRating !== null) {
+          if (webknotRating !== undefined && webknotRating !== null && String(webknotRating).trim() !== "") {
             ratingStr = ` (Self: ${selfRating}/5, WK: ${webknotRating}/5)`;
           } else if (selfRating !== undefined && String(selfRating).trim() !== "") {
-            ratingStr = ` (${selfRating}/5)`;
+            ratingStr = ` (Self: ${selfRating}/5)`;
           }
           return `${skill}${ratingStr}`;
         }

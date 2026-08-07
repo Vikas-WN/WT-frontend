@@ -372,6 +372,14 @@ export function EmployeeProfilePageClient() {
           if (!editForm.primary_skills.length) {
             throw new Error("At least one primary skill is required.");
           }
+          const missingSelfRating = [...editForm.primary_skills, ...editForm.secondary_skills].filter(
+            (item) =>
+              String(item.skill ?? "").trim() &&
+              (!Number.isFinite(item.self_rating) || item.self_rating < 1 || item.self_rating > 5)
+          );
+          if (missingSelfRating.length) {
+            throw new Error("Each skill must have a self rating between 1 and 5.");
+          }
           const invalidSkills = editForm.primary_skills.filter(
             (item) => !allowedPrimarySkills.has(item.skill)
           );

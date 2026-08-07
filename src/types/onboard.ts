@@ -39,6 +39,7 @@ export interface OnboardListItem {
   band: string | null;
   yoe: number | null;
   primary_skills: SkillRating[];
+  secondary_skills?: SkillRating[];
   /** Portal access roles from user_roles. */
   portal_roles?: string[] | null;
   portalRoles?: string[] | null;

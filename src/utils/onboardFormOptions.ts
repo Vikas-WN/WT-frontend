@@ -103,6 +103,7 @@ export function parseOnboardOptions(raw: unknown): OnboardOptionsResponse {
     holiday_calendars: parseOptionItems(row.holiday_calendars),
     reporting_managers: parseOptionItems(row.reporting_managers),
     primary_skills: parseOptionItems(row.primary_skills),
+    secondary_skills: parseOptionItems(row.secondary_skills ?? row.primary_skills),
   };
 
   if (!isCompleteOptions(parsed)) {
@@ -224,7 +225,13 @@ export const FALLBACK_ONBOARD_OPTIONS: OnboardOptionsResponse = {
     { value: "Flutter", label: "Flutter" },
     { value: "React Native", label: "React Native" },
   ],
+  secondary_skills: [],
 };
+
+// Mirror primary skills for secondary filter/suggestions when API is unavailable.
+FALLBACK_ONBOARD_OPTIONS.secondary_skills = FALLBACK_ONBOARD_OPTIONS.primary_skills.map((item) => ({
+  ...item,
+}));
 
 // Ensure every fallback department has a key in department_bands.
 FALLBACK_ONBOARD_OPTIONS.department_bands = Object.fromEntries(

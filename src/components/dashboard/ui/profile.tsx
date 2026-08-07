@@ -82,25 +82,30 @@ export function readProfileField(
   return String(value).trim();
 }
 
+function formatSkillRatingEntry(item: unknown): string {
+  if (item && typeof item === "object") {
+    const rec = item as Record<string, unknown>;
+    const skill = String(rec.skill ?? rec.name ?? "").trim();
+    if (!skill) return "";
+    const selfRating = rec.self_rating ?? rec.selfRating ?? rec.rating ?? rec.level;
+    const webknotRating = rec.webknot_rating ?? rec.webknotRating;
+    if (webknotRating !== undefined && webknotRating !== null && String(webknotRating).trim() !== "") {
+      return `${skill} (Self: ${selfRating}/5, WK: ${webknotRating}/5)`;
+    }
+    if (selfRating !== undefined && String(selfRating).trim() !== "") {
+      return `${skill} (Self: ${selfRating}/5)`;
+    }
+    return skill;
+  }
+  return String(item ?? "").trim();
+}
+
 export function formatSecondarySkillsForProfile(profile: Record<string, unknown> | null | undefined): string {
   if (!profile) return "—";
   const raw =
     profile.secondary_skills ?? profile.secondarySkills ?? profile.secondary_skill;
   if (Array.isArray(raw)) {
-    const parts = raw
-      .map((item) => {
-        if (item && typeof item === "object") {
-          const rec = item as Record<string, unknown>;
-          const skill = String(rec.skill ?? rec.name ?? "").trim();
-          const rating = rec.rating ?? rec.level;
-          if (!skill) return "";
-          return rating !== undefined && String(rating).trim() !== ""
-            ? `${skill} (${String(rating)}/5)`
-            : skill;
-        }
-        return String(item ?? "").trim();
-      })
-      .filter(Boolean);
+    const parts = raw.map(formatSkillRatingEntry).filter(Boolean);
     return parts.length ? parts.join(", ") : "—";
   }
   const single = String(raw ?? "").trim();

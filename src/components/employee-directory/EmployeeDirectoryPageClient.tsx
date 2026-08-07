@@ -35,8 +35,10 @@ import { SearchInput } from "@/components/dashboard/ui/SearchInput";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   cleanEmployeeName,
+  extractSkillNames,
   onboardRowToListRow,
   rowEmpId,
+  rowHasSkill,
 } from "@/utils/employeeDirectory";
 import { directoryUserTypeFilterOptions, FALLBACK_ONBOARD_OPTIONS, resolveDirectoryUserTypes } from "@/utils/onboardFormOptions";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
@@ -152,24 +154,6 @@ export function EmployeeDirectoryPageClient() {
     () => directoryUserTypeFilterOptions(onboardOptionsQ.data),
     [onboardOptionsQ.data]
   );
-  
-  const primarySkillOptions = useMemo(() => {
-    return [{ value: "", label: "All Primary Skills" }].concat(
-      (onboardOptionsQ.data?.primary_skills || []).map((item) => ({
-        value: item.value,
-        label: item.label || item.value,
-      }))
-    );
-  }, [onboardOptionsQ.data]);
-
-  const secondarySkillOptions = useMemo(() => {
-    return [{ value: "", label: "All Secondary Skills" }].concat(
-      (onboardOptionsQ.data?.secondary_skills || []).map((item) => ({
-        value: item.value,
-        label: item.label || item.value,
-      }))
-    );
-  }, [onboardOptionsQ.data]);
 
   const directoryUserTypeOptions = useMemo(
     () => resolveDirectoryUserTypes(onboardOptionsQ.data ?? FALLBACK_ONBOARD_OPTIONS),
@@ -186,6 +170,54 @@ export function EmployeeDirectoryPageClient() {
     enabled: queriesEnabled,
   });
 
+  const primarySkillOptions = useMemo(() => {
+    const fromOptions = onboardOptionsQ.data?.primary_skills || [];
+    const fromRows = new Map<string, string>();
+    for (const row of rows) {
+      const record = row as unknown as Record<string, unknown>;
+      for (const skill of extractSkillNames(record.primary_skills ?? record.primarySkills)) {
+        const key = skill.toLowerCase();
+        if (!fromRows.has(key)) fromRows.set(key, skill);
+      }
+    }
+    const merged = new Map<string, string>();
+    for (const item of fromOptions) {
+      merged.set(item.value.toLowerCase(), item.label || item.value);
+    }
+    for (const [key, skill] of fromRows) {
+      if (!merged.has(key)) merged.set(key, skill);
+    }
+    return [{ value: "", label: "All Primary Skills" }].concat(
+      Array.from(merged.entries())
+        .sort((a, b) => a[1].localeCompare(b[1]))
+        .map(([_, label]) => ({ value: label, label }))
+    );
+  }, [onboardOptionsQ.data, rows]);
+
+  const secondarySkillOptions = useMemo(() => {
+    const fromOptions = onboardOptionsQ.data?.secondary_skills || onboardOptionsQ.data?.primary_skills || [];
+    const fromRows = new Map<string, string>();
+    for (const row of rows) {
+      const record = row as unknown as Record<string, unknown>;
+      for (const skill of extractSkillNames(record.secondary_skills ?? record.secondarySkills)) {
+        const key = skill.toLowerCase();
+        if (!fromRows.has(key)) fromRows.set(key, skill);
+      }
+    }
+    const merged = new Map<string, string>();
+    for (const item of fromOptions) {
+      merged.set(item.value.toLowerCase(), item.label || item.value);
+    }
+    for (const [key, skill] of fromRows) {
+      if (!merged.has(key)) merged.set(key, skill);
+    }
+    return [{ value: "", label: "All Secondary Skills" }].concat(
+      Array.from(merged.entries())
+        .sort((a, b) => a[1].localeCompare(b[1]))
+        .map(([_, label]) => ({ value: label, label }))
+    );
+  }, [onboardOptionsQ.data, rows]);
+
   const tableRows = useMemo(() => {
     const needle = debouncedSearch.trim().toLowerCase();
     const filtered = rows
@@ -200,12 +232,14 @@ export function EmployeeDirectoryPageClient() {
           return false;
         }
         if (primarySkillFilter) {
-          const pSkills = String(display.primary_skills || "").toLowerCase();
-          if (!pSkills.includes(primarySkillFilter.toLowerCase())) return false;
+          if (!rowHasSkill(record.primary_skills ?? record.primarySkills, primarySkillFilter)) {
+            return false;
+          }
         }
         if (secondarySkillFilter) {
-          const sSkills = String(display.secondary_skills || "").toLowerCase();
-          if (!sSkills.includes(secondarySkillFilter.toLowerCase())) return false;
+          if (!rowHasSkill(record.secondary_skills ?? record.secondarySkills, secondarySkillFilter)) {
+            return false;
+          }
         }
         if (!needle) return true;
         const haystack = [
@@ -218,6 +252,8 @@ export function EmployeeDirectoryPageClient() {
           display.user_type,
           display.work_mode,
           display.status,
+          display.primary_skills,
+          display.secondary_skills,
           cleanEmployeeName(record),
         ]
           .join(" ")

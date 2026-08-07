@@ -101,6 +101,7 @@ export function SkillRatingsListInput({
                       value={String(item.self_rating || 3)}
                       onChange={(v) => handleChange(idx, "self_rating", v)}
                       disabled={disabled}
+                      required
                     />
                   </div>
                   {showWebknotRating && (
