@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Users, Bell, Clock, CalendarDays } from "lucide-react";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { SkillRatingsListInput } from "@/components/dashboard/ui/SkillRatingsListInput";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";

@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { SkillRatingsListInput } from "@/components/dashboard/ui/SkillRatingsListInput";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
