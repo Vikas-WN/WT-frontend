@@ -25,9 +25,11 @@ export function WtLoaderCentered({
   className?: string;
 }) {
   return (
-    <div className={`flex flex-col items-center justify-center gap-3 ${className}`.trim()}>
-      <WtLoader size="lg" label={label} />
-      {label ? <p className="text-sm text-wt-text-muted">{label}</p> : null}
+    <div className={`flex flex-col items-center justify-center gap-4 ${className}`.trim()}>
+      <WtLoader size="lg" label={label || "Loading"} />
+      {label ? (
+        <p className="animate-pulse text-sm font-medium tracking-wide text-wt-text-muted">{label}</p>
+      ) : null}
     </div>
   );
 }

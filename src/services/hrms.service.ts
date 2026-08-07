@@ -295,6 +295,17 @@ export const hrmsService = {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.profile.self, { body: fd });
   },
 
+  getMyPreferences() {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.profile.preferences);
+  },
+
+  updateMyPreferences(payload: Record<string, unknown>) {
+    return apiClient.put<ApiEnvelope<unknown>>(endpoints.profile.preferences, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
   getEmployeeProfile(empId: string) {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.profile.employeeById(empId));
   },
@@ -304,11 +315,6 @@ export const hrmsService = {
       contentType: "application/json",
       body: JSON.stringify(payload),
     });
-  },
-
-  /** DELETE /employee-profile/{empId} — soft-delete an employee (ROLE_ADMIN only). */
-  deleteEmployee(empId: string) {
-    return apiClient.delete<ApiEnvelope<unknown>>(endpoints.profile.deleteEmployee(empId));
   },
 
   updateEmployeeUserType(
@@ -1164,18 +1170,6 @@ export const hrmsService = {
     if (params.page != null) query.page = String(params.page);
     if (params.size != null) query.size = String(params.size);
     return apiClient.get<unknown>(endpoints.masters.clients, { query });
-  },
-
-  listAccountManagers(search?: string) {
-    const query: Record<string, string> = {};
-    if (search?.trim()) query.search = search.trim();
-    return apiClient.get<unknown>(endpoints.employees.accountManagers, { query });
-  },
-
-  listDeliveryManagers(search?: string) {
-    const query: Record<string, string> = {};
-    if (search?.trim()) query.search = search.trim();
-    return apiClient.get<unknown>(endpoints.employees.deliveryManagers, { query });
   },
 
   listClientOpportunities(params: {

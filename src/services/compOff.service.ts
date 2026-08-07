@@ -280,11 +280,10 @@ export const compOffService = {
     toDate: string;
     requestType: string;
     empEmails?: string;
-    selfOnly?: boolean;
     page?: number;
     size?: number;
   }) {
-    const { fromDate, toDate, requestType, empEmails, selfOnly, page = 0, size = 200 } = params;
+    const { fromDate, toDate, requestType, empEmails, page = 0, size = 200 } = params;
     const normalizedFrom = toApiDateParam(fromDate) ?? fromDate.trim();
     const normalizedTo = toApiDateParam(toDate) ?? toDate.trim();
     return apiClient
@@ -296,7 +295,6 @@ export const compOffService = {
             requestType,
             page: String(page),
             size: String(size),
-            ...(selfOnly ? { selfOnly: "true" } : {}),
           },
           ["fromDate", "toDate"]
         ),

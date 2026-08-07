@@ -87,6 +87,11 @@ export function rowEmpId(row: Record<string, unknown>): string {
   ).trim();
 }
 
+/** Stable list/react key — prefer emp id, fall back to email so invited rows still show. */
+export function rowDirectoryKey(row: Record<string, unknown>): string {
+  return rowEmpId(row) || rowEmail(row);
+}
+
 export function rowEmail(row: Record<string, unknown>): string {
   const direct = String(
     row.email ?? row.user_email ?? row.userEmail ?? row.employee_email ?? ""
@@ -145,6 +150,31 @@ export function formatYoeDisplay(value: unknown): string {
   return text;
 }
 
+export function extractSkillNames(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const names: string[] = [];
+  for (const item of raw) {
+    if (item && typeof item === "object") {
+      const skill = String(
+        (item as Record<string, unknown>).skill ??
+          (item as Record<string, unknown>).name ??
+          ""
+      ).trim();
+      if (skill) names.push(skill);
+      continue;
+    }
+    const text = String(item ?? "").trim();
+    if (text) names.push(text);
+  }
+  return names;
+}
+
+export function rowHasSkill(raw: unknown, skillFilter: string): boolean {
+  const needle = skillFilter.trim().toLowerCase();
+  if (!needle) return true;
+  return extractSkillNames(raw).some((skill) => skill.toLowerCase() === needle);
+}
+
 export function formatProfileDisplayValue(value: unknown): string {
   if (value === null || value === undefined) return "—";
   if (Array.isArray(value)) {
@@ -153,14 +183,14 @@ export function formatProfileDisplayValue(value: unknown): string {
         if (item && typeof item === "object") {
           const rec = item as Record<string, unknown>;
           const skill = String(rec.skill ?? rec.name ?? "").trim();
-          const selfRating = rec.self_rating ?? rec.rating ?? rec.level;
-          const webknotRating = rec.webknot_rating;
+          const selfRating = rec.self_rating ?? rec.selfRating ?? rec.rating ?? rec.level;
+          const webknotRating = rec.webknot_rating ?? rec.webknotRating;
           if (!skill) return "";
           let ratingStr = "";
-          if (webknotRating !== undefined && webknotRating !== null) {
+          if (webknotRating !== undefined && webknotRating !== null && String(webknotRating).trim() !== "") {
             ratingStr = ` (Self: ${selfRating}/5, WK: ${webknotRating}/5)`;
           } else if (selfRating !== undefined && String(selfRating).trim() !== "") {
-            ratingStr = ` (${selfRating}/5)`;
+            ratingStr = ` (Self: ${selfRating}/5)`;
           }
           return `${skill}${ratingStr}`;
         }
@@ -187,10 +217,13 @@ export function formatSecondarySkills(profile: Record<string, unknown>): string 
 
 export function onboardRowToListRow(row: OnboardRowInput): Record<string, string> {
   const record = asOnboardRecord(row);
+  const isOnline = Boolean(record.is_online ?? record.isOnline);
   return {
     emp_id: rowEmpId(record) || "—",
     name: cleanEmployeeName(record),
     email: rowEmail(record) || "—",
+    personal_email:
+      String(record.personal_email ?? record.personalEmail ?? "").trim() || "—",
     department: String(record.department ?? "").trim() || "—",
     role: String(record.role ?? "").trim() || "—",
     portal_role: formatPrimaryPortalRoleLabel(record.portal_roles ?? record.portalRoles),
@@ -211,7 +244,24 @@ export function onboardRowToListRow(row: OnboardRowInput): Record<string, string
     yoe: formatYoeDisplay(record.yoe ?? record.years_of_experience ?? record.experience),
     primary_skills: formatPrimarySkills(record),
     secondary_skills: formatSecondarySkills(record),
+    is_online: isOnline ? "online" : "offline",
   };
+}
+
+export function rowIsOnline(record: Record<string, unknown>): boolean {
+  return Boolean(record.is_online ?? record.isOnline);
+}
+
+/** True when DOB month/day matches today (year ignored). */
+export function rowIsBirthdayToday(record: Record<string, unknown>, today = new Date()): boolean {
+  const raw = String(record.date_of_birth ?? record.dateOfBirth ?? record.dob ?? "").trim();
+  if (!raw || raw === "—") return false;
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return false;
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!month || !day) return false;
+  return today.getMonth() + 1 === month && today.getDate() === day;
 }
 
 import { SkillRating } from "@/types/onboard";
@@ -311,9 +361,7 @@ export function editFormToUpdatePayload(
     }
   }
 
-  const personalEmail = form.personal_email.trim();
-  if (personalEmail) payload.personal_email = personalEmail;
-
+  // Personal email is employee-managed — never include it on HR directory updates.
   return payload;
 }
 
@@ -357,6 +405,15 @@ function formatUserTypeTransitionHistory(profile: Record<string, unknown>): stri
     .filter(Boolean);
 
   return lines.length ? lines.join("; ") : "—";
+}
+
+/** PAN is stored as a document path — surface on-file status on profiles. */
+function formatPanCardStatus(profile: Record<string, unknown>): string {
+  const onFile = profile.pan_card_on_file ?? profile.panCardOnFile;
+  if (onFile === true || onFile === "true" || onFile === 1) return "Uploaded";
+  const raw = pickProfileField(profile, ["pan_card", "panCard"]);
+  if (raw && String(raw).trim() && String(raw).trim() !== "—") return "Uploaded";
+  return "Not uploaded";
 }
 
 /** Grouped profile fields for the HR employee directory profile view. */
@@ -468,6 +525,7 @@ export function buildGroupedProfileSections(
       pickProfileField(profile, ["emergency_contact_number", "emergencyContactNumber"])
     ),
     profileEntry("Blood Group", pickProfileField(profile, ["blood_group", "bloodGroup"])),
+    profileEntry("PAN Card", formatPanCardStatus(profile)),
     profileEntry("Resume Link", resumeHref ? "resume" : null, {
       resumeShareHref: resumeHref,
       fullWidth: true,
@@ -504,6 +562,7 @@ const PROFILE_VIEW_PERSONAL_LABELS = new Set([
   "Marital Status",
   "Local Address",
   "Permanent Address",
+  "PAN Card",
 ]);
 
 const PROFILE_VIEW_LABEL_OVERRIDES: Record<string, string> = {

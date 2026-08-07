@@ -39,9 +39,15 @@ export interface OnboardListItem {
   band: string | null;
   yoe: number | null;
   primary_skills: SkillRating[];
+  secondary_skills?: SkillRating[];
   /** Portal access roles from user_roles. */
   portal_roles?: string[] | null;
   portalRoles?: string[] | null;
+  /** Active WebTrak session within the idle window. */
+  is_online?: boolean | null;
+  isOnline?: boolean | null;
+  last_seen_at?: string | null;
+  lastSeenAt?: string | null;
   /** Present on GET /user/invited rows. */
   created_at?: string | null;
   createdAt?: string | null;

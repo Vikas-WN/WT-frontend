@@ -103,7 +103,6 @@ export function EmployeeUserTypeSelect({
       });
       await queryClient.invalidateQueries({ queryKey: ["employee-directory", "onboard"] });
       await queryClient.invalidateQueries({ queryKey: ["employee-profile"] });
-      await queryClient.invalidateQueries({ queryKey: ["offboarding"] });
       showSuccessToast("User type updated successfully.");
       setDialogOpen(false);
       setPendingType(null);
@@ -163,6 +162,8 @@ export function EmployeeUserTypeSelect({
           variant="table-inline"
           className="w-full min-w-0"
           contentClassName="min-w-[14rem] w-max"
+          // Keep chevron dropdown look — no clear "x" pill (User Type is required).
+          clearSelectionOnEmptyInput={false}
         />
       </div>
 

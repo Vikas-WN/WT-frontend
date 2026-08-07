@@ -3,6 +3,10 @@
 import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SkillRatingsListInput } from "@/components/dashboard/ui/SkillRatingsListInput";
+import {
+  DateOfBirthConfirmField,
+  isDobReadyToSave,
+} from "@/components/dashboard/ui/DateOfBirthConfirmField";
 import { SkillRating } from "@/types/onboard";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
@@ -32,8 +36,8 @@ import {
   InputField,
   SelectField,
   FileField,
-  DatePickerField,
 } from "@/components/dashboard/ui/forms";
+import { toApiDateParam } from "@/utils/apiDate";
 import { readProfileField } from "@/components/dashboard/ui/profile";
 import { pickProfileField } from "@/utils/employeeDirectory";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
@@ -91,6 +95,7 @@ export function ProfilePageLeanClient() {
   });
   const [selfProfilePic, setSelfProfilePic] = useState<File | null>(null);
   const [isEditingOwnProfile, setIsEditingOwnProfile] = useState(false);
+  const [dobConfirmed, setDobConfirmed] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -213,6 +218,9 @@ export function ProfilePageLeanClient() {
     const profileDob = String(
       pickProfileField(profile, ["date_of_birth", "dob", "dateOfBirth"]) ?? "",
     ).trim();
+    const dobLocked = Boolean(
+      profile.date_of_birth_locked ?? profile.dateOfBirthLocked ?? profileDob
+    );
     setSelfProfileForm({
       phone_country: phoneParts.countryIso,
       phone_number: phoneParts.nationalNumber,
@@ -221,6 +229,7 @@ export function ProfilePageLeanClient() {
       yoe: String(profile.yoe ?? "").trim(),
       date_of_birth: profileDob,
     });
+    setDobConfirmed(dobLocked);
     setSelfProfileEmploymentFiles({
       reliving_letter: null,
       salary_slips: null,
@@ -232,13 +241,14 @@ export function ProfilePageLeanClient() {
   const profileDisplayName =
     String(employeeProfile?.name ?? user?.name ?? "").trim() || "Profile";
 
-  const renderEditPanel = () => (
-    <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-10 md:p-12">
-      <h3 className="mb-1 font-semibold">Edit Profile</h3>
-      <p className="mb-4 text-sm text-wt-text-muted">
-        You are onboarded. Update your profile details anytime.
+  const renderEditPanel = () => {
+    return (
+    <div className="rounded-3xl border border-wt-border bg-wt-surface-1 p-6 shadow-[var(--wt-shadow-md)] wt-soft-in dark:shadow-none md:p-10">
+      <h3 className="text-lg font-semibold tracking-tight text-wt-text">Edit Profile</h3>
+      <p className="mb-5 mt-1 text-sm text-wt-text-muted">
+        Keep your skills and personal details current. Date of birth locks after you confirm your age.
       </p>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
         <SelectField
           label="Country Code"
           value={selfProfileForm.phone_country ?? defaultPhoneCountryIso()}
@@ -248,20 +258,42 @@ export function ProfilePageLeanClient() {
           }
           placeholder="Search Country Code"
         />
-        <SkillRatingsListInput label="Primary Skills" value={selfProfileForm.primary_skills} onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, primary_skills: v }))} />
-        <SkillRatingsListInput label="Secondary Skills" value={selfProfileForm.secondary_skills} onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, secondary_skills: v }))} />
+        <InputField
+          label="Phone Number"
+          required
+          value={selfProfileForm.phone_number}
+          onChange={(v) =>
+            setSelfProfileForm((p) => ({ ...p, phone_number: digitsOnly(v) }))
+          }
+        />
+        <SkillRatingsListInput
+          label="Primary Skills"
+          required
+          hint="At least one skill with a self rating"
+          value={selfProfileForm.primary_skills}
+          onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, primary_skills: v }))}
+          className="sm:col-span-2"
+        />
+        <SkillRatingsListInput
+          label="Secondary Skills"
+          required
+          hint="At least one skill with a self rating"
+          value={selfProfileForm.secondary_skills}
+          onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, secondary_skills: v }))}
+          className="sm:col-span-2"
+        />
         <InputField
           label="Years of Experience (excluding internship)"
           required
           value={selfProfileForm.yoe}
           onChange={(v) => setSelfProfileForm((p) => ({ ...p, yoe: v }))}
         />
-        <DatePickerField
-          label="Date of Birth"
+        <DateOfBirthConfirmField
           value={selfProfileForm.date_of_birth}
-          onChange={(v) =>
-            setSelfProfileForm((p) => ({ ...p, date_of_birth: v }))
-          }
+          confirmed={dobConfirmed}
+          locked={Boolean(employeeProfile?.date_of_birth_locked ?? employeeProfile?.dateOfBirthLocked)}
+          onChange={(v) => setSelfProfileForm((p) => ({ ...p, date_of_birth: v }))}
+          onConfirmChange={setDobConfirmed}
         />
       </div>
       {priorEmploymentDocsForProfile ? (
@@ -315,6 +347,23 @@ export function ProfilePageLeanClient() {
           onClick={() =>
             runAction("Update my profile", async () => {
               const primarySkills = selfProfileForm.primary_skills.filter((item) => String(item.skill ?? "").trim());
+              const secondarySkills = selfProfileForm.secondary_skills.filter((item) => String(item.skill ?? "").trim());
+              if (!primarySkills.length) {
+                throw new Error("At least one primary skill is required.");
+              }
+              if (!secondarySkills.length) {
+                throw new Error("At least one secondary skill is required.");
+              }
+              const dobLocked = Boolean(
+                employeeProfile?.date_of_birth_locked ?? employeeProfile?.dateOfBirthLocked
+              );
+              if (!isDobReadyToSave(selfProfileForm.date_of_birth, dobConfirmed, dobLocked)) {
+                throw new Error(
+                  dobLocked
+                    ? "Date of birth is required."
+                    : "Confirm your calculated age to lock your date of birth before saving."
+                );
+              }
               const selectedPhoneCountry =
                 selfProfileForm.phone_country ?? defaultPhoneCountryIso();
               const phoneValidationError = validatePhoneNumber(
@@ -376,15 +425,20 @@ export function ProfilePageLeanClient() {
               }
               const profilePayload: Record<string, unknown> = {
                 phone_number: formattedPhoneNumber,
-                primary_skills: primarySkills.length ? primarySkills : null,
-                secondary_skills: selfProfileForm.secondary_skills,
+                primary_skills: primarySkills,
+                secondary_skills: secondarySkills,
                 experience:
                   yoeValue > 0 ? `${yoeValue} years` : null,
                 yoe: yoeValue,
               };
-              if (selfProfileForm.date_of_birth.trim()) {
-                profilePayload.date_of_birth =
-                  selfProfileForm.date_of_birth.trim();
+              const dobValue =
+                toApiDateParam(selfProfileForm.date_of_birth) ||
+                selfProfileForm.date_of_birth.trim();
+              if (dobValue) {
+                profilePayload.date_of_birth = dobValue;
+                if (!dobLocked) {
+                  profilePayload.date_of_birth_confirmed = true;
+                }
               }
               fd.append("body", JSON.stringify(profilePayload));
               if (selfProfilePic) fd.append("profilePic", selfProfilePic);
@@ -427,6 +481,7 @@ export function ProfilePageLeanClient() {
       </div>
     </div>
   );
+  };
 
   return (
     <>

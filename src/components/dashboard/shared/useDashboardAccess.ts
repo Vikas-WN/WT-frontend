@@ -65,10 +65,9 @@ export function useDashboardAccess() {
     const status = resolveProfileStatus(profile, user);
     setProfileStatus(status);
     setIsSelfOnboarded(!shouldRequireSelfOnboarding(status));
-    if (normalizeUserStatus(user.status) !== status) {
-      void refreshSession();
-    }
-  }, [user, profileQ.data, profileQ.isLoading, refreshSession, userRoles]);
+    // Do NOT call refreshSession() here — status sync must not rotate refresh tokens.
+    // Profile status is already authoritative for dashboard gating.
+  }, [user, profileQ.data, profileQ.isLoading, userRoles]);
 
   const loadMyProfile = useCallback(async () => {
     const result = await profileQ.refetch();
@@ -82,12 +81,10 @@ export function useDashboardAccess() {
     const status = resolveProfileStatus(profile, user);
     setProfileStatus(status);
     setIsSelfOnboarded(!shouldRequireSelfOnboarding(status));
-    if (user && normalizeUserStatus(user.status) !== status) {
-      void refreshSession();
-    }
+    // Avoid rotating refresh tokens just to sync a stale auth.status string.
     void queryClient.invalidateQueries({ queryKey: ["profile", "exit-interview"] });
     return profile;
-  }, [profileQ, queryClient, refreshSession, user, userRoles]);
+  }, [profileQ, queryClient, user, userRoles]);
 
   const invalidateSelfProfile = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: selfProfileQueryKey(user?.email) });

@@ -27,7 +27,6 @@ import { formatEmployeePickerLabel } from "@/utils/employeePickerLabel";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
 import { showErrorToast } from "@/lib/toast";
-import { validateTimelogHours } from "@/utils/timelog/hoursValidation";
 
 function emptyForm(): DayTimelogEntryForm {
   return {
@@ -176,9 +175,9 @@ export function DayEntryForm({
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     if (selectedDate > todayStr) return "Cannot log time for future dates.";
-    const hoursError = validateTimelogHours(form.hours);
-    if (hoursError) return hoursError;
     const hours = Number(form.hours);
+    if (!Number.isFinite(hours) || hours <= 0) return "Enter valid hours.";
+    if (hours > 24) return "Single entry cannot exceed 24 hours.";
     const existing = entry ? dayTotalHours - entry.hours : dayTotalHours;
     if (existing + hours > 24) return "Total hours for this day would exceed 24.";
     return null;

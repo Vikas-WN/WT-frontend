@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { Lock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DropdownSelect } from "@/components/dashboard/ui/DropdownSelect";
 import { AdaptiveSelectField } from "@/components/dashboard/ui/forms";
@@ -16,6 +17,7 @@ import {
   portalRoleOptionsForActor,
 } from "@/utils/roles";
 import { isPreActiveEmployeeStatus } from "@/utils/userStatus";
+import { cn } from "@/lib/utils";
 
 type Props = {
   email: string;
@@ -34,6 +36,36 @@ function isInvitedEmployeeStatus(status: unknown): boolean {
   return isPreActiveEmployeeStatus(status);
 }
 
+function LockedPortalRoleChip({
+  label,
+  invited,
+  compact,
+}: {
+  label: string;
+  invited: boolean;
+  compact?: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        // Match table-inline / form select chrome so locked rows don't look like a different control.
+        "inline-flex w-full max-w-full items-center gap-1.5 rounded-xl border border-wt-border bg-wt-surface-1 font-medium text-wt-text",
+        "shadow-none dark:border-wt-border-md dark:bg-wt-surface-2",
+        compact ? "h-9 min-h-9 px-2.5 text-xs" : "h-11 min-h-11 px-3.5 text-sm"
+      )}
+      title={
+        invited
+          ? "Portal role is locked until onboarding is complete"
+          : "Portal role cannot be changed"
+      }
+      aria-disabled="true"
+    >
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <Lock className="size-3.5 shrink-0 text-wt-text-muted" aria-hidden />
+    </span>
+  );
+}
+
 export function EmployeePortalRoleSelect({
   email,
   portalRoles,
@@ -42,7 +74,7 @@ export function EmployeePortalRoleSelect({
   compact = false,
 }: Props) {
   const queryClient = useQueryClient();
-  const { user, refresh } = useAuth();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [optimisticRole, setOptimisticRole] = useState<string | null>(null);
   const roles = useMemo(() => normalizePortalRoles(portalRoles), [portalRoles]);
@@ -149,12 +181,6 @@ export function EmployeePortalRoleSelect({
       ).trim();
       setOptimisticRole(nextRole);
       patchCachedPortalRole(targetEmail, nextRole, nextStatus || null);
-      // When an administrator changes their own portal role, rotate the session
-      // immediately so its access-token claims cannot retain the previous role.
-      // Other users reconcile on their next application bootstrap via /roles.
-      if (user?.email?.trim().toLowerCase() === targetEmail.toLowerCase()) {
-        await refresh();
-      }
       // Avoid refetching the directory list — onboard list often omits/lags portal_roles
       // and would overwrite the optimistic cache update.
       await queryClient.invalidateQueries({
@@ -178,11 +204,7 @@ export function EmployeePortalRoleSelect({
   };
 
   if (!editable) {
-    return (
-      <span className="block truncate text-wt-text" title={invited ? "Role is locked until onboarding is complete" : undefined}>
-        {displayLabel}
-      </span>
-    );
+    return <LockedPortalRoleChip label={displayLabel} invited={invited} compact={compact} />;
   }
 
   if (compact) {

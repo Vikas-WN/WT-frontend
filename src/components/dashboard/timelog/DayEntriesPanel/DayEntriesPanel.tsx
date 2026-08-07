@@ -6,6 +6,7 @@ import { formatUiStatusLabel } from "@/utils/statusLabel";
 import { formatTimelogTableDate } from "@/utils/timelog/weekDates";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
 import { projectManagerEmailFromEntry } from "@/utils/timelog/entryManager";
+import { isEmployeeTimelogEditable } from "@/utils/timelog/employeeEditability";
 import "./DayEntriesPanel.css";
 import type { DayEntriesPanelProps } from "./DayEntriesPanel.types";
 
@@ -18,10 +19,6 @@ function statusClass(status: string): string {
     rejected: "day-entries-card-status--rejected",
   };
   return map[key] ?? "day-entries-card-status--draft";
-}
-
-function canEdit(status: string): boolean {
-  return status === "DRAFT";
 }
 
 export function DayEntriesPanel({
@@ -44,7 +41,7 @@ export function DayEntriesPanel({
     ? formatTimelogTableDate(selectedDate)
     : "";
 
-  const hasSubmittable = entries.some((e) => canEdit(e.status));
+  const hasSubmittable = entries.some((e) => isEmployeeTimelogEditable(e.status));
 
   return (
     <div className="day-entries-overlay" role="presentation" onClick={onClose}>
@@ -124,7 +121,7 @@ export function DayEntriesPanel({
                       </div>
                     ) : null}
                   </div>
-                  {canEdit(entry.status) ? (
+                  {isEmployeeTimelogEditable(entry.status) ? (
                     <div className="day-entries-card-actions">
                       <Button
                         variant="outline"
@@ -165,7 +162,11 @@ export function DayEntriesPanel({
               type="button"
               disabled={actionLoading || !hasSubmittable}
               onClick={onSubmit}
-              title={hasSubmittable ? "Submit all draft entries for this date" : "No draft entries to submit"}
+              title={
+                hasSubmittable
+                  ? "Submit all draft entries for this date"
+                  : "No draft entries to submit"
+              }
             >
               {actionLoading ? "Submitting\u2026" : hasSubmittable ? "Submit All" : "All Submitted"}
             </Button>

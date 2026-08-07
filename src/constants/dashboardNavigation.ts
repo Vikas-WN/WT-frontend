@@ -164,7 +164,7 @@ export const dashboardNavigation: NavItem[] = [
     kind: "link",
     id: "background-verification",
     label: "Background Verification",
-    roles: ["ROLE_HR"],
+    roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN", "ROLE_FINANCE"],
     icon: "shield",
   },
   {
@@ -214,7 +214,6 @@ export const dashboardNavigation: NavItem[] = [
     label: "Pulse",
     roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
     icon: "trendingUp",
-    externalUrl: "https://pulse.webknot.in",
   },
 ];
 
@@ -309,6 +308,7 @@ export function accordionSectionForPathname(pathname: string, activeSection: str
 
 const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   profile: "Profile",
+  settings: "Settings",
   overview: "Overview",
   "employee-directory": "Employee Directory",
   employee: "Onboarding",
