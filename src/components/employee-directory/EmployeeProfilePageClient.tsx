@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { SkillRatingsListInput } from "@/components/dashboard/ui/SkillRatingsListInput";
 import {
   ProfileDetailsSkeleton,
   ProfileHeaderSkeleton,
@@ -370,13 +371,10 @@ export function EmployeeProfilePageClient() {
             throw new Error("At least one primary skill is required.");
           }
           const invalidSkills = editForm.primary_skills.filter(
-            (skill) => !allowedPrimarySkills.has(skill)
+            (item) => !allowedPrimarySkills.has(item.skill)
           );
           if (invalidSkills.length) {
             throw new Error("Selected primary skills must come from the predefined list.");
-          }
-          if (editForm.secondary_skill.trim() && !editForm.secondary_rating.trim()) {
-            throw new Error("Please select a rating for the secondary skill.");
           }
         }
         await updateMutation.mutateAsync(
@@ -634,33 +632,25 @@ export function EmployeeProfilePageClient() {
 
                     <FormSubsection title="Skills">
                       <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
-                        <SkillsMultiSelectField
+                        <SkillRatingsListInput
                           label="Primary Skills"
-                          required
-                          className="w-full max-w-sm"
                           value={editForm.primary_skills}
-                          options={primarySkillOptions}
-                          loading={onboardOptionsLoading}
-                          loadingLabel="Loading Primary Skills…"
-                          placeholder="Select Primary Skills"
                           onChange={(skills) =>
                             setEditForm((prev) => (prev ? { ...prev, primary_skills: skills } : prev))
                           }
                           disabled={saving}
+                          showWebknotRating
+                          className="sm:col-span-3"
                         />
-                        <InputField
-                          label="Secondary Skill"
-                          value={editForm.secondary_skill}
-                          onChange={(v) => setEditForm({ ...editForm, secondary_skill: v })}
+                        <SkillRatingsListInput
+                          label="Secondary Skills"
+                          value={editForm.secondary_skills}
+                          onChange={(skills) =>
+                            setEditForm((prev) => (prev ? { ...prev, secondary_skills: skills } : prev))
+                          }
                           disabled={saving}
-                        />
-                        <AdaptiveSelectField
-                          label="Secondary Skill Rating"
-                          value={editForm.secondary_rating}
-                          placeholder="Select Rating"
-                          options={SKILL_RATINGS}
-                          onChange={(v) => setEditForm({ ...editForm, secondary_rating: v })}
-                          disabled={saving}
+                          showWebknotRating
+                          className="sm:col-span-3"
                         />
                       </div>
                     </FormSubsection>

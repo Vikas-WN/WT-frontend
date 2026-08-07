@@ -9,13 +9,14 @@ export interface OnboardUserResponse {
   work_location_type: string | null;
   date_of_birth: string | null;
   yoe: number | null;
-  primary_skills: string[];
+  primary_skills: SkillRating[];
 }
 
-/** PUT user_data — secondary skill entry. */
-export interface SecondarySkillRating {
+/** Unified skill entry used for both primary and secondary skills. */
+export interface SkillRating {
   skill: string;
-  rating: number;
+  self_rating: number;
+  webknot_rating?: number | null;
 }
 
 /** GET /api/v1/user/onboard — `data.items[]`. */
@@ -37,7 +38,7 @@ export interface OnboardListItem {
   band_id: number | null;
   band: string | null;
   yoe: number | null;
-  primary_skills: string[];
+  primary_skills: SkillRating[];
   /** Portal access roles from user_roles. */
   portal_roles?: string[] | null;
   portalRoles?: string[] | null;

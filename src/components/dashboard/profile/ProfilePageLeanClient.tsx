@@ -241,38 +241,7 @@ export function ProfilePageLeanClient() {
           }
           placeholder="Search Country Code"
         />
-        <InputField
-          label="Phone Number"
-          type="tel"
-          value={selfProfileForm.phone_number}
-          onChange={(v) =>
-            setSelfProfileForm((p) => ({ ...p, phone_number: digitsOnly(v) }))
-          }
-          placeholder="Enter phone number"
-        />
-        <InputField
-          label="Primary Skills (comma separated)"
-          value={selfProfileForm.primary_skills}
-          onChange={(v) =>
-            setSelfProfileForm((p) => ({ ...p, primary_skills: v }))
-          }
-        />
-        <InputField
-          label="Secondary Skill"
-          value={selfProfileForm.secondary_skill}
-          onChange={(v) =>
-            setSelfProfileForm((p) => ({ ...p, secondary_skill: v }))
-          }
-        />
-        <SelectField
-          label="Secondary Skill Rating"
-          placeholder="Select rating"
-          value={selfProfileForm.secondary_rating}
-          options={["1", "2", "3", "4", "5"]}
-          onChange={(v) =>
-            setSelfProfileForm((p) => ({ ...p, secondary_rating: v }))
-          }
-        />
+        <SkillRatingsListInput label="Secondary Skills" value={selfProfileForm.secondary_skills} onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, secondary_skills: v }))} />
         <InputField
           label="Years of Experience (excluding internship)"
           required

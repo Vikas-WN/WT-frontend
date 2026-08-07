@@ -103,6 +103,7 @@ export function EmployeeUserTypeSelect({
       });
       await queryClient.invalidateQueries({ queryKey: ["employee-directory", "onboard"] });
       await queryClient.invalidateQueries({ queryKey: ["employee-profile"] });
+      await queryClient.invalidateQueries({ queryKey: ["offboarding"] });
       showSuccessToast("User type updated successfully.");
       setDialogOpen(false);
       setPendingType(null);
