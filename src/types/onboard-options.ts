@@ -21,4 +21,5 @@ export interface OnboardOptionsResponse {
   holiday_calendars: OnboardOptionItem[];
   reporting_managers: OnboardOptionItem[];
   primary_skills: OnboardOptionItem[];
+  secondary_skills?: OnboardOptionItem[];
 }
