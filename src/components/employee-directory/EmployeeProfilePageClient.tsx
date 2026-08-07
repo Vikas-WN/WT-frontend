@@ -294,7 +294,9 @@ export function EmployeeProfilePageClient() {
 
   useEffect(() => {
     if (!isEditing || !editForm || onboardOptionsLoading || !allowedPrimarySkills.size) return;
-    const filtered = editForm.primary_skills.filter((skill) => allowedPrimarySkills.has(skill));
+    const filtered = editForm.primary_skills.filter((skill) =>
+      allowedPrimarySkills.has(skill.skill)
+    );
     if (filtered.length !== editForm.primary_skills.length) {
       setEditForm((prev) => (prev ? { ...prev, primary_skills: filtered } : prev));
     }

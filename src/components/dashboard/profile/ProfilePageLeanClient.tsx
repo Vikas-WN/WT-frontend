@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SkillRatingsListInput } from "@/components/dashboard/ui/SkillRatingsListInput";
+import { SkillRating } from "@/types/onboard";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -181,23 +182,29 @@ export function ProfilePageLeanClient() {
 
   const openOwnProfileEditor = () => {
     const profile = employeeProfile ?? {};
-    const primarySkillsRaw =
-      profile.primary_skills ?? profile.primarySkills ?? [];
-    const primarySkills = Array.isArray(primarySkillsRaw)
-      ? primarySkillsRaw
-          .map((item) => String(item).trim())
-          .filter(Boolean)
-          .join(", ")
-      : String(primarySkillsRaw ?? "").trim();
-    const secondarySkillsRaw =
-      (profile.secondary_skills as
-        | Array<Record<string, unknown>>
-        | undefined) ??
-      (profile.secondarySkills as Array<Record<string, unknown>> | undefined) ??
-      [];
-    const firstSecondary = Array.isArray(secondarySkillsRaw)
-      ? secondarySkillsRaw[0]
-      : undefined;
+    const toSkillRatings = (raw: unknown): SkillRating[] => {
+      if (!Array.isArray(raw)) return [];
+      return raw
+        .map((item) => {
+          if (item && typeof item === "object") {
+            const row = item as Record<string, unknown>;
+            const skill = String(row.skill ?? "").trim();
+            if (!skill) return null;
+            const selfRating = Number(row.self_rating ?? row.selfRating ?? row.rating ?? 3);
+            const wk = row.webknot_rating ?? row.webknotRating;
+            return {
+              skill,
+              self_rating: Number.isFinite(selfRating) ? selfRating : 3,
+              webknot_rating: wk == null || wk === "" ? null : Number(wk),
+            } as SkillRating;
+          }
+          const skill = String(item ?? "").trim();
+          return skill ? ({ skill, self_rating: 3, webknot_rating: null } as SkillRating) : null;
+        })
+        .filter((item): item is SkillRating => Boolean(item));
+    };
+    const primarySkills = toSkillRatings(profile.primary_skills ?? profile.primarySkills ?? []);
+    const secondarySkills = toSkillRatings(profile.secondary_skills ?? profile.secondarySkills ?? []);
 
     const phoneParts = splitPhoneNumber(
       String(profile.phone_number ?? profile.phoneNumber ?? "").trim(),
@@ -210,8 +217,7 @@ export function ProfilePageLeanClient() {
       phone_country: phoneParts.countryIso,
       phone_number: phoneParts.nationalNumber,
       primary_skills: primarySkills,
-      secondary_skill: String(firstSecondary?.skill ?? "").trim(),
-      secondary_rating: String(firstSecondary?.rating ?? "").trim(),
+      secondary_skills: secondarySkills,
       yoe: String(profile.yoe ?? "").trim(),
       date_of_birth: profileDob,
     });
@@ -242,6 +248,7 @@ export function ProfilePageLeanClient() {
           }
           placeholder="Search Country Code"
         />
+        <SkillRatingsListInput label="Primary Skills" value={selfProfileForm.primary_skills} onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, primary_skills: v }))} />
         <SkillRatingsListInput label="Secondary Skills" value={selfProfileForm.secondary_skills} onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, secondary_skills: v }))} />
         <InputField
           label="Years of Experience (excluding internship)"
@@ -307,10 +314,7 @@ export function ProfilePageLeanClient() {
           className="px-3 py-2"
           onClick={() =>
             runAction("Update my profile", async () => {
-              const primarySkills = selfProfileForm.primary_skills
-                .split(",")
-                .map((item) => item.trim())
-                .filter(Boolean);
+              const primarySkills = selfProfileForm.primary_skills.filter((item) => String(item.skill ?? "").trim());
               const selectedPhoneCountry =
                 selfProfileForm.phone_country ?? defaultPhoneCountryIso();
               const phoneValidationError = validatePhoneNumber(
@@ -373,14 +377,7 @@ export function ProfilePageLeanClient() {
               const profilePayload: Record<string, unknown> = {
                 phone_number: formattedPhoneNumber,
                 primary_skills: primarySkills.length ? primarySkills : null,
-                secondary_skills: selfProfileForm.secondary_skill
-                  ? [
-                      {
-                        skill: selfProfileForm.secondary_skill.trim(),
-                        rating: Number(selfProfileForm.secondary_rating),
-                      },
-                    ]
-                  : [],
+                secondary_skills: selfProfileForm.secondary_skills,
                 experience:
                   yoeValue > 0 ? `${yoeValue} years` : null,
                 yoe: yoeValue,

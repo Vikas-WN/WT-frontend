@@ -18,6 +18,7 @@ import { isValidIndiaMobile, isValidPersonName } from "@/utils/dashboard/validat
 import { validatePersonalEmail } from "@/utils/personalEmail";
 import { validateResumeShareLink } from "@/utils/employeeResume";
 import { createEmptySelfOnboardForm } from "@/utils/selfOnboardFormState";
+import { SkillRating } from "@/types/onboard";
 import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
 import { useOnboardOptions } from "@/hooks/useOnboardOptions";
 import { formatApiDate, fromApiDate, toApiDateParam } from "@/utils/apiDate";
@@ -136,17 +137,17 @@ export function SelfOnboardingPanel({
       const primarySkillLookup = new Map(
         options.primary_skills.map((item) => [item.value.toLowerCase(), item.value]),
       );
-      const primarySkills: string[] = [];
-      for (const rawSkill of form.primary_skills
-        ) {
-        const canonical = primarySkillLookup.get(rawSkill.toLowerCase());
+      const primarySkills: SkillRating[] = [];
+      for (const rawSkill of form.primary_skills) {
+        const skillName = String(rawSkill.skill ?? "").trim();
+        const canonical = primarySkillLookup.get(skillName.toLowerCase());
         if (!canonical) {
           throw new Error(
-            `Invalid primary skill: ${rawSkill}. Choose values from the onboard Primary Skills list (e.g. Python, React).`,
+            `Invalid primary skill: ${skillName}. Choose values from the onboard Primary Skills list (e.g. Python, React).`,
           );
         }
-        if (!primarySkills.includes(canonical)) {
-          primarySkills.push(canonical);
+        if (!primarySkills.some((item) => item.skill === canonical)) {
+          primarySkills.push({ ...rawSkill, skill: canonical });
         }
       }
       if (!form.primary_skills.length) {
@@ -204,8 +205,8 @@ export function SelfOnboardingPanel({
       if (yoeValue !== null)       userData.yoe = yoeValue;
       if (experience) userData.experience = experience;
       
-      if (form.primary_skills.length) {
-        userData.primary_skills = form.primary_skills;
+      if (primarySkills.length) {
+        userData.primary_skills = primarySkills;
       }
       if (form.secondary_skills.length) {
         userData.secondary_skills = form.secondary_skills;

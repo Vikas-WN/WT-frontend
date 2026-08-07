@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Users, Bell, Clock, CalendarDays } from "lucide-react";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { SkillRatingsListInput } from "@/components/dashboard/ui/SkillRatingsListInput";
+import { SkillRating } from "@/types/onboard";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -279,8 +280,8 @@ export function OverviewPageClient() {
     full_name: "",
     phone_number: "",
     yoe: "",
-    primary_skills: [],
-    secondary_skills: [],
+    primary_skills: [] as SkillRating[],
+    secondary_skills: [] as SkillRating[],
     work_location_type: "OFFSHORE",
   });
   const [selfOnboardFiles, setSelfOnboardFiles] = useState<{
@@ -300,8 +301,8 @@ export function OverviewPageClient() {
   });
   const [selfProfileForm, setSelfProfileForm] = useState({
     phone_number: "",
-    primary_skills: [],
-    secondary_skills: [],
+    primary_skills: [] as SkillRating[],
+    secondary_skills: [] as SkillRating[],
     yoe: "",
   });
   const [selfProfileEmploymentFiles, setSelfProfileEmploymentFiles] = useState<{
@@ -2706,7 +2707,8 @@ export function OverviewPageClient() {
         entered when you were invited.
       </p>
       <div className="grid sm:grid-cols-2 gap-3">
-        <SkillRatingsListInput label="Secondary Skills" value={selfProfileForm.secondary_skills} onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, secondary_skills: v }))} />
+        <SkillRatingsListInput label="Primary Skills" value={selfOnboardForm.primary_skills} onChange={(v) => setSelfOnboardForm((prev) => ({ ...prev, primary_skills: v }))} />
+        <SkillRatingsListInput label="Secondary Skills" value={selfOnboardForm.secondary_skills} onChange={(v) => setSelfOnboardForm((prev) => ({ ...prev, secondary_skills: v }))} />
         <SelectField
           label="Work Location"
           value={selfOnboardForm.work_location_type}
@@ -2759,10 +2761,7 @@ export function OverviewPageClient() {
                 throw new Error("Enter a valid Indian mobile number (10 digits, optional +91).");
               }
               const fd = new FormData();
-              const primarySkills = selfOnboardForm.primary_skills
-                .split(",")
-                .map((item) => item.trim())
-                .filter(Boolean);
+              const primarySkills = selfOnboardForm.primary_skills.filter((item) => String(item.skill ?? "").trim());
               if (!primarySkills.length) {
                 throw new Error("Please add at least one primary skill.");
               }
@@ -2816,14 +2815,7 @@ export function OverviewPageClient() {
                   yoe: yoeValue,
                   experience: yoeValue && yoeValue > 0 ? `${yoeValue} years` : null,
                   primary_skills: primarySkills,
-                  secondary_skills: selfOnboardForm.secondary_skill
-                    ? [
-                        {
-                          skill: selfOnboardForm.secondary_skill.trim(),
-                          rating: Number(selfOnboardForm.secondary_rating),
-                        },
-                      ]
-                    : [],
+                  secondary_skills: selfOnboardForm.secondary_skills,
                   work_location_type: selfOnboardForm.work_location_type,
                 })
               );
@@ -2840,8 +2832,8 @@ export function OverviewPageClient() {
                 full_name: "",
                 phone_number: "",
                 yoe: "",
-                primary_skills: [],
-    secondary_skills: [],
+                primary_skills: [] as SkillRating[],
+    secondary_skills: [] as SkillRating[],
                 work_location_type: "OFFSHORE",
               });
               setSelfOnboardFiles({
@@ -2869,21 +2861,34 @@ export function OverviewPageClient() {
 
   const openOwnProfileEditor = () => {
     const profile = employeeProfile ?? {};
-    const primarySkillsRaw = profile.primary_skills ?? profile.primarySkills ?? [];
-    const primarySkills = Array.isArray(primarySkillsRaw)
-      ? primarySkillsRaw.map((item) => String(item).trim()).filter(Boolean).join(", ")
-      : String(primarySkillsRaw ?? "").trim();
-    const secondarySkillsRaw =
-      (profile.secondary_skills as Array<Record<string, unknown>> | undefined) ??
-      (profile.secondarySkills as Array<Record<string, unknown>> | undefined) ??
-      [];
-    const firstSecondary = Array.isArray(secondarySkillsRaw) ? secondarySkillsRaw[0] : undefined;
+    const toSkillRatings = (raw: unknown): SkillRating[] => {
+      if (!Array.isArray(raw)) return [];
+      return raw
+        .map((item) => {
+          if (item && typeof item === "object") {
+            const row = item as Record<string, unknown>;
+            const skill = String(row.skill ?? "").trim();
+            if (!skill) return null;
+            const selfRating = Number(row.self_rating ?? row.selfRating ?? row.rating ?? 3);
+            const wk = row.webknot_rating ?? row.webknotRating;
+            return {
+              skill,
+              self_rating: Number.isFinite(selfRating) ? selfRating : 3,
+              webknot_rating: wk == null || wk === "" ? null : Number(wk),
+            } as SkillRating;
+          }
+          const skill = String(item ?? "").trim();
+          return skill ? ({ skill, self_rating: 3, webknot_rating: null } as SkillRating) : null;
+        })
+        .filter((item): item is SkillRating => Boolean(item));
+    };
+    const primarySkills = toSkillRatings(profile.primary_skills ?? profile.primarySkills ?? []);
+    const secondarySkills = toSkillRatings(profile.secondary_skills ?? profile.secondarySkills ?? []);
 
     setSelfProfileForm({
       phone_number: String(profile.phone_number ?? profile.phoneNumber ?? "").trim(),
       primary_skills: primarySkills,
-      secondary_skill: String(firstSecondary?.skill ?? "").trim(),
-      secondary_rating: String(firstSecondary?.rating ?? "3"),
+      secondary_skills: secondarySkills,
       yoe: String(profile.yoe ?? "").trim(),
     });
     setSelfProfileEmploymentFiles({
@@ -2969,6 +2974,7 @@ export function OverviewPageClient() {
       <h3 className="font-semibold mb-1">Edit My Profile</h3>
       <p className="text-sm text-wt-text-muted mb-4">You are onboarded. Update your profile details anytime.</p>
       <div className="grid sm:grid-cols-2 gap-3">
+        <SkillRatingsListInput label="Primary Skills" value={selfProfileForm.primary_skills} onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, primary_skills: v }))} />
         <SkillRatingsListInput label="Secondary Skills" value={selfProfileForm.secondary_skills} onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, secondary_skills: v }))} />
         <InputField label="Years of Experience (excluding internship)" required value={selfProfileForm.yoe} onChange={(v) => setSelfProfileForm((p) => ({ ...p, yoe: v }))} />
       </div>
@@ -3004,10 +3010,7 @@ export function OverviewPageClient() {
       <div className="mt-4">
         <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
             runAction("Update my profile", async () => {
-              const primarySkills = selfProfileForm.primary_skills
-                .split(",")
-                .map((item) => item.trim())
-                .filter(Boolean);
+              const primarySkills = selfProfileForm.primary_skills.filter((item) => String(item.skill ?? "").trim());
               if (!selfProfilePic) {
                 throw new Error("Profile picture is mandatory. Please upload your profile picture.");
               }
@@ -3064,14 +3067,7 @@ export function OverviewPageClient() {
                 JSON.stringify({
                   phone_number: selfProfileForm.phone_number || null,
                   primary_skills: primarySkills.length ? primarySkills : null,
-                  secondary_skills: selfProfileForm.secondary_skill
-                    ? [
-                        {
-                          skill: selfProfileForm.secondary_skill.trim(),
-                          rating: Number(selfProfileForm.secondary_rating),
-                        },
-                      ]
-                    : [],
+                  secondary_skills: selfProfileForm.secondary_skills,
                   experience: yoeValue && yoeValue > 0 ? `${yoeValue} years` : null,
                   yoe: yoeValue,
                 })
@@ -3088,8 +3084,8 @@ export function OverviewPageClient() {
               await hrmsService.updateMyProfile(fd);
               setSelfProfileForm({
                 phone_number: "",
-                primary_skills: [],
-    secondary_skills: [],
+                primary_skills: [] as SkillRating[],
+    secondary_skills: [] as SkillRating[],
                 yoe: "",
               });
               setSelfProfileEmploymentFiles({
