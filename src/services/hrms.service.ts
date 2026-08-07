@@ -317,6 +317,11 @@ export const hrmsService = {
     });
   },
 
+  /** DELETE /api/v1/employee-profile/{empId} — soft-delete (ROLE_ADMIN). */
+  deleteEmployee(empId: string) {
+    return apiClient.delete<ApiEnvelope<unknown>>(endpoints.profile.employeeById(empId));
+  },
+
   updateEmployeeUserType(
     empId: string,
     payload: { user_type: string; transition_date?: string; band_id?: number }
