@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { SkillRatingsListInput } from "@/components/dashboard/ui/SkillRatingsListInput";
 import { useEffect, useMemo, useState } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { MAX_ONBOARD_FILE_BYTES, MAX_ONBOARD_TOTAL_BYTES } from "@/constants/dashboard";
@@ -137,9 +138,7 @@ export function SelfOnboardingPanel({
       );
       const primarySkills: string[] = [];
       for (const rawSkill of form.primary_skills
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean)) {
+        ) {
         const canonical = primarySkillLookup.get(rawSkill.toLowerCase());
         if (!canonical) {
           throw new Error(
@@ -150,15 +149,8 @@ export function SelfOnboardingPanel({
           primarySkills.push(canonical);
         }
       }
-      if (!primarySkills.length) {
+      if (!form.primary_skills.length) {
         throw new Error("At least one primary skill is required.");
-      }
-
-      if (form.secondary_skill.trim()) {
-        const rating = Number(form.secondary_rating);
-        if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-          throw new Error("Secondary skill rating must be a whole number from 1 to 5.");
-        }
       }
 
       const resumeShareLink = form.resume_share_link.trim();
@@ -211,14 +203,12 @@ export function SelfOnboardingPanel({
 
       if (yoeValue !== null)       userData.yoe = yoeValue;
       if (experience) userData.experience = experience;
-      userData.primary_skills = primarySkills;
-      if (form.secondary_skill.trim()) {
-        userData.secondary_skills = [
-          {
-            skill: form.secondary_skill.trim(),
-            rating: Number(form.secondary_rating),
-          },
-        ];
+      
+      if (form.primary_skills.length) {
+        userData.primary_skills = form.primary_skills;
+      }
+      if (form.secondary_skills.length) {
+        userData.secondary_skills = form.secondary_skills;
       }
       if (form.work_location_type) userData.work_location_type = form.work_location_type;
       if (form.local_address.trim()) userData.local_address = form.local_address.trim();
@@ -301,25 +291,9 @@ export function SelfOnboardingPanel({
             onChange={(v) => setForm((p) => ({ ...p, experience: v }))}
           />
         ) : null}
-        <InputField
-          label="Primary Skills (comma separated)"
-          required
-          value={form.primary_skills}
-          onChange={(v) => setForm((p) => ({ ...p, primary_skills: v }))}
-        />
-        <InputField
-          label="Secondary Skill"
-          value={form.secondary_skill}
-          onChange={(v) => setForm((p) => ({ ...p, secondary_skill: v }))}
-        />
-        <SelectField
-          label="Secondary Skill Rating"
-          required={Boolean(form.secondary_skill.trim())}
-          placeholder="Select"
-          value={form.secondary_rating}
-          options={["1", "2", "3", "4", "5"]}
-          onChange={(v) => setForm((p) => ({ ...p, secondary_rating: v }))}
-        />
+        <SkillRatingsListInput label="Primary Skills" value={form.primary_skills} onChange={(v) => setForm((p) => ({ ...p, primary_skills: v }))} />
+        <SkillRatingsListInput label="Secondary Skills" value={form.secondary_skills} onChange={(v) => setForm((p) => ({ ...p, secondary_skills: v }))} />
+
         <SelectField
           label="Work Location"
           placeholder="Select"

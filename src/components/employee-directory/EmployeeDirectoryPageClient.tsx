@@ -139,6 +139,8 @@ export function EmployeeDirectoryPageClient() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
   const [userTypeFilter, setUserTypeFilter] = useState("");
+  const [primarySkillFilter, setPrimarySkillFilter] = useState("");
+  const [secondarySkillFilter, setSecondarySkillFilter] = useState("");
   const [sortId, setSortId] = useState("doj_desc");
   const [deleteTarget, setDeleteTarget] = useState<{
     empId: string;
@@ -150,6 +152,25 @@ export function EmployeeDirectoryPageClient() {
     () => directoryUserTypeFilterOptions(onboardOptionsQ.data),
     [onboardOptionsQ.data]
   );
+  
+  const primarySkillOptions = useMemo(() => {
+    return [{ value: "", label: "All Primary Skills" }].concat(
+      (onboardOptionsQ.data?.primary_skills || []).map((item) => ({
+        value: item.value,
+        label: item.label || item.value,
+      }))
+    );
+  }, [onboardOptionsQ.data]);
+
+  const secondarySkillOptions = useMemo(() => {
+    return [{ value: "", label: "All Secondary Skills" }].concat(
+      (onboardOptionsQ.data?.secondary_skills || []).map((item) => ({
+        value: item.value,
+        label: item.label || item.value,
+      }))
+    );
+  }, [onboardOptionsQ.data]);
+
   const directoryUserTypeOptions = useMemo(
     () => resolveDirectoryUserTypes(onboardOptionsQ.data ?? FALLBACK_ONBOARD_OPTIONS),
     [onboardOptionsQ.data]
@@ -178,6 +199,14 @@ export function EmployeeDirectoryPageClient() {
         if (userTypeFilter && normalizeUserType(record.user_type ?? record.userType) !== userTypeFilter) {
           return false;
         }
+        if (primarySkillFilter) {
+          const pSkills = String(display.primary_skills || "").toLowerCase();
+          if (!pSkills.includes(primarySkillFilter.toLowerCase())) return false;
+        }
+        if (secondarySkillFilter) {
+          const sSkills = String(display.secondary_skills || "").toLowerCase();
+          if (!sSkills.includes(secondarySkillFilter.toLowerCase())) return false;
+        }
         if (!needle) return true;
         const haystack = [
           display.name,
@@ -196,11 +225,11 @@ export function EmployeeDirectoryPageClient() {
         return haystack.includes(needle);
       });
     return applyListSort(filtered, sortId, EMPLOYEE_DIRECTORY_SORT_OPTIONS);
-  }, [rows, debouncedSearch, userTypeFilter, sortId]);
+  }, [rows, debouncedSearch, userTypeFilter, primarySkillFilter, secondarySkillFilter, sortId]);
 
   const pagination = useClientPagination(tableRows, {
     pageSize: EMPLOYEE_DIRECTORY_PAGE_SIZE,
-    resetKeys: [debouncedSearch, userTypeFilter, sortId],
+    resetKeys: [debouncedSearch, userTypeFilter, primarySkillFilter, secondarySkillFilter, sortId],
   });
 
   const handleCopyField = useCallback(
@@ -283,14 +312,32 @@ export function EmployeeDirectoryPageClient() {
           />
         }
         filters={
-          <SelectField
-            label="User Type"
-            className="w-[11rem] shrink-0"
-            value={userTypeFilter}
-            onChange={setUserTypeFilter}
-            options={userTypeSelectOptions}
-            placeholder="All User Types"
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <SelectField
+              label="User Type"
+              className="w-[11rem] shrink-0"
+              value={userTypeFilter}
+              onChange={setUserTypeFilter}
+              options={userTypeSelectOptions}
+              placeholder="All User Types"
+            />
+            <SelectField
+              label="Primary Skill"
+              className="w-[12rem] shrink-0"
+              value={primarySkillFilter}
+              onChange={setPrimarySkillFilter}
+              options={primarySkillOptions}
+              placeholder="All Primary Skills"
+            />
+            <SelectField
+              label="Secondary Skill"
+              className="w-[12rem] shrink-0"
+              value={secondarySkillFilter}
+              onChange={setSecondarySkillFilter}
+              options={secondarySkillOptions}
+              placeholder="All Secondary Skills"
+            />
+          </div>
         }
       >
         {isError ? (

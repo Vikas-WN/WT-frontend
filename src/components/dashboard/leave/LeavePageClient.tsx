@@ -582,9 +582,8 @@ export function LeavePageClient() {
     full_name: "",
     phone_number: "",
     yoe: "",
-    primary_skills: "",
-    secondary_skill: "",
-    secondary_rating: "3",
+    primary_skills: [],
+    secondary_skills: [],
     work_location_type: "OFFSHORE",
   });
   const [selfOnboardFiles, setSelfOnboardFiles] = useState<{
@@ -604,9 +603,8 @@ export function LeavePageClient() {
   });
   const [selfProfileForm, setSelfProfileForm] = useState({
     phone_number: "",
-    primary_skills: "",
-    secondary_skill: "",
-    secondary_rating: "3",
+    primary_skills: [],
+    secondary_skills: [],
     yoe: "",
   });
   const [selfProfileEmploymentFiles, setSelfProfileEmploymentFiles] = useState<{

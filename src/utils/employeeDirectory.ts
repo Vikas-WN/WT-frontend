@@ -153,11 +153,16 @@ export function formatProfileDisplayValue(value: unknown): string {
         if (item && typeof item === "object") {
           const rec = item as Record<string, unknown>;
           const skill = String(rec.skill ?? rec.name ?? "").trim();
-          const rating = rec.rating ?? rec.level;
+          const selfRating = rec.self_rating ?? rec.rating ?? rec.level;
+          const webknotRating = rec.webknot_rating;
           if (!skill) return "";
-          return rating !== undefined && String(rating).trim() !== ""
-            ? `${skill} (${String(rating)}/5)`
-            : skill;
+          let ratingStr = "";
+          if (webknotRating !== undefined && webknotRating !== null) {
+            ratingStr = ` (Self: ${selfRating}/5, WK: ${webknotRating}/5)`;
+          } else if (selfRating !== undefined && String(selfRating).trim() !== "") {
+            ratingStr = ` (${selfRating}/5)`;
+          }
+          return `${skill}${ratingStr}`;
         }
         const text = String(item ?? "").trim();
         return text ? formatRoleDisplayValue(text) : "";
@@ -205,8 +210,11 @@ export function onboardRowToListRow(row: OnboardRowInput): Record<string, string
     phone_number: String(record.phone_number ?? record.phoneNumber ?? "").trim() || "—",
     yoe: formatYoeDisplay(record.yoe ?? record.years_of_experience ?? record.experience),
     primary_skills: formatPrimarySkills(record),
+    secondary_skills: formatSecondarySkills(record),
   };
 }
+
+import { SkillRating } from "@/types/onboard";
 
 export type EmployeeProfileEditForm = {
   name: string;
@@ -220,25 +228,29 @@ export type EmployeeProfileEditForm = {
   work_mode: string;
   work_location_type: string;
   band_id: string;
-  primary_skills: string[];
-  secondary_skill: string;
-  secondary_rating: string;
+  primary_skills: SkillRating[];
+  secondary_skills: SkillRating[];
 };
 
 export function profileToEditForm(profile: Record<string, unknown>): EmployeeProfileEditForm {
-  const primarySkillsRaw = pickProfileField(profile, ["primary_skills", "primarySkills"]);
-  const primarySkills = Array.isArray(primarySkillsRaw)
-    ? primarySkillsRaw.map((item) => String(item).trim()).filter(Boolean)
-    : String(primarySkillsRaw ?? "")
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean);
+  const primarySkillsRaw = pickProfileField(profile, ["primary_skills", "primarySkills"]) as Array<Record<string, unknown>> | undefined;
+  const primarySkills: SkillRating[] = (primarySkillsRaw || []).map((item) => ({
+    skill: String(item.skill ?? item.name ?? "").trim(),
+    self_rating: Number(item.self_rating ?? item.rating ?? item.level ?? 3),
+    webknot_rating: item.webknot_rating != null ? Number(item.webknot_rating) : undefined,
+  })).filter(s => !!s.skill);
 
   const secondarySkillsRaw =
     (profile.secondary_skills as Array<Record<string, unknown>> | undefined) ??
     (profile.secondarySkills as Array<Record<string, unknown>> | undefined) ??
     [];
-  const firstSecondary = Array.isArray(secondarySkillsRaw) ? secondarySkillsRaw[0] : undefined;
+  
+  const secondarySkills: SkillRating[] = secondarySkillsRaw.map((item) => ({
+    skill: String(item.skill ?? item.name ?? "").trim(),
+    self_rating: Number(item.self_rating ?? item.rating ?? item.level ?? 3),
+    webknot_rating: item.webknot_rating != null ? Number(item.webknot_rating) : undefined,
+  })).filter(s => !!s.skill);
+
   const phoneParts = splitPhoneNumber(
     String(pickProfileField(profile, ["phone_number", "phoneNumber"]) ?? "").trim()
   );
@@ -262,8 +274,7 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
       pickProfileField(profile, ["band_id", "bandId"]) ?? ""
     ).trim(),
     primary_skills: primarySkills,
-    secondary_skill: String(firstSecondary?.skill ?? "").trim(),
-    secondary_rating: String(firstSecondary?.rating ?? "").trim(),
+    secondary_skills: secondarySkills,
   };
 }
 
@@ -274,13 +285,6 @@ export function editFormToUpdatePayload(
   if (options?.statusOnly) {
     return { user_status: form.user_status.trim() };
   }
-
-  const primary = form.primary_skills.map((skill) => skill.trim()).filter(Boolean);
-
-  const secondarySkill = form.secondary_skill.trim();
-  const secondary_skills = secondarySkill
-    ? [{ skill: secondarySkill, rating: Number(form.secondary_rating) }]
-    : [];
 
   const payload: Record<string, unknown> = {
     name: form.name.trim(),
@@ -294,8 +298,8 @@ export function editFormToUpdatePayload(
     user_status: form.user_status.trim(),
     work_mode: form.work_mode.trim(),
     work_location_type: form.work_location_type.trim(),
-    primary_skills: primary,
-    secondary_skills,
+    primary_skills: form.primary_skills.length ? form.primary_skills : null,
+    secondary_skills: form.secondary_skills.length ? form.secondary_skills : [],
   };
 
   // Consultants do not use band — never send band_id (API rejects it).

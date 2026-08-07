@@ -10,5 +10,5 @@ export type {
   OnboardListData,
   OnboardListItem,
   OnboardUserResponse,
-  SecondarySkillRating,
+  SkillRating,
 } from "@/types/onboard";

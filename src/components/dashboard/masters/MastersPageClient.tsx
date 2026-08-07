@@ -269,9 +269,8 @@ export function MastersPageClient() {
     full_name: "",
     phone_number: "",
     yoe: "",
-    primary_skills: "",
-    secondary_skill: "",
-    secondary_rating: "3",
+    primary_skills: [],
+    secondary_skills: [],
     work_location_type: "OFFSHORE",
   });
   const [selfOnboardFiles, setSelfOnboardFiles] = useState<{
@@ -291,9 +290,8 @@ export function MastersPageClient() {
   });
   const [selfProfileForm, setSelfProfileForm] = useState({
     phone_number: "",
-    primary_skills: "",
-    secondary_skill: "",
-    secondary_rating: "3",
+    primary_skills: [],
+    secondary_skills: [],
     yoe: "",
   });
   const [selfProfileEmploymentFiles, setSelfProfileEmploymentFiles] = useState<{
@@ -2670,33 +2668,7 @@ export function MastersPageClient() {
         entered when you were invited.
       </p>
       <div className="grid sm:grid-cols-2 gap-3">
-        <InputField
-          label="Full name (as per ID)"
-          value={selfOnboardForm.full_name}
-          onChange={(v) => setSelfOnboardForm((p) => ({ ...p, full_name: v }))}
-        />
-        <InputField
-          label="Phone number"
-          value={selfOnboardForm.phone_number}
-          onChange={(v) => setSelfOnboardForm((p) => ({ ...p, phone_number: v }))}
-        />
-        <InputField label="Years of Experience (excluding internship)" required value={selfOnboardForm.yoe} onChange={(v) => setSelfOnboardForm((p) => ({ ...p, yoe: v }))} />
-        <InputField
-          label="Primary Skills (comma separated)"
-          value={selfOnboardForm.primary_skills}
-          onChange={(v) => setSelfOnboardForm((p) => ({ ...p, primary_skills: v }))}
-        />
-        <InputField
-          label="Secondary Skill"
-          value={selfOnboardForm.secondary_skill}
-          onChange={(v) => setSelfOnboardForm((p) => ({ ...p, secondary_skill: v }))}
-        />
-        <SelectField
-          label="Secondary Skill Rating"
-          value={selfOnboardForm.secondary_rating}
-          options={["1", "2", "3", "4", "5"]}
-          onChange={(v) => setSelfOnboardForm((p) => ({ ...p, secondary_rating: v }))}
-        />
+        <SkillRatingsListInput label="Secondary Skills" value={selfProfileForm.secondary_skills} onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, secondary_skills: v }))} />
         <SelectField
           label="Work Location"
           value={selfOnboardForm.work_location_type}
@@ -2830,9 +2802,8 @@ export function MastersPageClient() {
                 full_name: "",
                 phone_number: "",
                 yoe: "",
-                primary_skills: "",
-                secondary_skill: "",
-                secondary_rating: "3",
+                primary_skills: [],
+    secondary_skills: [],
                 work_location_type: "OFFSHORE",
               });
               setSelfOnboardFiles({
@@ -2960,10 +2931,7 @@ export function MastersPageClient() {
       <h3 className="font-semibold mb-1">Edit My Profile</h3>
       <p className="text-sm text-wt-text-muted mb-4">You are onboarded. Update your profile details anytime.</p>
       <div className="grid sm:grid-cols-2 gap-3">
-        <InputField label="Phone Number" value={selfProfileForm.phone_number} onChange={(v) => setSelfProfileForm((p) => ({ ...p, phone_number: v }))} />
-        <InputField label="Primary Skills (comma separated)" value={selfProfileForm.primary_skills} onChange={(v) => setSelfProfileForm((p) => ({ ...p, primary_skills: v }))} />
-        <InputField label="Secondary Skill" value={selfProfileForm.secondary_skill} onChange={(v) => setSelfProfileForm((p) => ({ ...p, secondary_skill: v }))} />
-        <SelectField label="Secondary Skill Rating" value={selfProfileForm.secondary_rating} options={["1", "2", "3", "4", "5"]} onChange={(v) => setSelfProfileForm((p) => ({ ...p, secondary_rating: v }))} />
+        <SkillRatingsListInput label="Secondary Skills" value={selfProfileForm.secondary_skills} onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, secondary_skills: v }))} />
         <InputField label="Years of Experience (excluding internship)" required value={selfProfileForm.yoe} onChange={(v) => setSelfProfileForm((p) => ({ ...p, yoe: v }))} />
       </div>
       {priorEmploymentDocsForProfile ? (
@@ -3082,9 +3050,8 @@ export function MastersPageClient() {
               await hrmsService.updateMyProfile(fd);
               setSelfProfileForm({
                 phone_number: "",
-                primary_skills: "",
-                secondary_skill: "",
-                secondary_rating: "3",
+                primary_skills: [],
+    secondary_skills: [],
                 yoe: "",
               });
               setSelfProfileEmploymentFiles({
