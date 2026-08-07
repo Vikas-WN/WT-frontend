@@ -21,7 +21,7 @@ function statusClass(status: string): string {
 }
 
 function canEdit(status: string): boolean {
-  return status === "DRAFT" || status === "REJECTED";
+  return status === "DRAFT";
 }
 
 export function DayEntriesPanel({

@@ -68,7 +68,7 @@ export function gridRowsFromWeekSnapshot(snapshot: TimelogWeekSnapshot | null, d
 }
 
 export function isTimelogCellEditable(status?: string): boolean {
-  return !status || status === "DRAFT" || status === "REJECTED";
+  return !status || status === "DRAFT";
 }
 
 export function isRowMetadataEditable(row: TimelogGridRow, dayKeys: string[]): boolean {
