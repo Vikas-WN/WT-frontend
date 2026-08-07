@@ -263,6 +263,8 @@ export function LeavePageClient() {
     "my" | "team" | "org" | "comp-off" | "wfh" | "balances"
   >(() => {
     if (tabFromQuery === "comp-off" && !isTeamLeaveRoute) return "comp-off";
+    // Balances lives on Employee → Leave Requests (team route) for HR — not Personal leave.
+    if (tabFromQuery === "balances" && !isTeamLeaveRoute) return "my";
     if (
       tabFromQuery === "wfh" ||
       tabFromQuery === "balances" ||
@@ -288,6 +290,11 @@ export function LeavePageClient() {
         setLeaveSubTab("team");
         return;
       }
+      // Balances is team/HR leave only.
+      if (tabFromQuery === "balances" && !isTeamLeaveRoute) {
+        setLeaveSubTab("my");
+        return;
+      }
       setLeaveSubTab(tabFromQuery);
       return;
     }
@@ -300,8 +307,8 @@ export function LeavePageClient() {
       });
     } else if (pathname.includes("/dashboard/leave")) {
       setLeaveSubTab((prev) => {
-        if (prev === "team" || prev === "org") return "my";
-        if (prev === "balances" || prev === "comp-off" || prev === "wfh") return prev;
+        if (prev === "team" || prev === "org" || prev === "balances") return "my";
+        if (prev === "comp-off" || prev === "wfh") return prev;
         return "my";
       });
     }
@@ -1656,7 +1663,6 @@ export function LeavePageClient() {
       { value: "my", label: "Leave Requests" },
       showCompOffTab ? { value: "comp-off", label: "Compensation Off Credit" } : null,
       { value: "wfh", label: "Work From Home" },
-      hasHrAccess ? { value: "balances", label: "Balances" } : null,
     ].filter((item): item is { value: string; label: string } => Boolean(item));
   }, [canViewTeamLeave, hasHrAccess, isTeamLeaveRoute, showCompOffTab]);
 

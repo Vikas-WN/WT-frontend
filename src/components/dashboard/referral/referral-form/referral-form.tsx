@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
-import { Loader2 } from "lucide-react";
 import {
   Briefcase,
   Send,
@@ -13,6 +12,7 @@ import {
   FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { WtLoader } from "@/components/dashboard/ui/WtLoader";
 import { Input } from "@/components/ui/input";
 import {
   Combobox,
@@ -160,7 +160,7 @@ export function ReferralForm({
                 <ComboboxList ref={comboboxListRef}>
                   {showLoading ? (
                     <div className="flex items-center justify-center py-6">
-                      <Loader2 className="size-5 animate-spin text-slate-400" />
+                      <WtLoader size="md" label="Loading jobs" />
                     </div>
                   ) : error ? (
                     <p className="px-3 py-4 text-center text-sm text-rose-500">{error}</p>
@@ -182,7 +182,7 @@ export function ReferralForm({
                   )}
                   {isFetchingNextPage && (
                     <div className="flex items-center justify-center py-3">
-                      <Loader2 className="size-4 animate-spin text-slate-400" />
+                      <WtLoader size="sm" label="Loading more jobs" />
                     </div>
                   )}
                 </ComboboxList>
@@ -337,7 +337,7 @@ export function ReferralForm({
             >
               {sending ? (
                 <>
-                  <div className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  <WtLoader size="sm" label="Sending referral" />
                   {REFERRAL_FORM_COPY.sending}
                 </>
               ) : (

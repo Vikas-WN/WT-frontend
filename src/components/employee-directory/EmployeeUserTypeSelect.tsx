@@ -162,6 +162,8 @@ export function EmployeeUserTypeSelect({
           variant="table-inline"
           className="w-full min-w-0"
           contentClassName="min-w-[14rem] w-max"
+          // Keep chevron dropdown look — no clear "x" pill (User Type is required).
+          clearSelectionOnEmptyInput={false}
         />
       </div>
 

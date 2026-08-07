@@ -32,6 +32,7 @@ import { ManagementListCard } from "@/components/dashboard/ui/ManagementListCard
 import { SearchInput } from "@/components/dashboard/ui/SearchInput";
 import { FormGridSkeleton, MetricCardsSkeleton, TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
+import { WtLoader } from "@/components/dashboard/ui/WtLoader";
 import {
   CARD_CONTENT_STACK_CLASS,
   CARD_FORM_ACTIONS_CLASS,
@@ -705,9 +706,9 @@ export function OffboardingPanel() {
         ) : (
           <>
             <div className="relative">
-              {loadingList ? (
+                  {loadingList ? (
                 <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-wt-surface-1/60">
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-wt-brand border-t-transparent" />
+                  <WtLoader size="md" label="Loading offboarding list" />
                 </div>
               ) : null}
               <div className={INNER_SCROLL_CLASS}>

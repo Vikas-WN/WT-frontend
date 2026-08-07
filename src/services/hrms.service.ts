@@ -295,6 +295,17 @@ export const hrmsService = {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.profile.self, { body: fd });
   },
 
+  getMyPreferences() {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.profile.preferences);
+  },
+
+  updateMyPreferences(payload: Record<string, unknown>) {
+    return apiClient.put<ApiEnvelope<unknown>>(endpoints.profile.preferences, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
   getEmployeeProfile(empId: string) {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.profile.employeeById(empId));
   },
