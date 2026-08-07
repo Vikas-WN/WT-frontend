@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 import { DatePicker } from "@/components/ui/date-picker";
+import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { ProjectTimelogCardList } from "@/components/dashboard/timelog/ProjectTimelogCardList/ProjectTimelogCardList";
 import { useProjectTimelogs } from "@/hooks/timelog/useProjectTimelogs";
+import { useClientPagination } from "@/hooks/useClientPagination";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { hrmsService } from "@/services/hrms.service";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
@@ -18,6 +20,8 @@ import type { DayTimelogEntry } from "@/hooks/timelog/useDayTimelog.types";
 import type { ProjectWeekEmployeeTotal } from "@/hooks/timelog/useProjectTimelogs.types";
 import type { ProjectTimelogPanelProps } from "./ProjectTimelogPanel.types";
 import { ApprovalRemarkModal } from "@/components/dashboard/timelog/ApprovalRemarkModal/ApprovalRemarkModal";
+
+const TEAM_TIMELOG_PAGE_SIZE = 10;
 
 type EmployeeDetailCache = {
   mode: "all" | "week";
@@ -147,12 +151,34 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
   // Employee detail always shows every project for that person (not only the
   // accordion project they were opened from).
   const filteredAllEntries = useMemo(() => {
-    if(!expandedProject) return employeeEntries;
+    if (!expandedProject) return employeeEntries;
     const code = expandedProject.trim().toUpperCase();
     return employeeEntries.filter(
       (entry) => entry.project_code.trim().toUpperCase() === code
     );
   }, [employeeEntries, expandedProject]);
+
+  const projectsPagination = useClientPagination(projects, {
+    pageSize: TEAM_TIMELOG_PAGE_SIZE,
+    resetKeys: [fromDate, toDate],
+  });
+  const pendingPagination = useClientPagination(pendingApprovals, {
+    pageSize: TEAM_TIMELOG_PAGE_SIZE,
+    resetKeys: [fromDate, toDate, pendingApprovals.length],
+  });
+  const entriesPagination = useClientPagination(filteredAllEntries, {
+    pageSize: TEAM_TIMELOG_PAGE_SIZE,
+    resetKeys: [selectedEmployee, fromDate, toDate, expandedProject],
+  });
+
+  // Keep accordion expansion on the visible page only.
+  useEffect(() => {
+    if (!expandedProject) return;
+    const visible = projectsPagination.pageItems.some(
+      (project) => project.project_code === expandedProject
+    );
+    if (!visible) toggleProject(expandedProject);
+  }, [expandedProject, projectsPagination.pageItems, toggleProject]);
 
   const refreshAfterStatusChange = useCallback(async () => {
     if (selectedEmployee) {
@@ -268,85 +294,100 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
             ) : !filteredAllEntries.length ? (
               <p className="py-10 text-center text-sm text-wt-text-muted">No Time Log Entries</p>
             ) : (
-              <div className="overflow-x-auto rounded-lg border border-wt-border">
-                <table className="w-full border-collapse text-sm">
-                  <thead className="bg-wt-surface-2 text-wt-text-muted">
-                    <tr>
-                      <th className="px-2 py-2 text-left font-medium whitespace-nowrap">Date</th>
-                      <th className="px-2 py-2 text-left font-medium">Project</th>
-                      <th className="px-2 py-2 text-left font-medium">Task Category</th>
-                      <th className="px-2 py-2 text-left font-medium min-w-[180px]">Description</th>
-                      <th className="px-2 py-2 text-center font-medium">Hours</th>
-                      <th className="px-2 py-2 text-center font-medium">Status</th>
-                      <th className="px-2 py-2 text-center font-medium">Approve / Reject</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredAllEntries.map((entry: DayTimelogEntry) => {
-                      const isActionable =
-                        entry.status === "SUBMITTED" || entry.status === "REJECTED";
-                      return (
-                        <tr
-                          key={`${entry.id}-${toIsoDateKey(entry.log_date)}`}
-                          className="border-t border-wt-border hover:bg-wt-surface-2/50"
-                        >
-                          <td className="px-2 py-2 whitespace-nowrap tabular-nums">
-                            {entry.log_date}
-                          </td>
-                          <td className="px-2 py-2 whitespace-nowrap">
-                            {entry.project_name?.trim() 
-                            || projects.find((p) => p.project_code === entry.project_code)?.project_name 
-                            || entry.project_code 
-                            || "-"}
-                          </td>
-                          <td className="px-2 py-2 whitespace-nowrap">
-                            {TASK_CATEGORY_LABELS[entry.task_category] ?? entry.task_category}
-                          </td>
-                          <td className="px-2 py-2 max-w-[240px]">
-                            <span className="line-clamp-3 whitespace-pre-wrap break-words" title={entry.description || undefined}>
-                              {entry.description?.trim() || "—"}
-                            </span>
-                          </td>
-                          <td className="px-2 py-2 text-center tabular-nums">{entry.hours}h</td>
-                          <td className="px-2 py-2 text-center">
-                            <span className={entryStatusClass(entry.status)}>
-                              {formatUiStatusLabel(entry.status)}
-                            </span>
-                          </td>
-                          <td className="px-2 py-2 text-center whitespace-nowrap">
-                            {isActionable && entry.id > 0 ? (
-                              <div className="flex justify-center gap-1">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="xs"
-                                  disabled={actionLoading}
-                                  className="border-emerald-300 px-1.5 py-0.5 text-[10px] text-emerald-700 hover:bg-emerald-50"
-                                  onClick={() => handleApproveEntry(entry.id)}
-                                >
-                                  Approve
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="xs"
-                                  disabled={actionLoading}
-                                  className="px-1.5 py-0.5 text-[10px]"
-                                  onClick={() => setRejectAction({ entryId: entry.id })}
-                                >
-                                  Reject
-                                </Button>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-wt-text-muted">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="overflow-x-auto rounded-lg border border-wt-border">
+                  <table className="w-full border-collapse text-sm">
+                    <thead className="bg-wt-surface-2 text-wt-text-muted">
+                      <tr>
+                        <th className="px-2 py-2 text-left font-medium whitespace-nowrap">Date</th>
+                        <th className="px-2 py-2 text-left font-medium">Project</th>
+                        <th className="px-2 py-2 text-left font-medium">Task Category</th>
+                        <th className="px-2 py-2 text-left font-medium min-w-[180px]">Description</th>
+                        <th className="px-2 py-2 text-center font-medium">Hours</th>
+                        <th className="px-2 py-2 text-center font-medium">Status</th>
+                        <th className="px-2 py-2 text-center font-medium">Approve / Reject</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {entriesPagination.pageItems.map((entry: DayTimelogEntry) => {
+                        const isActionable =
+                          entry.status === "SUBMITTED" || entry.status === "REJECTED";
+                        return (
+                          <tr
+                            key={`${entry.id}-${toIsoDateKey(entry.log_date)}`}
+                            className="border-t border-wt-border hover:bg-wt-surface-2/50"
+                          >
+                            <td className="px-2 py-2 whitespace-nowrap tabular-nums">
+                              {entry.log_date}
+                            </td>
+                            <td className="px-2 py-2 whitespace-nowrap">
+                              {entry.project_name?.trim()
+                                || projects.find((p) => p.project_code === entry.project_code)?.project_name
+                                || entry.project_code
+                                || "-"}
+                            </td>
+                            <td className="px-2 py-2 whitespace-nowrap">
+                              {TASK_CATEGORY_LABELS[entry.task_category] ?? entry.task_category}
+                            </td>
+                            <td className="px-2 py-2 max-w-[240px]">
+                              <span className="line-clamp-3 whitespace-pre-wrap break-words" title={entry.description || undefined}>
+                                {entry.description?.trim() || "—"}
+                              </span>
+                            </td>
+                            <td className="px-2 py-2 text-center tabular-nums">{entry.hours}h</td>
+                            <td className="px-2 py-2 text-center">
+                              <span className={entryStatusClass(entry.status)}>
+                                {formatUiStatusLabel(entry.status)}
+                              </span>
+                            </td>
+                            <td className="px-2 py-2 text-center whitespace-nowrap">
+                              {isActionable && entry.id > 0 ? (
+                                <div className="flex justify-center gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="xs"
+                                    disabled={actionLoading}
+                                    className="border-emerald-300 px-1.5 py-0.5 text-[10px] text-emerald-700 hover:bg-emerald-50"
+                                    onClick={() => handleApproveEntry(entry.id)}
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="xs"
+                                    disabled={actionLoading}
+                                    className="px-1.5 py-0.5 text-[10px]"
+                                    onClick={() => setRejectAction({ entryId: entry.id })}
+                                  >
+                                    Reject
+                                  </Button>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-wt-text-muted">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {entriesPagination.showPagination ? (
+                  <ListPagination
+                    className="mt-3"
+                    page={entriesPagination.page}
+                    totalPages={entriesPagination.totalPages}
+                    totalItems={entriesPagination.totalItems}
+                    rangeStart={entriesPagination.rangeStart}
+                    rangeEnd={entriesPagination.rangeEnd}
+                    pageSize={entriesPagination.pageSize}
+                    onPageChange={entriesPagination.setPage}
+                    onPageSizeChange={entriesPagination.setPageSize}
+                  />
+                ) : null}
+              </>
             )}
           </CardContent>
         </Card>
@@ -421,7 +462,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {pendingApprovals.map((item) => (
+                  {pendingPagination.pageItems.map((item) => (
                     <tr
                       key={item.timelog_id}
                       className="border-t border-wt-border hover:bg-wt-surface-2/50"
@@ -469,17 +510,43 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                 </tbody>
               </table>
             </div>
+            {pendingPagination.showPagination ? (
+              <ListPagination
+                page={pendingPagination.page}
+                totalPages={pendingPagination.totalPages}
+                totalItems={pendingPagination.totalItems}
+                rangeStart={pendingPagination.rangeStart}
+                rangeEnd={pendingPagination.rangeEnd}
+                pageSize={pendingPagination.pageSize}
+                onPageChange={pendingPagination.setPage}
+                onPageSizeChange={pendingPagination.setPageSize}
+              />
+            ) : null}
           </div>
         ) : null}
-        <ProjectTimelogCardList
-          projects={projects}
-          weekTotals={weekTotals}
-          weekTotalsLoading={weekTotalsLoading}
-          expandedProject={expandedProject}
-          selectedEmployee={selectedEmployee}
-          onToggleProject={toggleProject}
-          onSelectEmployee={selectEmployee}
-        />
+        <div className="space-y-3">
+          <ProjectTimelogCardList
+            projects={projectsPagination.pageItems}
+            weekTotals={weekTotals}
+            weekTotalsLoading={weekTotalsLoading}
+            expandedProject={expandedProject}
+            selectedEmployee={selectedEmployee}
+            onToggleProject={toggleProject}
+            onSelectEmployee={selectEmployee}
+          />
+          {projectsPagination.showPagination ? (
+            <ListPagination
+              page={projectsPagination.page}
+              totalPages={projectsPagination.totalPages}
+              totalItems={projectsPagination.totalItems}
+              rangeStart={projectsPagination.rangeStart}
+              rangeEnd={projectsPagination.rangeEnd}
+              pageSize={projectsPagination.pageSize}
+              onPageChange={projectsPagination.setPage}
+              onPageSizeChange={projectsPagination.setPageSize}
+            />
+          ) : null}
+        </div>
       </CardContent>
     </Card>
     <ApprovalRemarkModal
