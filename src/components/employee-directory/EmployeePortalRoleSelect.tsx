@@ -42,7 +42,7 @@ export function EmployeePortalRoleSelect({
   compact = false,
 }: Props) {
   const queryClient = useQueryClient();
-  const { user, refresh } = useAuth();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [optimisticRole, setOptimisticRole] = useState<string | null>(null);
   const roles = useMemo(() => normalizePortalRoles(portalRoles), [portalRoles]);
@@ -149,12 +149,6 @@ export function EmployeePortalRoleSelect({
       ).trim();
       setOptimisticRole(nextRole);
       patchCachedPortalRole(targetEmail, nextRole, nextStatus || null);
-      // When an administrator changes their own portal role, rotate the session
-      // immediately so its access-token claims cannot retain the previous role.
-      // Other users reconcile on their next application bootstrap via /roles.
-      if (user?.email?.trim().toLowerCase() === targetEmail.toLowerCase()) {
-        await refresh();
-      }
       // Avoid refetching the directory list — onboard list often omits/lags portal_roles
       // and would overwrite the optimistic cache update.
       await queryClient.invalidateQueries({

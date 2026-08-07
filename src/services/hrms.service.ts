@@ -306,11 +306,6 @@ export const hrmsService = {
     });
   },
 
-  /** DELETE /employee-profile/{empId} — soft-delete an employee (ROLE_ADMIN only). */
-  deleteEmployee(empId: string) {
-    return apiClient.delete<ApiEnvelope<unknown>>(endpoints.profile.deleteEmployee(empId));
-  },
-
   updateEmployeeUserType(
     empId: string,
     payload: { user_type: string; transition_date?: string; band_id?: number }
@@ -1164,18 +1159,6 @@ export const hrmsService = {
     if (params.page != null) query.page = String(params.page);
     if (params.size != null) query.size = String(params.size);
     return apiClient.get<unknown>(endpoints.masters.clients, { query });
-  },
-
-  listAccountManagers(search?: string) {
-    const query: Record<string, string> = {};
-    if (search?.trim()) query.search = search.trim();
-    return apiClient.get<unknown>(endpoints.employees.accountManagers, { query });
-  },
-
-  listDeliveryManagers(search?: string) {
-    const query: Record<string, string> = {};
-    if (search?.trim()) query.search = search.trim();
-    return apiClient.get<unknown>(endpoints.employees.deliveryManagers, { query });
   },
 
   listClientOpportunities(params: {

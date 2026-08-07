@@ -11,7 +11,6 @@ import {
   createEmptyManagerAllocationFields,
   type ManagerAllocationFieldsState,
 } from "@/components/allocation/ManagerAllocationFields";
-import { InternalEmployeeSelect } from "@/components/allocation/InternalEmployeeSelect";
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { hrmsService } from "@/services/hrms.service";
@@ -28,6 +27,7 @@ import {
   isValidAllocationPercentForDesignation,
 } from "@/utils/allocationPercent";
 import { parseEmployeeAllocationsResponse } from "@/utils/allocationList";
+import { isExternalClientId } from "@/utils/client";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { UI_COPY } from "@/constants/uiCopy";
 
@@ -225,11 +225,16 @@ export function CreateProjectDialog({
       return;
     }
     const accountManagerEmail = normalizePickerEmail(form.account_manager_email);
+    const externalClientSelected = isExternalClientId(form.client_id);
     if (
       !isEditing &&
       (!accountManagerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountManagerEmail))
     ) {
-      showErrorToast("Select an account manager for this project.");
+      showErrorToast(
+        externalClientSelected
+          ? "Enter a valid account manager email for this client."
+          : "Select a client with a valid account manager."
+      );
       return;
     }
     const startDate = normalizeToApiDate(form.start_date);
@@ -297,29 +302,21 @@ export function CreateProjectDialog({
                 projectCode: code,
               });
             } catch {
-              try {
-                await allocateManagerOnProject({
+              await allocateManagerOnProject({
+                email: nextPm,
+                fields: {
+                  ...pmFields,
                   email: nextPm,
-                  fields: {
-                    ...pmFields,
-                    email: nextPm,
-                    role: "Project Manager",
-                    start_date: pmFields.start_date || form.start_date,
-                    end_date: pmFields.end_date || form.end_date,
-                  },
-                  projectCode: code,
-                  projectStart: startDate,
-                  projectEnd: endDate,
-                  isManager: true,
-                  allocationPercentOptions: pmPercentOptions,
-                });
-              } catch (error) {
-                showErrorToast(
-                  `Project updated, but failed to allocate Project Manager: ${
-                    error instanceof Error ? error.message : "unknown error"
-                  }.`
-                );
-              }
+                  role: "Project Manager",
+                  start_date: pmFields.start_date || form.start_date,
+                  end_date: pmFields.end_date || form.end_date,
+                },
+                projectCode: code,
+                projectStart: startDate,
+                projectEnd: endDate,
+                isManager: true,
+                allocationPercentOptions: pmPercentOptions,
+              });
             }
           }
         }
@@ -343,35 +340,22 @@ export function CreateProjectDialog({
       });
 
       // Delivery Manager is contact-only on create (no allocation). PM is allocated.
-      // A PM-allocation failure must not abort or misreport the (already persisted)
-      // project creation — otherwise retrying would create a duplicate project.
       if (pmEmail) {
-        try {
-          await allocateManagerOnProject({
+        await allocateManagerOnProject({
+          email: pmEmail,
+          fields: {
+            ...pmFields,
             email: pmEmail,
-            fields: {
-              ...pmFields,
-              email: pmEmail,
-              role: "Project Manager",
-              start_date: pmFields.start_date || form.start_date,
-              end_date: pmFields.end_date || form.end_date,
-            },
-            projectCode,
-            projectStart: startDate,
-            projectEnd: endDate,
-            isManager: true,
-            allocationPercentOptions: pmPercentOptions,
-          });
-        } catch (error) {
-          showErrorToast(
-            `Project created, but failed to allocate Project Manager: ${
-              error instanceof Error ? error.message : "unknown error"
-            }.`
-          );
-          onCreated();
-          onClose();
-          return;
-        }
+            role: "Project Manager",
+            start_date: pmFields.start_date || form.start_date,
+            end_date: pmFields.end_date || form.end_date,
+          },
+          projectCode,
+          projectStart: startDate,
+          projectEnd: endDate,
+          isManager: true,
+          allocationPercentOptions: pmPercentOptions,
+        });
       }
 
       showSuccessToast("Project created successfully.");
@@ -477,12 +461,17 @@ export function CreateProjectDialog({
               }}
             />
             {!isEditing ? (
-              <InternalEmployeeSelect
+              <InputField
                 label="Account Manager"
-                required
                 value={form.account_manager_email}
                 onChange={(value) =>
                   setForm((prev) => ({ ...prev, account_manager_email: value }))
+                }
+                disabled={!isExternalClientId(form.client_id)}
+                placeholder={
+                  isExternalClientId(form.client_id)
+                    ? "Enter account manager email"
+                    : "Filled from selected client"
                 }
               />
             ) : null}
@@ -513,7 +502,6 @@ export function CreateProjectDialog({
             enabled={enabled}
             percentDesignation="Delivery Manager"
             managerContactOnly
-            emailSource="all"
           />
         ) : null}
 
