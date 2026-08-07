@@ -137,7 +137,7 @@ export function dedupeLeaveRequestNotifications(
     }
 
     const rawMessage = String(
-      row.message ?? (row as Record<string, unknown>).body ?? ""
+      row.message ?? (row as unknown as Record<string, unknown>).body ?? ""
     ).trim();
     const idMatch = rawMessage.match(/request\s*#\s*(\d+)/i);
     const rangeMatch = rawMessage.match(

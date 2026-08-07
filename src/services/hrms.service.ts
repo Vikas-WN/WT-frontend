@@ -1177,6 +1177,18 @@ export const hrmsService = {
     return apiClient.get<unknown>(endpoints.masters.clients, { query });
   },
 
+  listAccountManagers(search?: string) {
+    const query: Record<string, string> = {};
+    if (search?.trim()) query.search = search.trim();
+    return apiClient.get<unknown>(endpoints.employees.accountManagers, { query });
+  },
+
+  listDeliveryManagers(search?: string) {
+    const query: Record<string, string> = {};
+    if (search?.trim()) query.search = search.trim();
+    return apiClient.get<unknown>(endpoints.employees.deliveryManagers, { query });
+  },
+
   listClientOpportunities(params: {
     clientId: string | number;
     search?: string;
