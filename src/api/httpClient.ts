@@ -193,7 +193,10 @@ export class HttpClient {
               : typeof payload === "string"
                 ? payload
                 : "";
-          dispatchSessionLogout(sessionLogoutReasonFromApiDetail(detail) ?? "server");
+          const reason = sessionLogoutReasonFromApiDetail(detail);
+          // Prefer idle/expired messaging. Avoid "Session Ended" on generic refresh races —
+          // attemptTokenRefresh already tried /auth/me; if we still failed, logout as server.
+          dispatchSessionLogout(reason ?? "server");
         }
 
         const serverUnavailable =

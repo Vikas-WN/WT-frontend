@@ -38,8 +38,10 @@ import {
   cleanEmployeeName,
   extractSkillNames,
   onboardRowToListRow,
+  rowDirectoryKey,
   rowEmpId,
   rowHasSkill,
+  rowIsBirthdayToday,
   rowIsOnline,
 } from "@/utils/employeeDirectory";
 import { directoryUserTypeFilterOptions, FALLBACK_ONBOARD_OPTIONS, resolveDirectoryUserTypes } from "@/utils/onboardFormOptions";
@@ -59,7 +61,7 @@ import {
   toggleColumnSort,
 } from "@/utils/listSort";
 import { cn } from "@/lib/utils";
-import { normalizeEmployeeStatusKey } from "@/utils/userStatus";
+import { isOffboardedUserStatus, normalizeEmployeeStatusKey } from "@/utils/userStatus";
 import { Users } from "lucide-react";
 
 const EMPLOYEE_DIRECTORY_PAGE_SIZE = 10;
@@ -242,10 +244,12 @@ export function EmployeeDirectoryPageClient() {
       .map((row) => {
         const record = row as unknown as Record<string, unknown>;
         const empId = rowEmpId(record);
-        return { record, empId, display: onboardRowToListRow(row) };
+        const directoryKey = rowDirectoryKey(record);
+        return { record, empId, directoryKey, display: onboardRowToListRow(row) };
       })
-      .filter(({ empId, record, display }) => {
-        if (!empId) return false;
+      .filter(({ directoryKey, record, display }) => {
+        // Keep invited/pre-emp-id rows visible via email so TOTAL matches the table.
+        if (!directoryKey) return false;
         if (userTypeFilter && normalizeUserType(record.user_type ?? record.userType) !== userTypeFilter) {
           return false;
         }
@@ -281,7 +285,17 @@ export function EmployeeDirectoryPageClient() {
           .toLowerCase();
         return haystack.includes(needle);
       });
-    return applyListSort(filtered, sortId, EMPLOYEE_DIRECTORY_SORT_OPTIONS);
+
+    const sorted = applyListSort(filtered, sortId, EMPLOYEE_DIRECTORY_SORT_OPTIONS);
+    // Inactive employees always sink to the bottom after the chosen sort.
+    const activeish: typeof sorted = [];
+    const inactive: typeof sorted = [];
+    for (const row of sorted) {
+      const status = row.record.status ?? row.record.user_status ?? row.record.userStatus;
+      if (isOffboardedUserStatus(status)) inactive.push(row);
+      else activeish.push(row);
+    }
+    return [...activeish, ...inactive];
   }, [
     rows,
     debouncedSearch,
@@ -296,8 +310,11 @@ export function EmployeeDirectoryPageClient() {
     let online = 0;
     let active = 0;
     let invited = 0;
+    let total = 0;
     for (const row of rows) {
       const record = row as unknown as Record<string, unknown>;
+      if (!rowDirectoryKey(record)) continue;
+      total += 1;
       if (rowIsOnline(record)) online += 1;
       const status = normalizeEmployeeStatusKey(
         record.status ?? record.user_status ?? record.userStatus
@@ -305,7 +322,7 @@ export function EmployeeDirectoryPageClient() {
       if (status === "ACTIVE") active += 1;
       if (status === "INVITED") invited += 1;
     }
-    return { total: rows.length, online, active, invited };
+    return { total, online, active, invited };
   }, [rows]);
 
   const pagination = useClientPagination(tableRows, {
@@ -422,7 +439,14 @@ export function EmployeeDirectoryPageClient() {
                 <Users className="size-3.5 text-[var(--wt-brand)]" />
                 <span>
                   Showing{" "}
-                  <span className="font-semibold text-wt-text">{pagination.totalItems}</span> people
+                  <span className="font-semibold text-wt-text">{pagination.totalItems}</span>
+                  {pagination.totalItems !== directoryStats.total ? (
+                    <>
+                      {" "}
+                      of <span className="font-semibold text-wt-text">{directoryStats.total}</span>
+                    </>
+                  ) : null}{" "}
+                  people
                 </span>
               </div>
             }
@@ -575,16 +599,25 @@ export function EmployeeDirectoryPageClient() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {pagination.pageItems.map(({ empId, display, record }) => {
+                        {pagination.pageItems.map(({ empId, directoryKey, display, record }) => {
+                          const openProfile = () => {
+                            if (!empId) {
+                              showErrorToast(
+                                "This person does not have an employee ID yet — open their profile after onboarding completes."
+                              );
+                              return;
+                            }
+                            router.push(employeeDirectoryProfilePath(empId));
+                          };
                           return (
                             <TableRow
-                              key={empId}
+                              key={directoryKey}
                               className="cursor-pointer border-wt-border/70 transition-colors hover:bg-[color-mix(in_srgb,var(--wt-brand)_6%,transparent)] dark:hover:bg-wt-surface-2"
-                              onClick={() => router.push(employeeDirectoryProfilePath(empId))}
+                              onClick={openProfile}
                               onKeyDown={(e) => {
                                 if (e.key === "Enter" || e.key === " ") {
                                   e.preventDefault();
-                                  router.push(employeeDirectoryProfilePath(empId));
+                                  openProfile();
                                 }
                               }}
                               tabIndex={0}
@@ -619,6 +652,7 @@ export function EmployeeDirectoryPageClient() {
                                       empId={display.emp_id}
                                       profile={record}
                                       isOnline={rowIsOnline(record)}
+                                      isBirthday={rowIsBirthdayToday(record)}
                                     />
                                   ) : col.key === "email" ? (
                                     <div className="flex w-full min-w-0 items-center gap-1">
@@ -685,6 +719,13 @@ export function EmployeeDirectoryPageClient() {
                                     <span
                                       className="text-xs text-wt-text-muted"
                                       title="You cannot delete your own account"
+                                    >
+                                      —
+                                    </span>
+                                  ) : !empId ? (
+                                    <span
+                                      className="text-xs text-wt-text-muted"
+                                      title="Employee ID required to delete"
                                     >
                                       —
                                     </span>

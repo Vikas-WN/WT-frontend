@@ -87,6 +87,11 @@ export function rowEmpId(row: Record<string, unknown>): string {
   ).trim();
 }
 
+/** Stable list/react key — prefer emp id, fall back to email so invited rows still show. */
+export function rowDirectoryKey(row: Record<string, unknown>): string {
+  return rowEmpId(row) || rowEmail(row);
+}
+
 export function rowEmail(row: Record<string, unknown>): string {
   const direct = String(
     row.email ?? row.user_email ?? row.userEmail ?? row.employee_email ?? ""
@@ -245,6 +250,18 @@ export function onboardRowToListRow(row: OnboardRowInput): Record<string, string
 
 export function rowIsOnline(record: Record<string, unknown>): boolean {
   return Boolean(record.is_online ?? record.isOnline);
+}
+
+/** True when DOB month/day matches today (year ignored). */
+export function rowIsBirthdayToday(record: Record<string, unknown>, today = new Date()): boolean {
+  const raw = String(record.date_of_birth ?? record.dateOfBirth ?? record.dob ?? "").trim();
+  if (!raw || raw === "—") return false;
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return false;
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!month || !day) return false;
+  return today.getMonth() + 1 === month && today.getDate() === day;
 }
 
 import { SkillRating } from "@/types/onboard";

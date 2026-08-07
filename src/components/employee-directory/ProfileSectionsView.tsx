@@ -40,17 +40,22 @@ export function ProfileSectionsView({
 
   return (
     <div className="grid grid-cols-1 gap-5 xl:grid-cols-2 xl:items-stretch">
-      {sections.map((section) => (
+      {sections.map((section, index) => (
         <Card
           key={section.title}
-          className={cn("flex h-full w-full flex-col p-0 wt-soft-in", CONTENT_CARD_CLASS)}
+          className={cn(
+            "flex h-full w-full flex-col overflow-hidden p-0 wt-soft-in",
+            CONTENT_CARD_CLASS
+          )}
+          style={{ animationDelay: `${Math.min(index, 4) * 40}ms` }}
         >
-          <CardHeader className="px-5 py-4 sm:px-6">
+          <CardHeader className="space-y-1 px-5 py-4 sm:px-6">
             <CardTitle className="text-base tracking-tight">{section.title}</CardTitle>
+            <p className="text-xs text-wt-text-muted">Key details for this section</p>
           </CardHeader>
           <Separator />
           <CardContent className="flex flex-1 flex-col px-5 py-4 sm:px-6">
-            <ProfileFieldGrid entries={section.entries} variant="table" />
+            <ProfileFieldGrid entries={section.entries} variant="dashboard" />
           </CardContent>
         </Card>
       ))}

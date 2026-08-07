@@ -13,11 +13,13 @@ export function DirectoryEmployeeNameCell({
   empId,
   profile,
   isOnline,
+  isBirthday = false,
 }: {
   name: string;
   empId?: string;
   profile: Record<string, unknown>;
   isOnline?: boolean;
+  isBirthday?: boolean;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   const photoSrc = resolveProfilePhotoSrc(profile);
@@ -29,7 +31,10 @@ export function DirectoryEmployeeNameCell({
     <div className="flex min-w-0 items-center gap-3">
       <span className="relative shrink-0">
         <span
-          className="flex size-9 items-center justify-center overflow-hidden rounded-full border border-white/35 shadow-sm ring-1 ring-black/8"
+          className={cn(
+            "flex size-9 items-center justify-center overflow-hidden rounded-full border border-white/35 shadow-sm ring-1 ring-black/8",
+            isBirthday && "wt-birthday-avatar"
+          )}
           style={showFallback ? avatarGradientStyle(displayName, gradientSeed) : undefined}
         >
           {photoSrc && !imageFailed ? (
@@ -45,18 +50,34 @@ export function DirectoryEmployeeNameCell({
             </span>
           )}
         </span>
-        <span
-          className={cn(
-            "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-wt-surface-1",
-            isOnline ? "bg-emerald-500" : "bg-wt-text-faint/55"
-          )}
-          title={isOnline ? "Online" : "Offline"}
-          aria-label={isOnline ? "Online" : "Offline"}
-        />
+        {isBirthday ? (
+          <span className="wt-birthday-badge" title="Birthday today" aria-label="Birthday today">
+            <span className="wt-birthday-cake" aria-hidden>
+              🎂
+            </span>
+            <span className="wt-birthday-popper" aria-hidden>
+              🎉
+            </span>
+          </span>
+        ) : (
+          <span
+            className={cn(
+              "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-wt-surface-1",
+              isOnline ? "bg-emerald-500" : "bg-wt-text-faint/55"
+            )}
+            title={isOnline ? "Online" : "Offline"}
+            aria-label={isOnline ? "Online" : "Offline"}
+          />
+        )}
       </span>
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold tracking-tight text-wt-text">
           {displayName}
+          {isBirthday ? (
+            <span className="ml-1.5 inline-block align-middle text-[11px] font-medium text-amber-600 dark:text-amber-300">
+              Birthday
+            </span>
+          ) : null}
         </span>
         {empId && empId !== "—" ? (
           <span className="mt-0.5 block truncate text-[11px] font-medium text-wt-text-faint">
