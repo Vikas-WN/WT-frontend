@@ -15,6 +15,7 @@ import {
   notificationRowId,
   notificationTitle,
   parseNotificationItems,
+  dedupeLeaveRequestNotifications,
 } from "@/utils/notifications";
 import { toPagedRows } from "@/utils/apiRows";
 import {
@@ -37,18 +38,20 @@ import { dashboardHref, DASHBOARD_ROUTES, isDashboardNavChildActive } from "@/co
 import { learningSubNav } from "@/constants/learningNav";
 import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
 
-import { applyResolvedTheme, readStoredTheme } from "@/utils/dashboard/theme";
+import { applyResolvedTheme } from "@/utils/dashboard/theme";
 import { readSidebarCollapsed, writeSidebarCollapsed } from "@/utils/dashboard/sidebarPrefs";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { AccountMenu } from "@/components/dashboard/AccountMenu";
 import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
+import { useUserPreferences } from "@/context/UserPreferencesContext";
 import {
   DASHBOARD_HEADER_CLASS,
   DASHBOARD_HEADER_MENU_BUTTON_CLASS,
 } from "@/components/dashboard/ui/sidebarLayout";
 
 const HEADER_ICON_BUTTON_CLASS =
-  "flex size-10 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-1 text-wt-text transition-[background-color,border-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:bg-wt-surface-2 dark:border-wt-border dark:bg-wt-surface-2 dark:hover:bg-wt-surface-3";
+  "flex size-10 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-1 text-wt-text transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:bg-wt-surface-2 hover:shadow-sm hover:-translate-y-px dark:border-wt-border dark:bg-wt-surface-2 dark:hover:bg-wt-surface-3";
 
 function IconMenu({ className = "" }: { className?: string }) {
   return (
@@ -88,41 +91,6 @@ function IconCheck({ className = "" }: { className?: string }) {
   return (
     <svg className={`h-4 w-4 ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-
-function IconMoon({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      className={`h-5 w-5 ${className}`}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-    </svg>
-  );
-}
-
-function IconSun({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      className={`h-5 w-5 ${className}`}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
     </svg>
   );
 }
@@ -188,15 +156,11 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   );
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark">(readStoredTheme);
   const [actionLoading, setActionLoading] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const notificationsPanelRef = useRef<HTMLDetailsElement>(null);
-
-  const toggleTheme = useCallback(() => {
-    setTheme((current) => (current === "dark" ? "light" : "dark"));
-  }, []);
+  const { resolvedTheme } = useUserPreferences();
 
   const toggleSidebarCollapsed = useCallback(() => {
     setSidebarCollapsed((current) => {
@@ -245,23 +209,20 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    applyResolvedTheme(theme);
-    try {
-      window.localStorage.setItem("wt-theme", theme);
-    } catch {
-      /* ignore */
-    }
-  }, [theme]);
+    applyResolvedTheme(resolvedTheme);
+  }, [resolvedTheme]);
 
   const loadNotifications = useCallback(async () => {
     setNotificationsLoading(true);
     setNotificationsError(null);
     try {
       const [res, projectsRes] = await Promise.all([
-        hrmsService.getNotifications({ page: "0", size: "20" }),
+        hrmsService.getNotifications({ page: "0", size: "50" }),
         hrmsService.getAllProjects({ page: "0", size: "500" }).catch(() => null),
       ]);
-      const items = parseNotificationItems(res.data ?? res);
+      const items = dedupeLeaveRequestNotifications(
+        parseNotificationItems(res.data ?? res)
+      );
       setNotifications(items);
 
       if (projectsRes) {
@@ -562,7 +523,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
 
                       return (
                         <div
-                          key={id || `notification-${idx}`}
+                          key={id ? `notification-${id}` : `notification-${idx}`}
                           role={isNavigable ? "button" : undefined}
                           tabIndex={isNavigable ? 0 : undefined}
                           onClick={() => {
@@ -626,18 +587,15 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 </div>
               </div>
             </details>
-            <button
-              type="button"
-              className={HEADER_ICON_BUTTON_CLASS}
-              onClick={toggleTheme}
-              aria-label={theme === "dark" ? "Switch To Light Mode" : "Switch To Dark Mode"}
-            >
-              {theme === "dark" ? (
-                <IconSun className="text-wt-text-muted" />
-              ) : (
-                <IconMoon className="text-wt-text-muted" />
-              )}
-            </button>
+            <AccountMenu
+              profile={profile}
+              user={user}
+              displayName={sidebarDisplayName}
+              canAccessProfile={canAccessProfile}
+              isOffboarded={isOffboarded}
+              placement="header"
+              onLogout={requestLogout}
+            />
           </div>
         </header>
 

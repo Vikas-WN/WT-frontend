@@ -32,7 +32,7 @@ import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 import { HrReviewNoticeBanner } from "@/components/hr-review/HrReviewNoticeBanner";
 import { hrmsService } from "@/services/hrms.service";
 import { toPagedRows } from "@/utils/apiRows";
-import { isOffboardedUserStatus } from "@/utils/userStatus";
+import { isOffboardedUserStatus, shouldRequireSelfOnboarding } from "@/utils/userStatus";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
 import { formatApiDate } from "@/utils/apiDate";
 import type { DayTimelogEntry } from "@/hooks/timelog/useDayTimelog.types";
@@ -68,7 +68,7 @@ export function TimelogPageClient() {
   const hasAdminAccess = roles.includes("ROLE_ADMIN");
   const hasAmRole = roles.includes("ROLE_AM");
   const isOffboarded = isOffboardedUserStatus(user?.status);
-  const requiresSelfOnboarding = Boolean(user?.requiresSelfOnboarding);
+  const requiresSelfOnboarding = shouldRequireSelfOnboarding(user?.status);
 
   const subTab = pathname.endsWith("/dashboard/timelog/team")
     ? "team"

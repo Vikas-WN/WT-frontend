@@ -1,12 +1,13 @@
+import { SkillRating } from "@/types/onboard";
+
 export type SelfOnboardFormState = {
   personal_email: string;
   full_name: string;
   date_of_birth: string;
   yoe: string;
   experience: string;
-  primary_skills: string;
-  secondary_skill: string;
-  secondary_rating: string;
+  primary_skills: SkillRating[];
+  secondary_skills: SkillRating[];
   work_location_type: string;
   resume_share_link: string;
   local_address: string;
@@ -25,9 +26,8 @@ export function createEmptySelfOnboardForm(): SelfOnboardFormState {
     date_of_birth: "",
     yoe: "",
     experience: "",
-    primary_skills: "",
-    secondary_skill: "",
-    secondary_rating: "",
+    primary_skills: [],
+    secondary_skills: [],
     work_location_type: "",
     resume_share_link: "",
     local_address: "",

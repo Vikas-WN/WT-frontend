@@ -164,7 +164,7 @@ export const dashboardNavigation: NavItem[] = [
     kind: "link",
     id: "background-verification",
     label: "Background Verification",
-    roles: ["ROLE_HR"],
+    roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN", "ROLE_FINANCE"],
     icon: "shield",
   },
   {
@@ -192,6 +192,7 @@ export const dashboardNavigation: NavItem[] = [
     ],
   },
   { kind: "link", id: "uploads", label: "Uploads", roles: ["ROLE_HR", "ROLE_ADMIN"], icon: "upload" },
+  { kind: "link", id: "apps", label: "Apps", roles: ["ROLE_ADMIN"], icon: "code" },
   {
     kind: "link",
     id: "referral",
@@ -213,7 +214,6 @@ export const dashboardNavigation: NavItem[] = [
     label: "Pulse",
     roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
     icon: "trendingUp",
-    externalUrl: "https://pulse.webknot.in",
   },
 ];
 
@@ -235,6 +235,16 @@ export function filterVisibleNavigation(
   const result: NavItem[] = [];
   for (const item of items) {
     if (item.kind === "group") {
+      // The Employee module (onboarding, directory, HR/manager team views) is an
+      // HR/admin/manager surface — never show it to plain employees or non-staff roles.
+      if (
+        item.id === "employee" &&
+        !["ROLE_HR", "ROLE_ADMIN", "ROLE_MANAGER", "ROLE_DM"].some((role) =>
+          userRoles.includes(role)
+        )
+      ) {
+        continue;
+      }
       const children = item.children.filter((child) => childVisible(child, userRoles, options));
       if (children.length) result.push({ ...item, children });
       continue;
@@ -298,6 +308,7 @@ export function accordionSectionForPathname(pathname: string, activeSection: str
 
 const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   profile: "Profile",
+  settings: "Settings",
   overview: "Overview",
   "employee-directory": "Employee Directory",
   employee: "Onboarding",

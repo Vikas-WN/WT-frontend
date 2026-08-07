@@ -35,7 +35,7 @@ async function fetchLeaveManagerInbox(actorEmail: string): Promise<Array<Record<
   const fromDate = formatApiDate(start);
   const toDate = formatApiDate(end);
 
-  const [leaveRows, wfhRows] = await Promise.all([
+  const [leaveRows, wfhRows, optionalRows] = await Promise.all([
     listScopedUserRequests({
       fromDate,
       toDate,
@@ -46,11 +46,16 @@ async function fetchLeaveManagerInbox(actorEmail: string): Promise<Array<Record<
       toDate,
       requestType: "WFH",
     }),
+    listScopedUserRequests({
+      fromDate,
+      toDate,
+      requestType: "OPTIONAL",
+    }),
   ]);
 
   const merged = Array.from(
     new Map(
-      [...leaveRows, ...wfhRows].map((row) => {
+      [...leaveRows, ...wfhRows, ...optionalRows].map((row) => {
         const key = String(
           row.user_request_id ??
             row.userRequestId ??

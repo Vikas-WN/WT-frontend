@@ -58,7 +58,7 @@ export function LeaveRequestForm({
   const isLeaveOrOptional = normalizedType === "LEAVE" || normalizedType === "OPTIONAL";
   const isCompOff = normalizedType === "COMP_OFF";
   // Primary + secondary manager pickers are required for leave/optional routing (unless talent pool → HR).
-  const showManagerSelectors = isLeaveOrOptional && !routesToHr;
+  const showManagerSelectors = (isLeaveOrOptional || isCompOff) && !routesToHr;
 
   const selectItems = useMemo(() => {
     return leaveRequestTypeOptions.map((opt) =>

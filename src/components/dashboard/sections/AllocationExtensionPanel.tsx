@@ -15,7 +15,7 @@ import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { ApiError } from "@/api/error";
 import { hrmsService, type AllocationExtensionRequestRow, type AllocationExtensionRequestStatus } from "@/services/hrms.service";
 import { useAuth } from "@/context/AuthContext";
-import { ApiDateField, SelectField } from "@/components/dashboard/ui/forms";
+import { ApiDateField, FieldLabel, InputField, SelectField } from "@/components/dashboard/ui/forms";
 import { SkillsMultiSelectField } from "@/components/dashboard/ui/SkillsMultiSelectField";
 import { Button } from "@/components/ui/button";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
@@ -340,8 +340,8 @@ export function AllocationExtensionPanel() {
       if (createdIds.length) {
         showSuccessToast(
           createdIds.length === 1
-            ? `Extension request created (ID: ${createdIds[0]}).`
-            : `${createdIds.length} extension requests created.`
+            ? "Extension request created successfully."
+            : `${createdIds.length} extension requests created successfully.`
         );
       }
       if (failures.length) {
@@ -488,10 +488,10 @@ export function AllocationExtensionPanel() {
             />
 
             <label className="text-sm">
-              <span className="mb-1 block text-xs text-wt-text-muted">
-                Current allocation end date
-                {createForm.userEmails.length > 1 ? " (first selected)" : ""}
-              </span>
+              <FieldLabel
+                label={`Current allocation end date${createForm.userEmails.length > 1 ? " (first selected)" : ""}`}
+                required
+              />
               <div
                 className="w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm text-wt-text"
                 aria-live="polite"
@@ -529,16 +529,15 @@ export function AllocationExtensionPanel() {
               }
             />
 
-            <label className="text-sm md:col-span-2">
-              <span className="mb-1 block text-xs text-wt-text-muted">Reason</span>
-              <input
-                value={createForm.reason}
-                onChange={(e) => setCreateForm((p) => ({ ...p, reason: e.target.value }))}
-                className="w-full rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:border-[var(--wt-brand)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)]"
-                placeholder="Needed for release closure"
+            <div className="md:col-span-2">
+              <InputField
+                label="Reason"
                 required
+                value={createForm.reason}
+                onChange={(reason) => setCreateForm((p) => ({ ...p, reason }))}
+                placeholder="Needed for release closure"
               />
-            </label>
+            </div>
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">

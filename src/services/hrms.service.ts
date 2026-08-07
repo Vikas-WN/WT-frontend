@@ -295,6 +295,17 @@ export const hrmsService = {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.profile.self, { body: fd });
   },
 
+  getMyPreferences() {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.profile.preferences);
+  },
+
+  updateMyPreferences(payload: Record<string, unknown>) {
+    return apiClient.put<ApiEnvelope<unknown>>(endpoints.profile.preferences, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
   getEmployeeProfile(empId: string) {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.profile.employeeById(empId));
   },
@@ -308,7 +319,7 @@ export const hrmsService = {
 
   updateEmployeeUserType(
     empId: string,
-    payload: { user_type: string; transition_date?: string }
+    payload: { user_type: string; transition_date?: string; band_id?: number }
   ) {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.profile.employeeUserType(empId), {
       contentType: "application/json",
@@ -380,7 +391,7 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.allocation.byId(allocationId));
   },
 
-  /** GET /allocation/talent-pool — alias of unallocated list (ROLE_HR). */
+  /** GET /allocation/talent-pool — active BENCH roster (ROLE_HR). */
   getTalentPool(params: { page?: number; size?: number; search?: string } = {}) {
     const query: Record<string, string | number> = {
       page: params.page ?? 0,
@@ -402,15 +413,19 @@ export const hrmsService = {
     });
   },
 
-  /** GET /allocation/talent-pool/dashboard — initial load; read data.unallocated.items. */
+  /** GET /allocation/talent-pool/dashboard — initial load; read data.on_bench + data.unallocated. */
   getTalentPoolDashboard(
     params: {
       search?: string;
+      onBenchPage?: number;
+      onBenchSize?: number;
       unallocatedPage?: number;
       unallocatedSize?: number;
     } = {}
   ) {
     const query: Record<string, string | number> = {
+      onBenchPage: params.onBenchPage ?? 0,
+      onBenchSize: params.onBenchSize ?? 50,
       unallocatedPage: params.unallocatedPage ?? 0,
       unallocatedSize: params.unallocatedSize ?? 50,
     };

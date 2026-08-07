@@ -172,6 +172,9 @@ export function buildUpstreamAuthHeaders(
   const accessToken = request.cookies.get("accessToken")?.value?.trim();
   if (accessToken) {
     headers.set("authorization", `Bearer ${accessToken}`);
+  } else if (!headers.has("authorization")) {
+    const incomingAuth = request.headers.get("authorization")?.trim();
+    if (incomingAuth) headers.set("authorization", incomingAuth);
   }
 
   return headers;

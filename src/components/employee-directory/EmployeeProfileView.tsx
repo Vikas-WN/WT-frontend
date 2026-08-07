@@ -43,7 +43,7 @@ export function EmployeeProfileView({
   currentAllocationSummary,
 }: EmployeeProfileViewProps) {
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-5">
       <EmployeeProfileHeaderCard
         profile={profile}
         displayName={displayName}

@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { SkillRatingsListInput } from "@/components/dashboard/ui/SkillRatingsListInput";
 import {
   ProfileDetailsSkeleton,
   ProfileHeaderSkeleton,
@@ -28,7 +29,7 @@ import {
   rowEmail,
   type EmployeeProfileEditForm,
 } from "@/utils/employeeDirectory";
-import { validatePersonalEmail, validateWorkEmail } from "@/utils/personalEmail";
+import { validateWorkEmail } from "@/utils/personalEmail";
 import { useDesignationSelectOptions } from "@/hooks/useDesignationSelectOptions";
 import { useOnboardOptions } from "@/hooks/useOnboardOptions";
 import {
@@ -36,6 +37,7 @@ import {
   bandSelectOptions,
   bandsForDepartment,
   isInternOnlyBand,
+  isValidPersonName,
 } from "@/utils/dashboard/validation";
 import {
   PHONE_COUNTRY_OPTIONS,
@@ -270,24 +272,31 @@ export function EmployeeProfilePageClient() {
   }, [bandSelectOptionsList, editForm, isEditing, isConsultantEmployee]);
 
   useEffect(() => {
-    if (!isEditing || !editForm || designationLoading || isConsultantEmployee) return;
+    if (!isEditing || designationLoading || isConsultantEmployee) return;
     if (designationOptions.length === 1) {
       const onlyRole = designationOptions[0]?.value ?? "";
-      if (onlyRole && editForm.role !== onlyRole) {
-        setEditForm((prev) => (prev ? { ...prev, role: onlyRole } : prev));
-      }
+      if (!onlyRole) return;
+      setEditForm((prev) => {
+        if (!prev) return prev;
+        return prev.role === onlyRole ? prev : { ...prev, role: onlyRole };
+      });
       return;
     }
-    if (!editForm.role) return;
-    const validRoles = new Set(designationOptions.map((option) => option.value).filter(Boolean));
-    if (designationOptions.length > 0 && !validRoles.has(editForm.role)) {
-      setEditForm((prev) => (prev ? { ...prev, role: "" } : prev));
-    }
-  }, [designationOptions, designationLoading, editForm, isEditing, isConsultantEmployee]);
+    setEditForm((prev) => {
+      if (!prev || !prev.role) return prev;
+      const validRoles = new Set(designationOptions.map((option) => option.value).filter(Boolean));
+      if (designationOptions.length > 0 && !validRoles.has(prev.role)) {
+        return { ...prev, role: "" };
+      }
+      return prev;
+    });
+  }, [designationOptions, designationLoading, isEditing, isConsultantEmployee]);
 
   useEffect(() => {
     if (!isEditing || !editForm || onboardOptionsLoading || !allowedPrimarySkills.size) return;
-    const filtered = editForm.primary_skills.filter((skill) => allowedPrimarySkills.has(skill));
+    const filtered = editForm.primary_skills.filter((skill) =>
+      allowedPrimarySkills.has(skill.skill)
+    );
     if (filtered.length !== editForm.primary_skills.length) {
       setEditForm((prev) => (prev ? { ...prev, primary_skills: filtered } : prev));
     }
@@ -327,12 +336,12 @@ export function EmployeeProfilePageClient() {
       statusOnlyEdit ? "Update employee status" : "Update employee profile",
       async () => {
         if (!statusOnlyEdit) {
+          if (!isValidPersonName(editForm.name.trim())) {
+            throw new Error("Name should be 2–120 characters and contain letters (and spaces) only.");
+          }
           const workEmailError = validateWorkEmail(editForm.email);
           if (workEmailError) throw new Error(workEmailError);
-          const personalError = validatePersonalEmail(editForm.email, editForm.personal_email, {
-            required: false,
-          });
-          if (personalError) throw new Error(personalError);
+          // Personal email is view-only for HR/Admin — do not validate or require it here.
           const phoneCountry = editForm.phone_country?.trim();
           if (!phoneCountry) throw new Error("Please select a country code.");
           const phoneError = validatePhoneNumber(
@@ -360,14 +369,22 @@ export function EmployeeProfilePageClient() {
           if (!editForm.primary_skills.length) {
             throw new Error("At least one primary skill is required.");
           }
+          if (!editForm.secondary_skills.some((item) => String(item.skill ?? "").trim())) {
+            throw new Error("At least one secondary skill is required.");
+          }
+          const missingSelfRating = [...editForm.primary_skills, ...editForm.secondary_skills].filter(
+            (item) =>
+              String(item.skill ?? "").trim() &&
+              (!Number.isFinite(item.self_rating) || item.self_rating < 1 || item.self_rating > 5)
+          );
+          if (missingSelfRating.length) {
+            throw new Error("Each skill must have a self rating between 1 and 5.");
+          }
           const invalidSkills = editForm.primary_skills.filter(
-            (skill) => !allowedPrimarySkills.has(skill)
+            (item) => !allowedPrimarySkills.has(item.skill)
           );
           if (invalidSkills.length) {
             throw new Error("Selected primary skills must come from the predefined list.");
-          }
-          if (editForm.secondary_skill.trim() && !editForm.secondary_rating.trim()) {
-            throw new Error("Please select a rating for the secondary skill.");
           }
         }
         await updateMutation.mutateAsync(
@@ -501,6 +518,22 @@ export function EmployeeProfilePageClient() {
                         onChange={(v) => setEditForm({ ...editForm, email: v })}
                         disabled={saving}
                       />
+                      <div className="flex flex-col gap-2">
+                        <span className="text-sm font-medium leading-none text-wt-text">
+                          Personal Email
+                        </span>
+                        <div className="flex h-11 items-center rounded-xl border border-dashed border-wt-border bg-wt-surface-2/60 px-3.5 text-sm text-wt-text">
+                          <span className="min-w-0 truncate">
+                            {editForm.personal_email.trim() || "Not provided"}
+                          </span>
+                          <span className="ml-auto shrink-0 rounded-md bg-wt-surface-3 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-wt-text-muted">
+                            View only
+                          </span>
+                        </div>
+                        <p className="text-xs text-wt-text-muted">
+                          Employees manage their personal email — HR/Admin can view it only.
+                        </p>
+                      </div>
                       <AdaptiveSelectField
                         label="Country Code"
                         required
@@ -625,33 +658,29 @@ export function EmployeeProfilePageClient() {
 
                     <FormSubsection title="Skills">
                       <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
-                        <SkillsMultiSelectField
+                        <SkillRatingsListInput
                           label="Primary Skills"
                           required
-                          className="w-full max-w-sm"
+                          hint="At least one skill with ratings"
                           value={editForm.primary_skills}
-                          options={primarySkillOptions}
-                          loading={onboardOptionsLoading}
-                          loadingLabel="Loading Primary Skills…"
-                          placeholder="Select Primary Skills"
                           onChange={(skills) =>
                             setEditForm((prev) => (prev ? { ...prev, primary_skills: skills } : prev))
                           }
                           disabled={saving}
+                          showWebknotRating
+                          className="sm:col-span-3"
                         />
-                        <InputField
-                          label="Secondary Skill"
-                          value={editForm.secondary_skill}
-                          onChange={(v) => setEditForm({ ...editForm, secondary_skill: v })}
+                        <SkillRatingsListInput
+                          label="Secondary Skills"
+                          required
+                          hint="At least one skill with ratings"
+                          value={editForm.secondary_skills}
+                          onChange={(skills) =>
+                            setEditForm((prev) => (prev ? { ...prev, secondary_skills: skills } : prev))
+                          }
                           disabled={saving}
-                        />
-                        <AdaptiveSelectField
-                          label="Secondary Skill Rating"
-                          value={editForm.secondary_rating}
-                          placeholder="Select Rating"
-                          options={SKILL_RATINGS}
-                          onChange={(v) => setEditForm({ ...editForm, secondary_rating: v })}
-                          disabled={saving}
+                          showWebknotRating
+                          className="sm:col-span-3"
                         />
                       </div>
                     </FormSubsection>
@@ -714,20 +743,23 @@ export function EmployeeProfilePageClient() {
                         profileRecord.user_status ??
                         profileRecord.userStatus
                     ) === "INVITED"
-                      ? "Portal role is locked while this employee is Invited. It can be changed after onboarding is complete."
-                      : "Set this employee's portal access role from user_roles."
+                      ? "Locked while Invited — change after onboarding completes."
+                      : "Set this employee's portal access role."
                   }
+                  className="!p-4 sm:!p-5"
                 >
-                  <EmployeePortalRoleSelect
-                    email={email}
-                    portalRoles={pickPortalRoles(profileRecord)}
-                    employeeStatus={
-                      profileRecord.status ??
-                      profileRecord.user_status ??
-                      profileRecord.userStatus
-                    }
-                    canEdit
-                  />
+                  <div className="flex flex-wrap items-center gap-3">
+                    <EmployeePortalRoleSelect
+                      email={email}
+                      portalRoles={pickPortalRoles(profileRecord)}
+                      employeeStatus={
+                        profileRecord.status ??
+                        profileRecord.user_status ??
+                        profileRecord.userStatus
+                      }
+                      canEdit
+                    />
+                  </div>
                 </FormSection>
               ) : null}
               </>

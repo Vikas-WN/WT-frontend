@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { Lock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DropdownSelect } from "@/components/dashboard/ui/DropdownSelect";
 import { AdaptiveSelectField } from "@/components/dashboard/ui/forms";
@@ -16,6 +17,7 @@ import {
   portalRoleOptionsForActor,
 } from "@/utils/roles";
 import { isPreActiveEmployeeStatus } from "@/utils/userStatus";
+import { cn } from "@/lib/utils";
 
 type Props = {
   email: string;
@@ -32,6 +34,36 @@ function rolesForPortalSelection(nextRole: string): string[] {
 
 function isInvitedEmployeeStatus(status: unknown): boolean {
   return isPreActiveEmployeeStatus(status);
+}
+
+function LockedPortalRoleChip({
+  label,
+  invited,
+  compact,
+}: {
+  label: string;
+  invited: boolean;
+  compact?: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        // Match table-inline / form select chrome so locked rows don't look like a different control.
+        "inline-flex w-full max-w-full items-center gap-1.5 rounded-xl border border-wt-border bg-wt-surface-1 font-medium text-wt-text",
+        "shadow-none dark:border-wt-border-md dark:bg-wt-surface-2",
+        compact ? "h-9 min-h-9 px-2.5 text-xs" : "h-11 min-h-11 px-3.5 text-sm"
+      )}
+      title={
+        invited
+          ? "Portal role is locked until onboarding is complete"
+          : "Portal role cannot be changed"
+      }
+      aria-disabled="true"
+    >
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <Lock className="size-3.5 shrink-0 text-wt-text-muted" aria-hidden />
+    </span>
+  );
 }
 
 export function EmployeePortalRoleSelect({
@@ -72,9 +104,14 @@ export function EmployeePortalRoleSelect({
     }
   }, [propRole, optimisticRole]);
 
-  const patchCachedPortalRole = (targetEmail: string, nextRole: string) => {
+  const patchCachedPortalRole = (
+    targetEmail: string,
+    nextRole: string,
+    employeeStatus?: string | null
+  ) => {
     const nextRoles = rolesForPortalSelection(nextRole);
     const emailKey = targetEmail.trim().toLowerCase();
+    const nextStatus = employeeStatus?.trim() || null;
 
     queryClient.setQueriesData<OnboardListItem[]>(
       { queryKey: ["employee-directory", "onboard"] },
@@ -89,6 +126,11 @@ export function EmployeePortalRoleSelect({
             ...row,
             portal_roles: nextRoles,
             portalRoles: nextRoles,
+            ...(nextStatus
+              ? {
+                  status: nextStatus,
+                }
+              : {}),
           };
         });
       }
@@ -106,6 +148,11 @@ export function EmployeePortalRoleSelect({
           ...old,
           portal_roles: nextRoles,
           portalRoles: nextRoles,
+          ...(nextStatus
+            ? {
+                status: nextStatus,
+              }
+            : {}),
         };
       }
     );
@@ -122,9 +169,18 @@ export function EmployeePortalRoleSelect({
     }
     setSaving(true);
     try {
-      await hrmsService.setPortalRole({ target_email: targetEmail, role: nextRole });
+      const res = await hrmsService.setPortalRole({ target_email: targetEmail, role: nextRole });
+      const envelope = res as unknown as Record<string, unknown>;
+      const data =
+        envelope.data && typeof envelope.data === "object" && !Array.isArray(envelope.data)
+          ? (envelope.data as Record<string, unknown>)
+          : envelope;
+      const onboardingReopened = Boolean(data.onboarding_reopened ?? data.onboardingReopened);
+      const nextStatus = String(
+        data.employee_status ?? data.employeeStatus ?? (onboardingReopened ? "INVITED" : "")
+      ).trim();
       setOptimisticRole(nextRole);
-      patchCachedPortalRole(targetEmail, nextRole);
+      patchCachedPortalRole(targetEmail, nextRole, nextStatus || null);
       // Avoid refetching the directory list — onboard list often omits/lags portal_roles
       // and would overwrite the optimistic cache update.
       await queryClient.invalidateQueries({
@@ -132,7 +188,13 @@ export function EmployeePortalRoleSelect({
         refetchType: "none",
       });
       await queryClient.invalidateQueries({ queryKey: ["employee-profile"] });
-      showSuccessToast("Portal role updated successfully.");
+      const successMessage =
+        typeof data.message === "string" && data.message.trim()
+          ? data.message.trim()
+          : onboardingReopened
+            ? "Portal role set to Employee. Onboarding was reopened — ask them to sign in and complete the form."
+            : "Portal role updated successfully.";
+      showSuccessToast(successMessage);
     } catch (err) {
       setOptimisticRole(null);
       showErrorToast(err instanceof Error ? err.message : "Could not update portal role.");
@@ -142,11 +204,7 @@ export function EmployeePortalRoleSelect({
   };
 
   if (!editable) {
-    return (
-      <span className="block truncate text-wt-text" title={invited ? "Role is locked until onboarding is complete" : undefined}>
-        {displayLabel}
-      </span>
-    );
+    return <LockedPortalRoleChip label={displayLabel} invited={invited} compact={compact} />;
   }
 
   if (compact) {

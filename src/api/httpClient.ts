@@ -179,6 +179,10 @@ export class HttpClient {
         }
       }
 
+      // Do NOT refresh on 403 Insufficient role. That raced with AuthContext refresh,
+      // rotated the refresh token twice, and the losing request cleared session cookies.
+      // Mid-session role grants are picked up via /auth/me + explicit refresh.
+
       if (!response.ok) {
         const payload = await this.tryReadBody(response);
 
@@ -189,7 +193,10 @@ export class HttpClient {
               : typeof payload === "string"
                 ? payload
                 : "";
-          dispatchSessionLogout(sessionLogoutReasonFromApiDetail(detail) ?? "server");
+          const reason = sessionLogoutReasonFromApiDetail(detail);
+          // Prefer idle/expired messaging. Avoid "Session Ended" on generic refresh races —
+          // attemptTokenRefresh already tried /auth/me; if we still failed, logout as server.
+          dispatchSessionLogout(reason ?? "server");
         }
 
         const serverUnavailable =

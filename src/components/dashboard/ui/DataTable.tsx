@@ -38,7 +38,7 @@ export function DataTable({
   pageSize: initialPageSize,
   resetPaginationKeys,
   maxHeightClass,
-  scrollChain = false,
+  scrollChain = true,
 }: {
   title?: string;
   columns: string[];

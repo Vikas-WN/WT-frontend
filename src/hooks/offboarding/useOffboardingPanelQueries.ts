@@ -21,6 +21,7 @@ export type OffboardCandidate = {
   user_type: string;
   band: string;
   status: string;
+  primary_skills?: string[];
 };
 
 export const OFFBOARDING_LIST_PAGE_SIZE = 10;
@@ -48,12 +49,12 @@ function defaultFinancialYearStart(): string {
   return String(year);
 }
 
-function parseFinancialYear(value: string): number {
+function parseFinancialYear(value: string): number | null {
   const parsed = Number.parseInt(value, 10);
   if (Number.isFinite(parsed) && parsed >= 2000 && parsed <= 2100) {
     return parsed;
   }
-  return Number(defaultFinancialYearStart());
+  return null;
 }
 
 function exitSplitPercent(part: unknown, total: unknown): number {
@@ -162,10 +163,20 @@ function buildOffboardCandidates(
           const band =
             String(row.band ?? row.band_name ?? row.bandName ?? row.band_id ?? row.bandId ?? "")
               .trim() || "—";
-          return [
-            emp_id.toLowerCase(),
-            { emp_id, name, email, user_type, band, status },
-          ] as const;
+          const rawSkills = row.primary_skills ?? row.primarySkills;
+          const primary_skills = Array.isArray(rawSkills)
+            ? (rawSkills as unknown[]).map(String)
+            : [];
+          const candidate: OffboardCandidate = {
+            emp_id,
+            name,
+            email,
+            user_type,
+            band,
+            status,
+            primary_skills,
+          };
+          return [emp_id.toLowerCase(), candidate] as const;
         })
         .filter((entry): entry is readonly [string, OffboardCandidate] => Boolean(entry))
     ).values()
@@ -225,6 +236,14 @@ export function useOffboardingPanelQueries() {
   const attritionQ = useQuery({
     queryKey: ["offboarding", "attrition", fyYear],
     queryFn: async () => {
+      if (fyYear == null) {
+        return {
+          attritionPercent: null,
+          attritionExitCount: null,
+          voluntaryPercent: null,
+          involuntaryPercent: null,
+        };
+      }
       const [overallResult, viResult] = await Promise.allSettled([
         hrmsService.getAttritionOverallPercent({ fy_start_year: fyYear }),
         hrmsService.getAttritionVoluntaryInvoluntary({ fy_start_year: fyYear }),

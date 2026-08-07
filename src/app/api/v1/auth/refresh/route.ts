@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   backendMisconfiguredResponse,
   backendUnavailableResponse,
-  clearAuthCookies,
   getBackendBaseUrl,
   isBackendMisconfigured,
   setAuthCookies,
@@ -41,9 +40,9 @@ export async function POST(request: NextRequest) {
   });
 
   if (!upstream.ok) {
-    if (upstream.status === 401) {
-      clearAuthCookies(response);
-    }
+    // Do not clear auth cookies on refresh 401 here.
+    // Concurrent refresh races (or a single expired access probe) used to wipe a
+    // still-valid session that another in-flight refresh had just renewed.
     return response;
   }
 

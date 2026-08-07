@@ -95,18 +95,29 @@ export function useSessionTimeout(
 
     const events: Array<keyof WindowEventMap> = [
       "mousedown",
+      "mousemove",
       "keydown",
       "click",
       "scroll",
       "touchstart",
+      "pointerdown",
       "focus",
       "input",
       "change",
     ];
 
-    const onActivity = () => bumpActivity();
+    let moveThrottleUntil = 0;
+    const onActivity = (event: Event) => {
+      if (event.type === "mousemove") {
+        const now = Date.now();
+        if (now < moveThrottleUntil) return;
+        moveThrottleUntil = now + 2_000;
+      }
+      bumpActivity();
+    };
     for (const eventName of events) {
-      window.addEventListener(eventName, onActivity, { passive: true });
+      // capture:true so nested dashboard scroll containers still count as activity
+      window.addEventListener(eventName, onActivity, { passive: true, capture: true });
     }
 
     const intervalId = window.setInterval(() => {
@@ -147,7 +158,7 @@ export function useSessionTimeout(
 
     return () => {
       for (const eventName of events) {
-        window.removeEventListener(eventName, onActivity);
+        window.removeEventListener(eventName, onActivity, { capture: true } as AddEventListenerOptions);
       }
       window.clearInterval(intervalId);
     };

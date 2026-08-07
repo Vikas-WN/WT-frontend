@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
-import { resolveProfilePhotoSrc } from "@/components/dashboard/ui/profile";
+import { resolveProfilePhotoSrc, avatarInitials, avatarGradientStyle } from "@/components/dashboard/ui/profile";
 import {
   formatProfileDisplayValue,
   pickEmployeeRole,
@@ -23,7 +23,10 @@ export function EmployeeProfileSummaryCard({
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   const photoSrc = resolveProfilePhotoSrc(profile);
-  const initial = (displayName.charAt(0) || "?").toUpperCase();
+  const showFallback = !photoSrc || imageFailed;
+  const gradientSeed = String(
+    profile.emp_id ?? profile.empId ?? email ?? profile.email ?? ""
+  ).trim();
   const phone = formatProfileDisplayValue(
     pickProfileField(profile, ["phone_number", "phoneNumber"])
   );
@@ -39,7 +42,10 @@ export function EmployeeProfileSummaryCard({
       </div>
 
       <div className="flex flex-col items-center px-5 pb-6 pt-6">
-        <div className="h-28 w-28 overflow-hidden rounded-full border border-wt-border bg-wt-surface-2">
+        <div
+          className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border border-white/25 shadow-sm ring-1 ring-black/10"
+          style={showFallback ? avatarGradientStyle(displayName, gradientSeed) : undefined}
+        >
           {photoSrc && !imageFailed ? (
             <img
               src={photoSrc}
@@ -48,8 +54,8 @@ export function EmployeeProfileSummaryCard({
               onError={() => setImageFailed(true)}
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-wt-surface-2 text-2xl font-semibold text-wt-text-muted">
-              {initial}
+            <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-white drop-shadow-sm">
+              {avatarInitials(displayName)}
             </div>
           )}
         </div>

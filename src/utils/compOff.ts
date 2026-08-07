@@ -1,6 +1,6 @@
 import { ApiError } from "@/api/error";
 import type { CompOffGrant, CompOffRequestType } from "@/types/compOff";
-import { formatApiDate, parseApiDate } from "@/utils/apiDate";
+import { compareApiDates, formatApiDate, parseApiDate } from "@/utils/apiDate";
 
 export const COMP_OFF_EARN_ALIASES = [
   "COMP_OFF_EARN",
@@ -238,8 +238,8 @@ export function sortGrantsFifo(grants: CompOffGrant[]): CompOffGrant[] {
   return [...grants].sort((a, b) => {
     const expA = grantExpiryDate(a);
     const expB = grantExpiryDate(b);
-    if (expA && expB && expA !== expB) return expA.localeCompare(expB);
-    return grantWorkedDate(a).localeCompare(grantWorkedDate(b));
+    if (expA && expB && expA !== expB) return compareApiDates(expA, expB);
+    return compareApiDates(grantWorkedDate(a), grantWorkedDate(b));
   });
 }
 
@@ -249,7 +249,64 @@ export function availableUnitsFromGrants(grants: CompOffGrant[], asOfYmd: string
     .filter((g) => grantStatus(g) === "ACTIVE")
     .filter((g) => {
       const exp = grantExpiryDate(g);
-      return !exp || exp >= asOf;
+      if (!exp || !asOf) return true;
+      return compareApiDates(exp, asOf) >= 0;
+    })
+    // Cannot use a credit on the same calendar day it was earned.
+    .filter((g) => {
+      const worked = grantWorkedDate(g);
+      if (!worked || !asOf) return true;
+      return compareApiDates(worked, asOf) < 0;
     })
     .reduce((sum, g) => sum + grantRemainingUnits(g), 0);
+}
+
+/** Credit inventory for balance display — pending usage must not reduce this. */
+export function remainingCreditUnitsFromGrants(grants: CompOffGrant[], asOfYmd: string): number {
+  const asOf = asOfYmd.trim();
+  return grants
+    .filter((g) => grantStatus(g) === "ACTIVE")
+    .filter((g) => grantRemainingUnits(g) > 0)
+    .filter((g) => {
+      const exp = grantExpiryDate(g);
+      if (!exp || !asOf) return true;
+      return compareApiDates(exp, asOf) >= 0;
+    })
+    .reduce((sum, g) => sum + grantRemainingUnits(g), 0);
+}
+
+/** Inclusive usage days that collide with an ACTIVE grant's worked/earn date. */
+export function sameDayCompOffEarnDatesInUsageRange(
+  grants: CompOffGrant[],
+  fromDate: string,
+  toDate: string
+): string[] {
+  const from = fromDate.trim();
+  const to = toDate.trim();
+  if (!from || !to) return [];
+  const collisions = new Set<string>();
+  for (const grant of grants) {
+    if (grantStatus(grant) !== "ACTIVE") continue;
+    if (grantRemainingUnits(grant) <= 0) continue;
+    const worked = grantWorkedDate(grant);
+    if (!worked) continue;
+    if (compareApiDates(worked, from) >= 0 && compareApiDates(worked, to) <= 0) {
+      collisions.add(worked);
+    }
+  }
+  return Array.from(collisions).sort((a, b) => compareApiDates(a, b));
+}
+
+export function sameDayCompOffUsageErrorMessage(earnDates: string[]): string {
+  const formatted = earnDates
+    .map((d) => {
+      const parsed = parseApiDate(d);
+      if (!parsed) return d;
+      return formatApiDate(parsed);
+    })
+    .join(", ");
+  return (
+    `Comp-off cannot be used on the same date it was earned (${formatted || "selected date"}). ` +
+    "Choose a later leave date after the credit has been earned."
+  );
 }
