@@ -145,6 +145,8 @@ export const endpoints = {
 
   employees: {
     managers: `${api}/employees/managers`,
+    accountManagers: `${api}/employees/account-managers`,
+    deliveryManagers: `${api}/employees/delivery-managers`,
   },
 
   learning: {
@@ -247,6 +249,8 @@ export const endpoints = {
     submit: `${api}/exit-interview`,
     submissions: `${api}/exit-interview/submissions`,
     followUp: `${api}/exit-interview/follow-up`,
+    magicLinkContext: (token: string) =>
+      `${api}/exit-interview/magic/${encodeURIComponent(token)}`,
     submissionByLookupId: (lookupId: string) =>
       `${api}/exit-interview/submissions/${encodeURIComponent(lookupId)}`,
     minutesOfMeetingByLookupId: (lookupId: string) =>
@@ -282,6 +286,13 @@ export const endpoints = {
   referral: {
     jobs: `${api}/jobs`,
     root: `${api}/referrals`,
+  },
+
+  apps: {
+    base: `${api}/admin/api-keys`,
+    byId: (id: number) => `${api}/admin/api-keys/${id}`,
+    roles: (id: number) => `${api}/admin/api-keys/${id}/roles`,
+    rotate: (id: number) => `${api}/admin/api-keys/${id}/rotate`,
   },
 } as const;
 
