@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import { SkillRatingsListInput } from "@/components/dashboard/ui/SkillRatingsListInput";
 import {
   TableBody,
   TableCell,
