@@ -36,6 +36,7 @@ import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAc
 
 import { DatePicker } from "@/components/ui/date-picker";
 import { LeaveManagerSelector } from "@/components/dashboard/leave/LeaveManagerSelector";
+import { LeaveAdditionalRecipientsSelector } from "@/components/dashboard/leave/LeaveAdditionalRecipientsSelector";
 import { useAccountManagerEmails } from "@/hooks/useAccountManagerEmails";
 import { useManagerPortfolioEmails } from "@/hooks/comp-off/useManagerPortfolioEmails";
 import { requestRowEmail } from "@/utils/learning/onboardOptions";
@@ -187,6 +188,7 @@ export function CompOffPageClient({
   const [redirectingToProjects, setRedirectingToProjects] = useState(false);
 
   const [selectedManagerEmails, setSelectedManagerEmails] = useState<string[]>([]);
+  const [selectedAdditionalManagerEmails, setSelectedAdditionalManagerEmails] = useState<string[]>([]);
 
   const [earnForm, setEarnForm] = useState({
     worked_date: "",
@@ -843,6 +845,7 @@ export function CompOffPageClient({
       throw new Error("Worked date cannot be in the future.");
     }
     if (!selectedManagerEmails.length) throw new Error("At least one primary manager must be selected.");
+    if (!selectedAdditionalManagerEmails.length) throw new Error("At least one secondary manager must be selected.");
     if (!comments) throw new Error("Comments are required.");
     if (comments.length > 2000) throw new Error("Comments must be 2000 characters or less.");
     if (editingRequestId) {
@@ -857,9 +860,12 @@ export function CompOffPageClient({
       workDescription: comments,
       manager_emails: selectedManagerEmails,
       managerEmails: selectedManagerEmails,
+      secondary_manager_emails: selectedAdditionalManagerEmails,
+      secondaryManagerEmails: selectedAdditionalManagerEmails,
     });
     setEarnForm({ worked_date: "", project_code: "", manager_comp_off_email: "", comments: "" });
     setSelectedManagerEmails([]);
+    setSelectedAdditionalManagerEmails([]);
     setEditingRequestId("");
     await Promise.all([loadMyRequests(), loadBalanceAndGrants()]);
   }
@@ -999,25 +1005,46 @@ export function CompOffPageClient({
                   </div>
                 </div>
 
-                {/* Primary Managers + Comments */}
+                {/* Managers + Comments */}
                 <div className="bg-muted/40 rounded-xl p-6 space-y-4 shadow-sm">
-                  <LeaveManagerSelector
-                    label="Primary Managers"
-                    required
-                    selectedEmails={selectedManagerEmails}
-                    onChange={setSelectedManagerEmails}
-                    disabled={actionLoading}
-                  />
-                  {!selectedManagerEmails.length ? (
-                    <p className="text-xs text-destructive">Select at least one manager.</p>
-                  ) : null}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex flex-col gap-1.5 min-w-0">
+                      <LeaveManagerSelector
+                        label="Primary Managers"
+                        required
+                        selectedEmails={selectedManagerEmails}
+                        onChange={(emails) => {
+                          setSelectedManagerEmails(emails);
+                          const primarySet = new Set(emails.map((e) => e.trim().toLowerCase()));
+                          setSelectedAdditionalManagerEmails((prev) =>
+                            prev.filter((e) => !primarySet.has(e.trim().toLowerCase()))
+                          );
+                        }}
+                        disabled={actionLoading}
+                      />
+                      {!selectedManagerEmails.length ? (
+                        <p className="text-xs text-destructive">Select at least one manager.</p>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-col gap-1.5 min-w-0">
+                      <LeaveAdditionalRecipientsSelector
+                        selectedEmails={selectedAdditionalManagerEmails}
+                        onChange={setSelectedAdditionalManagerEmails}
+                        excludedEmails={selectedManagerEmails}
+                        disabled={actionLoading}
+                      />
+                      {!selectedAdditionalManagerEmails.length ? (
+                        <p className="text-xs text-destructive">Select at least one secondary manager.</p>
+                      ) : null}
+                    </div>
+                  </div>
                   <TextAreaField
                     label="Comments / Work Description"
                     required
                     value={earnForm.comments}
                     onChange={(v) => setEarnForm((p) => ({ ...p, comments: v }))}
                   />
-                  <Button variant="brand" type="button" className="px-3 py-2" disabled={actionLoading || !earnForm.project_code.trim() || !earnForm.worked_date.trim() || !selectedManagerEmails.length || !earnForm.comments.trim()} onClick={() =>
+                  <Button variant="brand" type="button" className="px-3 py-2" disabled={actionLoading || !earnForm.project_code.trim() || !earnForm.worked_date.trim() || !selectedManagerEmails.length || !selectedAdditionalManagerEmails.length || !earnForm.comments.trim()} onClick={() =>
                       runAction(compOffEarnActionLabel(editingRequestId ? "update" : "submit"), submitEarn)
                     }
                   >

@@ -2040,7 +2040,8 @@ export function LeavePageClient() {
                                         if (
                                           !routesLeaveWfhToHr &&
                                           (normalizeUserRequestType(requestType) === "LEAVE" ||
-                                           normalizeUserRequestType(requestType) === "OPTIONAL") &&
+                                           normalizeUserRequestType(requestType) === "OPTIONAL" ||
+                                           normalizeUserRequestType(requestType) === "COMP_OFF") &&
                                           !selectedLeaveManagerEmails.length
                                         ) {
                                           throw new Error("Select at least one primary manager.");
@@ -2048,7 +2049,8 @@ export function LeavePageClient() {
                                         if (
                                           !routesLeaveWfhToHr &&
                                           (normalizeUserRequestType(requestType) === "LEAVE" ||
-                                           normalizeUserRequestType(requestType) === "OPTIONAL") &&
+                                           normalizeUserRequestType(requestType) === "OPTIONAL" ||
+                                           normalizeUserRequestType(requestType) === "COMP_OFF") &&
                                           !selectedAdditionalRecipientEmails.length
                                         ) {
                                           throw new Error("Select at least one secondary manager.");
@@ -2098,13 +2100,32 @@ export function LeavePageClient() {
                                               "Could not resolve project manager for comp-off. Ensure you are allocated to a project with a manager."
                                             );
                                           }
-                                          await compOffService.createUsageRequest({
-                                            request_from_date: fromDate,
-                                            request_to_date: toDate,
-                                            request_type: "COMP_OFF",
-                                            comments,
-                                            manager_comp_off_email: managerCompOffEmail,
-                                          });
+                                          if (editingLeaveRequestId) {
+                                            await compOffService.updateRequest({
+                                              user_request_id: Number(editingLeaveRequestId),
+                                              request_from_date: fromDate,
+                                              request_to_date: toDate,
+                                              request_type: "COMP_OFF",
+                                              comments,
+                                              manager_comp_off_email: managerCompOffEmail,
+                                              primary_manager_emails: selectedLeaveManagerEmails,
+                                              secondary_manager_emails: selectedAdditionalRecipientEmails,
+                                              primaryManagerEmails: selectedLeaveManagerEmails,
+                                              secondaryManagerEmails: selectedAdditionalRecipientEmails,
+                                              is_half_day: false,
+                                              isHalfDay: false,
+                                            });
+                                          } else {
+                                            await compOffService.createUsageRequest({
+                                              request_from_date: fromDate,
+                                              request_to_date: toDate,
+                                              request_type: "COMP_OFF",
+                                              comments,
+                                              manager_comp_off_email: managerCompOffEmail,
+                                              primary_manager_emails: selectedLeaveManagerEmails,
+                                              secondary_manager_emails: selectedAdditionalRecipientEmails,
+                                            });
+                                          }
                                           setLeaveRequestForm(createDefaultLeaveRequestForm());
                                           setSelectedLeaveManagerEmails([]);
                                           setSelectedWfhManagerEmails([]);
@@ -2183,6 +2204,7 @@ export function LeavePageClient() {
                                   <MyLeaveRequestsView
                                     rows={filteredLeaveTabRequests}
                                     loading={myLeaveRequestsLoading}
+                                    showRequestType
                                     sortId={myLeaveSortId}
                                     onSortChange={setMyLeaveSortId}
                                     sortOptions={LEAVE_REQUEST_SORT_OPTIONS}
