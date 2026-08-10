@@ -414,9 +414,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
                 aria-label="Breadcrumb"
               >
-                <Link prefetch={false} href="/dashboard" className="hover:text-wt-text transition">
-                  Dashboard
-                </Link>
+                <span className="text-wt-text-muted">Employee</span>
                 <span aria-hidden>/</span>
                 {isEmployeeProfileRoute ? (
                   <>
@@ -425,13 +423,13 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                       href={DASHBOARD_ROUTES["employee-directory"]}
                       className="hover:text-wt-text transition"
                     >
-                      Employee Directory
+                      Directory
                     </Link>
                     <span aria-hidden>/</span>
                     <span className="text-wt-text">Employee Profile</span>
                   </>
                 ) : (
-                  <span className="text-wt-text">Employee Directory</span>
+                  <span className="text-wt-text">Directory</span>
                 )}
               </nav>
             ) : isLearningRoute ? (
