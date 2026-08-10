@@ -31,10 +31,12 @@ export const DASHBOARD_ROUTES: Record<string, string> = {
   "reports-section-6": "/dashboard/reports/compliance",
   "reports-section-7": "/dashboard/reports/bgv-dashboard",
   uploads: "/dashboard/uploads",
+  apps: "/dashboard/apps",
   pulse: "/dashboard/pulse",
   referral: "/dashboard/referral",
   masters: "/dashboard/masters",
   profile: "/dashboard/profile",
+  settings: "/dashboard/settings",
   "exit-interview": "/dashboard/exit-interview",
 };
 
@@ -71,9 +73,12 @@ const PATH_TO_NAV_ID: Array<{ prefix: string; id: string }> = [
   { prefix: "/dashboard/annual-calendar", id: "annual-calendar" },
   { prefix: "/dashboard/holiday-calendars", id: "holiday-calendars" },
   { prefix: "/dashboard/uploads", id: "uploads" },
+  { prefix: "/dashboard/apps", id: "apps" },
   { prefix: "/dashboard/masters", id: "masters" },
   { prefix: "/dashboard/referral", id: "referral" },
+  { prefix: "/dashboard/pulse", id: "pulse" },
   { prefix: "/dashboard/profile", id: "profile" },
+  { prefix: "/dashboard/settings", id: "settings" },
   { prefix: "/dashboard/exit-interview", id: "exit-interview" },
 ];
 

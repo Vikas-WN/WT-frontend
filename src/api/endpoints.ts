@@ -26,14 +26,13 @@ export const endpoints = {
 
   profile: {
     self: `${api}/profile`,
+    preferences: `${api}/profile/preferences`,
     myBalances: `${api}/profile/balances`,
     employeeById: (empId: string) => `${api}/employee-profile/${encodeURIComponent(empId)}`,
     employeeUserType: (empId: string) =>
       `${api}/employee-profile/${encodeURIComponent(empId)}/user-type`,
     employeeBalances: (empId: string) =>
       `${api}/employee-profile/${encodeURIComponent(empId)}/balances`,
-    deleteEmployee: (empId: string) =>
-      `${api}/employee-profile/${encodeURIComponent(empId)}`,
   },
 
   employeeResume: {
@@ -287,6 +286,13 @@ export const endpoints = {
   referral: {
     jobs: `${api}/jobs`,
     root: `${api}/referrals`,
+  },
+
+  apps: {
+    base: `${api}/admin/api-keys`,
+    byId: (id: number) => `${api}/admin/api-keys/${id}`,
+    roles: (id: number) => `${api}/admin/api-keys/${id}/roles`,
+    rotate: (id: number) => `${api}/admin/api-keys/${id}/rotate`,
   },
 } as const;
 

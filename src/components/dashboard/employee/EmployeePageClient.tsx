@@ -28,6 +28,7 @@ import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { ApiDateField } from "@/components/dashboard/ui/forms";
 import { ManagementListCard } from "@/components/dashboard/ui/ManagementListCard";
 import { SearchInput } from "@/components/dashboard/ui/SearchInput";
+import { WtLoader } from "@/components/dashboard/ui/WtLoader";
 import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { defaultDashboardPathForRoles } from "@/constants/routes";
@@ -485,7 +486,7 @@ export function EmployeePageClient() {
                   <div className="relative">
                     {invitedListLoading ? (
                       <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/60">
-                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-wt-brand border-t-transparent" />
+                        <WtLoader size="md" label="Loading invited employees" />
                       </div>
                     ) : null}
                     <InvitedEmployeesTable

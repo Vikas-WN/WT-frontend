@@ -295,6 +295,17 @@ export const hrmsService = {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.profile.self, { body: fd });
   },
 
+  getMyPreferences() {
+    return apiClient.get<ApiEnvelope<unknown>>(endpoints.profile.preferences);
+  },
+
+  updateMyPreferences(payload: Record<string, unknown>) {
+    return apiClient.put<ApiEnvelope<unknown>>(endpoints.profile.preferences, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
   getEmployeeProfile(empId: string) {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.profile.employeeById(empId));
   },
@@ -306,9 +317,9 @@ export const hrmsService = {
     });
   },
 
-  /** DELETE /employee-profile/{empId} — soft-delete an employee (ROLE_ADMIN only). */
+  /** DELETE /api/v1/employee-profile/{empId} — soft-delete (ROLE_ADMIN). */
   deleteEmployee(empId: string) {
-    return apiClient.delete<ApiEnvelope<unknown>>(endpoints.profile.deleteEmployee(empId));
+    return apiClient.delete<ApiEnvelope<unknown>>(endpoints.profile.employeeById(empId));
   },
 
   updateEmployeeUserType(

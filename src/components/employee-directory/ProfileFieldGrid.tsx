@@ -41,7 +41,7 @@ export function ProfileFieldGrid({
 
   if (variant === "table") {
     return (
-      <div className="overflow-x-auto rounded-lg border border-wt-border">
+      <div className="overflow-x-auto rounded-2xl border border-wt-border">
         <WtTable>
           <TableBody>
             {entries.map((entry) => (
@@ -81,7 +81,7 @@ export function ProfileFieldGrid({
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-wt-border">
+    <div className="overflow-x-auto rounded-2xl border border-wt-border">
       <WtTable>
         <TableBody>
           {entries.map((entry) => (

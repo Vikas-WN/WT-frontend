@@ -19,6 +19,7 @@ import type {
 } from "./useDayTimelog.types";
 import { buildTimelogEntryPayload, primaryManagerEmailsFromEntries } from "@/utils/timelog/entryManager";
 import { validateTimelogHours } from "@/utils/timelog/hoursValidation";
+import { isEmployeeTimelogEditable } from "@/utils/timelog/employeeEditability";
 
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
@@ -290,6 +291,9 @@ export function useDayTimelog() {
           throw new Error("Select a project manager before submitting.");
         }
         if (editingEntry) {
+          if (!isEmployeeTimelogEditable(editingEntry.status)) {
+            throw new Error("Rejected or finalized timelog entries cannot be edited.");
+          }
           await hrmsService.updateTimelogEntry(editingEntry.id, entryPayload);
         } else {
           await hrmsService.createTimelogDraft({
@@ -343,6 +347,10 @@ export function useDayTimelog() {
   const updateEntry = useCallback(
     (entryId: number, form: DayTimelogEntryForm) =>
       handleAction(async () => {
+        const existing = selectedDayEntries.find((entry) => entry.id === entryId);
+        if (existing && !isEmployeeTimelogEditable(existing.status)) {
+          throw new Error("Rejected or finalized timelog entries cannot be edited.");
+        }
         const hoursError = validateTimelogHours(form.hours);
         if (hoursError) throw new Error(hoursError);
         const hours = Number(form.hours);
@@ -361,12 +369,16 @@ export function useDayTimelog() {
         setEditingEntry(null);
         showSuccessToast("Entry updated.");
       }),
-    [selectedDate, handleAction, queryClient],
+    [selectedDate, selectedDayEntries, handleAction, queryClient],
   );
 
   const deleteEntry = useCallback(
     (entryId: number) =>
       handleAction(async () => {
+        const existing = selectedDayEntries.find((entry) => entry.id === entryId);
+        if (existing && !isEmployeeTimelogEditable(existing.status)) {
+          throw new Error("Rejected or finalized timelog entries cannot be deleted.");
+        }
         await hrmsService.deleteTimelogEntry(entryId);
         await queryClient.invalidateQueries({
           queryKey: ["day-timelog-logs"],
@@ -376,7 +388,7 @@ export function useDayTimelog() {
         });
         showSuccessToast("Entry deleted.");
       }),
-    [handleAction, queryClient],
+    [selectedDayEntries, handleAction, queryClient],
   );
 
   const submitDay = useCallback(
@@ -412,6 +424,9 @@ export function useDayTimelog() {
   }, []);
 
   const openEditForm = useCallback((entry: DayTimelogEntry) => {
+    if (!isEmployeeTimelogEditable(entry.status)) {
+      return;
+    }
     setEditingEntry(entry);
     setShowEntryForm(true);
   }, []);

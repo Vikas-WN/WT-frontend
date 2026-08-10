@@ -35,11 +35,6 @@ import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { useClientsPage } from "@/hooks/clients/useClients";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import {
-  DEFAULT_PAGE_SIZE,
-  PAGE_SIZE_OPTIONS,
-} from "@/hooks/useClientPagination";
-import { ClientDetailDialog } from "@/components/dashboard/clients/ClientDetailDialog";
 import type { ClientRecord } from "@/types/client";
 
 type StatusFilter = "all" | "active" | "inactive";
@@ -49,6 +44,8 @@ const STATUS_FILTER_OPTIONS = [
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
 ];
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 
 function PersonCell({
   name,
@@ -138,8 +135,7 @@ export function ClientsPageClient() {
   const debouncedSearch = useDebouncedValue(search, 300);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [selectedClient, setSelectedClient] = useState<ClientRecord | null>(null);
+  const [pageSize, setPageSize] = useState(25);
 
   useEffect(() => {
     setPage(0);
@@ -267,8 +263,7 @@ export function ClientsPageClient() {
                   {clients.map((client) => (
                     <TableRow
                       key={String(client.id)}
-                      className="cursor-pointer transition hover:bg-blue-50/40 dark:hover:bg-wt-surface-2"
-                      onClick={() => setSelectedClient(client)}
+                      className="transition hover:bg-blue-50/40 dark:hover:bg-wt-surface-2"
                     >
                       <TableCell className={cn(WT_TABLE_CELL_COMPACT_CLASS, "align-top")}>
                         <div className="min-w-0 max-w-[14rem]">
@@ -332,12 +327,6 @@ export function ClientsPageClient() {
           ) : null}
         </ManagementListContent>
       </ManagementListCard>
-
-      <ClientDetailDialog
-        open={Boolean(selectedClient)}
-        client={selectedClient}
-        onClose={() => setSelectedClient(null)}
-      />
     </DashboardPageShell>
   );
 }

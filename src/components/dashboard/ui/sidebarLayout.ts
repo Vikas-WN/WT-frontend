@@ -47,7 +47,7 @@ export function sidebarBrandRowClass(collapsed: boolean) {
 }
 
 export const SIDEBAR_COLLAPSE_TOGGLE_CLASS =
-  "flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-wt-border bg-wt-surface-2 text-wt-text-muted transition-colors hover:bg-wt-surface-3 hover:text-wt-text max-lg:hidden";
+  "flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-wt-border bg-wt-surface-2 text-wt-text-muted transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:-translate-y-px hover:border-[color-mix(in_srgb,var(--wt-brand)_30%,var(--wt-border))] hover:bg-wt-surface-3 hover:text-wt-text hover:shadow-sm active:translate-y-0 max-lg:hidden";
 
 export const SIDEBAR_NAV_CLASS =
   "wt-sidebar-nav min-h-0 min-w-0 flex-1 space-y-1.5 overflow-x-hidden overflow-y-auto px-0.5";
@@ -98,16 +98,16 @@ export const SIDEBAR_COMPACT_MARK_CLASS =
   "flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--wt-brand)] text-[11px] font-bold tracking-tight text-white shadow-sm";
 
 export const DASHBOARD_HEADER_CLASS =
-  "z-20 flex shrink-0 items-center justify-between gap-3 border-b border-wt-border bg-wt-surface-1/95 px-4 py-4 sm:gap-4 sm:px-7 sm:py-5 dark:bg-black/95 dark:backdrop-blur-md backdrop-blur-xl";
+  "z-20 flex shrink-0 items-center justify-between gap-3 border-b border-wt-border bg-wt-surface-1/90 px-4 py-3.5 sm:gap-4 sm:px-7 sm:py-4 dark:bg-black/90 dark:backdrop-blur-xl backdrop-blur-xl transition-[background-color,border-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)]";
 
 export const DASHBOARD_HEADER_MENU_BUTTON_CLASS =
-  "flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2 text-wt-text shadow-sm transition-[background-color,border-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:bg-wt-surface-3 lg:hidden";
+  "flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2 text-wt-text shadow-sm transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:bg-wt-surface-3 hover:-translate-y-px lg:hidden";
 
 const SIDEBAR_PARENT_BASE =
-  "wt-sidebar-nav-item relative flex h-auto min-h-10 w-full min-w-0 items-center gap-2.5 rounded-xl px-3 py-2.5 font-normal whitespace-normal transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)]";
+  "wt-sidebar-nav-item relative flex h-auto min-h-10 w-full min-w-0 items-center gap-2.5 rounded-xl px-3 py-2.5 font-normal whitespace-normal transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:-translate-y-px active:translate-y-0";
 
 const SIDEBAR_CHILD_BASE =
-  "wt-sidebar-nav-item relative flex w-full min-w-0 items-center gap-2 rounded-lg px-2.5 py-2 font-normal whitespace-normal transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)]";
+  "wt-sidebar-nav-item relative flex w-full min-w-0 items-center gap-2 rounded-lg px-2.5 py-2 font-normal whitespace-normal transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:-translate-y-px active:translate-y-0";
 
 const SIDEBAR_ACTIVE_CLASS =
   "bg-[var(--wt-brand-soft)] font-medium text-wt-text ring-1 ring-[color-mix(in_srgb,var(--wt-brand)_22%,transparent)] before:absolute before:left-1.5 before:top-1/2 before:h-4 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-[var(--wt-brand)] dark:bg-wt-surface-2 dark:ring-wt-border-md";
@@ -116,7 +116,7 @@ const SIDEBAR_ACTIVE_COLLAPSED_CLASS =
   "lg:bg-[var(--wt-brand-soft)] lg:text-wt-text lg:shadow-sm lg:ring-1 lg:ring-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)] lg:before:hidden";
 
 const SIDEBAR_IDLE_CLASS =
-  "text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text";
+  "text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text hover:shadow-sm";
 
 function sidebarCollapsedItemClass(collapsed: boolean) {
   return collapsed
@@ -150,7 +150,7 @@ export function sidebarChildNavClass(active: boolean, options?: { extra?: string
 
 export function sidebarChildBlockClass(active: boolean, extra?: string) {
   return cn(
-    "wt-sidebar-nav-item block w-full min-w-0 rounded-lg px-2.5 py-2 text-left transition-all duration-150 ease-out",
+    "wt-sidebar-nav-item block w-full min-w-0 rounded-lg px-2.5 py-2 text-left transition-all duration-150 ease-out hover:-translate-y-px hover:shadow-sm active:translate-y-0",
     SIDEBAR_CHILD_TEXT,
     active ? cn(SIDEBAR_ACTIVE_CLASS, "font-medium") : SIDEBAR_IDLE_CLASS,
     extra

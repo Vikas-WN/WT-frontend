@@ -1,3 +1,5 @@
+import { isEmployeeTimelogEditable } from "@/utils/timelog/employeeEditability";
+
 export type TimelogGridRow = {
   clientKey: string;
   project_code: string;
@@ -68,7 +70,7 @@ export function gridRowsFromWeekSnapshot(snapshot: TimelogWeekSnapshot | null, d
 }
 
 export function isTimelogCellEditable(status?: string): boolean {
-  return !status || status === "DRAFT" || status === "REJECTED";
+  return isEmployeeTimelogEditable(status);
 }
 
 export function isRowMetadataEditable(row: TimelogGridRow, dayKeys: string[]): boolean {

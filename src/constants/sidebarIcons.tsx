@@ -203,6 +203,13 @@ export const sidebarIcons = {
     svg(className, <path d="m6 9 6 6 6-6" />),
   chevronRight: ({ className = "" }: IconProps) =>
     svg(className, <path d="m9 18 6-6-6-6" />),
+  code: ({ className = "" }: IconProps) =>
+    svg(className, (
+      <>
+        <polyline points="16 18 22 12 16 6" />
+        <polyline points="8 6 2 12 8 18" />
+      </>
+    )),
 } as const;
 
 export type SidebarIconName = keyof typeof sidebarIcons;

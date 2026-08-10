@@ -22,6 +22,15 @@ function sessionLogoutReasonFromApiError(error: ApiError): SessionLogoutReason {
   return sessionLogoutReasonFromApiDetail(detail) ?? "server";
 }
 
+function apiErrorDetail(error: ApiError): string {
+  const payload = error.payload;
+  if (typeof payload === "object" && payload && "detail" in payload) {
+    return String((payload as { detail?: unknown }).detail ?? "");
+  }
+  if (typeof payload === "string") return payload;
+  return error.message ?? "";
+}
+
 export interface AuthUser {
   message: string;
   email: string;
@@ -47,88 +56,6 @@ export interface ApiResponse<T> {
  */
 export function getGoogleSignInUrl(): string {
   return endpoints.auth.googleSignIn;
-}
-
-/**
- * Attempts to refresh the session using HttpOnly cookies.
- * Returns the user data on success, or null on 401.
- */
-export async function refreshSession(): Promise<AuthUser | null> {
-  try {
-    const body = await apiClient.post<ApiResponse<AuthUser>>(endpoints.auth.refresh, {
-      skipAuth: true,
-    });
-    return body.data;
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
-      dispatchSessionLogout(sessionLogoutReasonFromApiError(error));
-      return null;
-    }
-    throw error;
-  }
-}
-
-/**
- * Single-flight token refresh used by the HTTP client's reactive 401 handler.
- *
- * Returns true when the session was refreshed, false otherwise. Unlike
- * refreshSession(), it does NOT dispatch a logout — the caller (httpClient)
- * decides what to do when refresh fails (surface the original 401 / logout).
- */
-export async function attemptTokenRefresh(): Promise<boolean> {
-  try {
-    const body = await apiClient.post<ApiResponse<AuthUser>>(endpoints.auth.refresh, {
-      skipAuth: true,
-    });
-    return Boolean(body?.data);
-  } catch {
-    return false;
-  }
-}
-
-export function initAuthClient(): void {
-  apiClient.setTokenRefresher(attemptTokenRefresh);
-}
-
-/**
- * Records user activity server-side to reset the inactivity timer.
- */
-export async function recordSessionActivity(): Promise<void> {
-  try {
-    await apiClient.post<ApiResponse<null>>(endpoints.auth.activity, {
-      skipAuth: true,
-    });
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
-      dispatchSessionLogout(sessionLogoutReasonFromApiError(error));
-      return;
-    }
-    throw error;
-  }
-}
-
-/**
- * Logs out the current session and clears auth cookies server-side.
- * Best-effort: network or server errors are ignored so the client can still log out locally.
- */
-export async function logout(): Promise<void> {
-  try {
-    await apiClient.post<ApiResponse<null>>(endpoints.auth.logout, {
-      skipAuth: true,
-    });
-  } catch {
-    // Backend unreachable or logout endpoint failed — local session is cleared by logout.
-  }
-}
-
-/**
- * Dev/staging only — bypasses Google OAuth.
- */
-export async function devBypassLogin(email: string): Promise<AuthUser | null> {
-  const body = await apiClient.get<ApiResponse<AuthUser>>(endpoints.auth.oauthBypass(email), {
-    skipAuth: true,
-  });
-  return body.data;
 }
 
 /**
@@ -159,6 +86,138 @@ export async function fetchMe(): Promise<AuthUser | null> {
     }
     throw error;
   }
+}
+
+/**
+ * Single-flight rotating refresh. Concurrent callers (HTTP 401 retry + AuthContext.refresh)
+ * share one POST /auth/refresh so a rotated token is never spent twice.
+ */
+let refreshInFlight: Promise<AuthUser | null> | null = null;
+let lastRefreshFailReason: SessionLogoutReason | null = null;
+
+async function rotateRefreshSession(): Promise<AuthUser | null> {
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = (async () => {
+    lastRefreshFailReason = null;
+    try {
+      const body = await apiClient.post<ApiResponse<AuthUser>>(endpoints.auth.refresh, {
+        skipAuth: true,
+      });
+      return body.data ?? null;
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 401) {
+        throw error;
+      }
+
+      const detail = apiErrorDetail(error);
+      const hardReason = sessionLogoutReasonFromApiDetail(detail);
+      // Hard idle/max-age ends — do not try to recover.
+      if (hardReason === "idle" || hardReason === "expired") {
+        lastRefreshFailReason = hardReason;
+        return null;
+      }
+
+      // Refresh-token rotation race (or stale loser): another request may already
+      // have set valid cookies. Prefer /auth/me over forcing a global logout.
+      try {
+        const me = await fetchMe();
+        if (me) return me;
+      } catch {
+        /* fall through */
+      }
+      lastRefreshFailReason = "server";
+      return null;
+    }
+  })().finally(() => {
+    refreshInFlight = null;
+  });
+
+  return refreshInFlight;
+}
+
+/**
+ * Attempts to refresh the session using HttpOnly cookies.
+ * Returns the user data on success, or null on 401.
+ */
+export async function refreshSession(): Promise<AuthUser | null> {
+  try {
+    const user = await rotateRefreshSession();
+    if (user) return user;
+    dispatchSessionLogout(lastRefreshFailReason ?? "server");
+    return null;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      dispatchSessionLogout(sessionLogoutReasonFromApiError(error));
+      return null;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Single-flight token refresh used by the HTTP client's reactive 401 handler.
+ *
+ * Returns true when the session was refreshed, false otherwise. Unlike
+ * refreshSession(), it does NOT dispatch a logout — the caller (httpClient)
+ * decides what to do when refresh fails (surface the original 401 / logout).
+ */
+export async function attemptTokenRefresh(): Promise<boolean> {
+  try {
+    return Boolean(await rotateRefreshSession());
+  } catch {
+    return false;
+  }
+}
+
+export function initAuthClient(): void {
+  apiClient.setTokenRefresher(attemptTokenRefresh);
+}
+
+/**
+ * Records user activity server-side to reset the inactivity timer.
+ */
+export async function recordSessionActivity(): Promise<void> {
+  try {
+    await apiClient.post<ApiResponse<null>>(endpoints.auth.activity, {
+      skipAuth: true,
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      const reason = sessionLogoutReasonFromApiError(error);
+      // Only idle/expired from the activity endpoint should force logout.
+      // Generic 401 / invalid refresh after a rotation race must not wipe a live session.
+      if (reason === "idle" || reason === "expired") {
+        dispatchSessionLogout(reason);
+      }
+      return;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Logs out the current session and clears auth cookies server-side.
+ * Best-effort: network or server errors are ignored so the client can still log out locally.
+ */
+export async function logout(): Promise<void> {
+  try {
+    await apiClient.post<ApiResponse<null>>(endpoints.auth.logout, {
+      skipAuth: true,
+    });
+  } catch {
+    // Backend unreachable or logout endpoint failed — local session is cleared by logout.
+  }
+}
+
+/**
+ * Dev/staging only — bypasses Google OAuth.
+ */
+export async function devBypassLogin(email: string): Promise<AuthUser | null> {
+  const body = await apiClient.get<ApiResponse<AuthUser>>(endpoints.auth.oauthBypass(email), {
+    skipAuth: true,
+  });
+  return body.data;
 }
 
 /**

@@ -1,11 +1,15 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { SkillRatingsListInput } from "@/components/dashboard/ui/SkillRatingsListInput";
+import {
+  DateOfBirthConfirmField,
+  isDobReadyToSave,
+} from "@/components/dashboard/ui/DateOfBirthConfirmField";
 import { useEffect, useMemo, useState } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { MAX_ONBOARD_FILE_BYTES, MAX_ONBOARD_TOTAL_BYTES } from "@/constants/dashboard";
 import {
-  DatePickerField,
   InputField,
   SelectField,
   FileField,
@@ -17,9 +21,10 @@ import { isValidIndiaMobile, isValidPersonName } from "@/utils/dashboard/validat
 import { validatePersonalEmail } from "@/utils/personalEmail";
 import { validateResumeShareLink } from "@/utils/employeeResume";
 import { createEmptySelfOnboardForm } from "@/utils/selfOnboardFormState";
+import { SkillRating } from "@/types/onboard";
 import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
 import { useOnboardOptions } from "@/hooks/useOnboardOptions";
-import { formatApiDate, fromApiDate, toApiDateParam } from "@/utils/apiDate";
+import { toApiDateParam } from "@/utils/apiDate";
 
 type OnboardFiles = {
   profile_photo: File | null;
@@ -55,6 +60,7 @@ export function SelfOnboardingPanel({
   const [formKey, setFormKey] = useState(0);
   const [form, setForm] = useState(createEmptySelfOnboardForm);
   const [files, setFiles] = useState<OnboardFiles>(EMPTY_FILES);
+  const [dobConfirmed, setDobConfirmed] = useState(false);
   const onboardOptionsQ = useOnboardOptions();
   const options = onboardOptionsQ.data ?? FALLBACK_ONBOARD_OPTIONS;
 
@@ -78,6 +84,7 @@ export function SelfOnboardingPanel({
   const resetForm = () => {
     setForm(createEmptySelfOnboardForm());
     setFiles(EMPTY_FILES);
+    setDobConfirmed(false);
     setFormKey((key) => key + 1);
   };
 
@@ -100,19 +107,8 @@ export function SelfOnboardingPanel({
       if (!dateOfBirth) {
         throw new Error("Date of birth is required. Use DD/MM/YYYY.");
       }
-      const dob = fromApiDate(dateOfBirth);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (dob > today) {
-        throw new Error("Date of birth cannot be in the future.");
-      }
-      let age = today.getFullYear() - dob.getFullYear();
-      const monthDiff = today.getMonth() - dob.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-        age -= 1;
-      }
-      if (age < 18) {
-        throw new Error("Employee must be at least 18 years old.");
+      if (!isDobReadyToSave(form.date_of_birth, dobConfirmed, false)) {
+        throw new Error("Confirm your calculated age to lock your date of birth before submitting.");
       }
 
       const yoeRaw = form.yoe.trim();
@@ -135,30 +131,32 @@ export function SelfOnboardingPanel({
       const primarySkillLookup = new Map(
         options.primary_skills.map((item) => [item.value.toLowerCase(), item.value]),
       );
-      const primarySkills: string[] = [];
-      for (const rawSkill of form.primary_skills
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean)) {
-        const canonical = primarySkillLookup.get(rawSkill.toLowerCase());
+      const primarySkills: SkillRating[] = [];
+      for (const rawSkill of form.primary_skills) {
+        const skillName = String(rawSkill.skill ?? "").trim();
+        const canonical = primarySkillLookup.get(skillName.toLowerCase());
         if (!canonical) {
           throw new Error(
-            `Invalid primary skill: ${rawSkill}. Choose values from the onboard Primary Skills list (e.g. Python, React).`,
+            `Invalid primary skill: ${skillName}. Choose values from the onboard Primary Skills list (e.g. Python, React).`,
           );
         }
-        if (!primarySkills.includes(canonical)) {
-          primarySkills.push(canonical);
+        if (!primarySkills.some((item) => item.skill === canonical)) {
+          primarySkills.push({ ...rawSkill, skill: canonical });
         }
       }
-      if (!primarySkills.length) {
+      if (!form.primary_skills.length) {
         throw new Error("At least one primary skill is required.");
       }
-
-      if (form.secondary_skill.trim()) {
-        const rating = Number(form.secondary_rating);
-        if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-          throw new Error("Secondary skill rating must be a whole number from 1 to 5.");
-        }
+      if (!form.secondary_skills.some((item) => String(item.skill ?? "").trim())) {
+        throw new Error("At least one secondary skill is required.");
+      }
+      const missingSelfRating = [...form.primary_skills, ...form.secondary_skills].filter(
+        (item) =>
+          String(item.skill ?? "").trim() &&
+          (!Number.isFinite(item.self_rating) || item.self_rating < 1 || item.self_rating > 5)
+      );
+      if (missingSelfRating.length) {
+        throw new Error("Each skill must have a self rating between 1 and 5.");
       }
 
       const resumeShareLink = form.resume_share_link.trim();
@@ -206,20 +204,15 @@ export function SelfOnboardingPanel({
         personal_email: personalEmail,
         name: legalName,
         date_of_birth: dateOfBirth,
+        date_of_birth_confirmed: true,
         resume_share_link: resumeShareLink,
       };
 
       if (yoeValue !== null)       userData.yoe = yoeValue;
       if (experience) userData.experience = experience;
+      
       userData.primary_skills = primarySkills;
-      if (form.secondary_skill.trim()) {
-        userData.secondary_skills = [
-          {
-            skill: form.secondary_skill.trim(),
-            rating: Number(form.secondary_rating),
-          },
-        ];
-      }
+      userData.secondary_skills = form.secondary_skills.filter((item) => String(item.skill ?? "").trim());
       if (form.work_location_type) userData.work_location_type = form.work_location_type;
       if (form.local_address.trim()) userData.local_address = form.local_address.trim();
       if (form.permanent_address.trim()) userData.permanent_address = form.permanent_address.trim();
@@ -250,12 +243,12 @@ export function SelfOnboardingPanel({
   };
 
   return (
-    <div key={formKey} className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-      <h3 className="font-semibold mb-1">Complete Your Onboarding</h3>
-      <p className="text-sm text-wt-text-muted mb-4">
+    <div key={formKey} className="rounded-3xl border border-wt-border bg-wt-surface-1 p-5 shadow-[var(--wt-shadow-md)] wt-soft-in dark:shadow-none sm:p-7">
+      <h3 className="text-lg font-semibold tracking-tight text-wt-text">Complete Your Onboarding</h3>
+      <p className="mb-5 mt-1 text-sm text-wt-text-muted">
         Submit your onboarding survey to activate full portal access. Fields marked with * are required.
       </p>
-      <div className="grid sm:grid-cols-2 gap-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <FieldLabel label="Work Email" />
           <Input
@@ -279,12 +272,11 @@ export function SelfOnboardingPanel({
           value={form.full_name}
           onChange={(v) => setForm((p) => ({ ...p, full_name: v }))}
         />
-        <DatePickerField
-          label="Date of Birth"
-          required
-          max={formatApiDate(new Date())}
+        <DateOfBirthConfirmField
           value={form.date_of_birth}
+          confirmed={dobConfirmed}
           onChange={(v) => setForm((p) => ({ ...p, date_of_birth: v }))}
+          onConfirmChange={setDobConfirmed}
         />
         <InputField
           label="Years of Experience (excluding internship)"
@@ -301,25 +293,23 @@ export function SelfOnboardingPanel({
             onChange={(v) => setForm((p) => ({ ...p, experience: v }))}
           />
         ) : null}
-        <InputField
-          label="Primary Skills (comma separated)"
+        <SkillRatingsListInput
+          label="Primary Skills"
           required
+          hint="At least one skill with a self rating"
           value={form.primary_skills}
           onChange={(v) => setForm((p) => ({ ...p, primary_skills: v }))}
+          className="sm:col-span-2"
         />
-        <InputField
-          label="Secondary Skill"
-          value={form.secondary_skill}
-          onChange={(v) => setForm((p) => ({ ...p, secondary_skill: v }))}
+        <SkillRatingsListInput
+          label="Secondary Skills"
+          required
+          hint="At least one skill with a self rating"
+          value={form.secondary_skills}
+          onChange={(v) => setForm((p) => ({ ...p, secondary_skills: v }))}
+          className="sm:col-span-2"
         />
-        <SelectField
-          label="Secondary Skill Rating"
-          required={Boolean(form.secondary_skill.trim())}
-          placeholder="Select"
-          value={form.secondary_rating}
-          options={["1", "2", "3", "4", "5"]}
-          onChange={(v) => setForm((p) => ({ ...p, secondary_rating: v }))}
-        />
+
         <SelectField
           label="Work Location"
           placeholder="Select"

@@ -57,7 +57,7 @@ export function ManagementListCard({
   const compact = density === "compact";
 
   return (
-    <Card className={cn("p-0", CONTENT_CARD_CLASS, className)}>
+    <Card className={cn("p-0 wt-soft-in", CONTENT_CARD_CLASS, className)}>
       <CardHeader
         className={cn(
           "flex flex-col space-y-0 sm:flex-row sm:items-start sm:justify-between",

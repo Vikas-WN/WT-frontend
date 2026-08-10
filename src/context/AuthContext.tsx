@@ -110,26 +110,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * everyone else (including other multi-role combinations like Manager+DM) keeps
    * today's additive/union permissions and never sees the switcher.
    */
-  const syncRolesAndPersona = useCallback(async (freshUser: AuthUser): Promise<AuthUser> => {
+  const syncRolesAndPersona = useCallback(async (freshUser: AuthUser) => {
     const fetched = await fetchRoles();
     const roles = normalizeRoles(fetched.length ? fetched : freshUser.roles);
-    // /auth/me can be backed by an access token issued before an administrator
-    // changed this user's portal role. /roles is the authoritative role lookup,
-    // so use it for both the switcher and the permissions exposed to the app.
-    // Otherwise a reload can briefly (or, until token expiry, persistently) revive
-    // the old HR persona.
-    const resolvedUser = { ...freshUser, roles };
     setAllRoles(roles);
     const eligibleForSwitcher = roles.includes("ROLE_ADMIN") && roles.length > 1;
     if (!eligibleForSwitcher) {
       setActivePersonaState(null);
-      return resolvedUser;
+      return;
     }
     const stored = getStoredPersona(freshUser.email);
     const persona = stored && roles.includes(stored) ? stored : pickPrimaryPortalRole(roles);
     setActivePersonaState(persona);
     setStoredPersona(freshUser.email, persona);
-    return resolvedUser;
   }, []);
 
   const refresh = useCallback(async (): Promise<AuthUser | null> => {
@@ -138,10 +131,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const freshUser = await refreshSession();
       if (freshUser) {
         const normalized = applyAuthenticatedUser(freshUser);
-        const resolvedUser = await syncRolesAndPersona(normalized);
-        setRawUser(resolvedUser);
+        setRawUser(normalized);
         setStatus("authenticated");
-        return resolvedUser;
+        void syncRolesAndPersona(normalized);
+        return normalized;
       }
       clearSessionTiming();
       setRawUser(null);
@@ -178,10 +171,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const me = await fetchMe();
       if (me) {
         const normalized = applyAuthenticatedUser(me);
-        const resolvedUser = await syncRolesAndPersona(normalized);
-        setRawUser(resolvedUser);
+        setRawUser(normalized);
         setStatus("authenticated");
-        return resolvedUser;
+        void syncRolesAndPersona(normalized);
+        return normalized;
       }
     } catch {
       /* fall through below */

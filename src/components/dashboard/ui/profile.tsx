@@ -42,14 +42,31 @@ export function resolveProfilePhotoSrc(profile: Record<string, unknown> | null |
   return raw.startsWith("/") ? `${base}${raw}` : `${base}/${raw}`;
 }
 
-/** Indigo/violet gradient pairs using theme tokens — cohesive with the app brand. */
+/**
+ * Distinct hex gradient pairs so fallback avatars don't all look like the same
+ * indigo/violet wash. Picked for readable white initials on both light/dark UIs.
+ */
 const AVATAR_GRADIENT_STOPS = [
-  "var(--wt-indigo-500),var(--wt-violet-500)",
-  "var(--wt-indigo-600),var(--wt-violet-400)",
-  "var(--wt-brand),var(--wt-indigo-500)",
-  "var(--wt-violet-500),var(--wt-indigo-400)",
-  "var(--wt-indigo-700),var(--wt-indigo-400)",
-  "var(--wt-indigo-400),var(--wt-violet-500)",
+  ["#355095", "#0ea5e9"],
+  ["#0d9488", "#2dd4bf"],
+  ["#059669", "#34d399"],
+  ["#d97706", "#f59e0b"],
+  ["#ea580c", "#fb923c"],
+  ["#dc2626", "#fb7185"],
+  ["#db2777", "#f472b6"],
+  ["#7c3aed", "#a78bfa"],
+  ["#4f46e5", "#818cf8"],
+  ["#0284c7", "#38bdf8"],
+  ["#0f766e", "#14b8a6"],
+  ["#b45309", "#fbbf24"],
+  ["#be123c", "#f43f5e"],
+  ["#6d28d9", "#c084fc"],
+  ["#1d4ed8", "#60a5fa"],
+  ["#047857", "#6ee7b7"],
+  ["#9333ea", "#e879f9"],
+  ["#0891b2", "#67e8f9"],
+  ["#c2410c", "#fdba74"],
+  ["#4338ca", "#a5b4fc"],
 ] as const;
 
 /** First letter of first name + first letter of last name (e.g. "Sanketh" → "S"). */
@@ -61,13 +78,37 @@ export function avatarInitials(displayName: string): string {
   return first + last || "?";
 }
 
-/** Deterministic gradient class for a name, so each person keeps a stable, varied color. */
-export function avatarGradientClass(displayName: string): string {
-  const seed = String(displayName ?? "").trim().toLowerCase();
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  const stops = AVATAR_GRADIENT_STOPS[hash % AVATAR_GRADIENT_STOPS.length];
-  return `bg-[linear-gradient(135deg,${stops})]`;
+function hashAvatarSeed(seed: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+/**
+ * Deterministic multi-color gradient for a person (inline style — Tailwind
+ * arbitrary gradients with CSS vars often fail to emit). Pass empId/email as
+ * `seedExtra` when available so similarly named people still diverge.
+ */
+export function avatarGradientStyle(
+  displayName: string,
+  seedExtra = ""
+): { backgroundImage: string; backgroundColor: string } {
+  const seed = `${String(displayName ?? "").trim().toLowerCase()}|${String(seedExtra ?? "").trim().toLowerCase()}`;
+  const hash = hashAvatarSeed(seed || "employee");
+  const [from, to] = AVATAR_GRADIENT_STOPS[hash % AVATAR_GRADIENT_STOPS.length];
+  const angle = 120 + (hash % 60);
+  return {
+    backgroundColor: from,
+    backgroundImage: `linear-gradient(${angle}deg, ${from}, ${to})`,
+  };
+}
+
+/** @deprecated Prefer avatarGradientStyle — class-based gradients with CSS vars are unreliable. */
+export function avatarGradientClass(_displayName: string): string {
+  return "bg-[var(--wt-brand)]";
 }
 
 export function readProfileField(
@@ -82,25 +123,30 @@ export function readProfileField(
   return String(value).trim();
 }
 
+function formatSkillRatingEntry(item: unknown): string {
+  if (item && typeof item === "object") {
+    const rec = item as Record<string, unknown>;
+    const skill = String(rec.skill ?? rec.name ?? "").trim();
+    if (!skill) return "";
+    const selfRating = rec.self_rating ?? rec.selfRating ?? rec.rating ?? rec.level;
+    const webknotRating = rec.webknot_rating ?? rec.webknotRating;
+    if (webknotRating !== undefined && webknotRating !== null && String(webknotRating).trim() !== "") {
+      return `${skill} (Self: ${selfRating}/5, WK: ${webknotRating}/5)`;
+    }
+    if (selfRating !== undefined && String(selfRating).trim() !== "") {
+      return `${skill} (Self: ${selfRating}/5)`;
+    }
+    return skill;
+  }
+  return String(item ?? "").trim();
+}
+
 export function formatSecondarySkillsForProfile(profile: Record<string, unknown> | null | undefined): string {
   if (!profile) return "—";
   const raw =
     profile.secondary_skills ?? profile.secondarySkills ?? profile.secondary_skill;
   if (Array.isArray(raw)) {
-    const parts = raw
-      .map((item) => {
-        if (item && typeof item === "object") {
-          const rec = item as Record<string, unknown>;
-          const skill = String(rec.skill ?? rec.name ?? "").trim();
-          const rating = rec.rating ?? rec.level;
-          if (!skill) return "";
-          return rating !== undefined && String(rating).trim() !== ""
-            ? `${skill} (${String(rating)}/5)`
-            : skill;
-        }
-        return String(item ?? "").trim();
-      })
-      .filter(Boolean);
+    const parts = raw.map(formatSkillRatingEntry).filter(Boolean);
     return parts.length ? parts.join(", ") : "—";
   }
   const single = String(raw ?? "").trim();
@@ -136,6 +182,14 @@ export function UserAvatar({
   const src = resolveProfilePhotoSrc(profile);
   const displayName = String(profile?.name ?? fallbackName ?? "User").trim();
   const showFallback = !src || imageFailed;
+  const gradientSeed = String(
+    profile?.emp_id ??
+      profile?.empId ??
+      profile?.email ??
+      profile?.work_email ??
+      profile?.workEmail ??
+      ""
+  ).trim();
   const sizeClass =
     size === "xs" ? "h-6 w-6" : size === "sm" ? "h-8 w-8" : "h-10 w-10";
   const textClass =
@@ -143,7 +197,8 @@ export function UserAvatar({
 
   return (
     <div
-      className={`${sizeClass} flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-wt-border ${showFallback ? avatarGradientClass(displayName) : "bg-wt-surface-2"} ${className}`.trim()}
+      className={`${sizeClass} flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/25 shadow-sm ring-1 ring-black/10 ${showFallback ? "" : "bg-wt-surface-2"} ${className}`.trim()}
+      style={showFallback ? avatarGradientStyle(displayName, gradientSeed) : undefined}
       aria-hidden
     >
       {src && !imageFailed ? (
@@ -154,7 +209,7 @@ export function UserAvatar({
           onError={() => setImageFailed(true)}
         />
       ) : (
-        <span className={`${textClass} font-semibold text-white`}>
+        <span className={`${textClass} font-semibold text-white drop-shadow-sm`}>
           {avatarInitials(displayName)}
         </span>
       )}
@@ -173,11 +228,20 @@ export function ProfilePhotoAvatar({
   const src = resolveProfilePhotoSrc(profile);
   const displayName = String(profile?.name ?? fallbackName ?? "User").trim();
   const showFallback = !src || imageFailed;
+  const gradientSeed = String(
+    profile?.emp_id ??
+      profile?.empId ??
+      profile?.email ??
+      profile?.work_email ??
+      profile?.workEmail ??
+      ""
+  ).trim();
 
   return (
     <div className="flex flex-col items-center gap-2">
       <div
-        className={`h-28 w-28 shrink-0 overflow-hidden rounded-full border border-wt-border ${showFallback ? avatarGradientClass(displayName) : "bg-wt-surface-2"} flex items-center justify-center`}
+        className={`h-28 w-28 shrink-0 overflow-hidden rounded-full border border-white/25 shadow-md ring-1 ring-black/10 ${showFallback ? "" : "bg-wt-surface-2"} flex items-center justify-center`}
+        style={showFallback ? avatarGradientStyle(displayName, gradientSeed) : undefined}
         aria-hidden={!src || imageFailed}
       >
         {src && !imageFailed ? (
@@ -188,7 +252,7 @@ export function ProfilePhotoAvatar({
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <span className="text-3xl font-semibold text-white">{avatarInitials(displayName)}</span>
+          <span className="text-3xl font-semibold text-white drop-shadow-sm">{avatarInitials(displayName)}</span>
         )}
       </div>
 
