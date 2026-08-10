@@ -80,7 +80,8 @@ export function ReferralForm({
 
   const hasNumericName = /\d/.test(candidateName);
   const isInvalidEmail = candidateEmail.trim().length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidateEmail.trim());
-  const step1Valid = Boolean(selectedJob && candidateName.trim() && !hasNumericName && candidateEmail.trim() && !isInvalidEmail && candidatePhone.trim());
+  const isInvalidPhone = candidatePhone.trim().length > 0 && !/^\+?[0-9\s\-()]{7,20}$/.test(candidatePhone.trim());
+  const step1Valid = Boolean(selectedJob && candidateName.trim() && !hasNumericName && candidateEmail.trim() && !isInvalidEmail && candidatePhone.trim() && !isInvalidPhone);
 
   const handleSelect = useCallback(
     (title: string | null, _eventDetails?: object) => {
@@ -241,6 +242,9 @@ export function ReferralForm({
                 onChange={(e) => onCandidatePhoneChange(e.target.value)}
               />
             </div>
+            {isInvalidPhone && (
+              <p className="text-xs text-destructive mt-1">Enter a valid phone number</p>
+            )}
           </div>
 
           <Button
