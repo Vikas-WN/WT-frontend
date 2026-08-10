@@ -1465,12 +1465,35 @@ select.input-field {
 }
 
 .wt-sidebar {
-  background: var(--wt-surface-1);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, color-mix(in oklch, var(--wt-brand) 14%, transparent), transparent 40%),
+    radial-gradient(circle at top right, color-mix(in oklch, var(--wt-brand) 8%, transparent), transparent 34%),
+    var(--wt-surface-1);
+  animation: wt-sidebar-shell-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 :is(.dark, [data-theme="dark"]) .wt-sidebar {
-  background: #000000;
+  background:
+    radial-gradient(circle at top left, rgba(14, 165, 233, 0.16), transparent 38%),
+    radial-gradient(circle at top right, rgba(99, 102, 241, 0.1), transparent 32%),
+    #000000;
   border-color: var(--wt-border);
+}
+
+@keyframes wt-sidebar-shell-in {
+  from {
+    opacity: 0;
+    transform: translateX(-14px) scale(0.985);
+    filter: blur(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
 }
 
 .wt-brand-wordmark {
@@ -1747,11 +1770,13 @@ html[data-density="compact"] .wt-page-enter {
   transition:
     border-color var(--wt-duration) var(--wt-ease),
     background-color var(--wt-duration) var(--wt-ease),
-    box-shadow var(--wt-duration) var(--wt-ease);
+    box-shadow var(--wt-duration) var(--wt-ease),
+    transform var(--wt-duration) var(--wt-ease);
 }
 
 .wt-account-footer:hover {
-  box-shadow: var(--wt-shadow-sm);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
 }
 
 .wt-sidebar-nav {
@@ -1775,6 +1800,8 @@ html[data-density="compact"] .wt-page-enter {
 /* Sidebar nav — keep label colors in dark mode (no ghost-button bleed) */
 .wt-sidebar-nav .wt-sidebar-nav-item {
   color: var(--wt-text-muted);
+  transform-origin: left center;
+  will-change: transform, box-shadow, background-color, color;
 }
 
 .wt-sidebar-nav .wt-sidebar-nav-item:hover {
@@ -1782,13 +1809,30 @@ html[data-density="compact"] .wt-page-enter {
 }
 
 .wt-sidebar-nav .wt-sidebar-nav-item:hover svg {
-  transform: scale(1.06);
+  transform: scale(1.08);
   color: var(--wt-brand);
   transition: transform var(--wt-duration) var(--wt-ease), color var(--wt-duration) var(--wt-ease);
 }
 
 .wt-sidebar-nav .wt-sidebar-nav-item svg {
   transition: transform var(--wt-duration) var(--wt-ease), color var(--wt-duration) var(--wt-ease);
+}
+
+.wt-sidebar-nav .wt-sidebar-nav-item:hover {
+  transform: translateY(-1px);
+}
+
+.wt-sidebar-nav .wt-sidebar-nav-item:active {
+  transform: translateY(0);
+}
+
+.wt-sidebar-nav .wt-sidebar-nav-item::selection {
+  background: color-mix(in oklch, var(--wt-brand) 24%, transparent);
+}
+
+.wt-sidebar-nav .wt-sidebar-nav-item::before,
+.wt-sidebar-nav .wt-sidebar-nav-item::after {
+  pointer-events: none;
 }
 
 :is(.dark, [data-theme="dark"]) .wt-sidebar-nav .wt-sidebar-nav-item:hover {
@@ -1798,6 +1842,10 @@ html[data-density="compact"] .wt-page-enter {
 
 :is(.dark, [data-theme="dark"]) .wt-sidebar-nav .wt-sidebar-nav-item:hover svg {
   color: var(--wt-text);
+}
+
+html.wt-reduce-motion .wt-sidebar {
+  animation: none !important;
 }
 
 :is(.dark, [data-theme="dark"]) [data-slot="table-head"] {

@@ -370,12 +370,6 @@ export function EmployeeProfilePageClient() {
             throw new Error("Primary skills are still loading. Please wait a moment.");
           }
           const primarySkills = normalizePrimarySkills(editForm.primary_skills);
-          if (!primarySkills.length) {
-            throw new Error("At least one primary skill is required.");
-          }
-          if (!editForm.secondary_skills.some((item) => String(item.skill ?? "").trim())) {
-            throw new Error("At least one secondary skill is required.");
-          }
           const missingSelfRating = [...editForm.primary_skills, ...editForm.secondary_skills].filter(
             (item) =>
               String(item.skill ?? "").trim() &&
@@ -669,8 +663,7 @@ export function EmployeeProfilePageClient() {
                       <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
                         <SkillRatingsListInput
                           label="Primary Skills"
-                          required
-                          hint="At least one skill with ratings"
+                          hint="Optional. Add any skills and ratings you want to save."
                           value={editForm.primary_skills}
                           onChange={(skills) =>
                             setEditForm((prev) => (prev ? { ...prev, primary_skills: skills } : prev))
@@ -681,8 +674,7 @@ export function EmployeeProfilePageClient() {
                         />
                         <SkillRatingsListInput
                           label="Secondary Skills"
-                          required
-                          hint="At least one skill with ratings"
+                          hint="Optional. Add any supporting skills and ratings you want to save."
                           value={editForm.secondary_skills}
                           onChange={(skills) =>
                             setEditForm((prev) => (prev ? { ...prev, secondary_skills: skills } : prev))
