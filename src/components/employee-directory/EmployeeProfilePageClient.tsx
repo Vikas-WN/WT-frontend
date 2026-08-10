@@ -54,7 +54,6 @@ import { normalizeEmployeeStatusKey } from "@/utils/userStatus";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { AdaptiveSelectField, InputField } from "@/components/dashboard/ui/forms";
-import { SkillsMultiSelectField } from "@/components/dashboard/ui/SkillsMultiSelectField";
 import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
 import { FormActionBar } from "@/components/dashboard/ui/FormActionBar";
 import { FormSection, FormSubsection } from "@/components/dashboard/ui/FormSection";
@@ -67,7 +66,6 @@ import { isSystemProjectAllocationRow } from "@/utils/allocationList";
 const WORK_MODES = ["WFO", "WFH", "HYBRID"];
 const WORK_LOCATIONS = ["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"];
 const USER_STATUSES = ["ACTIVE", "INACTIVE", "PENDING", "ONBOARDING", "INVITED", "SERVING_NOTICE"];
-const SKILL_RATINGS = ["1", "2", "3", "4", "5"];
 
 type BandOption = { value: string; label: string };
 
@@ -112,10 +110,25 @@ export function EmployeeProfilePageClient() {
     return options.map((option) => ({ value: option.value, label: option.label }));
   }, [onboardOptions?.primary_skills]);
 
-  const allowedPrimarySkills = useMemo(
-    () => new Set(primarySkillOptions.map((option) => option.value)),
+  const primarySkillLookup = useMemo(
+    () => new Map(primarySkillOptions.map((option) => [option.value.toLowerCase(), option.value])),
     [primarySkillOptions]
   );
+  const normalizePrimarySkills = (skills: EmployeeProfileEditForm["primary_skills"]) => {
+    const normalizedSkills: EmployeeProfileEditForm["primary_skills"] = [];
+    for (const item of skills) {
+      const skillName = String(item.skill ?? "").trim();
+      if (!skillName) continue;
+      const canonicalSkill = primarySkillLookup.get(skillName.toLowerCase());
+      if (!canonicalSkill) {
+        throw new Error("Selected primary skills must come from the predefined list.");
+      }
+      if (!normalizedSkills.some((existing) => existing.skill === canonicalSkill)) {
+        normalizedSkills.push({ ...item, skill: canonicalSkill });
+      }
+    }
+    return normalizedSkills;
+  };
   const profileRecord = profile ?? {};
   const displayName = cleanEmployeeName(profileRecord) || "Employee";
   const department = String(pickProfileField(profileRecord, ["department"]) ?? "").trim();
@@ -292,16 +305,6 @@ export function EmployeeProfilePageClient() {
     });
   }, [designationOptions, designationLoading, isEditing, isConsultantEmployee]);
 
-  useEffect(() => {
-    if (!isEditing || !editForm || onboardOptionsLoading || !allowedPrimarySkills.size) return;
-    const filtered = editForm.primary_skills.filter((skill) =>
-      allowedPrimarySkills.has(skill.skill)
-    );
-    if (filtered.length !== editForm.primary_skills.length) {
-      setEditForm((prev) => (prev ? { ...prev, primary_skills: filtered } : prev));
-    }
-  }, [allowedPrimarySkills, editForm, isEditing, onboardOptionsLoading]);
-
   const departmentSelectOptions = useMemo(() => {
     const deps = [...departmentOptions];
     const current = editForm?.department?.trim();
@@ -366,7 +369,8 @@ export function EmployeeProfilePageClient() {
           if (onboardOptionsLoading) {
             throw new Error("Primary skills are still loading. Please wait a moment.");
           }
-          if (!editForm.primary_skills.length) {
+          const primarySkills = normalizePrimarySkills(editForm.primary_skills);
+          if (!primarySkills.length) {
             throw new Error("At least one primary skill is required.");
           }
           if (!editForm.secondary_skills.some((item) => String(item.skill ?? "").trim())) {
@@ -380,12 +384,17 @@ export function EmployeeProfilePageClient() {
           if (missingSelfRating.length) {
             throw new Error("Each skill must have a self rating between 1 and 5.");
           }
-          const invalidSkills = editForm.primary_skills.filter(
-            (item) => !allowedPrimarySkills.has(item.skill)
+          const normalizedEditForm = { ...editForm, primary_skills: primarySkills };
+          await updateMutation.mutateAsync(
+            editFormToUpdatePayload(normalizedEditForm, {
+              statusOnly: statusOnlyEdit,
+              omitBand: isConsultantEmployee,
+            })
           );
-          if (invalidSkills.length) {
-            throw new Error("Selected primary skills must come from the predefined list.");
-          }
+          await refetch();
+          setIsEditing(false);
+          setEditForm(null);
+          return;
         }
         await updateMutation.mutateAsync(
           editFormToUpdatePayload(editForm, {
