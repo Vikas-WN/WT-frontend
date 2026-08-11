@@ -533,7 +533,7 @@ export function OffboardingPanel() {
                   required
                   placeholder="Select Exit Type"
                   value={offboardingForm.exit_type}
-                  options={EXIT_TYPE_OPTIONS}
+                  options={EXIT_TYPE_OPTIONS.filter((opt) => opt.value !== "CONTRACTUAL")}
                   onChange={(v) =>
                     setOffboardingForm((p) => ({
                       ...p,
