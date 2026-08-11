@@ -1,33 +1,33 @@
-export type ApiDocsNavItem = {
+export type IntegrationsNavItem = {
   id: string;
   label: string;
   path?: string;
 };
 
-export type ApiDocsNavGroup = {
+export type IntegrationsNavGroup = {
   title: string;
-  items: ApiDocsNavItem[];
+  items: IntegrationsNavItem[];
 };
 
-export type ApiDocsEndpoint = {
+export type IntegrationsEndpoint = {
   method: "GET" | "POST" | "PUT" | "DELETE";
   path: string;
   description: string;
   scope?: string;
-  queryParams?: { name: string; type: string; notes: string }[];
+  queryParams?: { name: string; type: string; required: boolean; notes: string }[];
   exampleRequest?: string;
   exampleResponse?: string;
 };
 
-export const API_DOCS_BASE_URL = "/api/v1";
+export const INTEGRATIONS_BASE_PATH = "/api/v1/integrations";
 
 // Placeholders resolved at render time from window.location.origin.
-// {{ORIGIN}}   → window.location.origin          (e.g. https://webtrak.webknot-dev.in)
-// {{BASE_URL}} → window.location.origin + /api/v1 (e.g. https://webtrak.webknot-dev.in/api/v1)
-export const CURL_ORIGIN_TOKEN = "{{ORIGIN}}";
-export const CURL_BASE_URL_TOKEN = "{{BASE_URL}}";
+// {{ORIGIN}}   → window.location.origin
+// {{BASE_URL}} → window.location.origin + /api/v1/integrations
+export const INTEGRATIONS_ORIGIN_TOKEN = "{{ORIGIN}}";
+export const INTEGRATIONS_BASE_URL_TOKEN = "{{BASE_URL}}";
 
-export const API_DOCS_NAV: ApiDocsNavGroup[] = [
+export const INTEGRATIONS_NAV: IntegrationsNavGroup[] = [
   {
     title: "Introduction",
     items: [
@@ -64,55 +64,55 @@ export const API_DOCS_NAV: ApiDocsNavGroup[] = [
   },
 ];
 
-export const API_DOCS_ENDPOINTS: Record<string, ApiDocsEndpoint> = {
+export const INTEGRATIONS_ENDPOINTS: Record<string, IntegrationsEndpoint> = {
   health: {
     method: "GET",
     path: "/integrations/health",
-    description: "Liveness probe for the WebTrak integrations API. No authentication required.",
-    exampleRequest: `curl --location '{{BASE_URL}}/integrations/health'`,
+    description: "Liveness probe for the WebTrak integrations gateway. No authentication required.",
+    exampleRequest: `curl --location '{{BASE_URL}}/health'`,
     exampleResponse: `{\n  "status": "ok"\n}`,
   },
   projects: {
     method: "GET",
     path: "/integrations/projects",
-    description: "Full list of all projects. Returns project name, code, client, status, and manager details.",
+    description: "Full list of all projects in WebTrak. Returns project name, code, client association, status, and manager details.",
     scope: "API key required (ROLE_HR)",
     queryParams: [
-      { name: "search", type: "string", notes: "Filter by project name or code." },
+      { name: "search", type: "string", required: false, notes: "Filter by project name or code (case-insensitive)." },
     ],
-    exampleRequest: `curl --location '{{BASE_URL}}/integrations/projects' \\\n  --header 'Authorization: Bearer wtak_your_api_key'`,
-    exampleResponse: `{\n  "message": "success",\n  "data": {\n    "items": [\n      {\n        "id": 3,\n        "project_code": "P00708769",\n        "project_name": "Cenomi",\n        "project_type": "PRODUCT",\n        "is_active": true,\n        "client_name": "Cenomi client",\n        "start_date": "2026-01-01",\n        "end_date": "2027-01-01"\n      }\n    ],\n    "total": 14\n  }\n}`,
+    exampleRequest: `curl --location '{{BASE_URL}}/projects' \\\n  --header 'Authorization: Bearer wtak_your_api_key'`,
+    exampleResponse: `{\n  "message": "success",\n  "data": {\n    "items": [\n      {\n        "id": 3,\n        "project_code": "P00708769",\n        "project_name": "Cenomi",\n        "project_type": "PRODUCT",\n        "is_active": true,\n        "client_name": "Cenomi client",\n        "start_date": "01/01/2026",\n        "end_date": "01/01/2027"\n      }\n    ],\n    "total": 14\n  }\n}`,
   },
   allocations: {
     method: "GET",
     path: "/integrations/allocations",
-    description: "Full list of employee-project allocations. Filter by project code or employee email.",
+    description: "Full list of employee-project allocations. Optionally filter by project code or employee email.",
     scope: "API key required (ROLE_HR)",
     queryParams: [
-      { name: "projectCode", type: "string", notes: "Filter allocations for a specific project." },
-      { name: "userEmail", type: "string", notes: "Filter allocations for a specific employee." },
-      { name: "search", type: "string", notes: "Free-text search across employee name or project." },
+      { name: "projectCode", type: "string", required: false, notes: "Filter allocations for a specific project." },
+      { name: "userEmail", type: "string", required: false, notes: "Filter allocations for a specific employee." },
+      { name: "search", type: "string", required: false, notes: "Free-text search across employee name or project." },
     ],
-    exampleRequest: `curl --location '{{BASE_URL}}/integrations/allocations' \\\n  --header 'Authorization: Bearer wtak_your_api_key'`,
-    exampleResponse: `{\n  "message": "success",\n  "data": {\n    "current_page": 0,\n    "total_pages": 9,\n    "page_size": 10,\n    "total_elements": 84,\n    "allocations": [\n      {\n        "id": 8,\n        "employee_email": "jane.doe@example.com",\n        "employee_name": "Jane Doe",\n        "project_code": "P00708769",\n        "project_name": "Cenomi",\n        "role": "Android Developer",\n        "allocated_percent": 100,\n        "start_date": "2026-01-01",\n        "end_date": "2027-01-01",\n        "is_active": true\n      }\n    ]\n  }\n}`,
+    exampleRequest: `curl --location '{{BASE_URL}}/allocations' \\\n  --header 'Authorization: Bearer wtak_your_api_key'`,
+    exampleResponse: `{\n  "message": "success",\n  "data": {\n    "items": [\n      {\n        "id": "a1b2c3d4-0000-0000-0000-000000000001",\n        "employeeEmail": "john.doe@example.com",\n        "employeeName": "John Doe",\n        "projectCode": "PRJ-001",\n        "projectName": "Acme Platform",\n        "allocationPercentage": 100,\n        "startDate": "2025-01-01",\n        "endDate": "2025-12-31",\n        "status": "ACTIVE"\n      }\n    ],\n    "total": 1,\n    "page": 0,\n    "size": 10\n  }\n}`,
   },
   employees: {
     method: "GET",
     path: "/integrations/employees",
-    description: "Full list of onboarded employees. Returns name, email, employee ID, designation, and status.",
+    description: "Full list of onboarded employees. Returns name, email, employee ID, designation, and employment status.",
     scope: "API key required (ROLE_HR)",
     queryParams: [
-      { name: "search", type: "string", notes: "Filter by employee name or email." },
+      { name: "search", type: "string", required: false, notes: "Filter by employee name or email." },
     ],
-    exampleRequest: `curl --location '{{BASE_URL}}/integrations/employees' \\\n  --header 'Authorization: Bearer wtak_your_api_key'`,
-    exampleResponse: `{\n  "message": "success",\n  "data": {\n    "items": [\n      {\n        "emp_id": "GW1480",\n        "name": "Jane Doe",\n        "email": "jane.doe@example.com",\n        "status": "ACTIVE",\n        "user_type": "FULLTIME",\n        "department": "Engineering",\n        "role": "Senior Engineer",\n        "band": "B5",\n        "doj": "2022-07-14"\n      }\n    ],\n    "total": 210,\n    "page": 0,\n    "size": 10\n  }\n}`,
+    exampleRequest: `curl --location '{{BASE_URL}}/employees' \\\n  --header 'Authorization: Bearer wtak_your_api_key'`,
+    exampleResponse: `{\n  "message": "success",\n  "data": {\n    "items": [\n      {\n        "empId": "WK-001",\n        "name": "Jane Smith",\n        "email": "jane.smith@example.com",\n        "designation": "Software Engineer",\n        "status": "ACTIVE",\n        "joiningDate": "2024-03-01"\n      }\n    ],\n    "total": 1,\n    "page": 0,\n    "size": 10\n  }\n}`,
   },
   "project-detail": {
     method: "GET",
     path: "/integrations/projects/{project_code}",
     description: "Full details for a single project by its project code.",
     scope: "API key required (ROLE_HR)",
-    exampleRequest: `curl --location '{{BASE_URL}}/integrations/projects/P00708769' \\\n  --header 'Authorization: Bearer wtak_your_api_key'`,
+    exampleRequest: `curl --location '{{BASE_URL}}/projects/P00708769' \\\n  --header 'Authorization: Bearer wtak_your_api_key'`,
     exampleResponse: `{\n  "message": "success",\n  "data": {\n    "id": 3,\n    "project_code": "P00708769",\n    "project_name": "Cenomi",\n    "project_type": "PRODUCT",\n    "is_active": true,\n    "client_name": "Cenomi client",\n    "start_date": "2026-01-01",\n    "end_date": "2027-01-01",\n    "manager_email": "manager@example.com"\n  }\n}`,
   },
   "project-employees": {
@@ -121,9 +121,9 @@ export const API_DOCS_ENDPOINTS: Record<string, ApiDocsEndpoint> = {
     description: "List of employees currently allocated to a project.",
     scope: "API key required (ROLE_HR)",
     queryParams: [
-      { name: "search", type: "string", notes: "Filter by employee name or email." },
+      { name: "search", type: "string", required: false, notes: "Filter by employee name or email." },
     ],
-    exampleRequest: `curl --location '{{BASE_URL}}/integrations/projects/P00708769/employees' \\\n  --header 'Authorization: Bearer wtak_your_api_key'`,
+    exampleRequest: `curl --location '{{BASE_URL}}/projects/P00708769/employees' \\\n  --header 'Authorization: Bearer wtak_your_api_key'`,
     exampleResponse: `{\n  "message": "success",\n  "data": {\n    "employees": [\n      {\n        "emp_id": "GW1480",\n        "name": "Jane Doe",\n        "email": "jane.doe@example.com",\n        "role": "Android Developer",\n        "allocated_percent": 100,\n        "start_date": "2026-01-01",\n        "end_date": "2027-01-01"\n      }\n    ]\n  }\n}`,
   },
   "employee-detail": {
@@ -131,7 +131,7 @@ export const API_DOCS_ENDPOINTS: Record<string, ApiDocsEndpoint> = {
     path: "/integrations/employees/{emp_id}",
     description: "Full profile for a single employee by their employee ID (e.g. GW1480).",
     scope: "API key required (ROLE_HR)",
-    exampleRequest: `curl --location '{{BASE_URL}}/integrations/employees/GW1480' \\\n  --header 'Authorization: Bearer wtak_your_api_key'`,
+    exampleRequest: `curl --location '{{BASE_URL}}/employees/GW1480' \\\n  --header 'Authorization: Bearer wtak_your_api_key'`,
     exampleResponse: `{\n  "message": "success",\n  "data": {\n    "emp_id": "GW1480",\n    "name": "Jane Doe",\n    "email": "jane.doe@example.com",\n    "status": "ACTIVE",\n    "user_type": "FULLTIME",\n    "designation": "Senior Engineer",\n    "department": "Engineering",\n    "band": "B5",\n    "doj": "2022-07-14"\n  }\n}`,
   },
   "employee-allocations": {
@@ -140,9 +140,9 @@ export const API_DOCS_ENDPOINTS: Record<string, ApiDocsEndpoint> = {
     description: "Allocations for a single employee. Use the scope param to filter by time range.",
     scope: "API key required (ROLE_HR)",
     queryParams: [
-      { name: "scope", type: "string", notes: "Time filter: current, current_and_future (default), or all." },
+      { name: "scope", type: "string", required: false, notes: "Time filter: current, current_and_future (default), or all." },
     ],
-    exampleRequest: `curl --location '{{BASE_URL}}/integrations/employees/GW1480/allocations?scope=current_and_future' \\\n  --header 'Authorization: Bearer wtak_your_api_key'`,
+    exampleRequest: `curl --location '{{BASE_URL}}/employees/GW1480/allocations?scope=current_and_future' \\\n  --header 'Authorization: Bearer wtak_your_api_key'`,
     exampleResponse: `{\n  "message": "success",\n  "data": {\n    "allocations": [\n      {\n        "id": 8,\n        "project_code": "P00708769",\n        "project_name": "Cenomi",\n        "role": "Android Developer",\n        "allocated_percent": 100,\n        "start_date": "2026-01-01",\n        "end_date": "2027-01-01",\n        "is_active": true\n      }\n    ]\n  }\n}`,
   },
 };
