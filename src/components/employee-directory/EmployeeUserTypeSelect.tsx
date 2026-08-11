@@ -123,6 +123,11 @@ export function EmployeeUserTypeSelect({
     const normalizedNext = normalizeDirectoryUserType(nextType);
     if (!normalizedNext || normalizedNext === currentType) return;
 
+    if (currentType === "FULLTIME" && normalizedNext === "INTERN") {
+      showErrorToast("Changing a Full-Time employee to an Intern is not allowed.");
+      return;
+    }
+
     if (requiresUserTypeTransitionDialog(currentType, normalizedNext)) {
       setPendingType(normalizedNext);
       setDialogOpen(true);
