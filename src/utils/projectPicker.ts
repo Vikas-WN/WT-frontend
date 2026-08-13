@@ -17,6 +17,8 @@ export type ProjectPickerRow = {
   project_type: string;
   id?: number;
   client_id?: number | null;
+  client_name?: string | null;
+  is_active?: boolean;
 };
 
 /** Normalize GET /projects/all (or paginated /projects) rows for pickers. */
@@ -38,6 +40,9 @@ export function parseProjectPickerRows(
       clientRaw !== undefined && clientRaw !== null && clientRaw !== ""
         ? Number(clientRaw)
         : NaN;
+    const clientName = String(row.client_name ?? row.clientName ?? "").trim() || null;
+    const isActiveRaw = row.is_active ?? row.isActive;
+    const is_active = isActiveRaw === undefined || isActiveRaw === null ? true : Boolean(isActiveRaw);
 
     mapped.push([
       code,
@@ -47,6 +52,8 @@ export function parseProjectPickerRows(
         project_type,
         ...(Number.isFinite(idNum) ? { id: idNum } : {}),
         client_id: Number.isFinite(clientNum) ? clientNum : null,
+        client_name: clientName,
+        is_active,
       },
     ]);
   }

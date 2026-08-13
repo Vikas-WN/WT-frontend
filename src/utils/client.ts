@@ -32,9 +32,11 @@ function readNumber(row: Record<string, unknown>, ...keys: string[]): number | n
 }
 
 function parseProjectSummary(row: Record<string, unknown>): ClientProjectSummary {
+  const projectName = readString(row, "project_name", "projectName", "name");
+  const projectCode = readString(row, "project_code", "projectCode", "code") || projectName;
   return {
-    projectCode: readString(row, "project_code", "projectCode"),
-    projectName: readString(row, "project_name", "projectName"),
+    projectCode,
+    projectName: projectName || projectCode,
     isActive: Boolean(row.is_active ?? row.isActive ?? true),
   };
 }
@@ -57,7 +59,7 @@ export function parseClientRow(row: Record<string, unknown>): ClientRecord | nul
   const projects = Array.isArray(projectsRaw)
     ? projectsRaw
         .map((item) => parseProjectSummary(item as Record<string, unknown>))
-        .filter((item) => item.projectCode)
+        .filter((item) => item.projectCode || item.projectName)
     : undefined;
 
   const externalId = readNullableString(row, "external_id", "externalId") ?? (typeof id === "string" ? id : null);
@@ -148,6 +150,59 @@ export function parseClientList(data: unknown): ClientRecord[] {
   if (items.length) return items;
   if (Array.isArray(payload)) return parseClientItems(payload);
   return [];
+}
+
+function clientNumericId(client: ClientRecord): number | null {
+  if (typeof client.id === "number" && Number.isFinite(client.id)) return client.id;
+  const value = String(client.id).trim();
+  if (/^\d+$/.test(value)) return Number(value);
+  return null;
+}
+
+/** Merge projects from the catalog onto client rows (by numeric id or client name). */
+export function attachProjectsToClients(
+  clients: ClientRecord[],
+  catalog: Array<{
+    code: string;
+    name: string;
+    client_id?: number | null;
+    client_name?: string | null;
+    is_active?: boolean;
+  }>,
+): ClientRecord[] {
+  if (!clients.length || !catalog.length) return clients;
+
+  return clients.map((client) => {
+    const existing = client.projects ?? [];
+    const seen = new Set(
+      existing.map((item) => item.projectCode.trim().toUpperCase()).filter(Boolean)
+    );
+    const numericId = clientNumericId(client);
+    const nameKey = client.name.trim().toLowerCase();
+    const extra: ClientProjectSummary[] = [];
+
+    for (const row of catalog) {
+      const idMatch = numericId != null && row.client_id != null && row.client_id === numericId;
+      const catalogClientName = row.client_name?.trim().toLowerCase() ?? "";
+      const nameMatch = Boolean(catalogClientName) && catalogClientName === nameKey;
+      if (!idMatch && !nameMatch) continue;
+      const code = row.code.trim();
+      if (!code || seen.has(code.toUpperCase())) continue;
+      seen.add(code.toUpperCase());
+      extra.push({
+        projectCode: code,
+        projectName: row.name || code,
+        isActive: row.is_active ?? true,
+      });
+    }
+
+    const projects = extra.length ? [...existing, ...extra] : existing;
+    return {
+      ...client,
+      projects,
+      projectCount: Math.max(client.projectCount, projects.length),
+    };
+  });
 }
 
 export function isExternalClientId(id: string | number | null | undefined): boolean {

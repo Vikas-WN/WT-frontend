@@ -167,19 +167,23 @@ export function ClientDetailDialog({
             </DetailBlock>
           </div>
 
-          {projects.length ? (
-            <DetailBlock title="Projects">
-              {projects.map((project) => (
-                <div key={project.projectCode}>
-                  <p className="font-medium text-wt-text">{project.projectName}</p>
+          <DetailBlock title="Projects">
+            {projects.length ? (
+              projects.map((project) => (
+                <div key={project.projectCode || project.projectName}>
+                  <p className="font-medium text-wt-text">{project.projectName || project.projectCode}</p>
                   <p className="text-xs text-wt-text-muted">
                     {project.projectCode}
                     {project.isActive ? " · Active" : " · Inactive"}
                   </p>
                 </div>
-              ))}
-            </DetailBlock>
-          ) : null}
+              ))
+            ) : (
+              <p className="text-sm text-wt-text-muted sm:col-span-2">
+                No projects are currently linked to this client.
+              </p>
+            )}
+          </DetailBlock>
 
           <section>
             <div className="mb-3 flex items-center justify-between">

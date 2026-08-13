@@ -42,7 +42,13 @@ export function AllocateProjectToClientDialog({
       .filter((row) => {
         if (!row.id || !isHrCreatedProjectCode(row.code)) return false;
         // Only unallocated projects, or already linked to this client (idempotent).
-        return row.client_id == null || row.client_id === client.id;
+        const sameNumericId =
+          row.client_id != null &&
+          /^\d+$/.test(String(client.id)) &&
+          row.client_id === Number(client.id);
+        const catalogClientName = row.client_name?.trim().toLowerCase() ?? "";
+        const sameName = Boolean(catalogClientName) && catalogClientName === client.name.trim().toLowerCase();
+        return row.client_id == null || sameNumericId || sameName;
       })
       .map((row) => ({
         value: String(row.id),

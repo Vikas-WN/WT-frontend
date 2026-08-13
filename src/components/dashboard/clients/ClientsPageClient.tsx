@@ -33,6 +33,7 @@ import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
+import { ClientDetailDialog } from "@/components/dashboard/clients/ClientDetailDialog";
 import { useClientsPage } from "@/hooks/clients/useClients";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import type { ClientRecord } from "@/types/client";
@@ -92,11 +93,11 @@ function ProjectsCell({ client }: { client: ClientRecord }) {
         <div className="flex flex-wrap gap-1">
           {visible.map((project) => (
             <span
-              key={project.projectCode}
+              key={project.projectCode || project.projectName}
               title={project.projectName}
               className="inline-flex max-w-[9rem] truncate rounded-md bg-wt-surface-2 px-1.5 py-0.5 text-[11px] text-wt-text-muted"
             >
-              {project.projectName}
+              {project.projectName || project.projectCode}
             </span>
           ))}
           {remaining > 0 ? (
@@ -136,6 +137,7 @@ export function ClientsPageClient() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(25);
+  const [selectedClient, setSelectedClient] = useState<ClientRecord | null>(null);
 
   useEffect(() => {
     setPage(0);
@@ -263,7 +265,8 @@ export function ClientsPageClient() {
                   {clients.map((client) => (
                     <TableRow
                       key={String(client.id)}
-                      className="transition hover:bg-blue-50/40 dark:hover:bg-wt-surface-2"
+                      className="cursor-pointer transition hover:bg-blue-50/40 dark:hover:bg-wt-surface-2"
+                      onClick={() => setSelectedClient(client)}
                     >
                       <TableCell className={cn(WT_TABLE_CELL_COMPACT_CLASS, "align-top")}>
                         <div className="min-w-0 max-w-[14rem]">
@@ -327,6 +330,11 @@ export function ClientsPageClient() {
           ) : null}
         </ManagementListContent>
       </ManagementListCard>
+      <ClientDetailDialog
+        open={Boolean(selectedClient)}
+        client={selectedClient}
+        onClose={() => setSelectedClient(null)}
+      />
     </DashboardPageShell>
   );
 }
