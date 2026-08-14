@@ -70,11 +70,19 @@ function SelectContent({
   align = "center",
   alignOffset = 0,
   alignItemWithTrigger = false,
+  collisionPadding = 8,
+  positionMethod = "fixed",
   ...props
 }: SelectPrimitive.Popup.Props &
   Pick<
     SelectPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"
+    | "align"
+    | "alignOffset"
+    | "side"
+    | "sideOffset"
+    | "alignItemWithTrigger"
+    | "collisionPadding"
+    | "positionMethod"
   >) {
   return (
     <SelectPrimitive.Portal>
@@ -84,12 +92,17 @@ function SelectContent({
         align={align}
         alignOffset={alignOffset}
         alignItemWithTrigger={alignItemWithTrigger}
+        positionMethod={positionMethod}
+        collisionPadding={collisionPadding}
         className="isolate z-[200]"
       >
         <SelectPrimitive.Popup
           data-slot="select-content"
           data-align-trigger={alignItemWithTrigger}
-          className={cn("relative isolate z-[200] max-h-60 w-(--anchor-width) min-w-(--anchor-width) origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-xl border border-wt-border bg-wt-surface-1 p-1 text-wt-text shadow-md duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className )}
+          className={cn(
+            "wt-combobox-scroll relative isolate z-[200] max-h-[min(15rem,var(--available-height,100dvh))] w-[min(var(--anchor-width),var(--available-width,100vw))] max-w-[var(--available-width,calc(100vw-1rem))] min-w-0 origin-(--transform-origin) overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl border border-wt-border bg-wt-surface-1 p-1 text-wt-text shadow-md duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            className
+          )}
           {...props}
         >
           <SelectScrollUpButton />
@@ -163,13 +176,12 @@ function SelectScrollUpButton({
     <SelectPrimitive.ScrollUpArrow
       data-slot="select-scroll-up-button"
       className={cn(
-        "top-0 z-10 flex w-full cursor-default items-center justify-center bg-popover py-1 [&_svg:not([class*='size-'])]:size-4",
+        "sticky top-0 z-10 flex w-full cursor-default items-center justify-center bg-gradient-to-b from-wt-surface-1 via-wt-surface-1/95 to-transparent py-1 text-wt-text-muted [&_svg:not([class*='size-'])]:size-3.5",
         className
       )}
       {...props}
     >
-      <ChevronUpIcon
-      />
+      <ChevronUpIcon />
     </SelectPrimitive.ScrollUpArrow>
   )
 }
@@ -182,13 +194,12 @@ function SelectScrollDownButton({
     <SelectPrimitive.ScrollDownArrow
       data-slot="select-scroll-down-button"
       className={cn(
-        "bottom-0 z-10 flex w-full cursor-default items-center justify-center bg-popover py-1 [&_svg:not([class*='size-'])]:size-4",
+        "sticky bottom-0 z-10 flex w-full cursor-default items-center justify-center bg-gradient-to-t from-wt-surface-1 via-wt-surface-1/95 to-transparent py-1 text-wt-text-muted [&_svg:not([class*='size-'])]:size-3.5",
         className
       )}
       {...props}
     >
-      <ChevronDownIcon
-      />
+      <ChevronDownIcon />
     </SelectPrimitive.ScrollDownArrow>
   )
 }

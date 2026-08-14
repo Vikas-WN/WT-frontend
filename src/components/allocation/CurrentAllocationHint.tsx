@@ -25,28 +25,45 @@ function activeAllocationRows(allocations: Array<Record<string, unknown>>) {
 
 function buildBreakdown(allocations: Array<Record<string, unknown>>): AllocationBreakdownItem[] {
   const active = activeAllocationRows(allocations);
-  const items: AllocationBreakdownItem[] = [];
+  const projectItems: AllocationBreakdownItem[] = [];
+  let projectTotal = 0;
+
   for (const row of active) {
+    // BENCH/GLOBAL rows are capacity fillers across date segments — not separate "current" allocations.
+    if (isSystemProjectAllocationRow(row)) continue;
+
     const percent = resolveAllocatedPercentFromRow(row);
     if (percent == null || !Number.isFinite(percent) || percent <= 0) continue;
+
     const projectCode = String(row.project_code ?? row.projectCode ?? row.allocated_project ?? "")
       .trim()
       .toUpperCase();
     const projectName = String(
       row.project_name ?? row.projectName ?? row.allocated_project ?? projectCode
     ).trim();
-    const isBench = isSystemProjectAllocationRow(row);
-    items.push({
+
+    projectTotal += percent;
+    projectItems.push({
       projectCode: projectCode || "—",
       projectName: projectName || projectCode || "—",
       percent,
-      isBench,
+      isBench: false,
     });
   }
-  return items.sort((a, b) => {
-    if (a.isBench !== b.isBench) return a.isBench ? 1 : -1;
-    return a.projectName.localeCompare(b.projectName);
-  });
+
+  projectItems.sort((a, b) => a.projectName.localeCompare(b.projectName));
+
+  const talentPoolPercent = Math.max(0, 100 - projectTotal);
+  if (talentPoolPercent > 0) {
+    projectItems.push({
+      projectCode: "BENCH",
+      projectName: "Talent Pool",
+      percent: talentPoolPercent,
+      isBench: true,
+    });
+  }
+
+  return projectItems;
 }
 
 export function CurrentAllocationHint({
@@ -127,7 +144,10 @@ export function CurrentAllocationHint({
       <p className="text-sm font-medium text-wt-text">Current allocations</p>
       <ul className="space-y-1 text-sm">
         {breakdown.map((item) => (
-          <li key={`${item.projectCode}-${item.isBench ? "talent-pool" : "project"}`} className="flex justify-between gap-3">
+          <li
+            key={item.isBench ? "talent-pool" : `project-${item.projectCode}-${item.percent}`}
+            className="flex justify-between gap-3"
+          >
             <span className="min-w-0 truncate text-wt-text">
               {item.isBench ? "Talent Pool" : item.projectName}
             </span>

@@ -8,10 +8,7 @@ import type { LeaveManagerOption } from "@/services/hrms.service";
 import { ChevronsUpDown, X, Check, Search, Loader2 } from "lucide-react";
 
 function optionLabel(option: LeaveManagerOption): string {
-  const name = option.name?.trim() || option.email;
-  const email = option.email?.trim();
-  if (email && name !== email) return `${name} (${email})`;
-  return name;
+  return option.name?.trim() || option.email;
 }
 
 function matchesQuery(option: LeaveManagerOption, query: string): boolean {

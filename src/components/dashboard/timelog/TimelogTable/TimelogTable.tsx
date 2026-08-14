@@ -5,6 +5,7 @@ import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
 import { formatTimelogTableDate } from "@/utils/timelog/weekDates";
+import { resolveTimelogProjectLabel } from "@/utils/timelog/projectLabel";
 import "./TimelogTable.css";
 import type { TimelogTableProps } from "./TimelogTable.types";
 
@@ -70,10 +71,7 @@ export function TimelogTable({
                     {formatTimelogTableDate(entry.log_date)}
                   </td>
                   <td className="whitespace-nowrap font-medium">
-                    {entry.project_name?.trim() 
-                    || projectOptions.find((p) => p.project_code === entry.project_code)?.project_name 
-                    || entry.project_code
-                    || "\u2014"}
+                    {resolveTimelogProjectLabel(entry, projectOptions)}
                   </td>
                   <td className="whitespace-nowrap">{taskLabel}</td>
                   <td className="whitespace-nowrap">

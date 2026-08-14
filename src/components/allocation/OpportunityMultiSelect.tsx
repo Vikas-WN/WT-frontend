@@ -85,6 +85,9 @@ export function OpportunityMultiSelect({
     onChange([...value, id]);
   }
 
+  const hasNoOpportunities =
+    Boolean(resolvedClientId) && !isLoading && !isError && opportunities.length === 0;
+
   if (!resolvedClientId) {
     return (
       <label className="flex flex-col gap-1 text-xs text-wt-text-muted sm:col-span-2">
@@ -100,7 +103,13 @@ export function OpportunityMultiSelect({
     <label className="flex flex-col gap-1 text-xs text-wt-text-muted sm:col-span-2">
       <FieldLabel label="Opportunities" required={required} />
       <div className="relative">
-        <Popover.Root open={open} onOpenChange={handleOpenChange}>
+        <Popover.Root
+          open={open && !hasNoOpportunities}
+          onOpenChange={(next) => {
+            if (hasNoOpportunities) return;
+            handleOpenChange(next);
+          }}
+        >
           <Popover.Trigger
             render={
               <Button
@@ -109,7 +118,7 @@ export function OpportunityMultiSelect({
                 variant="outline"
                 role="combobox"
                 aria-required={required || undefined}
-                disabled={disabled || isLoading}
+                disabled={disabled || isLoading || hasNoOpportunities}
                 className="h-10 w-full justify-between rounded-lg border-wt-border bg-wt-surface-1 px-3 text-left text-sm font-normal text-wt-text"
               />
             }
@@ -133,6 +142,7 @@ export function OpportunityMultiSelect({
               side="bottom"
               sideOffset={6}
               align="start"
+              positionMethod={modalPanel ? "absolute" : "fixed"}
               className="isolate z-[200]"
             >
               <Popover.Popup
@@ -214,6 +224,11 @@ export function OpportunityMultiSelect({
               </span>
             ))}
           </div>
+        ) : null}
+        {hasNoOpportunities ? (
+          <p className="mt-1.5 text-xs text-wt-text-muted">
+            This client has no opportunities configured. You can still create the project.
+          </p>
         ) : null}
       </div>
     </label>

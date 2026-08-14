@@ -18,6 +18,13 @@ function optionLabel(option: LeaveManagerOption): string {
   });
 }
 
+function optionTitle(option: LeaveManagerOption): string | undefined {
+  const name = option.name?.trim();
+  const email = option.email?.trim();
+  if (email && name && name !== email) return email;
+  return undefined;
+}
+
 function matchesQuery(option: LeaveManagerOption, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
@@ -264,7 +271,9 @@ export function LeaveManagerSelector({
                           onChange={() => toggleEmail(email, !checked)}
                         />
                         <span className="flex-1">
-                          <span className="font-medium">{optionLabel(option)}</span>
+                          <span className="font-medium" title={optionTitle(option)}>
+                            {optionLabel(option)}
+                          </span>
                           {option.project_name ? (
                             <span className="block text-xs text-muted-foreground">
                               {option.project_name}

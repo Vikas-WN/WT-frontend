@@ -135,7 +135,7 @@ export function ReferralForm({
   const showSentinel = hasMore && !isLoading && !isFetchingNextPage;
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <Timeline step={step} />
 
       {step === 1 && (
@@ -297,25 +297,39 @@ export function ReferralForm({
 
       {step === 3 && (
         <>
-          <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2.5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm dark:border-wt-border dark:bg-wt-surface-2">
-            <span className="text-wt-text-muted">Position</span>
-            <span className="font-medium text-wt-text">{selectedJob?.title}</span>
+          <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2.5 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm dark:border-wt-border dark:bg-wt-surface-2">
+            <span className="shrink-0 text-wt-text-muted">Position</span>
+            <span className="min-w-0 break-words font-medium text-wt-text" title={selectedJob?.title}>
+              {selectedJob?.title}
+            </span>
 
-            <span className="text-wt-text-muted">Candidate</span>
-            <span className="font-medium text-wt-text">{candidateName}</span>
+            <span className="shrink-0 text-wt-text-muted">Candidate</span>
+            <span className="min-w-0 break-words font-medium text-wt-text" title={candidateName}>
+              {candidateName}
+            </span>
 
-            <span className="text-wt-text-muted">Email</span>
-            <span className="font-medium text-wt-text">{candidateEmail}</span>
+            <span className="shrink-0 text-wt-text-muted">Email</span>
+            <span
+              className="min-w-0 break-all font-medium text-wt-text"
+              title={candidateEmail}
+            >
+              {candidateEmail}
+            </span>
 
-            <span className="text-wt-text-muted">Phone</span>
-            <span className="font-medium text-wt-text">{candidatePhone || "—"}</span>
+            <span className="shrink-0 text-wt-text-muted">Phone</span>
+            <span
+              className="min-w-0 break-all font-medium text-wt-text"
+              title={candidatePhone || undefined}
+            >
+              {candidatePhone || "—"}
+            </span>
 
-            <span className="text-wt-text-muted">Resume</span>
-            <span className="font-medium text-wt-text min-w-0">
+            <span className="shrink-0 text-wt-text-muted">Resume</span>
+            <span className="min-w-0 font-medium text-wt-text">
               {resume ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 py-0.5 max-w-full dark:border-wt-border dark:bg-wt-surface-1">
+                  <span className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 py-0.5 dark:border-wt-border dark:bg-wt-surface-1">
                   <FileText className="size-3.5 shrink-0 text-indigo-500" />
-                  <span className="truncate">{resume.name}</span>
+                  <span className="truncate" title={resume.name}>{resume.name}</span>
                 </span>
               ) : (
                 "—"

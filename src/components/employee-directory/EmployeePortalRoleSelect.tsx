@@ -74,7 +74,7 @@ export function EmployeePortalRoleSelect({
   compact = false,
 }: Props) {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, refresh, logout } = useAuth();
   const [saving, setSaving] = useState(false);
   const [optimisticRole, setOptimisticRole] = useState<string | null>(null);
   const roles = useMemo(() => normalizePortalRoles(portalRoles), [portalRoles]);
@@ -188,12 +188,27 @@ export function EmployeePortalRoleSelect({
         refetchType: "none",
       });
       await queryClient.invalidateQueries({ queryKey: ["employee-profile"] });
+      // If HR demotes themselves (or changes their own portal role), refresh the session
+      // so nav/permissions drop HR modules. Tokens are revoked server-side on role change,
+      // so a failed refresh means they must sign in again with the new permissions.
+      if (user?.email?.trim().toLowerCase() === targetEmail.trim().toLowerCase()) {
+        try {
+          const refreshed = await refresh();
+          if (!refreshed) {
+            await logout();
+          }
+        } catch {
+          await logout();
+        }
+      }
       const successMessage =
         typeof data.message === "string" && data.message.trim()
           ? data.message.trim()
           : onboardingReopened
             ? "Portal role set to Employee. Onboarding was reopened — ask them to sign in and complete the form."
-            : "Portal role updated successfully.";
+            : nextRole === "ROLE_EMPLOYEE"
+              ? "Portal role set to Employee. Ask them to sign in again so Manager menus and permissions are cleared."
+              : "Portal role changed successfully.";
       showSuccessToast(successMessage);
     } catch (err) {
       setOptimisticRole(null);

@@ -106,6 +106,13 @@ async function rotateRefreshSession(): Promise<AuthUser | null> {
       });
       return body.data ?? null;
     } catch (error) {
+      if (error instanceof ApiError && error.status === 403) {
+        const detail = apiErrorDetail(error);
+        if (sessionLogoutReasonFromApiDetail(detail) === "inactive") {
+          lastRefreshFailReason = "inactive";
+          return null;
+        }
+      }
       if (!(error instanceof ApiError) || error.status !== 401) {
         throw error;
       }

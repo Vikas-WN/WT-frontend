@@ -20,5 +20,6 @@ export function sessionLogoutReasonFromApiDetail(detail: string): SessionLogoutR
   const key = detail.trim().toLowerCase();
   if (key === "session_idle_timeout") return "idle";
   if (key === "session_expired") return "expired";
+  if (key === "account_inactive") return "inactive";
   return null;
 }

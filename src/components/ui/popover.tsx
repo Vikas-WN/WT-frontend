@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
 
 import { cn } from "@/lib/utils"
@@ -32,18 +33,21 @@ function PopoverPositioner({ className, ...props }: PopoverPrimitive.Positioner.
   )
 }
 
-function PopoverPopup({ className, ...props }: PopoverPrimitive.Popup.Props) {
-  return (
-    <PopoverPrimitive.Popup
-      data-slot="popover-popup"
-      className={cn(
-        "w-auto rounded-xl border border-border bg-popover p-0 shadow-lg shadow-black/5 outline-none data-[side='bottom']:animate-in data-[side='top']:animate-out data-[side='top']:fade-out-0 data-[side='bottom']:fade-in-0 data-[side='bottom']:slide-in-from-top-2 data-[side='top']:slide-out-from-bottom-2",
-        className
-      )}
-      {...props}
-    />
-  )
-}
+const PopoverPopup = React.forwardRef<HTMLDivElement, PopoverPrimitive.Popup.Props>(
+  function PopoverPopup({ className, ...props }, ref) {
+    return (
+      <PopoverPrimitive.Popup
+        ref={ref}
+        data-slot="popover-popup"
+        className={cn(
+          "w-auto rounded-xl border border-border bg-popover p-0 shadow-lg shadow-black/5 outline-none data-[side='bottom']:animate-in data-[side='top']:animate-out data-[side='top']:fade-out-0 data-[side='bottom']:fade-in-0 data-[side='bottom']:slide-in-from-top-2 data-[side='top']:slide-out-from-bottom-2",
+          className
+        )}
+        {...props}
+      />
+    )
+  }
+)
 
 function PopoverArrow({ className, ...props }: PopoverPrimitive.Arrow.Props) {
   return (

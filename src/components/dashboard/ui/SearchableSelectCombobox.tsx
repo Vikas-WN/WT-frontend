@@ -9,9 +9,10 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox";
+import { useModalPanel } from "@/components/dashboard/ui/ModalPanelContext";
 import { cn } from "@/lib/utils";
 
-export type SearchableSelectOption = { value: string; label: string };
+export type SearchableSelectOption = { value: string; label: string; title?: string };
 
 export function SearchableSelectCombobox({
   value,
@@ -70,6 +71,7 @@ export function SearchableSelectCombobox({
   const selected = value ? items.find((opt) => opt.value === value) ?? null : null;
   const selectedLabel = selected?.label ?? "";
   const isDisabled = disabled || loading;
+  const modalPanel = useModalPanel();
 
   const [isFiltering, setIsFiltering] = useState(false);
   const [filterText, setFilterText] = useState("");
@@ -175,16 +177,20 @@ export function SearchableSelectCombobox({
       <ComboboxContent
         side="bottom"
         sideOffset={4}
-        className={cn(
-          "max-w-[min(calc(100vw-2rem),28rem)]",
-          contentClassName
-        )}
+        align="start"
+        // Inside modals: portal into the body host and use absolute positioning so
+        // clipping-ancestors bound height above Cancel/Next. Outside: fixed to body.
+        container={modalPanel}
+        positionMethod={modalPanel ? "absolute" : "fixed"}
+        className={contentClassName}
       >
         <ComboboxEmpty>{loading ? loadingLabel : "No matches"}</ComboboxEmpty>
         <ComboboxList>
           {(item) => (
             <ComboboxItem key={item.value || `opt-${item.label}`} value={item} className="max-w-full">
-              <span className="block truncate">{item.label}</span>
+              <span className="min-w-0 flex-1 truncate" title={item.title ?? item.label}>
+                {item.label}
+              </span>
             </ComboboxItem>
           )}
         </ComboboxList>

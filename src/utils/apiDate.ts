@@ -103,6 +103,25 @@ export function isValidApiDate(value: string): boolean {
   return parseApiDate(value) !== null;
 }
 
+/**
+ * Distinguish empty vs unparseable dates so UIs don't report "required"
+ * when the user typed an invalid value.
+ */
+export function validateRequiredApiDate(
+  value: string | null | undefined,
+  fieldLabel: string
+): { ok: true; date: string } | { ok: false; error: string } {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) {
+    return { ok: false, error: `${fieldLabel} is required.` };
+  }
+  const date = normalizeToApiDate(trimmed);
+  if (!date) {
+    return { ok: false, error: `Please enter a valid ${fieldLabel.toLowerCase()}.` };
+  }
+  return { ok: true, date };
+}
+
 export const API_DATE_PLACEHOLDER = "dd/mm/yyyy";
 
 /** Mask digits while typing toward dd/mm/yyyy. */

@@ -105,6 +105,7 @@ import {
 } from "@/utils/listSort";
 import { Calendar, Clock, Home, Users, Building2, Wallet } from "lucide-react";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { WtLoadingOverlay } from "@/components/dashboard/ui/WtLoader";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
@@ -358,6 +359,7 @@ export function LeavePageClient() {
     [invalidateLeaveBalance, loadMyLeaveRequests]
   );
   const [actionLoading, setActionLoading] = useState(false);
+  const [actionBusyLabel, setActionBusyLabel] = useState<string | null>(null);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
     () => defaultInvitedEmployeesDateRange().from
   );
@@ -857,6 +859,7 @@ export function LeavePageClient() {
 
   async function runAction(label: string, fn: () => Promise<unknown>) {
     setActionLoading(true);
+    setActionBusyLabel(label);
     try {
       await fn();
       showSuccessToast(formatActionSuccessMessage(label));
@@ -869,9 +872,20 @@ export function LeavePageClient() {
             : "";
       showErrorToast(formatActionErrorMessage(label, backendMessage));
     } finally {
+      setActionBusyLabel(null);
       setActionLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!actionLoading) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [actionLoading]);
 
   function buildUserIdToNameMap(users: Array<Record<string, unknown>>) {
     const map: Record<string, string> = {};
@@ -1459,9 +1473,10 @@ export function LeavePageClient() {
       });
       closeRejectDialog();
       const scope = leaveSubTab === "org" ? "org" : "team";
+      // Local row is already patched; refresh lists in the background.
       invalidateTeamCache();
       invalidateLeaveBalance();
-      await loadEmployeeRequestsForApprover(scope, 0, 200, true);
+      void loadEmployeeRequestsForApprover(scope, 0, 200, true);
     } finally {
       setTeamStatusUpdatingId(null);
     }
@@ -1672,7 +1687,10 @@ export function LeavePageClient() {
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
           <section className={cn(CONTENT_CARD_CLASS, "p-5 sm:p-6")}>
                            {showLeaveSubTabBar ? (
-                             <Tabs value={leaveSubTab} onValueChange={(value) => setLeaveSubTab(value as "my" | "team" | "org" | "wfh" | "comp-off" | "balances")} className="gap-0">
+                             <Tabs value={leaveSubTab} onValueChange={(value) => {
+                               if (actionLoading) return;
+                               setLeaveSubTab(value as "my" | "team" | "org" | "wfh" | "comp-off" | "balances");
+                             }} className="gap-0">
                                  <div className="w-full overflow-x-auto border-b border-wt-border pb-5">
                                    <TabsList aria-label="Leave views" variant="default" className="min-w-max">
                                       {leaveTabItems.map((item) => (
@@ -1692,7 +1710,7 @@ export function LeavePageClient() {
                            ) : null}
                           <div className={showLeaveSubTabBar ? "pt-6" : undefined}>
                           {leaveSubTab === "balances" && hasHrAccess ? (
-                             <HrLeaveBalancesPanel actionLoading={actionLoading} runAction={runAction} />
+                             <HrLeaveBalancesPanel actionLoading={actionLoading} />
                            ) : null}
                           {leaveSubTab === "comp-off" && showCompOffTab ? (
                             <CompOffPageClient
@@ -2630,9 +2648,10 @@ export function LeavePageClient() {
                                                             }
                                                           );
                                                           // Actions column is team-only (hidden on org / All Employee Requests).
+                                                          // Local row is already patched; refresh lists in the background.
                                                           invalidateTeamCache();
                                                           invalidateLeaveBalance();
-                                                          await loadEmployeeRequestsForApprover("team", 0, 200, true);
+                                                          void loadEmployeeRequestsForApprover("team", 0, 200, true);
                                                         } finally {
                                                           setTeamStatusUpdatingId(null);
                                                         }
@@ -2683,9 +2702,10 @@ export function LeavePageClient() {
                                                                 requestType: rowRequestType,
                                                               }
                                                             );
+                                                            // Local row is already patched; refresh lists in the background.
                                                             invalidateTeamCache();
                                                             invalidateLeaveBalance();
-                                                            await loadEmployeeRequestsForApprover(
+                                                            void loadEmployeeRequestsForApprover(
                                                               "team",
                                                               0,
                                                               200,
@@ -2798,6 +2818,15 @@ export function LeavePageClient() {
               onClose={() => setWfhExceptionOpen(false)}
               onSubmit={handleSubmitWfhException}
             />
+            {actionLoading ? (
+              <WtLoadingOverlay
+                label={
+                  actionBusyLabel
+                    ? `${actionBusyLabel}…`
+                    : "Processing request…"
+                }
+              />
+            ) : null}
     </>
   );
 }

@@ -132,9 +132,12 @@ export const MODAL_PANEL_CLASS = cn(
 );
 export const MODAL_HEADER_CLASS =
   "shrink-0 border-b border-wt-border px-5 py-5 sm:px-7 dark:border-wt-border/80";
-export const MODAL_BODY_CLASS = "min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-7";
+// `relative` makes the body the containing block for absolute-positioned
+// dropdowns portaled into it; overflow clips them above the footer.
+export const MODAL_BODY_CLASS =
+  "relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-5 sm:px-7";
 export const MODAL_FOOTER_CLASS =
-  "flex shrink-0 justify-end gap-3 border-t border-wt-border px-5 py-5 sm:px-7 dark:border-wt-border/80";
+  "relative z-10 flex shrink-0 justify-end gap-3 border-t border-wt-border bg-wt-surface-1 px-5 py-5 sm:px-7 dark:border-wt-border/80";
 
 /** Filter / toolbar strip inside a content card. */
 export const FILTER_BAR_CLASS = cn(

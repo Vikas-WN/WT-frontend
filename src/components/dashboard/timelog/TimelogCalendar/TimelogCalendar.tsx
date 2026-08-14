@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useId } from "react";
 import { Button } from "@/components/ui/button";
 import { showErrorToast } from "@/lib/toast";
 import { DAYS_OF_WEEK } from "@/hooks/timelog/useDayTimelog";
 import "./TimelogCalendar.css";
 import type { TimelogCalendarProps } from "./TimelogCalendar.types";
+import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
 
 const MONTH_OPTIONS = [
@@ -25,6 +26,8 @@ export function TimelogCalendar({
   onGoToToday,
   onGoToMonth,
 }: TimelogCalendarProps) {
+  const monthFieldId = useId();
+  const yearFieldId = useId();
   const now = useMemo(() => new Date(), []);
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth();
@@ -36,7 +39,9 @@ export function TimelogCalendar({
   }, [doj]);
 
   const yearOptions = useMemo(() => {
-    const startYear = dojDate ? dojDate.getFullYear() : currentYear;
+    // Without DOJ (common for HR/Manager viewing their own logs), allow a
+    // multi-year window so month navigation still works.
+    const startYear = dojDate ? dojDate.getFullYear() : currentYear - 5;
     const years: number[] = [];
     for (let y = startYear; y <= currentYear; y++) years.push(y);
     return years;
@@ -56,6 +61,13 @@ export function TimelogCalendar({
       : MONTH_OPTIONS.map((_, i) => i);
   }, [dojDate, viewYear, currentYear, currentMonth]);
 
+  const earliestYear = yearOptions[0] ?? currentYear;
+  const earliestMonth = dojDate && dojDate.getFullYear() === earliestYear ? dojDate.getMonth() : 0;
+  const canGoPrevious =
+    viewYear > earliestYear || (viewYear === earliestYear && viewMonth > earliestMonth);
+  const canGoNext =
+    viewYear < currentYear || (viewYear === currentYear && viewMonth < currentMonth);
+
   const handleSelectDate = useCallback(
     (dateKey: string, isFuture: boolean) => {
       if (isFuture) {
@@ -71,60 +83,66 @@ export function TimelogCalendar({
     <div className="timelog-calendar">
       <div className="timelog-calendar-header">
         <div className="timelog-calendar-nav">
-          {dojDate ? (
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              disabled={loading || (viewYear === dojDate.getFullYear() && viewMonth === dojDate.getMonth())}
-              onClick={() => onNavigate(-1)}
-            >
-              ←
-            </Button>
-          ) : null}
-          {dojDate ? (
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              disabled={loading || (viewYear === currentYear && viewMonth === currentMonth)}
-              onClick={() => onNavigate(1)}
-            >
-              →
-            </Button>
-          ) : null}
-          <SearchableSelectCombobox
-            value={String(viewMonth)}
-            onChange={(value) => {
-              if (!value.trim()) return;
-              onGoToMonth(viewYear, Number(value));
-            }}
-            options={monthOptions.map((value) => ({
-              value: String(value),
-              label: MONTH_OPTIONS[value],
-            }))}
-            placeholder="Search months…"
-            inputClassName="timelog-calendar-select"
-            aria-label="Month"
-            showChevron
-            clearSelectionOnEmptyInput={false}
-          />
-          <SearchableSelectCombobox
-            value={String(viewYear)}
-            onChange={(value) => {
-              if (!value.trim()) return;
-              onGoToMonth(Number(value), viewMonth);
-            }}
-            options={yearOptions.map((value) => ({
-              value: String(value),
-              label: String(value),
-            }))}
-            placeholder="Search years…"
-            inputClassName="timelog-calendar-select"
-            aria-label="Year"
-            showChevron
-            clearSelectionOnEmptyInput={false}
-          />
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            disabled={loading || !canGoPrevious}
+            onClick={() => onNavigate(-1)}
+            aria-label="Previous month"
+          >
+            ←
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            disabled={loading || !canGoNext}
+            onClick={() => onNavigate(1)}
+            aria-label="Next month"
+          >
+            →
+          </Button>
+          <div className="timelog-calendar-field">
+            <FieldLabel label="Month" htmlFor={monthFieldId} />
+            <SearchableSelectCombobox
+              id={monthFieldId}
+              value={String(viewMonth)}
+              onChange={(value) => {
+                if (!value.trim()) return;
+                onGoToMonth(viewYear, Number(value));
+              }}
+              options={monthOptions.map((value) => ({
+                value: String(value),
+                label: MONTH_OPTIONS[value],
+              }))}
+              placeholder="Search months…"
+              inputClassName="timelog-calendar-select"
+              aria-label="Month"
+              showChevron
+              clearSelectionOnEmptyInput={false}
+            />
+          </div>
+          <div className="timelog-calendar-field">
+            <FieldLabel label="Year" htmlFor={yearFieldId} />
+            <SearchableSelectCombobox
+              id={yearFieldId}
+              value={String(viewYear)}
+              onChange={(value) => {
+                if (!value.trim()) return;
+                onGoToMonth(Number(value), viewMonth);
+              }}
+              options={yearOptions.map((value) => ({
+                value: String(value),
+                label: String(value),
+              }))}
+              placeholder="Search years…"
+              inputClassName="timelog-calendar-select"
+              aria-label="Year"
+              showChevron
+              clearSelectionOnEmptyInput={false}
+            />
+          </div>
           <Button
             variant="outline"
             size="sm"

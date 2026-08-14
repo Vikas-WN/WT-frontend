@@ -10,7 +10,7 @@ import { WtFormDialog } from "@/components/allocation/WtFormDialog";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { useAllocationPercentages } from "@/hooks/useAllocationPercentages";
 import { hrmsService } from "@/services/hrms.service";
-import { normalizeToApiDate, parseApiDate } from "@/utils/apiDate";
+import { parseApiDate, validateRequiredApiDate } from "@/utils/apiDate";
 import {
   createEmptyAllocationForm,
   type AllocationFormState,
@@ -34,6 +34,7 @@ import {
   allocationTypeForBillingStatus,
 } from "@/utils/allocationDefaults";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { UI_COPY } from "@/constants/uiCopy";
 
 const CUSTOM_ROLE_VALUE = "__custom_role__";
@@ -208,20 +209,24 @@ export function AllocateEmployeeDialog({
       showErrorToast("Please select status.");
       return;
     }
-    const startDate = normalizeToApiDate(form.start_date);
-    if (!startDate) {
-      showErrorToast("Start date is required.");
+    const startResult = validateRequiredApiDate(form.start_date, "Start date");
+    if (!startResult.ok) {
+      showErrorToast(startResult.error);
       return;
     }
-    const endDate = normalizeToApiDate(form.end_date);
-    if (!endDate) {
-      showErrorToast("End date is required.");
+    const startDate = startResult.date;
+
+    const endResult = validateRequiredApiDate(form.end_date, "End date");
+    if (!endResult.ok) {
+      showErrorToast(endResult.error);
       return;
     }
+    const endDate = endResult.date;
+
     const startParsed = parseApiDate(startDate);
     const endParsed = parseApiDate(endDate);
-    if (startParsed && endParsed && endParsed < startParsed) {
-      showErrorToast("End date must be on or after the start date.");
+    if (startParsed && endParsed && !(startParsed < endParsed)) {
+      showErrorToast("End date must be after the start date.");
       return;
     }
 
@@ -254,14 +259,16 @@ export function AllocateEmployeeDialog({
     setLoading(true);
     try {
       const allocationType = staffing ? "STAFFING" : form.allocation_type;
-      const lockedInDate =
-        allocationType === "LOCKED"
-          ? normalizeToApiDate(form.locked_in_date || form.start_date)
-          : null;
-      if (allocationType === "LOCKED" && !lockedInDate) {
-        showErrorToast("Locked-in date is required for locked allocations.");
-        setLoading(false);
-        return;
+      let lockedInDate: string | null = null;
+      if (allocationType === "LOCKED") {
+        const lockedInRaw = (form.locked_in_date || form.start_date).trim();
+        const lockedResult = validateRequiredApiDate(lockedInRaw, "Locked-in date");
+        if (!lockedResult.ok) {
+          showErrorToast(lockedResult.error);
+          setLoading(false);
+          return;
+        }
+        lockedInDate = lockedResult.date;
       }
       const payload = {
         employeeEmail,
@@ -285,7 +292,9 @@ export function AllocateEmployeeDialog({
       await onSaved();
       onClose();
     } catch (error) {
-      showErrorToast(error instanceof Error ? error.message : "Could not create allocation.");
+      showErrorToast(
+        toUserFriendlyApiErrorMessage(error, "Could not create allocation. Please check the details and try again.")
+      );
     } finally {
       setLoading(false);
     }

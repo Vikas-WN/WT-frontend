@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { InputField } from "@/components/dashboard/ui/forms";
 import { useAllocationPercentages } from "@/hooks/useAllocationPercentages";
+import { useClientOpportunities } from "@/hooks/clients/useClientOpportunities";
 import { ClientSelect } from "@/components/allocation/ClientSelect";
 import { OpportunityMultiSelect } from "@/components/allocation/OpportunityMultiSelect";
 import { ProjectTypeSelect } from "@/components/allocation/ProjectTypeSelect";
@@ -14,7 +15,7 @@ import {
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { hrmsService } from "@/services/hrms.service";
-import { normalizeToApiDate, compareApiDates } from "@/utils/apiDate";
+import { compareApiDates, validateRequiredApiDate } from "@/utils/apiDate";
 import {
   createEmptyProjectForm,
   type ProjectFormState,
@@ -92,14 +93,22 @@ async function allocateManagerOnProject({
     );
   }
   await assertAllocationWithinCap(normalized, percent);
-  const startDate = normalizeToApiDate(fields.start_date || projectStart);
-  if (!startDate) {
-    throw new Error("Project Manager start date is required.");
+  const startResult = validateRequiredApiDate(
+    fields.start_date.trim() || projectStart,
+    "Project Manager start date"
+  );
+  if (!startResult.ok) {
+    throw new Error(startResult.error);
   }
-  const endDate = normalizeToApiDate(fields.end_date || projectEnd);
-  if (!endDate) {
-    throw new Error("Project Manager end date is required.");
+  const startDate = startResult.date;
+  const endResult = validateRequiredApiDate(
+    fields.end_date.trim() || projectEnd,
+    "Project Manager end date"
+  );
+  if (!endResult.ok) {
+    throw new Error(endResult.error);
   }
+  const endDate = endResult.date;
   if (compareApiDates(startDate, endDate) > 0) {
     throw new Error("Project Manager start date must be on or before end date.");
   }
@@ -112,12 +121,16 @@ async function allocateManagerOnProject({
     );
   }
   const allocationType = fields.allocation_type || "DEPLOYABLE";
-  const lockedInDate =
-    allocationType === "LOCKED"
-      ? normalizeToApiDate(fields.locked_in_date || fields.start_date || projectStart)
-      : null;
-  if (allocationType === "LOCKED" && !lockedInDate) {
-    throw new Error("Locked-in date is required for locked allocations.");
+  let lockedInDate: string | null = null;
+  if (allocationType === "LOCKED") {
+    const lockedResult = validateRequiredApiDate(
+      (fields.locked_in_date || fields.start_date || projectStart).trim(),
+      "Locked-in date"
+    );
+    if (!lockedResult.ok) {
+      throw new Error(lockedResult.error);
+    }
+    lockedInDate = lockedResult.date;
   }
   const billingStatus = fields.billing_status || "BILLED";
   await hrmsService.createAllocation({
@@ -173,6 +186,14 @@ export function CreateProjectDialog({
     ? projectManagerPercentOptions
     : allocationPercentOptions;
 
+  const clientIdForOpportunities = form.client_id.trim();
+  const opportunitiesQ = useClientOpportunities({
+    clientId: clientIdForOpportunities || null,
+    enabled: open && !isEditing && Boolean(clientIdForOpportunities),
+  });
+  const clientHasOpportunities = (opportunitiesQ.data?.items.length ?? 0) > 0;
+  const opportunitiesRequired = !isEditing && clientHasOpportunities;
+
   useEffect(() => {
     if (!open) {
       setForm(createEmptyProjectForm());
@@ -213,9 +234,20 @@ export function CreateProjectDialog({
       showErrorToast("Client is required.");
       return;
     }
-    if (!isEditing && !form.opportunity_ids.length) {
-      showErrorToast("Select at least one opportunity for this client.");
-      return;
+    if (!isEditing && clientIdForOpportunities) {
+      if (opportunitiesQ.isLoading) {
+        showErrorToast("Still loading opportunities for this client.");
+        return;
+      }
+      if (opportunitiesQ.isError) {
+        showErrorToast("Could not load opportunities for this client. Try again.");
+        return;
+      }
+      // Only require a selection when the client actually has opportunities to choose from.
+      if (clientHasOpportunities && !form.opportunity_ids.length) {
+        showErrorToast("Select at least one opportunity for this client.");
+        return;
+      }
     }
     if (
       isEditing &&
@@ -237,16 +269,18 @@ export function CreateProjectDialog({
       );
       return;
     }
-    const startDate = normalizeToApiDate(form.start_date);
-    const endDate = normalizeToApiDate(form.end_date);
-    if (!startDate) {
-      showErrorToast("Project start date is required.");
+    const startResult = validateRequiredApiDate(form.start_date, "Start date");
+    if (!startResult.ok) {
+      showErrorToast(startResult.error);
       return;
     }
-    if (!endDate) {
-      showErrorToast("Project end date is required.");
+    const endResult = validateRequiredApiDate(form.end_date, "End date");
+    if (!endResult.ok) {
+      showErrorToast(endResult.error);
       return;
     }
+    const startDate = startResult.date;
+    const endDate = endResult.date;
     if (compareApiDates(startDate, endDate) > 0) {
       showErrorToast("Project start date must be on or before end date.");
       return;
@@ -255,16 +289,24 @@ export function CreateProjectDialog({
     // Create and edit both manage Project Manager here (Account Manager stays on the client).
     const pmEmail = pmFields.email.trim();
     if (pmEmail) {
-      const pmStartDate = normalizeToApiDate(pmFields.start_date || form.start_date);
-      const pmEndDate = normalizeToApiDate(pmFields.end_date || form.end_date);
-      if (!pmStartDate) {
-        showErrorToast("Project Manager start date is required.");
+      const pmStartResult = validateRequiredApiDate(
+        pmFields.start_date.trim() || form.start_date,
+        "Project Manager start date"
+      );
+      if (!pmStartResult.ok) {
+        showErrorToast(pmStartResult.error);
         return;
       }
-      if (!pmEndDate) {
-        showErrorToast("Project Manager end date is required.");
+      const pmEndResult = validateRequiredApiDate(
+        pmFields.end_date.trim() || form.end_date,
+        "Project Manager end date"
+      );
+      if (!pmEndResult.ok) {
+        showErrorToast(pmEndResult.error);
         return;
       }
+      const pmStartDate = pmStartResult.date;
+      const pmEndDate = pmEndResult.date;
       if (compareApiDates(pmStartDate, pmEndDate) > 0) {
         showErrorToast("Project Manager start date must be on or before end date.");
         return;
@@ -437,7 +479,7 @@ export function CreateProjectDialog({
                   setForm((prev) => ({ ...prev, opportunity_ids: opportunityIds }))
                 }
                 disabled={loading}
-                required
+                required={opportunitiesRequired}
               />
             ) : null}
             <InputField

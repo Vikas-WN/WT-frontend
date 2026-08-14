@@ -1,10 +1,24 @@
 import { allocatedHoursToPercent, MAX_ALLOCATION_HOURS_PER_DAY, resolveAllocatedPercentFromRow } from "@/utils/allocationPercent";
 
+/** Matches backend EmployeeOnboardRequest / EmployeeProfileHrUpdate `role` max_length. */
+export const MAX_DESIGNATION_LENGTH = 50;
+
+export const DESIGNATION_MAX_LENGTH_MESSAGE =
+  "Designation cannot exceed the maximum allowed length.";
+
 /** Letters, spaces, common punctuation; 2–120 chars */
 export function isValidPersonName(name: string): boolean {
   const t = name.trim();
   if (t.length < 2 || t.length > 120) return false;
   return /^[a-zA-ZÀ-ÿ][a-zA-ZÀ-ÿ\s.'-]*$/u.test(t);
+}
+
+/** Returns an error message when designation exceeds the API limit; otherwise null. */
+export function designationLengthError(value: string): string | null {
+  if (value.trim().length > MAX_DESIGNATION_LENGTH) {
+    return DESIGNATION_MAX_LENGTH_MESSAGE;
+  }
+  return null;
 }
 
 /** Collapse spaces/dashes so "B8 - Intern", "B8-intern", and "B8 Intern" all match B8INTERN. */

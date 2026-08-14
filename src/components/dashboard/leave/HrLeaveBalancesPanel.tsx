@@ -18,7 +18,7 @@ import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { showErrorToast } from "@/lib/toast";
 import { Pencil, Search, Wallet } from "lucide-react";
-import { useHrLeaveBalancesList } from "@/hooks/leave/useHrLeaveBalancesList";
+import { useHrLeaveBalancesList, validateLeaveBalancePeriod } from "@/hooks/leave/useHrLeaveBalancesList";
 import { FILTER_BAR_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -54,10 +54,8 @@ const YEAR_OPTIONS = buildYearOptions(new Date().getFullYear());
 
 export function HrLeaveBalancesPanel({
   actionLoading,
-  runAction,
 }: {
   actionLoading: boolean;
-  runAction: (label: string, fn: () => Promise<void>) => void;
 }) {
   const today = new Date();
   const currentYear = today.getFullYear();
@@ -68,6 +66,8 @@ export function HrLeaveBalancesPanel({
   const [appliedSearch, setAppliedSearch] = useState("");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(25);
+  const [yearError, setYearError] = useState<string | null>(null);
+  const [monthError, setMonthError] = useState<string | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<LeaveBalancesListItem | null>(null);
 
   const { user } = useAuth();
@@ -79,7 +79,14 @@ export function HrLeaveBalancesPanel({
       ? MONTH_OPTIONS.filter((opt) => Number(opt.value) <= currentMonth)
       : MONTH_OPTIONS;
 
-  const periodReady = Boolean(year.trim() && month.trim());
+  const periodValid = (() => {
+    try {
+      validateLeaveBalancePeriod(year, month);
+      return true;
+    } catch {
+      return false;
+    }
+  })();
 
   const balancesQ = useHrLeaveBalancesList({
     year,
@@ -87,7 +94,8 @@ export function HrLeaveBalancesPanel({
     page,
     pageSize,
     search: appliedSearch,
-    enabled: periodReady,
+    // Do not fetch until Year + Month are valid — blocks load on cleared/invalid Year.
+    enabled: periodValid,
   });
 
   useEffect(() => {
@@ -99,33 +107,56 @@ export function HrLeaveBalancesPanel({
   }, [year, month, currentYear, currentMonth]);
 
   useEffect(() => {
-    if (!balancesQ.error) return;
+    // API failures only. Period validation is toasting from applySearch — never pair with success.
+    if (!periodValid || !balancesQ.error) return;
     const message =
       balancesQ.error instanceof Error
         ? balancesQ.error.message
         : "Could not load leave balances.";
+    if (
+      /year is required|month is required|valid year|valid month|future months/i.test(message)
+    ) {
+      return;
+    }
     showErrorToast(message);
-  }, [balancesQ.error]);
+  }, [balancesQ.error, periodValid]);
 
-  const rows = balancesQ.data?.items ?? [];
+  const rows = periodValid ? (balancesQ.data?.items ?? []) : [];
   const totalPages = Math.max(1, balancesQ.data?.total_pages ?? 1);
-  const totalElements = balancesQ.data?.total_elements ?? 0;
-  const loading = balancesQ.isFetching && !balancesQ.isPlaceholderData;
+  const totalElements = periodValid ? (balancesQ.data?.total_elements ?? 0) : 0;
+  const loading = periodValid && balancesQ.isFetching && !balancesQ.isPlaceholderData;
   const loadError =
-    balancesQ.error instanceof Error
-      ? balancesQ.error.message
-      : balancesQ.error
-        ? "Could not load leave balances."
-        : null;
+    periodValid && balancesQ.error
+      ? balancesQ.error instanceof Error
+        ? balancesQ.error.message
+        : "Could not load leave balances."
+      : null;
   const rangeStart = totalElements ? page * pageSize + 1 : 0;
   const rangeEnd = Math.min(totalElements, (page + 1) * pageSize);
 
   function applySearch() {
+    try {
+      validateLeaveBalancePeriod(year, month);
+      setYearError(null);
+      setMonthError(null);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Select a valid year and month before searching.";
+      const isYearIssue = /year/i.test(message);
+      const isMonthIssue = /month/i.test(message);
+      setYearError(isYearIssue ? message : null);
+      setMonthError(isMonthIssue && !isYearIssue ? message : null);
+      // Single validation toast — do not load and do not show success.
+      showErrorToast(message);
+      return;
+    }
+
     const next = search.trim();
     if (next === appliedSearch.trim() && page === 0) {
-      runAction("Load leave balances", async () => {
-        await balancesQ.refetch();
-      });
+      // Silent refetch only after validation passed. Never use runAction here.
+      void balancesQ.refetch();
       return;
     }
     setAppliedSearch(next);
@@ -159,42 +190,44 @@ export function HrLeaveBalancesPanel({
             <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 sm:max-w-xs">
               <SelectField
                 label="Year"
+                required
                 value={year}
                 onChange={(value) => {
                   setYear(value);
+                  setYearError(null);
                   setPage(0);
                 }}
                 options={YEAR_OPTIONS}
+                placeholder="Select year"
+                contentClassName="w-auto min-w-[7rem]"
+                error={yearError}
               />
               <SelectField
                 label="Month"
+                required
                 value={month}
                 onChange={(value) => {
                   setMonth(value);
+                  setMonthError(null);
                   setPage(0);
                 }}
                 options={monthOptions}
                 placeholder="Select month"
                 contentClassName="w-auto min-w-[11rem]"
+                error={monthError}
               />
             </div>
             <Button
               variant="brand"
               type="submit"
               className="h-10 w-full shrink-0 gap-2 px-5 lg:w-auto"
-              disabled={actionLoading || balancesQ.isFetching}
+              disabled={actionLoading || loading}
             >
               <Search className="size-4" />
               Search
             </Button>
           </div>
         </form>
-
-        {loadError ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900 dark:bg-red-950/20">
-            <p className="text-sm text-red-700 dark:text-red-400">{loadError}</p>
-          </div>
-        ) : null}
 
         <ScrollableTable
           maxHeightClass="max-h-[min(60vh,480px)]"
@@ -290,7 +323,7 @@ export function HrLeaveBalancesPanel({
                       <span className="max-w-sm text-sm text-muted-foreground">
                         {loadError
                           ? "Adjust the period or try again."
-                          : !periodReady
+                          : !periodValid
                             ? "Select a year and month to view leave balances."
                             : "Try a different search, year, or month."}
                       </span>

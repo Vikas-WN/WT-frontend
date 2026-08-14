@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
+import { resolveTimelogProjectLabel } from "@/utils/timelog/projectLabel";
+import { isManagerTimelogDecisionActionable } from "@/utils/timelog/employeeEditability";
 import { formatDayHeader } from "@/utils/timelog/weekDates";
 import { useMemo, useState } from "react";
 import "./EntryReviewSidePanel.css";
@@ -44,8 +46,8 @@ export function EntryReviewSidePanel({
       dayKeys.some((key) => {
         const hours = row.hours_by_date[key];
         if (!hours || hours === "0" || hours === "0.00") return false;
-        const status = String(row.status_by_date?.[key] ?? "").toUpperCase();
-        return status === "SUBMITTED" || status === "REJECTED";
+        const status = row.status_by_date?.[key];
+        return isManagerTimelogDecisionActionable(status);
       }),
     [dayKeys, row.hours_by_date, row.status_by_date]
   );
@@ -74,7 +76,7 @@ export function EntryReviewSidePanel({
           </div>
           <div className="entry-review-field">
             <span className="entry-review-label">Project</span>
-            <span>{row.project_name?.trim() || "—"}</span>
+            <span>{resolveTimelogProjectLabel(row)}</span>
           </div>
           <div className="entry-review-field">
             <span className="entry-review-label">Task</span>

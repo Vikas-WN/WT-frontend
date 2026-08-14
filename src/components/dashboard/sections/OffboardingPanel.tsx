@@ -415,7 +415,8 @@ export function OffboardingPanel() {
           </div>
           <DropdownSelectField
             label="Financial Year (Start)"
-            className="w-[11rem] shrink-0"
+            className="w-[13.5rem] shrink-0"
+            contentClassName="min-w-[13.5rem] w-max"
             value={fyStartYear}
             onChange={setFyStartYear}
             options={financialYearOptions}

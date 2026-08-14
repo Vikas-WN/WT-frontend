@@ -3,7 +3,10 @@
 import { useMemo } from "react";
 import { useAllocationEmployees } from "@/hooks/useAllocationEmployees";
 import { FieldLabel, SearchableSelectCombobox } from "@/components/dashboard/ui/forms";
-import { formatEmployeePickerLabel } from "@/utils/employeePickerLabel";
+import {
+  formatEmployeePickerLabel,
+  formatEmployeePickerTitle,
+} from "@/utils/employeePickerLabel";
 
 export { formatEmployeePickerLabel };
 
@@ -33,6 +36,7 @@ export function InternalEmployeeSelect({
     const rows = employees.map((employee) => ({
       value: employee.employeeEmail,
       label: formatEmployeePickerLabel(employee),
+      title: formatEmployeePickerTitle(employee),
     }));
     return [{ value: "", label: placeholder }, ...rows];
   }, [employees, isError, isLoading, label]);

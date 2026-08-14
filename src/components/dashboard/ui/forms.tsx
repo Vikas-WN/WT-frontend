@@ -7,7 +7,12 @@ import {
   SearchableSelectCombobox,
   type SearchableSelectOption,
 } from "@/components/dashboard/ui/SearchableSelectCombobox";
-import { Field, FieldDescription, FieldLabel as ShadcnFieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel as ShadcnFieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   InputGroup,
@@ -259,12 +264,16 @@ export function TextAreaField({
   );
 }
 
-export type SelectFieldOption = string | { value: string; label: string };
+export type SelectFieldOption = string | { value: string; label: string; title?: string };
 
 function normalizeSelectOptions(options: SelectFieldOption[]): SearchableSelectOption[] {
   return options.map((opt) => {
     if (typeof opt !== "string") {
-      return { value: opt.value, label: opt.label };
+      return {
+        value: opt.value,
+        label: opt.label,
+        ...(opt.title ? { title: opt.title } : {}),
+      };
     }
     // String enums (PENDING, IN_PROGRESS, …) get human labels; plain text stays readable.
     const looksLikeCode = /^[A-Z][A-Z0-9_]*$/.test(opt) || opt.includes("_");
@@ -316,6 +325,8 @@ export function DropdownSelectField({
   loading = false,
   loadingLabel = "Loading…",
   className,
+  contentClassName,
+  error,
 }: {
   label: string;
   value: string;
@@ -327,12 +338,16 @@ export function DropdownSelectField({
   loading?: boolean;
   loadingLabel?: string;
   className?: string;
+  /** Widen/style the dropdown popup independently of the trigger width. */
+  contentClassName?: string;
+  error?: string | null;
 }) {
   const fieldId = useId();
   const items = withPlaceholderOption(normalizeSelectOptions(options), placeholder, required);
+  const errorId = error ? `${fieldId}-error` : undefined;
 
   return (
-    <Field className={cn(FORM_FIELD_CLASS, className)}>
+    <Field className={cn(FORM_FIELD_CLASS, className)} data-invalid={error ? true : undefined}>
       <FieldLabel label={label} required={required} htmlFor={fieldId} />
       <SearchableSelectCombobox
         id={fieldId}
@@ -346,7 +361,9 @@ export function DropdownSelectField({
         required={required}
         aria-label={label}
         showChevron
+        contentClassName={contentClassName}
       />
+      {error ? <FieldError id={errorId}>{error}</FieldError> : null}
     </Field>
   );
 }
@@ -366,6 +383,7 @@ export function AdaptiveSelectField({
   clearSelectionOnEmptyInput = true,
   contentClassName,
   inputClassName,
+  error,
 }: {
   label: string;
   value: string;
@@ -388,12 +406,14 @@ export function AdaptiveSelectField({
    * to adjust the actual text inset.
    */
   inputClassName?: string;
+  error?: string | null;
 }) {
   const fieldId = useId();
   const items = withPlaceholderOption(normalizeSelectOptions(options), placeholder, required);
+  const errorId = error ? `${fieldId}-error` : undefined;
 
   return (
-    <Field className={cn(FORM_FIELD_CLASS, className)}>
+    <Field className={cn(FORM_FIELD_CLASS, className)} data-invalid={error ? true : undefined}>
       <FieldLabel label={label} required={required} htmlFor={fieldId} />
       <SearchableSelectCombobox
         id={fieldId}
@@ -411,6 +431,7 @@ export function AdaptiveSelectField({
         contentClassName={contentClassName}
         inputClassName={inputClassName}
       />
+      {error ? <FieldError id={errorId}>{error}</FieldError> : null}
     </Field>
   );
 }
@@ -427,6 +448,8 @@ export function SelectField({
   loadingLabel = "Loading…",
   className,
   contentClassName,
+  clearSelectionOnEmptyInput = true,
+  error,
 }: {
   label: string;
   value: string;
@@ -440,6 +463,8 @@ export function SelectField({
   className?: string;
   /** Widen/style the dropdown popup independently of the trigger's own width. */
   contentClassName?: string;
+  clearSelectionOnEmptyInput?: boolean;
+  error?: string | null;
 }) {
   return (
     <AdaptiveSelectField
@@ -454,7 +479,9 @@ export function SelectField({
       loadingLabel={loadingLabel}
       className={className}
       contentClassName={contentClassName}
+      clearSelectionOnEmptyInput={clearSelectionOnEmptyInput}
       searchPlaceholder={placeholder ?? "Search…"}
+      error={error}
     />
   );
 }

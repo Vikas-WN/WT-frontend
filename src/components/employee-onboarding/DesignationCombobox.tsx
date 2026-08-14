@@ -9,6 +9,11 @@ import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
+import {
+  MAX_DESIGNATION_LENGTH,
+  designationLengthError,
+} from "@/utils/dashboard/validation";
+import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -39,12 +44,14 @@ export function DesignationCombobox({
   const [options, setOptions] = useState<Designation[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [lengthError, setLengthError] = useState<string | null>(null);
 
   const prerequisitesMet = bandId > 0 && Boolean(department.trim());
   const isDisabled = disabled || !prerequisitesMet;
 
   useEffect(() => {
     setQuery(value);
+    setLengthError(designationLengthError(value));
   }, [value]);
 
   useEffect(() => {
@@ -107,15 +114,28 @@ export function DesignationCombobox({
 
   const selectDesignation = useCallback(
     (name: string) => {
+      const error = designationLengthError(name);
+      if (error) {
+        setLengthError(error);
+        onError?.(error);
+        return;
+      }
+      setLengthError(null);
       onChange(name);
       setQuery(name);
       setIsOpen(false);
     },
-    [onChange]
+    [onChange, onError]
   );
 
   const handleCreate = async () => {
     if (!trimmedQuery || !prerequisitesMet) return;
+    const error = designationLengthError(trimmedQuery);
+    if (error) {
+      setLengthError(error);
+      onError?.(error);
+      return;
+    }
     setIsCreating(true);
     try {
       const res = await hrmsService.createDesignation({
@@ -133,12 +153,14 @@ export function DesignationCombobox({
         return [...prev, created].sort((a, b) => a.name.localeCompare(b.name));
       });
     } catch (error) {
-      const message =
+      const message = toUserFriendlyApiErrorMessage(
+        error,
         error instanceof ApiError
           ? error.message
           : error instanceof Error
             ? error.message
-            : "Could not create designation.";
+            : "Could not create designation."
+      );
       if (error instanceof ApiError && error.status === 400) {
         try {
           const res = await hrmsService.searchDesignations({
@@ -184,16 +206,23 @@ export function DesignationCombobox({
           aria-controls={listId}
           aria-autocomplete="list"
           placeholder={placeholder}
-          maxLength={50}
+          maxLength={MAX_DESIGNATION_LENGTH}
           onFocus={() => {
             if (!isDisabled) setIsOpen(true);
           }}
           onChange={(e) => {
-            setQuery(e.target.value);
-            onChange(e.target.value);
+            const next = e.target.value;
+            setQuery(next);
+            setLengthError(designationLengthError(next));
+            onChange(next);
             setIsOpen(true);
           }}
         />
+        {lengthError ? (
+          <p className="mt-1 text-xs text-destructive" role="alert">
+            {lengthError}
+          </p>
+        ) : null}
         {isOpen && !isDisabled ? (
           <ul
             id={listId}

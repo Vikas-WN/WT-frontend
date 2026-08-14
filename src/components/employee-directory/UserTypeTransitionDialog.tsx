@@ -17,10 +17,13 @@ type UserTypeTransitionDialogProps = {
   fromType: string;
   toType: string;
   saving?: boolean;
-  /** When true, user must pick a non-intern full-time band before confirming. */
+  /** When true, user must pick a band before confirming. */
   requireBand?: boolean;
   bandOptions?: Array<{ value: string; label: string }>;
   bandsLoading?: boolean;
+  bandFieldLabel?: string;
+  bandHelperText?: string;
+  dateHelperText?: string;
   onClose: () => void;
   onConfirm: (payload: UserTypeTransitionConfirmPayload) => void | Promise<void>;
 };
@@ -33,6 +36,9 @@ export function UserTypeTransitionDialog({
   requireBand = false,
   bandOptions = [],
   bandsLoading = false,
+  bandFieldLabel = "Band",
+  bandHelperText,
+  dateHelperText,
   onClose,
   onConfirm,
 }: UserTypeTransitionDialogProps) {
@@ -45,12 +51,24 @@ export function UserTypeTransitionDialog({
     setBandId("");
   }, [open, fromType, toType]);
 
+  useEffect(() => {
+    if (!open || !requireBand || bandsLoading) return;
+    if (bandOptions.length === 1 && !bandId) {
+      setBandId(bandOptions[0]?.value ?? "");
+    }
+  }, [open, requireBand, bandsLoading, bandOptions, bandId]);
+
   const selectedDate = useMemo(() => parseApiDate(transitionDate) ?? undefined, [transitionDate]);
 
   if (!open) return null;
 
   const bandReady = !requireBand || Boolean(bandId.trim());
   const canConfirm = Boolean(transitionDate.trim()) && bandReady && !saving && !bandsLoading;
+  const defaultDateHelper =
+    dateHelperText ??
+    (String(toType).toUpperCase().replace(/[\s_-]+/g, "") === "FULLTIME"
+      ? "Set the transition date for this employee's full-time start."
+      : "Set the transition date for this user-type change.");
 
   return (
     <div
@@ -73,11 +91,11 @@ export function UserTypeTransitionDialog({
             Changing from {formatUserTypeLabel(fromType)} to {formatUserTypeLabel(toType)}.
           </p>
           <p className="mt-1 text-sm leading-relaxed text-wt-text-muted break-words">
-            Set the transition date for this employee&apos;s full-time start.
+            {defaultDateHelper}
           </p>
-          {requireBand ? (
+          {requireBand && bandHelperText ? (
             <p className="mt-2 text-sm leading-relaxed text-wt-text-muted break-words">
-              This employee is on an intern band (B8). Select a valid full-time band to continue.
+              {bandHelperText}
             </p>
           ) : null}
         </div>
@@ -85,7 +103,7 @@ export function UserTypeTransitionDialog({
         <div className="border-y border-wt-border bg-wt-surface-2/40 px-6 py-4 space-y-4">
           {requireBand ? (
             <DropdownSelectField
-              label="Full-time Band"
+              label={bandFieldLabel}
               value={bandId}
               onChange={setBandId}
               options={bandOptions}

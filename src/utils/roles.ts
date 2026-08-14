@@ -186,7 +186,7 @@ export function canEditEmployeeProfile(roles: string[]): boolean {
   return roles.includes("ROLE_HR");
 }
 
-/** PUT /employee-profile/{empId} — status field only (ROLE_ADMIN, not HR). */
+/** PUT /employee-profile/{empId} — status field only (ROLE_ADMIN without HR). Backend accepts status-only payloads. */
 export function canEditEmployeeProfileStatusOnly(roles: string[]): boolean {
   return roles.includes("ROLE_ADMIN") && !roles.includes("ROLE_HR");
 }

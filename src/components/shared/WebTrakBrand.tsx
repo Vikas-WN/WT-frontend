@@ -17,9 +17,13 @@ type WebTrakBrandProps = {
 const LOGO_SRC = "/webtrak-logo.png";
 
 function logoFrameClass(variant: Variant, compact: boolean) {
-  if (compact) return "size-10 rounded-xl p-1.5";
+  if (compact) {
+    return "size-10 rounded-xl bg-[color-mix(in_srgb,var(--wt-brand)_10%,transparent)] p-1.5 ring-1 ring-[color-mix(in_srgb,var(--wt-brand)_16%,transparent)]";
+  }
   if (variant === "login") return "size-12 rounded-xl p-2 sm:size-[3.25rem] sm:p-2.5";
-  if (variant === "sidebar") return "size-9 rounded-lg p-1.5";
+  if (variant === "sidebar") {
+    return "size-9 rounded-xl bg-[color-mix(in_srgb,var(--wt-brand)_9%,transparent)] p-1.5 ring-1 ring-[color-mix(in_srgb,var(--wt-brand)_14%,transparent)]";
+  }
   return "size-8 rounded-lg p-1";
 }
 
@@ -27,7 +31,7 @@ function wordmarkClass(variant: Variant) {
   return cn(
     "wt-brand-wordmark text-wt-text",
     variant === "login" && "text-2xl font-bold tracking-[-0.045em] text-white",
-    variant === "sidebar" && "truncate text-[1.125rem] font-semibold tracking-[-0.04em]",
+    variant === "sidebar" && "truncate text-[1.05rem] font-semibold tracking-[-0.035em]",
     variant === "header" && "text-lg font-semibold tracking-[-0.035em]"
   );
 }

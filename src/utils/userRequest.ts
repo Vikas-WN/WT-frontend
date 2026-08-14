@@ -232,6 +232,24 @@ export function isLeaveOrWfhRequestType(value: unknown): boolean {
 
 }
 
+/** Custom WFH exceptions — HR-only approval (managers are notified, not decision makers). */
+export function isWfhExceptionRequestType(value: unknown): boolean {
+  const raw = String(value ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "_");
+  return (
+    raw === "WFH_EXCEPTION" ||
+    raw === "WORK_FROM_HOME_EXCEPTION" ||
+    raw === "CUSTOM_WFH"
+  );
+}
+
+/** Leave, standard WFH, or custom WFH — types HR may decide while pending. */
+export function isHrDirectLeaveOrWfhRequestType(value: unknown): boolean {
+  return isLeaveOrWfhRequestType(value) || isWfhExceptionRequestType(value);
+}
+
 
 
 export function isLeaveRequestType(value: unknown): boolean {
@@ -335,7 +353,7 @@ export function requestFinalStatus(row: Record<string, unknown>): string {
   );
   if (
     raw === "SUBMITTED" &&
-    isLeaveOrWfhRequestType(pickRowField(row, "request_type", "requestType"))
+    isHrDirectLeaveOrWfhRequestType(pickRowField(row, "request_type", "requestType"))
   ) {
     return "PENDING";
   }
@@ -356,6 +374,11 @@ export function hrToggleStatusFromRow(row: Record<string, unknown>): UserRequest
 
     if (hr === "APPROVED" || hr === "REJECTED" || hr === "PENDING") return hr;
 
+  }
+
+  if (isWfhExceptionRequestType(requestType)) {
+    const final = requestFinalStatus(row);
+    if (final === "APPROVED" || final === "REJECTED" || final === "PENDING") return final;
   }
 
   const final = requestFinalStatus(row);
@@ -384,7 +407,8 @@ export function canHrReviewUserRequest(
   if (!options.hasHrAccess) return false;
   if (requestFinalStatus(row) !== "PENDING") return false;
   const requestType = pickRowField(row, "request_type", "requestType");
-  if (isLeaveOrWfhRequestType(requestType)) return true;
+  // Leave, WFH, and Custom WFH (HR-direct) — do not wait on manager approval.
+  if (isHrDirectLeaveOrWfhRequestType(requestType)) return true;
   if (!isManagerApprovedForHr(row)) return false;
   return true;
 }
@@ -395,7 +419,7 @@ export function canHrToggleLeaveWfh(
 ): boolean {
   if (!options.hasHrAccess) return false;
   const requestType = pickRowField(row, "request_type", "requestType");
-  if (isLeaveOrWfhRequestType(requestType)) {
+  if (isHrDirectLeaveOrWfhRequestType(requestType)) {
     return requestFinalStatus(row) === "PENDING";
   }
   if (isLeaveEmailOnlyWorkflow(row)) return false;
@@ -445,7 +469,7 @@ export function hrTeamActionBlockedHint(
 
   const requestType = pickRowField(row, "request_type", "requestType");
 
-  if (isLeaveRequestType(requestType) || isLeaveOrWfhRequestType(requestType)) {
+  if (isLeaveRequestType(requestType) || isHrDirectLeaveOrWfhRequestType(requestType)) {
     return null;
   }
 
@@ -490,6 +514,10 @@ export function canManagerActOnRequest(
   // Never show Approve/Reject once the request is fully decided.
   if (requestFinalStatus(row) !== "PENDING") return false;
 
+  const requestType = pickRowField(row, "request_type", "requestType");
+  // Custom WFH is HR-only; managers are notified but cannot decide.
+  if (isWfhExceptionRequestType(requestType)) return false;
+
   if (canPrimaryManagerActOnLeave(row, options.actorEmail)) return true;
   if (canSecondaryManagerApproveOnLeave(row, options.actorEmail)) return true;
   if (canSecondaryManagerRejectOnLeave(row, options.actorEmail)) return true;
@@ -501,7 +529,6 @@ export function canManagerActOnRequest(
   const hasDm = Boolean(options.hasDmAccess);
   if (!hasManager && !hasDm) return false;
 
-  const requestType = pickRowField(row, "request_type", "requestType");
   if (!isStageUserRequestType(requestType)) {
     return true;
   }

@@ -38,6 +38,7 @@ import {
   bandsForDepartment,
   isInternOnlyBand,
   isValidPersonName,
+  designationLengthError,
 } from "@/utils/dashboard/validation";
 import {
   PHONE_COUNTRY_OPTIONS,
@@ -51,6 +52,7 @@ import {
 } from "@/utils/employeeResume";
 import { canFetchEmployeeResumeApi, pickPortalRoles } from "@/utils/roles";
 import { normalizeEmployeeStatusKey } from "@/utils/userStatus";
+import { useAuth } from "@/context/AuthContext";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { AdaptiveSelectField, InputField } from "@/components/dashboard/ui/forms";
@@ -63,15 +65,40 @@ import { EmployeePortalRoleSelect } from "@/components/employee-directory/Employ
 import { IconPencil } from "@/components/employee-directory/employeeDirectoryIcons";
 import { buildProfileRowsFromEmployeeAllocations, formatCurrentAllocationSummary, selectProfileAllocationRows } from "@/utils/dashboard/projects";
 import { isSystemProjectAllocationRow } from "@/utils/allocationList";
+import { showErrorToast } from "@/lib/toast";
 const WORK_MODES = ["WFO", "WFH", "HYBRID"];
 const WORK_LOCATIONS = ["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"];
 const USER_STATUSES = ["ACTIVE", "INACTIVE", "PENDING", "ONBOARDING", "INVITED", "SERVING_NOTICE"];
 
 type BandOption = { value: string; label: string };
 
+function ViewOnlyField({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-medium leading-none text-wt-text">{label}</span>
+      <div className="flex h-11 items-center rounded-xl border border-dashed border-wt-border bg-wt-surface-2/60 px-3.5 text-sm text-wt-text">
+        <span className="min-w-0 truncate">{value.trim() || "—"}</span>
+        <span className="ml-auto shrink-0 rounded-md bg-wt-surface-3 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-wt-text-muted">
+          View only
+        </span>
+      </div>
+      {hint ? <p className="text-xs text-wt-text-muted">{hint}</p> : null}
+    </div>
+  );
+}
+
 export function EmployeeProfilePageClient() {
   const params = useParams();
   const empId = decodeURIComponent(String(params?.empId ?? "").trim());
+  const { user } = useAuth();
   const {
     authStatus,
     canView: canViewProfile,
@@ -133,6 +160,13 @@ export function EmployeeProfilePageClient() {
   const displayName = cleanEmployeeName(profileRecord) || "Employee";
   const department = String(pickProfileField(profileRecord, ["department"]) ?? "").trim();
   const email = String(pickProfileField(profileRecord, ["email"]) ?? "").trim();
+  const isOwnProfile = Boolean(
+    email && user?.email && email.trim().toLowerCase() === user.email.trim().toLowerCase()
+  );
+  /** HR/Admin must not change org-admin fields on their own directory profile. */
+  const adminFieldsLocked = isOwnProfile;
+  const selfAdminLockHint =
+    "HR-controlled field — ask another HR or Admin to change this on your profile.";
   const phone = formatProfileDisplayValue(
     pickProfileField(profileRecord, ["phone_number", "phoneNumber"])
   );
@@ -267,10 +301,26 @@ export function EmployeeProfilePageClient() {
   const bandSelectValue = editForm?.band_id?.trim() ?? "";
   const designationBandId = Number(bandSelectValue) || 0;
   const departmentForDesignations = editForm?.department?.trim() ?? "";
+
+  /** Consultants have no band — union designations across non-intern bands for the department. */
+  const consultantDesignationBandIds = useMemo(() => {
+    if (!isConsultantEmployee) return undefined;
+    const dept = editForm?.department?.trim() ?? "";
+    if (!dept) return [];
+    return bandsForDepartment(bandRows, dept)
+      .filter((row) => !isInternOnlyBand(bandDisplayLabel(row)))
+      .map((row) => Number(row.id))
+      .filter((id) => Number.isFinite(id) && id > 0);
+  }, [isConsultantEmployee, editForm?.department, bandRows]);
+
   const {
     options: designationOptions,
     loading: designationLoading,
-  } = useDesignationSelectOptions(departmentForDesignations, designationBandId);
+  } = useDesignationSelectOptions(
+    departmentForDesignations,
+    isConsultantEmployee ? 0 : designationBandId,
+    consultantDesignationBandIds
+  );
 
   useEffect(() => {
     if (!isEditing || !editForm || isConsultantEmployee) return;
@@ -285,7 +335,7 @@ export function EmployeeProfilePageClient() {
   }, [bandSelectOptionsList, editForm, isEditing, isConsultantEmployee]);
 
   useEffect(() => {
-    if (!isEditing || designationLoading || isConsultantEmployee) return;
+    if (!isEditing || designationLoading) return;
     if (designationOptions.length === 1) {
       const onlyRole = designationOptions[0]?.value ?? "";
       if (!onlyRole) return;
@@ -303,7 +353,7 @@ export function EmployeeProfilePageClient() {
       }
       return prev;
     });
-  }, [designationOptions, designationLoading, isEditing, isConsultantEmployee]);
+  }, [designationOptions, designationLoading, isEditing]);
 
   const departmentSelectOptions = useMemo(() => {
     const deps = [...departmentOptions];
@@ -335,6 +385,11 @@ export function EmployeeProfilePageClient() {
 
   const saveProfile = () => {
     if (!editForm || !empId) return;
+    const lengthError = designationLengthError(editForm.role);
+    if (!statusOnlyEdit && lengthError) {
+      showErrorToast(lengthError);
+      return;
+    }
     void runAction(
       statusOnlyEdit ? "Update employee status" : "Update employee profile",
       async () => {
@@ -352,18 +407,19 @@ export function EmployeeProfilePageClient() {
             editForm.phone_number
           );
           if (phoneError) throw new Error(phoneError);
-          if (!isConsultantEmployee && designationLoading) {
+          if (designationLoading) {
             throw new Error("Designations are still loading. Please wait a moment.");
           }
           if (!editForm.role.trim()) {
             throw new Error("Designation is required.");
           }
-          if (
-            !isConsultantEmployee &&
-            !designationOptions.some((option) => option.value === editForm.role.trim())
-          ) {
+          const designationError = designationLengthError(editForm.role);
+          if (designationError) throw new Error(designationError);
+          if (!designationOptions.some((option) => option.value === editForm.role.trim())) {
             throw new Error(
-              "Selected designation is not valid for the chosen department and band."
+              isConsultantEmployee
+                ? "Selected designation is not valid for the chosen department."
+                : "Selected designation is not valid for the chosen department and band."
             );
           }
           if (onboardOptionsLoading) {
@@ -487,23 +543,39 @@ export function EmployeeProfilePageClient() {
                 {statusOnlyEdit ? (
                   <FormSection
                     title="Employee Status"
-                    description="Update the employee account status. Other profile fields cannot be changed from this role."
+                    description={
+                      adminFieldsLocked
+                        ? "You cannot change your own account status. Ask another HR or Admin user."
+                        : "Update the employee account status. Other profile fields cannot be changed from this role."
+                    }
                   >
                     <div className="max-w-sm">
-                      <AdaptiveSelectField
-                        label="Status"
-                        required
-                        value={editForm.user_status}
-                        options={USER_STATUSES}
-                        onChange={(v) => setEditForm({ ...editForm, user_status: v })}
-                        disabled={saving}
-                      />
+                      {adminFieldsLocked ? (
+                        <ViewOnlyField
+                          label="Status"
+                          value={editForm.user_status}
+                          hint={selfAdminLockHint}
+                        />
+                      ) : (
+                        <AdaptiveSelectField
+                          label="Status"
+                          required
+                          value={editForm.user_status}
+                          options={USER_STATUSES}
+                          onChange={(v) => setEditForm({ ...editForm, user_status: v })}
+                          disabled={saving}
+                        />
+                      )}
                     </div>
                   </FormSection>
                 ) : (
                   <FormSection
                     title="Information"
-                    description="Employment details, department, and work arrangement."
+                    description={
+                      adminFieldsLocked
+                        ? "Department, band, designation, and other HR-controlled fields are view-only on your own profile."
+                        : "Employment details, department, and work arrangement."
+                    }
                   >
                     <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
                       <InputField
@@ -513,14 +585,22 @@ export function EmployeeProfilePageClient() {
                         onChange={(v) => setEditForm({ ...editForm, name: v })}
                         disabled={saving}
                       />
-                      <InputField
-                        label="Work Email"
-                        type="email"
-                        required
-                        value={editForm.email}
-                        onChange={(v) => setEditForm({ ...editForm, email: v })}
-                        disabled={saving}
-                      />
+                      {adminFieldsLocked ? (
+                        <ViewOnlyField
+                          label="Work Email"
+                          value={editForm.email}
+                          hint={selfAdminLockHint}
+                        />
+                      ) : (
+                        <InputField
+                          label="Work Email"
+                          type="email"
+                          required
+                          value={editForm.email}
+                          onChange={(v) => setEditForm({ ...editForm, email: v })}
+                          disabled={saving}
+                        />
+                      )}
                       <div className="flex flex-col gap-2">
                         <span className="text-sm font-medium leading-none text-wt-text">
                           Personal Email
@@ -555,77 +635,116 @@ export function EmployeeProfilePageClient() {
                         onChange={(v) => setEditForm({ ...editForm, phone_number: digitsOnly(v) })}
                         disabled={saving}
                       />
-                      <AdaptiveSelectField
-                        label="Department"
-                        required
-                        value={editForm.department}
-                        placeholder="Select Department"
-                        searchPlaceholder="Search Departments…"
-                        options={departmentSelectOptions}
-                        onChange={(v) =>
-                          setEditForm((prev) =>
-                            prev ? { ...prev, department: v, band_id: "", role: "" } : prev
-                          )
-                        }
-                        disabled={saving}
-                      />
-                      <AdaptiveSelectField
-                        label="Status"
-                        required
-                        value={editForm.user_status}
-                        options={USER_STATUSES}
-                        onChange={(v) => setEditForm({ ...editForm, user_status: v })}
-                        disabled={saving}
-                      />
-                      <AdaptiveSelectField
-                        label="Work Mode"
-                        required
-                        value={editForm.work_mode}
-                        options={workModeOptions}
-                        onChange={(v) => setEditForm({ ...editForm, work_mode: v })}
-                        disabled={saving}
-                      />
-                      <AdaptiveSelectField
-                        label="Work Location"
-                        required
-                        value={editForm.work_location_type}
-                        options={WORK_LOCATIONS}
-                        onChange={(v) => setEditForm({ ...editForm, work_location_type: v })}
-                        disabled={saving}
-                      />
-                      {!isConsultantEmployee ? (
+                      {adminFieldsLocked ? (
+                        <ViewOnlyField
+                          label="Department"
+                          value={editForm.department}
+                          hint={selfAdminLockHint}
+                        />
+                      ) : (
                         <AdaptiveSelectField
-                          label="Band"
+                          label="Department"
                           required
-                          value={bandSelectValue}
-                          placeholder={
-                            !editForm.department.trim()
-                              ? "Select Department First"
-                              : bandSelectOptionsList.length
-                                ? "Select Band"
-                                : "No Bands Available"
-                          }
-                          searchPlaceholder="Search Bands…"
-                          options={bandSelectOptionsList}
-                          onChange={(id) =>
+                          value={editForm.department}
+                          placeholder="Select Department"
+                          searchPlaceholder="Search Departments…"
+                          options={departmentSelectOptions}
+                          onChange={(v) =>
                             setEditForm((prev) =>
-                              prev ? { ...prev, band_id: id, role: "" } : prev
+                              prev ? { ...prev, department: v, band_id: "", role: "" } : prev
                             )
                           }
-                          disabled={
-                            saving || !editForm.department.trim() || !bandSelectOptionsList.length
-                          }
-                        />
-                      ) : null}
-                      {isConsultantEmployee ? (
-                        <InputField
-                          label="Designation"
-                          required
-                          value={editForm.role}
-                          onChange={(role) =>
-                            setEditForm((prev) => (prev ? { ...prev, role } : prev))
-                          }
                           disabled={saving}
+                        />
+                      )}
+                      {adminFieldsLocked ? (
+                        <ViewOnlyField
+                          label="Status"
+                          value={editForm.user_status}
+                          hint={selfAdminLockHint}
+                        />
+                      ) : (
+                        <AdaptiveSelectField
+                          label="Status"
+                          required
+                          value={editForm.user_status}
+                          options={USER_STATUSES}
+                          onChange={(v) => setEditForm({ ...editForm, user_status: v })}
+                          disabled={saving}
+                        />
+                      )}
+                      {adminFieldsLocked ? (
+                        <ViewOnlyField
+                          label="Work Mode"
+                          value={editForm.work_mode}
+                          hint={selfAdminLockHint}
+                        />
+                      ) : (
+                        <AdaptiveSelectField
+                          label="Work Mode"
+                          required
+                          value={editForm.work_mode}
+                          options={workModeOptions}
+                          onChange={(v) => setEditForm({ ...editForm, work_mode: v })}
+                          disabled={saving}
+                        />
+                      )}
+                      {adminFieldsLocked ? (
+                        <ViewOnlyField
+                          label="Work Location"
+                          value={editForm.work_location_type}
+                          hint={selfAdminLockHint}
+                        />
+                      ) : (
+                        <AdaptiveSelectField
+                          label="Work Location"
+                          required
+                          value={editForm.work_location_type}
+                          options={WORK_LOCATIONS}
+                          onChange={(v) => setEditForm({ ...editForm, work_location_type: v })}
+                          disabled={saving}
+                        />
+                      )}
+                      {!isConsultantEmployee ? (
+                        adminFieldsLocked ? (
+                          <ViewOnlyField
+                            label="Band"
+                            value={
+                              bandSelectOptionsList.find((o) => o.value === bandSelectValue)?.label ??
+                              bandSelectValue
+                            }
+                            hint={selfAdminLockHint}
+                          />
+                        ) : (
+                          <AdaptiveSelectField
+                            label="Band"
+                            required
+                            value={bandSelectValue}
+                            placeholder={
+                              !editForm.department.trim()
+                                ? "Select Department First"
+                                : bandSelectOptionsList.length
+                                  ? "Select Band"
+                                  : "No Bands Available"
+                            }
+                            searchPlaceholder="Search Bands…"
+                            options={bandSelectOptionsList}
+                            onChange={(id) =>
+                              setEditForm((prev) =>
+                                prev ? { ...prev, band_id: id, role: "" } : prev
+                              )
+                            }
+                            disabled={
+                              saving || !editForm.department.trim() || !bandSelectOptionsList.length
+                            }
+                          />
+                        )
+                      ) : null}
+                      {adminFieldsLocked ? (
+                        <ViewOnlyField
+                          label="Designation"
+                          value={editForm.role}
+                          hint={selfAdminLockHint}
                         />
                       ) : (
                         <AdaptiveSelectField
@@ -635,13 +754,23 @@ export function EmployeeProfilePageClient() {
                           loading={designationLoading}
                           loadingLabel="Loading Designations…"
                           placeholder={
-                            !editForm.department.trim() || designationBandId <= 0
-                              ? "Select Department And Band First"
-                              : designationLoading
-                                ? "Loading Designations…"
-                                : designationOptions.length
-                                  ? "Select Designation"
-                                  : "No Designations For This Band"
+                            !editForm.department.trim()
+                              ? "Select Department First"
+                              : isConsultantEmployee
+                                ? designationLoading
+                                  ? "Loading Designations…"
+                                  : designationOptions.length
+                                    ? "Select Designation"
+                                    : consultantDesignationBandIds?.length
+                                      ? "No Designations For This Department"
+                                      : "No Bands Available"
+                                : designationBandId <= 0
+                                  ? "Select Department And Band First"
+                                  : designationLoading
+                                    ? "Loading Designations…"
+                                    : designationOptions.length
+                                      ? "Select Designation"
+                                      : "No Designations For This Band"
                           }
                           searchPlaceholder="Search Designations…"
                           options={designationOptions}
@@ -651,10 +780,11 @@ export function EmployeeProfilePageClient() {
                           disabled={
                             saving ||
                             !editForm.department.trim() ||
-                            designationBandId <= 0 ||
                             designationLoading ||
-                            !designationOptions.length
+                            !designationOptions.length ||
+                            (!isConsultantEmployee && designationBandId <= 0)
                           }
+                          error={designationLengthError(editForm.role)}
                         />
                       )}
                     </div>
@@ -690,9 +820,11 @@ export function EmployeeProfilePageClient() {
 
                 <FormActionBar
                   hint={
-                    statusOnlyEdit
-                      ? "Only the employee status will be updated."
-                      : "Review your updates, then save to apply changes to this profile."
+                    adminFieldsLocked
+                      ? "HR-controlled fields on your own profile are view-only. Contact details and skills can still be updated."
+                      : statusOnlyEdit
+                        ? "Only the employee status will be updated."
+                        : "Review your updates, then save to apply changes to this profile."
                   }
                   saving={saving}
                   onCancel={cancelEditor}
@@ -739,13 +871,15 @@ export function EmployeeProfilePageClient() {
                 <FormSection
                   title="Portal Role"
                   description={
-                    normalizeEmployeeStatusKey(
-                      profileRecord.status ??
-                        profileRecord.user_status ??
-                        profileRecord.userStatus
-                    ) === "INVITED"
-                      ? "Locked while Invited — change after onboarding completes."
-                      : "Set this employee's portal access role."
+                    isOwnProfile
+                      ? "You cannot change your own portal role. Ask another HR or Admin user."
+                      : normalizeEmployeeStatusKey(
+                            profileRecord.status ??
+                              profileRecord.user_status ??
+                              profileRecord.userStatus
+                          ) === "INVITED"
+                        ? "Locked while Invited — change after onboarding completes."
+                        : "Set this employee's portal access role."
                   }
                   className="!p-4 sm:!p-5"
                 >
@@ -758,7 +892,7 @@ export function EmployeeProfilePageClient() {
                         profileRecord.user_status ??
                         profileRecord.userStatus
                       }
-                      canEdit
+                      canEdit={!isOwnProfile}
                     />
                   </div>
                 </FormSection>

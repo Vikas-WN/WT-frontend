@@ -6,7 +6,11 @@ import { formatUiStatusLabel } from "@/utils/statusLabel";
 import { formatTimelogTableDate } from "@/utils/timelog/weekDates";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
 import { projectManagerEmailFromEntry } from "@/utils/timelog/entryManager";
-import { isEmployeeTimelogEditable } from "@/utils/timelog/employeeEditability";
+import {
+  employeeTimelogActionLockReason,
+  isEmployeeTimelogEditable,
+} from "@/utils/timelog/employeeEditability";
+import { resolveTimelogProjectLabel } from "@/utils/timelog/projectLabel";
 import "./DayEntriesPanel.css";
 import type { DayEntriesPanelProps } from "./DayEntriesPanel.types";
 
@@ -86,15 +90,15 @@ export function DayEntriesPanel({
                 [...entries].reverse().map((entry) => {
               const taskLabel = TASK_CATEGORY_LABELS[entry.task_category] ?? entry.task_category;
               const projectManagerEmail = projectManagerEmailFromEntry(entry);
+              const editable = isEmployeeTimelogEditable(entry.status);
+              const lockReason = employeeTimelogActionLockReason(entry.status);
+              const showActions = editable || Boolean(lockReason);
               return (
                 <div key={entry.id} className="day-entries-card">
                   <div className="day-entries-card-header">
                     <div>
                       <div className="day-entries-card-project">
-                        {entry.project_name?.trim() 
-                        || projectOptions.find((p) => p.project_code === entry.project_code)?.project_name
-                        || entry.project_code
-                        || "—"}
+                        {resolveTimelogProjectLabel(entry, projectOptions)}
                       </div>
                       {projectManagerEmail ? (
                         <div className="day-entries-card-task">
@@ -121,13 +125,14 @@ export function DayEntriesPanel({
                       </div>
                     ) : null}
                   </div>
-                  {isEmployeeTimelogEditable(entry.status) ? (
+                  {showActions ? (
                     <div className="day-entries-card-actions">
                       <Button
                         variant="outline"
                         size="xs"
                         type="button"
-                        disabled={actionLoading}
+                        disabled={actionLoading || !editable}
+                        title={lockReason ?? undefined}
                         onClick={() => onEdit(entry)}
                       >
                         Edit
@@ -136,7 +141,8 @@ export function DayEntriesPanel({
                         variant="destructive"
                         size="xs"
                         type="button"
-                        disabled={actionLoading}
+                        disabled={actionLoading || !editable}
+                        title={lockReason ?? undefined}
                         onClick={() => onDelete(entry.id)}
                       >
                         Delete

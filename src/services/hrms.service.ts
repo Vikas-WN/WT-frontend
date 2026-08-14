@@ -1067,8 +1067,9 @@ export const hrmsService = {
   getLeaveManagerOptions(params?: { search?: string }) {
     const query: Record<string, string> = {};
     if (params?.search?.trim()) query.search = params.search.trim();
-    return apiClient.get<ApiEnvelope<{ items: LeaveManagerOption[] }>>(
-      endpoints.userRequest.leaveManagerOptions,
+    // Prefer /employees/managers (Role=Manager/DM, any user type). Legacy leave-request path kept as alias.
+    return apiClient.get<ApiEnvelope<{ items: LeaveManagerOption[] } | LeaveManagerOption[]>>(
+      endpoints.employees.managers,
       { query }
     );
   },

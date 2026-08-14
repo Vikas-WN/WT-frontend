@@ -42,10 +42,15 @@ export function EmployeeUserTypeSelect({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [bandRows, setBandRows] = useState<Array<Record<string, unknown>>>([]);
   const [bandsLoading, setBandsLoading] = useState(false);
+  /** Local draft so the field can be cleared before picking a new type. */
+  const [draftType, setDraftType] = useState<string | null>(null);
 
   const currentType = normalizeDirectoryUserType(userType);
   const currentBandLabel = String(bandName ?? "").trim();
-  const needsFulltimeBand = isInternOnlyBand(currentBandLabel);
+  const currentBandIsInternOnly = isInternOnlyBand(currentBandLabel);
+  const needsFulltimeBand = currentBandIsInternOnly;
+  const needsInternBand = !currentBandIsInternOnly;
+  const displayValue = draftType !== null ? draftType : currentType;
 
   const selectOptions = useMemo(
     () =>
@@ -57,20 +62,34 @@ export function EmployeeUserTypeSelect({
   );
   const displayLabel = formatUserTypeLabel(currentType);
 
-  const fulltimeBandOptions = useMemo(() => {
-    const nonIntern = bandRows.filter(
-      (row) => !isInternOnlyBand(bandDisplayLabel(row))
+  const requireBandForPending =
+    (pendingType === "FULLTIME" && needsFulltimeBand) ||
+    (pendingType === "INTERN" && needsInternBand);
+
+  const dialogBandOptions = useMemo(() => {
+    if (pendingType === "INTERN") {
+      return bandSelectOptions(
+        bandRows.filter((row) => isInternOnlyBand(bandDisplayLabel(row)))
+      );
+    }
+    return bandSelectOptions(
+      bandRows.filter((row) => !isInternOnlyBand(bandDisplayLabel(row)))
     );
-    return bandSelectOptions(nonIntern);
-  }, [bandRows]);
+  }, [bandRows, pendingType]);
 
   useEffect(() => {
-    if (!dialogOpen || !needsFulltimeBand) return;
+    setDraftType(null);
+  }, [empId, currentType]);
+
+  useEffect(() => {
+    if (!dialogOpen || !requireBandForPending || !pendingType) return;
     let cancelled = false;
     setBandsLoading(true);
     void (async () => {
       try {
-        const res = await hrmsService.getBands({ userType: "FULLTIME" });
+        const res = await hrmsService.getBands({
+          userType: pendingType === "INTERN" ? "INTERN" : "FULLTIME",
+        });
         if (cancelled) return;
         setBandRows(toRows((res as { data?: unknown }).data ?? res));
       } catch {
@@ -82,7 +101,7 @@ export function EmployeeUserTypeSelect({
     return () => {
       cancelled = true;
     };
-  }, [dialogOpen, needsFulltimeBand]);
+  }, [dialogOpen, requireBandForPending, pendingType]);
 
   const persistUserType = async (
     nextType: string,
@@ -106,6 +125,7 @@ export function EmployeeUserTypeSelect({
       showSuccessToast("User type updated successfully.");
       setDialogOpen(false);
       setPendingType(null);
+      setDraftType(null);
     } catch (err) {
       const msg =
         err instanceof ApiError
@@ -114,6 +134,7 @@ export function EmployeeUserTypeSelect({
             ? err.message
             : "Could not update user type.";
       showErrorToast(msg);
+      setDraftType(null);
     } finally {
       setSaving(false);
     }
@@ -121,9 +142,25 @@ export function EmployeeUserTypeSelect({
 
   const handleChange = (nextType: string) => {
     const normalizedNext = normalizeDirectoryUserType(nextType);
-    if (!normalizedNext || normalizedNext === currentType) return;
 
-    if (requiresUserTypeTransitionDialog(currentType, normalizedNext)) {
+    // Allow clearing the field so a different type can be chosen next.
+    if (!normalizedNext) {
+      setDraftType("");
+      return;
+    }
+
+    if (normalizedNext === currentType) {
+      setDraftType(null);
+      return;
+    }
+
+    setDraftType(normalizedNext);
+
+    if (
+      requiresUserTypeTransitionDialog(currentType, normalizedNext, {
+        currentBandIsInternOnly,
+      })
+    ) {
       setPendingType(normalizedNext);
       setDialogOpen(true);
       return;
@@ -134,8 +171,12 @@ export function EmployeeUserTypeSelect({
 
   const handleConfirm = (payload: UserTypeTransitionConfirmPayload) => {
     if (!pendingType) return;
-    if (needsFulltimeBand && pendingType === "FULLTIME" && payload.bandId == null) {
+    if (pendingType === "FULLTIME" && needsFulltimeBand && payload.bandId == null) {
       showErrorToast("Select a valid full-time band before converting to Full-time.");
+      return;
+    }
+    if (pendingType === "INTERN" && needsInternBand && payload.bandId == null) {
+      showErrorToast("Select band B8 (Intern) before converting to Intern.");
       return;
     }
     void persistUserType(pendingType, payload.transitionDate, payload.bandId);
@@ -145,6 +186,19 @@ export function EmployeeUserTypeSelect({
     return <span className="block truncate text-wt-text">{displayLabel}</span>;
   }
 
+  const bandFieldLabel =
+    pendingType === "INTERN" ? "Intern Band" : pendingType === "FULLTIME" ? "Full-time Band" : "Band";
+  const bandHelperText =
+    pendingType === "INTERN"
+      ? "Interns must use band B8 (or B8 - Intern). Select it here to complete the conversion."
+      : pendingType === "FULLTIME" && needsFulltimeBand
+        ? "This employee is on an intern band (B8). Select a valid full-time band to continue."
+        : undefined;
+  const dateHelperText =
+    pendingType === "FULLTIME"
+      ? "Set the transition date for this employee's full-time start."
+      : "Set the transition date for this user-type change.";
+
   return (
     <>
       <div
@@ -153,8 +207,8 @@ export function EmployeeUserTypeSelect({
         onKeyDown={(event) => event.stopPropagation()}
       >
         <DropdownSelect
-          key={`${empId}-${currentType}`}
-          value={currentType}
+          key={empId}
+          value={displayValue}
           onChange={handleChange}
           options={selectOptions}
           disabled={saving}
@@ -162,8 +216,8 @@ export function EmployeeUserTypeSelect({
           variant="table-inline"
           className="w-full min-w-0"
           contentClassName="min-w-[14rem] w-max"
-          // Keep chevron dropdown look — no clear "x" pill (User Type is required).
-          clearSelectionOnEmptyInput={false}
+          placeholder="Select user type"
+          clearSelectionOnEmptyInput
         />
       </div>
 
@@ -172,13 +226,17 @@ export function EmployeeUserTypeSelect({
         fromType={currentType}
         toType={pendingType ?? ""}
         saving={saving}
-        requireBand={Boolean(pendingType === "FULLTIME" && needsFulltimeBand)}
-        bandOptions={fulltimeBandOptions}
+        requireBand={requireBandForPending}
+        bandOptions={dialogBandOptions}
         bandsLoading={bandsLoading}
+        bandFieldLabel={bandFieldLabel}
+        bandHelperText={bandHelperText}
+        dateHelperText={dateHelperText}
         onClose={() => {
           if (saving) return;
           setDialogOpen(false);
           setPendingType(null);
+          setDraftType(null);
         }}
         onConfirm={handleConfirm}
       />

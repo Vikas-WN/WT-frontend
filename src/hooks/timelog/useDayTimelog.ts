@@ -4,13 +4,15 @@ import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { hrmsService } from "@/services/hrms.service";
 import { ApiError } from "@/api/error";
-import { showSuccessToast } from "@/lib/toast";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { formatApiDate, parseTimelogDate, toIsoDateKey } from "@/utils/timelog/weekDates";
 import {
   projectOptionsFromPayload,
   normalizeTimelogOptionsPayload,
   type TimelogOptionsPayload,
 } from "@/utils/timelog/categories";
+import { normalizeDayTimelogEntries } from "@/utils/timelog/normalizeWeekSnapshot";
 import type {
   DayTimelogEntry,
   DayTimelogEntryForm,
@@ -138,7 +140,7 @@ export function useDayTimelog() {
     queryFn: async () => {
       const res = await hrmsService.getTimelogs({ page: "0", size: "200" });
       const raw = parseApiEnvelope<ApiTimelogList>(res);
-      const allItems = raw.items ?? [];
+      const allItems = normalizeDayTimelogEntries(raw.items ?? raw);
       const ms = monthStart.getTime();
       const me = monthEnd.getTime();
       return allItems.filter((item) => {
@@ -160,7 +162,7 @@ export function useDayTimelog() {
         size: "200",
       });
       const raw = parseApiEnvelope<ApiTimelogList>(res);
-      return raw.items ?? [];
+      return normalizeDayTimelogEntries(raw.items ?? raw);
     },
   });
 
@@ -172,7 +174,11 @@ export function useDayTimelog() {
         page: String(tablePage),
         size: String(TABLE_PAGE_SIZE),
       });
-      return parseApiEnvelope<ApiTimelogList>(res);
+      const raw = parseApiEnvelope<ApiTimelogList>(res);
+      return {
+        items: normalizeDayTimelogEntries(raw.items ?? raw),
+        total: Number(raw.total ?? 0),
+      };
     },
   });
 
@@ -263,17 +269,14 @@ export function useDayTimelog() {
     [],
   );
 
-  const [actionError, setActionError] = useState<string | null>(null);
-
   const handleAction = useCallback(
     async (fn: () => Promise<unknown>) => {
-      setActionError(null);
       try {
         await runAction(fn);
       } catch (error) {
-        const msg =
-          error instanceof Error ? error.message : "An error occurred";
-        setActionError(msg);
+        showErrorToast(
+          toUserFriendlyApiErrorMessage(error, "An error occurred")
+        );
       }
     },
     [runAction],
@@ -465,10 +468,7 @@ export function useDayTimelog() {
     loading:
       (logsQuery.isFetching && !logsQuery.isPaused) ||
       (dayLogsQuery.isFetching && !dayLogsQuery.isPaused),
-    error:
-      logsQuery.error || dayLogsQuery.error
-        ? "Unable to load timelog data"
-        : actionError,
+    error: logsQuery.error || dayLogsQuery.error ? "Unable to load timelog data" : null,
     actionLoading,
     editingEntry,
     showEntryForm,

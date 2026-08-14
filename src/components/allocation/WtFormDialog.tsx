@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { ModalPanelContext } from "@/components/dashboard/ui/ModalPanelContext";
 import { UI_COPY } from "@/constants/uiCopy";
 import {
   MODAL_BODY_CLASS,
@@ -56,6 +57,8 @@ export function WtFormDialog({
     };
   }, [open, onClose]);
 
+  const [portalHost, setPortalHost] = useState<HTMLElement | null>(null);
+
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
@@ -74,7 +77,11 @@ export function WtFormDialog({
           {description ? <p className={SECTION_DESCRIPTION_CLASS}>{description}</p> : null}
         </div>
 
-        <div className={MODAL_BODY_CLASS}>{children}</div>
+        <div ref={setPortalHost} className={MODAL_BODY_CLASS}>
+          <ModalPanelContext.Provider value={portalHost}>
+            {children}
+          </ModalPanelContext.Provider>
+        </div>
 
         <div className={MODAL_FOOTER_CLASS}>
           <Button type="button" variant="outline" onClick={onClose} disabled={loading}>

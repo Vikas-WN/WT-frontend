@@ -15,6 +15,8 @@ import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAc
 import { hrmsService } from "@/services/hrms.service";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
+import { resolveTimelogProjectLabel } from "@/utils/timelog/projectLabel";
+import { isManagerTimelogDecisionActionable } from "@/utils/timelog/employeeEditability";
 import { toIsoDateKey } from "@/utils/timelog/weekDates";
 import type { DayTimelogEntry } from "@/hooks/timelog/useDayTimelog.types";
 import type { ProjectWeekEmployeeTotal } from "@/hooks/timelog/useProjectTimelogs.types";
@@ -310,8 +312,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                     </thead>
                     <tbody>
                       {entriesPagination.pageItems.map((entry: DayTimelogEntry) => {
-                        const isActionable =
-                          entry.status === "SUBMITTED" || entry.status === "REJECTED";
+                        const isActionable = isManagerTimelogDecisionActionable(entry.status);
                         return (
                           <tr
                             key={`${entry.id}-${toIsoDateKey(entry.log_date)}`}
@@ -321,10 +322,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                               {entry.log_date}
                             </td>
                             <td className="px-2 py-2 whitespace-nowrap">
-                              {entry.project_name?.trim()
-                                || projects.find((p) => p.project_code === entry.project_code)?.project_name
-                                || entry.project_code
-                                || "-"}
+                              {resolveTimelogProjectLabel(entry, projects)}
                             </td>
                             <td className="px-2 py-2 whitespace-nowrap">
                               {TASK_CATEGORY_LABELS[entry.task_category] ?? entry.task_category}
@@ -472,7 +470,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                         <div className="text-xs text-wt-text-muted">{item.employee_email}</div>
                       </td>
                       <td className="px-2 py-2 whitespace-nowrap">
-                        {item.project_name?.trim() || "—"}
+                        {resolveTimelogProjectLabel(item, projects)}
                       </td>
                       <td className="px-2 py-2 whitespace-nowrap tabular-nums">{item.log_date}</td>
                       <td className="px-2 py-2 text-center tabular-nums">{item.hours}h</td>

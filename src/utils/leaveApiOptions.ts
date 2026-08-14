@@ -5,7 +5,9 @@ export function unwrapApiDataArray<T>(payload: unknown): T[] {
   return Array.isArray(data) ? (data as T[]) : [];
 }
 
-/** Unwrap `{ message, data: { items } }` (and one nested data layer) from BFF/API responses. */
+/** Unwrap `{ message, data: { items } }` (and one nested data layer) from BFF/API responses.
+ * Also accepts `data` as a bare array (legacy `/employees/managers`).
+ */
 export function unwrapLeaveOptionItems<T>(payload: unknown): T[] {
   if (!payload || typeof payload !== "object") return [];
   const root = payload as Record<string, unknown>;
@@ -16,7 +18,11 @@ export function unwrapLeaveOptionItems<T>(payload: unknown): T[] {
       data = nested.data;
     }
   }
-  if (!data || typeof data !== "object" || Array.isArray(data)) return [];
-  const items = (data as Record<string, unknown>).items;
+  if (Array.isArray(data)) {
+    return data as T[];
+  }
+  if (!data || typeof data !== "object") return [];
+  const record = data as Record<string, unknown>;
+  const items = record.items ?? record.managers;
   return Array.isArray(items) ? (items as T[]) : [];
 }

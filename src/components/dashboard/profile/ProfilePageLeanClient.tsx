@@ -63,7 +63,7 @@ import { ProfileSectionsView } from "@/components/employee-directory/ProfileSect
 import { pickEmployeeRole } from "@/utils/employeeDirectory";
 
 export function ProfilePageLeanClient() {
-  const { user, refresh: refreshSession } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   const userRoles = useMemo(() => user?.roles ?? [], [user?.roles]);
   const {
@@ -180,10 +180,9 @@ export function ProfilePageLeanClient() {
   }
 
   const handleOnboardingSuccess = useCallback(async () => {
-    await refreshSession();
-    await loadMyProfile();
-    router.replace("/dashboard/overview", { scroll: false });
-  }, [refreshSession, loadMyProfile, router]);
+    // Completing onboarding ends the invite session — require a fresh sign-in.
+    await logout();
+  }, [logout]);
 
   const openOwnProfileEditor = () => {
     const profile = employeeProfile ?? {};

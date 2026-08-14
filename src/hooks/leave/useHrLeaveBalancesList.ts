@@ -12,8 +12,18 @@ function validateLeaveBalancePeriod(yearRaw: string, monthRaw: string): {
   const today = new Date();
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth() + 1;
-  const year = Number(String(yearRaw).trim());
-  const month = Number(String(monthRaw).trim());
+  const yearText = String(yearRaw ?? "").trim();
+  const monthText = String(monthRaw ?? "").trim();
+
+  if (!yearText) {
+    throw new Error("Year is required. Select a valid year before searching.");
+  }
+  if (!monthText) {
+    throw new Error("Month is required. Select a valid month before searching.");
+  }
+
+  const year = Number(yearText);
+  const month = Number(monthText);
 
   if (!Number.isInteger(year) || year < 2000 || year > currentYear) {
     throw new Error(`Enter a valid year between 2000 and ${currentYear}.`);

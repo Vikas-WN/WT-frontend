@@ -34,6 +34,8 @@ import { hrmsService } from "@/services/hrms.service";
 import { toPagedRows } from "@/utils/apiRows";
 import { isOffboardedUserStatus, shouldRequireSelfOnboarding } from "@/utils/userStatus";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
+import { resolveTimelogProjectLabel } from "@/utils/timelog/projectLabel";
+import { isManagerTimelogDecisionActionable } from "@/utils/timelog/employeeEditability";
 import { formatApiDate } from "@/utils/apiDate";
 import type { DayTimelogEntry } from "@/hooks/timelog/useDayTimelog.types";
 import { timelogViewerRoles } from "@/utils/timelog/viewerRoles";
@@ -401,12 +403,12 @@ export function TimelogPageClient() {
                       <tbody>
                         {employeeEntries.map((entry) => {
                           const taskLabel = TASK_CATEGORY_LABELS[entry.task_category] ?? entry.task_category;
-                          const isActionable = entry.status === "SUBMITTED" || entry.status === "REJECTED";
+                          const isActionable = isManagerTimelogDecisionActionable(entry.status);
                           return (
                             <tr key={entry.id} className="border-t border-wt-border hover:bg-wt-surface-2/50">
                               <td className="px-2 py-2 whitespace-nowrap tabular-nums">{entry.log_date}</td>
                               <td className="px-2 py-2 whitespace-nowrap">
-                                {entry.project_name?.trim() || "—"}
+                                {resolveTimelogProjectLabel(entry)}
                               </td>
                               <td className="px-2 py-2 whitespace-nowrap">{taskLabel}</td>
                               <td className="px-2 py-2 whitespace-nowrap">{entry.sub_category || "—"}</td>

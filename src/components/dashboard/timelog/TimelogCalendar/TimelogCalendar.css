@@ -11,8 +11,16 @@
 
 .timelog-calendar-nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
-  align-items: center;
+  align-items: flex-end;
+}
+
+.timelog-calendar-field {
+  display: flex;
+  min-width: 8.5rem;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .timelog-calendar-select {

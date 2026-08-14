@@ -5,8 +5,19 @@ export function normalizeDirectoryUserType(value: unknown): string {
     .replace(/[\s_-]+/g, "");
 }
 
-export function requiresUserTypeTransitionDialog(fromType: string, toType: string): boolean {
+/**
+ * Whether converting between these types needs a confirmation dialog
+ * (transition date and/or band change).
+ */
+export function requiresUserTypeTransitionDialog(
+  fromType: string,
+  toType: string,
+  options?: { currentBandIsInternOnly?: boolean }
+): boolean {
   const from = normalizeDirectoryUserType(fromType);
   const to = normalizeDirectoryUserType(toType);
-  return to === "FULLTIME" && (from === "INTERN" || from === "CONSULTANT");
+  if (to === "FULLTIME" && (from === "INTERN" || from === "CONSULTANT")) return true;
+  // Full-time / consultant → Intern needs B8 when the current band is not already intern-only.
+  if (to === "INTERN" && from !== "INTERN" && !options?.currentBandIsInternOnly) return true;
+  return false;
 }

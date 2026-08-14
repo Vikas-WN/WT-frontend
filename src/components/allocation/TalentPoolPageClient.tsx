@@ -36,12 +36,16 @@ export function TalentPoolPageClient() {
   const {
     data,
     pages,
+    pageSizes,
     search,
     setSearch,
     loading,
     error,
     loadOnBenchPage,
     loadUnallocatedPage,
+    setOnBenchPageSize,
+    setUnallocatedPageSize,
+    pageSizeOptions,
   } = useTalentPoolTables(queriesEnabled);
 
   if (authStatus !== "loading" && !canView) {
@@ -101,8 +105,10 @@ export function TalentPoolPageClient() {
                   page={pages.onBench}
                   totalPages={onBench.total_pages}
                   totalItems={onBench.total_elements}
-                  pageSize={onBench.page_size}
+                  pageSize={pageSizes.onBench}
+                  pageSizeOptions={pageSizeOptions}
                   onPageChange={(p) => void loadOnBenchPage(p)}
+                  onPageSizeChange={setOnBenchPageSize}
                 >
                   {onBench.items.length ? (
                     <TalentPoolTable
@@ -123,8 +129,10 @@ export function TalentPoolPageClient() {
                   page={pages.unallocated}
                   totalPages={unallocated.total_pages}
                   totalItems={unallocated.total_elements}
-                  pageSize={unallocated.page_size}
+                  pageSize={pageSizes.unallocated}
+                  pageSizeOptions={pageSizeOptions}
                   onPageChange={(p) => void loadUnallocatedPage(p)}
+                  onPageSizeChange={setUnallocatedPageSize}
                 >
                   {unallocated.items.length ? (
                     <TalentPoolTable
@@ -195,7 +203,9 @@ function TalentPoolSection({
   totalPages,
   totalItems,
   pageSize,
+  pageSizeOptions,
   onPageChange,
+  onPageSizeChange,
   children,
 }: {
   title: string;
@@ -204,7 +214,9 @@ function TalentPoolSection({
   totalPages: number;
   totalItems: number;
   pageSize: number;
+  pageSizeOptions: readonly number[];
   onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
   children: ReactNode;
 }) {
   const safeTotal = Math.max(1, totalPages);
@@ -214,7 +226,7 @@ function TalentPoolSection({
   return (
     <section className="space-y-3">
       <h4 className="text-sm font-semibold">{title}</h4>
-      <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
+      <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]" scrollChain>
         {children}
       </ScrollableTable>
       <ListPagination
@@ -224,8 +236,10 @@ function TalentPoolSection({
         rangeStart={rangeStart}
         rangeEnd={rangeEnd}
         pageSize={pageSize}
+        pageSizeOptions={pageSizeOptions}
         loading={loading}
         onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
       />
     </section>
   );

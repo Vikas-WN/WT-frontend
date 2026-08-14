@@ -148,9 +148,6 @@ export function ProjectEmployeesDetailDialog({
                       <div className="min-w-0 max-w-[16rem]">
                         <p className="truncate font-medium text-wt-text">{row.employeeName}</p>
                         <p className="truncate text-xs text-wt-text-muted">{row.employeeEmail}</p>
-                        {row.empId ? (
-                          <p className="text-[11px] text-wt-text-faint">{row.empId}</p>
-                        ) : null}
                       </div>
                     </TableCell>
                     <TableCell className="align-top whitespace-nowrap">{row.role || "—"}</TableCell>

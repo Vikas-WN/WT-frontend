@@ -3,7 +3,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { hrmsService } from "@/services/hrms.service";
-import { ApiError } from "@/api/error";
+import { showErrorToast } from "@/lib/toast";
+import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import {
   gridRowsFromWeekSnapshot,
   type TimelogGridRow,
@@ -25,7 +26,6 @@ export function useMyWeeklyTimesheet() {
   const [weekStart, setWeekStart] = useState(() => normalizeWeekStart(new Date()));
   const weekKey = useMemo(() => formatApiDate(weekStart), [weekStart]);
   const [actionLoading, setActionLoading] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
   const [editingEntry, setEditingEntry] = useState<TimelogGridRow | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -62,12 +62,10 @@ export function useMyWeeklyTimesheet() {
 
   const runAction = useCallback(async (fn: () => Promise<unknown>) => {
     setActionLoading(true);
-    setActionError(null);
     try {
       await fn();
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : error instanceof Error ? error.message : "An error occurred";
-      setActionError(message);
+      showErrorToast(toUserFriendlyApiErrorMessage(error, "An error occurred"));
     } finally {
       setActionLoading(false);
     }
@@ -130,7 +128,11 @@ export function useMyWeeklyTimesheet() {
     rows,
     projectOptions,
     loading: weekQuery.isFetching && !weekQuery.isPaused,
-    error: weekQuery.error ? (weekQuery.error instanceof Error ? weekQuery.error.message : "Unable to load timelog week") : actionError,
+    error: weekQuery.error
+      ? weekQuery.error instanceof Error
+        ? weekQuery.error.message
+        : "Unable to load timelog week"
+      : null,
     actionLoading,
     editingEntry,
     sheetOpen,

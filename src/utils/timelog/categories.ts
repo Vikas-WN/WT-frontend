@@ -69,7 +69,15 @@ function normalizeTimelogProjectOption(raw: unknown): TimelogProjectOption | nul
   if (!row) return null;
   const project_code = readString(row.project_code, row.projectCode).toUpperCase();
   if (!project_code) return null;
-  const project_name = readString(row.project_name, row.projectName, project_code);
+  const rawName = readString(row.project_name, row.projectName);
+  const project_name =
+    rawName && rawName.toUpperCase() !== project_code
+      ? rawName
+      : project_code === "BENCH" || project_code === "GLOBAL"
+        ? "Talent Pool"
+        : project_code === "INTERNAL"
+          ? "Internal Project"
+          : rawName || project_code;
   const kind = readString(row.kind, "CLIENT");
   const taskRaw = row.task_categories ?? row.taskCategories;
   const task_categories = asArray(taskRaw)

@@ -209,7 +209,8 @@ export function AttritionRetentionReports({
         </div>
         <SelectField
           label="Financial year (start)"
-          className="min-w-[10rem]"
+          className="min-w-[13.5rem]"
+          contentClassName="min-w-[13.5rem] w-max"
           value={fyStartYear}
           onChange={onFyStartYearChange}
           options={fyOptions.map((year) => ({

@@ -50,7 +50,7 @@ export function MobileDrawer({ open, onClose, children }: MobileDrawerProps) {
             <X className="size-4" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto overscroll-contain p-5">
+        <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-5">
           {children}
         </div>
       </div>

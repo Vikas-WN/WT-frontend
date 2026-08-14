@@ -23,7 +23,10 @@ import "./DayEntryForm.css";
 import type { DayEntryFormProps } from "./DayEntryForm.types";
 import type { DayTimelogEntry, DayTimelogEntryForm } from "@/hooks/timelog/useDayTimelog.types";
 import { projectManagerEmailFromEntry } from "@/utils/timelog/entryManager";
-import { formatEmployeePickerLabel } from "@/utils/employeePickerLabel";
+import {
+  formatEmployeePickerLabel,
+  formatEmployeePickerTitle,
+} from "@/utils/employeePickerLabel";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
 import { showErrorToast } from "@/lib/toast";
@@ -271,6 +274,10 @@ export function DayEntryForm({
                     employeeName: employee.name,
                     employeeEmail: employee.email,
                     empId: employee.employeeId,
+                  }),
+                  title: formatEmployeePickerTitle({
+                    employeeName: employee.name,
+                    employeeEmail: employee.email,
                   }),
                 }))}
                 placeholder={

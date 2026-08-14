@@ -34,6 +34,12 @@ function messageFromPydanticItem(item: unknown): string | null {
   if (field === "doj") {
     return "Please enter a valid date of joining in DD/MM/YYYY format.";
   }
+  if (
+    (record.type === "string_too_long" || /at most \d+ character/i.test(msg)) &&
+    (field === "role" || field === "designation" || field === "name")
+  ) {
+    return "Designation cannot exceed the maximum allowed length.";
+  }
 
   if (msg && !msg.startsWith("[")) {
     return msg;
@@ -65,6 +71,8 @@ function isGenericServerFailureMessage(message: string): boolean {
   const lower = message.trim().toLowerCase();
   return (
     lower === "internal server error" ||
+    lower === "backend_unavailable" ||
+    lower === "backend_unconfigured" ||
     lower.startsWith("request failed:") ||
     lower.includes("bad gateway") ||
     isHtmlErrorBody(message)
@@ -78,17 +86,6 @@ export function toUserFriendlyApiErrorMessage(
   if (error instanceof ApiError) {
     if (error.status === 0) {
       return error.message;
-    }
-    if (
-      error.status === 500 ||
-      error.status === 502 ||
-      error.status === 503 ||
-      error.status === 504
-    ) {
-      const message = error.message.trim();
-      if (!message || isGenericServerFailureMessage(message)) {
-        return "Unable to reach the server. Please try again later.";
-      }
     }
 
     const payload = error.payload;
@@ -107,9 +104,25 @@ export function toUserFriendlyApiErrorMessage(
     if (pydanticFromPayload) return pydanticFromPayload;
 
     const message = error.message.trim();
+    if (
+      error.status === 500 ||
+      error.status === 502 ||
+      error.status === 503 ||
+      error.status === 504
+    ) {
+      if (!message || isGenericServerFailureMessage(message)) {
+        return "Unable to reach the server. Please try again later.";
+      }
+      // Prefer concrete backend validation/business messages even on 5xx.
+      return message;
+    }
+
     if (message && !isHtmlErrorBody(message)) {
       if (message.startsWith("[") && message.includes("value_error")) {
         return parsePydanticValidationPayload(message) ?? fallback;
+      }
+      if (isGenericServerFailureMessage(message)) {
+        return fallback;
       }
       return message;
     }

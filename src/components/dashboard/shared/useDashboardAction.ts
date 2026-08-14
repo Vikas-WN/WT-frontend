@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { ApiError } from "@/api/error";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import {
   formatActionErrorMessage,
   formatActionSuccessMessage,
 } from "@/utils/actionToast";
+import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 
 export function useDashboardAction() {
   const [actionLoading, setActionLoading] = useState(false);
@@ -18,12 +18,7 @@ export function useDashboardAction() {
       showSuccessToast(formatActionSuccessMessage(label));
       return true;
     } catch (error) {
-      const backendMessage =
-        error instanceof ApiError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "";
+      const backendMessage = toUserFriendlyApiErrorMessage(error, "");
       showErrorToast(formatActionErrorMessage(label, backendMessage));
       return false;
     } finally {

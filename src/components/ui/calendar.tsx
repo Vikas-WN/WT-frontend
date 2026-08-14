@@ -86,19 +86,21 @@ function Calendar({
   className,
   classNames,
   showOutsideDays = true,
+  fixedWeeks = true,
   components,
   ...props
 }: CalendarProps) {
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      fixedWeeks={fixedWeeks}
       components={{
         Nav: CalendarNav,
         MonthCaption: CalendarMonthCaption,
         ...components,
       }}
       classNames={{
-        root: "w-full max-w-[340px] mx-auto bg-transparent p-3",
+        root: cn("w-full max-w-[340px] mx-auto bg-transparent p-3", className),
         months: "flex flex-col gap-1.5 items-stretch",
         month: "flex flex-col gap-1.5",
         month_caption:

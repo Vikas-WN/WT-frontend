@@ -1,4 +1,6 @@
-import type { HTMLAttributes } from "react";
+"use client";
+
+import { useEffect, useRef, type HTMLAttributes, type CSSProperties } from "react";
 import { DEFAULT_TABLE_MAX_HEIGHT } from "@/components/dashboard/ui/uiLayout";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +25,25 @@ type ScrollableTableProps = HTMLAttributes<HTMLDivElement> & {
   axis?: "both" | "y";
 };
 
+function chainWheelToPageScroll(el: HTMLElement, deltaY: number) {
+  if (!deltaY) return false;
+  const scrollingDown = deltaY > 0;
+  const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+  // Content does not overflow — do not capture the wheel; let the page scroll.
+  if (maxScrollTop <= 0) return false;
+
+  const atTop = el.scrollTop <= 0;
+  const atBottom = el.scrollTop >= maxScrollTop - 1;
+  const blockedAtBoundary = (scrollingDown && atBottom) || (!scrollingDown && atTop);
+  if (!blockedAtBoundary) return false;
+
+  const pageScroller = el.closest(".wt-page-scroll") as HTMLElement | null;
+  if (!pageScroller) return false;
+
+  pageScroller.scrollBy({ top: deltaY, behavior: "auto" });
+  return true;
+}
+
 /** Bounded scroll region so table header cells can stick while body scrolls. */
 export function ScrollableTable({
   children,
@@ -30,8 +51,28 @@ export function ScrollableTable({
   maxHeightClass = DEFAULT_TABLE_MAX_HEIGHT,
   scrollChain = true,
   axis = "both",
+  style,
   ...props
 }: ScrollableTableProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!scrollChain) return;
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const onWheel = (event: WheelEvent) => {
+      // Prefer vertical intent; ignore mostly-horizontal gestures (trackpad).
+      if (Math.abs(event.deltaY) < Math.abs(event.deltaX)) return;
+      if (chainWheelToPageScroll(el, event.deltaY)) {
+        event.preventDefault();
+      }
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [scrollChain]);
+
   const scrollClass =
     axis === "y"
       ? scrollChain
@@ -45,9 +86,15 @@ export function ScrollableTable({
     ? SCROLLABLE_TABLE_SHELL_CHAIN_CLASS
     : SCROLLABLE_TABLE_SHELL_CLASS;
 
+  const mergedStyle: CSSProperties | undefined = scrollChain
+    ? { overscrollBehaviorY: "auto", ...style }
+    : style;
+
   return (
     <div
+      ref={scrollRef}
       className={cn(shellClass, scrollClass, maxHeightClass, className)}
+      style={mergedStyle}
       {...props}
     >
       {children}

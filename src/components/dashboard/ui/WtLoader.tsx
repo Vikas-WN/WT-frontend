@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+
 type WtLoaderProps = {
   size?: "sm" | "md" | "lg";
   className?: string;
@@ -34,10 +37,33 @@ export function WtLoaderCentered({
   );
 }
 
+/** Full-viewport busy shield — blocks clicks/navigation until the parent unmounts it. */
 export function WtLoadingOverlay({ label = "Loading" }: { label?: string }) {
-  return (
-    <div className="wt-loading-overlay" role="status" aria-live="polite" aria-busy="true" aria-label={label}>
-      <WtLoader size="lg" label={label} />
-    </div>
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <div
+      className="wt-loading-overlay"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      aria-label={label}
+    >
+      <div className="flex flex-col items-center justify-center gap-4 px-6">
+        <WtLoader size="lg" label={label} />
+        {label ? (
+          <p className="animate-pulse text-center text-sm font-medium tracking-wide text-wt-text">
+            {label}
+          </p>
+        ) : null}
+      </div>
+    </div>,
+    document.body
   );
 }

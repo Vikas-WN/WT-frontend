@@ -186,6 +186,18 @@ export class HttpClient {
       if (!response.ok) {
         const payload = await this.tryReadBody(response);
 
+        if (response.status === 403 && !skipAuth) {
+          const detail =
+            typeof payload === "object" && payload && "detail" in payload
+              ? String((payload as { detail?: unknown }).detail ?? "")
+              : typeof payload === "string"
+                ? payload
+                : "";
+          if (sessionLogoutReasonFromApiDetail(detail) === "inactive") {
+            dispatchSessionLogout("inactive");
+          }
+        }
+
         if (response.status === 401 && !skipAuth) {
           const detail =
             typeof payload === "object" && payload && "detail" in payload

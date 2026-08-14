@@ -20,6 +20,10 @@ import { SkillsMultiSelectField } from "@/components/dashboard/ui/SkillsMultiSel
 import { Button } from "@/components/ui/button";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import {
+  DEFAULT_PAGE_SIZE,
+  PAGE_SIZE_OPTIONS,
+} from "@/hooks/useClientPagination";
 import { formatApiDateDisplay, inputValueToApiDate } from "@/utils/apiDate";
 import { RequestStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
@@ -39,6 +43,7 @@ import {
 } from "@/utils/allocationExtension";
 import { parseEmployeeAllocationsResponse } from "@/utils/allocationList";
 import { createEmptyAllocationExtensionForm } from "@/utils/allocationFormState";
+import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
 
 function normalizeHrStatusFilter(value: string): AllocationExtensionRequestStatus | "" {
   const v = value.trim().toUpperCase();
@@ -72,7 +77,7 @@ export function AllocationExtensionPanel() {
   // Lists (HR list + Manager status)
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
-  const size = 10;
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const [hrStatusFilter, setHrStatusFilter] = useState<AllocationExtensionRequestStatus | "">("");
   const [rows, setRows] = useState<AllocationExtensionRequestRow[]>([]);
@@ -81,6 +86,11 @@ export function AllocationExtensionPanel() {
   const [loading, setLoading] = useState(false);
   const [updatingRequestId, setUpdatingRequestId] = useState<number | null>(null);
   const [updatingDecision, setUpdatingDecision] = useState<"APPROVED" | "REJECTED" | null>(null);
+  const [rejectDialog, setRejectDialog] = useState<{ open: boolean; requestId: number | null; reason: string }>({
+    open: false,
+    requestId: null,
+    reason: "",
+  });
 
   const visibleMode = useMemo<"hr" | "manager">(() => {
     if (hasHrAccess) return "hr";
@@ -236,7 +246,7 @@ export function AllocationExtensionPanel() {
       if (visibleMode === "hr") {
         const res = await hrmsService.listAllocationExtensionRequests({
           page,
-          size,
+          size: pageSize,
           search: search.trim() || undefined,
           status: hrStatusFilter ? hrStatusFilter : undefined,
         });
@@ -248,7 +258,7 @@ export function AllocationExtensionPanel() {
 
       const res = await hrmsService.listManagerAllocationExtensionStatus({
         page,
-        size,
+        size: pageSize,
         search: search.trim() || undefined,
       });
       setRows(res.data.data ?? []);
@@ -263,7 +273,7 @@ export function AllocationExtensionPanel() {
     } finally {
       setLoading(false);
     }
-  }, [visibleMode, page, size, search, hrStatusFilter]);
+  }, [visibleMode, page, pageSize, search, hrStatusFilter]);
 
   useEffect(() => {
     void load();
@@ -362,11 +372,14 @@ export function AllocationExtensionPanel() {
     }
   }
 
-  async function updateStatus(requestId: number, next: "APPROVED" | "REJECTED") {
+  async function updateStatus(
+    requestId: number,
+    next: "APPROVED" | "REJECTED",
+    rejectionReason?: string
+  ) {
     let message: string | undefined;
     if (next === "REJECTED") {
-      const entered = window.prompt("Enter rejection reason (required):", "") ?? "";
-      message = entered.trim();
+      message = String(rejectionReason ?? "").trim();
       if (!message) {
         showErrorToast("Rejection reason is required.");
         return;
@@ -389,6 +402,7 @@ export function AllocationExtensionPanel() {
         )
       );
       showSuccessToast(`Request ${next.toLowerCase()}.`);
+      setRejectDialog({ open: false, requestId: null, reason: "" });
       void load();
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : "Failed to update status.";
@@ -399,8 +413,22 @@ export function AllocationExtensionPanel() {
     }
   }
 
-  const rangeStart = totalElements === 0 ? 0 : page * size + 1;
-  const rangeEnd = Math.min(totalElements, (page + 1) * size);
+  function openRejectDialog(requestId: number) {
+    setRejectDialog({ open: true, requestId, reason: "" });
+  }
+
+  function closeRejectDialog() {
+    if (updatingDecision === "REJECTED") return;
+    setRejectDialog({ open: false, requestId: null, reason: "" });
+  }
+
+  async function confirmRejectRequest() {
+    if (!rejectDialog.requestId) return;
+    await updateStatus(rejectDialog.requestId, "REJECTED", rejectDialog.reason);
+  }
+
+  const rangeStart = totalElements === 0 ? 0 : page * pageSize + 1;
+  const rangeEnd = Math.min(totalElements, (page + 1) * pageSize);
 
   if (!hasHrAccess && !hasManagerRole && !hasAmRole) {
     return (
@@ -610,17 +638,16 @@ export function AllocationExtensionPanel() {
           {visibleMode === "hr" ? (
             <SelectField
               label="Status"
-              value={hrStatusFilter}
+              value={hrStatusFilter || "ALL"}
               onChange={(v) => {
                 setHrStatusFilter(normalizeHrStatusFilter(v));
                 setPage(0);
               }}
-              placeholder="All"
               options={[
-                { value: "", label: "All" },
-                { value: "PENDING", label: "PENDING" },
-                { value: "APPROVED", label: "APPROVED" },
-                { value: "REJECTED", label: "REJECTED" },
+                { value: "ALL", label: "All Statuses" },
+                { value: "PENDING", label: "Pending" },
+                { value: "APPROVED", label: "Approved" },
+                { value: "REJECTED", label: "Rejected" },
               ]}
             />
           ) : null}
@@ -698,7 +725,7 @@ export function AllocationExtensionPanel() {
                                     variant="outline"
                                     size="xs"
                                     className="border-rose-600/30 text-rose-700 hover:bg-rose-500/10"
-                                    onClick={() => void updateStatus(r.id, "REJECTED")}
+                                    onClick={() => openRejectDialog(r.id)}
                                   >
                                     Reject
                                   </Button>
@@ -731,11 +758,30 @@ export function AllocationExtensionPanel() {
           totalItems={totalElements}
           rangeStart={rangeStart}
           rangeEnd={rangeEnd}
-          pageSize={size}
+          pageSize={pageSize}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
           loading={loading}
           onPageChange={setPage}
+          onPageSizeChange={(nextSize) => {
+            setPageSize(nextSize);
+            setPage(0);
+          }}
         />
       </section>
+
+      <UserRequestRejectDialog
+        open={rejectDialog.open}
+        title="Reject Allocation Extension"
+        description="A reason is required when rejecting a project allocation extension request."
+        reason={rejectDialog.reason}
+        onReasonChange={(reason) => setRejectDialog((prev) => ({ ...prev, reason }))}
+        onCancel={closeRejectDialog}
+        onConfirm={() => void confirmRejectRequest()}
+        confirmLabel="Reject"
+        confirmingLabel="Rejecting…"
+        confirmDisabled={!rejectDialog.reason.trim()}
+        loading={updatingDecision === "REJECTED"}
+      />
     </div>
   );
 }

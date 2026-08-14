@@ -280,7 +280,10 @@ export function EmployeePageClient() {
           await runHrAction(async () => {
             await hrmsService.resendOnboardInvite({ email: normalized });
           });
-          showSuccessToast(`Onboarding invite resent to ${normalized}.`, `resend-invite-${normalized}`);
+          showSuccessToast(
+            "Invitation has been resent successfully.",
+            `resend-invite-${normalized}`
+          );
         } catch (error) {
           showErrorToast(
             toUserFriendlyApiErrorMessage(error, "Failed to resend onboarding invite.")
@@ -322,7 +325,9 @@ export function EmployeePageClient() {
 
     if (failed === 0) {
       showSuccessToast(
-        `Onboarding invites resent to ${sent} employee${sent === 1 ? "" : "s"}.`
+        sent === 1
+          ? "Invitation has been resent successfully."
+          : `Invitations have been resent successfully to ${sent} employees.`
       );
       return;
     }

@@ -16,28 +16,32 @@ export const SESSION_STORAGE_LAST_ACTIVITY = "wt.lastActivityAt";
 
 export const SESSION_IDLE_WARNING_MS = 5 * 60 * 1000;
 
-export type SessionLogoutReason = "idle" | "expired" | "server";
+export type SessionLogoutReason = "idle" | "expired" | "server" | "inactive";
 
 export const sessionLogoutMessages: Record<SessionLogoutReason, string> = {
   idle: "You were logged out after 30 minutes of inactivity.",
   expired: "Your session has expired after 8 hours. Please sign in again.",
   server: "Your session has ended. Please sign in again.",
+  inactive: "Your account is inactive. Please contact HR.",
 };
 
 export const sessionLogoutTitles: Record<SessionLogoutReason, string> = {
   idle: "Logged Out Due to Inactivity",
   expired: "Session Expired",
   server: "Session Ended",
+  inactive: "Account Inactive",
 };
 
 export function sessionLogoutReasonToErrorCode(reason: SessionLogoutReason): string {
   if (reason === "idle") return "session_idle_timeout";
   if (reason === "expired") return "session_expired";
+  if (reason === "inactive") return "account_inactive";
   return "oauth_login_failed";
 }
 
 export function sessionLogoutReasonFromErrorCode(code: string): SessionLogoutReason | null {
   if (code === "session_idle_timeout") return "idle";
   if (code === "session_expired") return "expired";
+  if (code === "account_inactive") return "inactive";
   return null;
 }

@@ -271,6 +271,8 @@ export function EmployeeDirectoryPageClient() {
           display.email,
           display.personal_email,
           display.phone_number,
+          display.emp_id,
+          empId,
           display.role,
           display.portal_role,
           display.band,
@@ -687,7 +689,15 @@ export function EmployeeDirectoryPageClient() {
                                       employeeStatus={
                                         record.status ?? record.user_status ?? display.status
                                       }
-                                      canEdit={canEditDirectory}
+                                      canEdit={
+                                        canEditDirectory &&
+                                        String(record.email ?? display.email ?? "")
+                                          .trim()
+                                          .toLowerCase() !==
+                                          String(authUser?.email ?? "")
+                                            .trim()
+                                            .toLowerCase()
+                                      }
                                       compact
                                     />
                                   ) : col.key === "user_type" ? (
@@ -698,7 +708,15 @@ export function EmployeeDirectoryPageClient() {
                                       bandName={
                                         record.band ?? record.band_name ?? record.bandName
                                       }
-                                      canEdit={canEditDirectory}
+                                      canEdit={
+                                        canEditDirectory &&
+                                        String(record.email ?? display.email ?? "")
+                                          .trim()
+                                          .toLowerCase() !==
+                                          String(authUser?.email ?? "")
+                                            .trim()
+                                            .toLowerCase()
+                                      }
                                       options={directoryUserTypeOptions}
                                     />
                                   ) : (

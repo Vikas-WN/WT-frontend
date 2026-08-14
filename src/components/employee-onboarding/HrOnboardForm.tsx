@@ -14,14 +14,21 @@ import { FormGridSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { isValidPersonName } from "@/utils/dashboard/validation";
 import {
   bandSelectOptionsForUserType,
+  designationLengthError,
   internBandDisplayLabel,
   resolveInternBandId,
 } from "@/utils/dashboard/validation";
 import { parseApiDate } from "@/utils/apiDate";
+import { nameFromOnboardOptionLabel } from "@/utils/exitInterviewManagers";
 import type { OnboardFormState } from "@/utils/onboardFormState";
 import type { OnboardOptionsResponse } from "@/types/onboard-options";
 import { useAuth } from "@/context/AuthContext";
 import { PORTAL_ROLE_SELECT_OPTIONS, portalRoleOptionsForActor } from "@/utils/roles";
+
+function emailFromOnboardOptionLabel(label: string): string | undefined {
+  const match = /\(([^)]*@[^)]*)\)\s*$/.exec(label.trim());
+  return match?.[1]?.trim() || undefined;
+}
 
 type HrOnboardFormProps = {
   formKey: number;
@@ -156,15 +163,19 @@ function validateWorkStep(
     throw new Error("Date of Joining is required.");
   }
 
-  if (!isConsultant && ctx?.designationLoading) {
+  if (ctx?.designationLoading) {
     throw new Error("Designations are still loading. Please wait a moment.");
   }
-  if (!isConsultant && ctx?.designationOptionsCount === 0) {
+  if (ctx?.designationOptionsCount === 0) {
     throw new Error(
-      "No designation is configured for the selected band. Please choose a different department or band."
+      isConsultant
+        ? "No designation is configured for the selected department. Please choose a different department."
+        : "No designation is configured for the selected band. Please choose a different department or band."
     );
   }
   if (!role) throw new Error("Designation is required.");
+  const designationError = designationLengthError(role);
+  if (designationError) throw new Error(designationError);
 
   return { empId, email, name, department, role, bandId, reportingManagerId, portalRole };
 }
@@ -203,12 +214,27 @@ export function HrOnboardForm({
     return Number(form.band_id);
   }, [form.band_id, form.user_type, internBandId]);
 
+  /** Consultants have no band on the profile — load designations across department bands. */
+  const consultantDesignationBandIds = useMemo(
+    () =>
+      isConsultant
+        ? bandOptions.map((option) => Number(option.value)).filter((id) => Number.isFinite(id) && id > 0)
+        : undefined,
+    [bandOptions, isConsultant]
+  );
+
   const reportingManagerOptions = useMemo(
     () =>
-      options.reporting_managers.map((rm) => ({
-        ...rm,
-        label: rm.label.length > 72 ? `${rm.label.slice(0, 72)}…` : rm.label,
-      })),
+      options.reporting_managers.map((rm) => {
+        const name = nameFromOnboardOptionLabel(rm.label);
+        const email = emailFromOnboardOptionLabel(rm.label);
+        const label = name.length > 72 ? `${name.slice(0, 72)}…` : name;
+        return {
+          value: rm.value,
+          label,
+          ...(email ? { title: email } : {}),
+        };
+      }),
     [options.reporting_managers]
   );
 
@@ -218,9 +244,11 @@ export function HrOnboardForm({
     loading: designationLoading,
     isError: designationQueryError,
     error: designationQueryErrorDetail,
-  } = useDesignationSelectOptions(department, designationBandId);
+  } = useDesignationSelectOptions(department, designationBandId, consultantDesignationBandIds);
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
+
+  const designationFieldError = designationLengthError(form.role);
 
   useEffect(() => {
     if (!designationQueryError) return;
@@ -240,7 +268,6 @@ export function HrOnboardForm({
   // not to form.role — so clearing the field (e.g. via Backspace) isn't immediately
   // fought by this effect snapping the single/only option back in.
   useEffect(() => {
-    if (isConsultant) return;
     if (designationLoading) return;
     if (designationOptions.length === 1) {
       const onlyRole = designationOptions[0]?.value ?? "";
@@ -256,7 +283,7 @@ export function HrOnboardForm({
       }
       return prev;
     });
-  }, [designationOptions, designationLoading, isConsultant, setForm]);
+  }, [designationOptions, designationLoading, setForm]);
 
   useEffect(() => {
     if (!form.department.trim()) return;
@@ -270,11 +297,17 @@ export function HrOnboardForm({
   }, [bandOptions, form.band_id, form.department, form.user_type, setForm]);
 
   function submit() {
+    const lengthError = designationLengthError(form.role);
+    if (lengthError) {
+      onError?.(lengthError);
+      return;
+    }
+
     void runAction("Create And Invite Employee", async () => {
       const { empId, email, name, department, role, bandId, reportingManagerId, portalRole } =
         validateWorkStep(form, internBandId, {
-          designationLoading: isConsultant ? false : designationLoading,
-          designationOptionsCount: isConsultant ? undefined : designationOptions.length,
+          designationLoading,
+          designationOptionsCount: designationOptions.length,
         });
 
       const basePayload: Record<string, unknown> = {
@@ -355,7 +388,10 @@ export function HrOnboardForm({
           options={options.user_types}
           onChange={(v) =>
             setForm((p) => {
-              const ut = v as "FULLTIME" | "INTERN" | "CONSULTANT";
+              const ut = String(v ?? "").trim();
+              if (!ut) {
+                return { ...p, user_type: "", band_id: 0, role: "" };
+              }
               if (ut === "INTERN") {
                 return { ...p, user_type: ut, band_id: internBandId, role: "" };
               }
@@ -425,40 +461,41 @@ export function HrOnboardForm({
             />
           )
         ) : null}
-        {isConsultant ? (
-          <InputField
-            label="Designation"
-            required
-            value={form.role}
-            placeholder="Enter Designation"
-            onChange={(role) => setForm((p) => ({ ...p, role }))}
-          />
-        ) : (
-          <DropdownSelectField
-            label="Designation"
-            required
-            value={form.role}
-            loading={designationLoading}
-            loadingLabel="Loading designations…"
-            placeholder={
-              !form.department.trim() || designationBandId <= 0
-                ? "Select Department And Band First"
-                : designationLoading
+        <DropdownSelectField
+          label="Designation"
+          required
+          value={form.role}
+          loading={designationLoading}
+          loadingLabel="Loading designations…"
+          placeholder={
+            !form.department.trim()
+              ? "Select Department First"
+              : isConsultant
+                ? designationLoading
                   ? "Loading Designations…"
                   : designationOptions.length
                     ? "Select"
-                    : "No Designations For This Band"
-            }
-            disabled={
-              !form.department.trim() ||
-              designationBandId <= 0 ||
-              designationLoading ||
-              !designationOptions.length
-            }
-            options={designationOptions}
-            onChange={(role) => setForm((p) => ({ ...p, role }))}
-          />
-        )}
+                    : consultantDesignationBandIds?.length
+                      ? "No Designations For This Department"
+                      : "No Bands Available"
+                : designationBandId <= 0
+                  ? "Select Department And Band First"
+                  : designationLoading
+                    ? "Loading Designations…"
+                    : designationOptions.length
+                      ? "Select"
+                      : "No Designations For This Band"
+          }
+          disabled={
+            !form.department.trim() ||
+            designationLoading ||
+            !designationOptions.length ||
+            (!isConsultant && designationBandId <= 0)
+          }
+          options={designationOptions}
+          onChange={(role) => setForm((p) => ({ ...p, role }))}
+          error={designationFieldError}
+        />
         <DropdownSelectField
           label="Work Mode"
           required
@@ -492,7 +529,6 @@ export function HrOnboardForm({
           value={form.reporting_manager_id}
           disabled={!reportingManagerOptions.length}
           options={reportingManagerOptions}
-          className="[&_[data-slot=select-content]]:max-w-[min(calc(100vw-2rem),28rem)] [&_[data-slot=select-item]]:max-w-full [&_[data-slot=select-item]_span]:truncate"
           onChange={(v) => setForm((p) => ({ ...p, reporting_manager_id: v }))}
         />
         {form.user_type === "INTERN" ? (

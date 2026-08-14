@@ -26,6 +26,7 @@ import {
   weeklyTotal,
 } from "@/utils/timelog/gridTotals";
 import type { TimelogGridRow } from "@/utils/timelog/gridState";
+import { resolveTimelogProjectLabel } from "@/utils/timelog/projectLabel";
 import {
   dayHasSubmittedEntries,
   isRowMetadataEditable,
@@ -57,11 +58,7 @@ function readOnlyText(value: string | undefined | null, fallback = "—"): strin
 }
 
 function projectLabel(row: TimelogGridRow, projectOptions: TimelogProjectOption[]): string {
-  if (row.project_name?.trim()) return row.project_name.trim();
-  const selected = projectOptions.find(
-    (p) => p.project_code.toUpperCase() === row.project_code.trim().toUpperCase()
-  );
-  return readOnlyText(selected?.project_name ?? "—");
+  return resolveTimelogProjectLabel(row, projectOptions);
 }
 
 function taskCategoryLabel(row: TimelogGridRow): string {

@@ -346,7 +346,7 @@ export function DashboardSidebar({
                         {!showCollapsed ? (
                           <SidebarIcon
                             name={isExpanded ? "chevronDown" : "chevronRight"}
-                            className={cn(SIDEBAR_ICON_WRAP, "ml-auto opacity-60")}
+                            className={cn(SIDEBAR_ICON_WRAP, "ml-auto opacity-45")}
                           />
                         ) : null}
                       </button>
@@ -415,7 +415,7 @@ export function DashboardSidebar({
                         {!showCollapsed ? (
                           <SidebarIcon
                             name={isExpanded ? "chevronDown" : "chevronRight"}
-                            className={cn(SIDEBAR_ICON_WRAP, "ml-auto opacity-60")}
+                            className={cn(SIDEBAR_ICON_WRAP, "ml-auto opacity-45")}
                           />
                         ) : null}
                       </button>
@@ -479,7 +479,7 @@ export function DashboardSidebar({
                         {!showCollapsed ? (
                           <SidebarIcon
                             name={isExpanded ? "chevronDown" : "chevronRight"}
-                            className={cn(SIDEBAR_ICON_WRAP, "ml-auto opacity-60")}
+                            className={cn(SIDEBAR_ICON_WRAP, "ml-auto opacity-45")}
                           />
                         ) : null}
                       </button>

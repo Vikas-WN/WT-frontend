@@ -66,7 +66,11 @@ export function parseApiErrorMessage(
     if (isHtmlErrorBody(body.detail)) {
       return "Unable to reach the server. Please try again later.";
     }
-    return body.detail;
+    const detail = body.detail.trim();
+    if (detail === "backend_unavailable" || detail === "backend_unconfigured") {
+      return "Unable to reach the server. Please try again later.";
+    }
+    return detail;
   }
   if (typeof body.message === "string" && body.message.trim()) return body.message;
 
