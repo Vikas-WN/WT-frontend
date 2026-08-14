@@ -247,7 +247,7 @@ export function EmployeeDirectoryPageClient() {
         const directoryKey = rowDirectoryKey(record);
         return { record, empId, directoryKey, display: onboardRowToListRow(row) };
       })
-      .filter(({ directoryKey, record, display }) => {
+      .filter(({ directoryKey, record, display, empId }) => {
         // Keep invited/pre-emp-id rows visible via email so TOTAL matches the table.
         if (!directoryKey) return false;
         if (userTypeFilter && normalizeUserType(record.user_type ?? record.userType) !== userTypeFilter) {
