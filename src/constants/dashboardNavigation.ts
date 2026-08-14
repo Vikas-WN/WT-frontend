@@ -1,6 +1,9 @@
 import type { SidebarIconName } from "@/constants/sidebarIcons";
 import { toTitleCase } from "@/utils/titleCase";
 
+/** External Pulse (RT portal) — sidebar + /dashboard/pulse redirect. */
+export const PULSE_EXTERNAL_URL = "https://rtportal.webknot-dev.in/";
+
 export type NavChild = {
   id: string;
   label: string;
@@ -214,6 +217,7 @@ export const dashboardNavigation: NavItem[] = [
     label: "Pulse",
     roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
     icon: "trendingUp",
+    externalUrl: PULSE_EXTERNAL_URL,
   },
 ];
 

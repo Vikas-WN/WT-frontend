@@ -548,16 +548,38 @@ export function DashboardSidebar({
             }
 
             if (item.kind === "link") {
+              const href = item.externalUrl ?? dashboardHref(item.id);
+              const isExternal = Boolean(item.externalUrl);
+              const className = sidebarParentNavClass(
+                !isLearningRoute && !isExternal && activeSection === item.id,
+                {
+                  collapsed: showCollapsed,
+                }
+              );
+              if (isExternal) {
+                return (
+                  <a
+                    key={item.id}
+                    href={href}
+                    title={showCollapsed ? item.label : undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={closeMobileNav}
+                    className={className}
+                  >
+                    <SidebarIcon name={item.icon} className={SIDEBAR_ICON_WRAP} />
+                    <span className={sidebarNavLabelClass(showCollapsed)}>{item.label}</span>
+                  </a>
+                );
+              }
               return (
                 <Link
                   prefetch={false}
                   key={item.id}
-                  href={dashboardHref(item.id)}
+                  href={href}
                   title={showCollapsed ? item.label : undefined}
                   onClick={closeMobileNav}
-                  className={sidebarParentNavClass(!isLearningRoute && activeSection === item.id, {
-                    collapsed: showCollapsed,
-                  })}
+                  className={className}
                 >
                   <SidebarIcon name={item.icon} className={SIDEBAR_ICON_WRAP} />
                   <span className={sidebarNavLabelClass(showCollapsed)}>{item.label}</span>
