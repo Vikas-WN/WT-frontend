@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { hrmsService } from "@/services/hrms.service";
+import { ApiError } from "@/api/error";
 import { showErrorToast } from "@/lib/toast";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import {
