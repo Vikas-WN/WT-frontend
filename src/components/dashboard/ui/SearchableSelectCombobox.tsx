@@ -181,6 +181,12 @@ export function SearchableSelectCombobox({
         side="bottom"
         sideOffset={4}
         align={align}
+        collisionPadding={8}
+        collisionAvoidance={{
+          side: "flip",
+          align: "shift",
+          fallbackAxisSide: "end",
+        }}
         // Inside modals: portal into the body host and use absolute positioning so
         // clipping-ancestors bound height above Cancel/Next. Outside: fixed to body.
         container={modalPanel}

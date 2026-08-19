@@ -89,9 +89,10 @@ export function SkillsMultiSelectField({
       const rect = trigger.getBoundingClientRect();
       const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - DROPDOWN_GAP - VIEWPORT_MARGIN);
       const spaceAbove = Math.max(0, rect.top - DROPDOWN_GAP - VIEWPORT_MARGIN);
-      const openUpward = spaceBelow < DROPDOWN_MAX_HEIGHT && spaceAbove > spaceBelow;
+      const openUpward = spaceBelow < Math.min(DROPDOWN_MAX_HEIGHT, 160) && spaceAbove > spaceBelow;
       const available = openUpward ? spaceAbove : spaceBelow;
-      const maxHeight = Math.min(DROPDOWN_MAX_HEIGHT, Math.max(available, 1));
+      // Never force a taller panel than remaining viewport space (avoids off-screen overflow).
+      const maxHeight = Math.max(Math.min(DROPDOWN_MAX_HEIGHT, available), 1);
       const maxWidth = Math.max(120, window.innerWidth - 2 * VIEWPORT_MARGIN);
       const width = Math.min(Math.max(rect.width, 180), dropdownMaxWidth, maxWidth);
       const left = Math.min(
@@ -135,12 +136,13 @@ export function SkillsMultiSelectField({
       ? `${value.length} selected`
       : placeholder ?? `Select ${label.toLowerCase()}…`;
 
-  const listMaxHeight = Math.max(
-    72,
-    (typeof dropdownStyle.maxHeight === "string"
+  const panelMaxHeight =
+    typeof dropdownStyle.maxHeight === "string"
       ? Number.parseFloat(dropdownStyle.maxHeight)
-      : DROPDOWN_MAX_HEIGHT) - SEARCH_HEADER_HEIGHT
-  );
+      : DROPDOWN_MAX_HEIGHT;
+  // Keep the option list within the panel (search header included) — never larger
+  // than remaining space, which previously forced overflow past the viewport.
+  const listMaxHeight = Math.max(0, panelMaxHeight - SEARCH_HEADER_HEIGHT);
 
   return (
     <div className={cn(FORM_FIELD_CLASS, className)} ref={rootRef}>

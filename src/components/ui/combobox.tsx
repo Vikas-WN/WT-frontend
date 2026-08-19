@@ -133,9 +133,9 @@ function ComboboxContent({
           data-slot="combobox-content"
           data-chips={!!anchor}
           className={cn(
-            // Stay inside the viewport: prefer remaining space (--available-*), never
-            // exceed the screen, and keep min-width from beating max-width.
-            "group/combobox-content relative z-[200] max-h-[min(15rem,var(--available-height,100dvh))] w-[min(var(--anchor-width),var(--available-width,100vw))] max-w-[min(var(--available-width,100vw),calc(100vw-1rem))] min-w-0 origin-(--transform-origin) overflow-x-hidden overflow-y-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 duration-100 dark:border-wt-border-md dark:bg-wt-surface-1 dark:shadow-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-8 *:data-[slot=input-group]:border-input/30 *:data-[slot=input-group]:bg-input/30 *:data-[slot=input-group]:shadow-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            // Stay inside the viewport: flip/shift via Positioner, then clamp height to
+            // remaining space (--available-height) so long lists scroll instead of spilling.
+            "group/combobox-content relative z-[200] flex max-h-[min(15rem,var(--available-height,calc(100dvh-1rem)))] w-[min(var(--anchor-width),var(--available-width,100vw))] max-w-[min(var(--available-width,100vw),calc(100vw-1rem))] min-h-0 min-w-0 flex-col overflow-x-hidden overflow-y-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 duration-100 dark:border-wt-border-md dark:bg-wt-surface-1 dark:shadow-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-8 *:data-[slot=input-group]:border-input/30 *:data-[slot=input-group]:bg-input/30 *:data-[slot=input-group]:shadow-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
             className
           )}
           {...props}
@@ -187,14 +187,13 @@ const ComboboxList = forwardRef<HTMLDivElement, ComboboxPrimitive.List.Props>(
     }, [])
 
     return (
-      <div className="relative min-h-0 min-w-0">
+      <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
         <ComboboxPrimitive.List
           ref={setRefs}
           data-slot="combobox-list"
           className={cn(
-            // Cap to popup height with a viewport fallback so long option lists
-            // always scroll inside the visible area instead of overflowing it.
-            "wt-combobox-scroll max-h-[min(15rem,calc(var(--available-height,100dvh)-0.5rem))] scroll-py-1 overflow-y-auto overscroll-contain p-1.5 data-empty:p-0",
+            // Fill the clamped popup; scroll inside so options never paint past the viewport.
+            "wt-combobox-scroll h-full max-h-[min(15rem,var(--available-height,calc(100dvh-1rem)))] scroll-py-1 overflow-y-auto overscroll-contain p-1.5 data-empty:p-0",
             className
           )}
           {...props}

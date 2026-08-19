@@ -498,6 +498,7 @@ export function EmployeeDirectoryPageClient() {
                     onChange={setPrimarySkillFilter}
                     options={primarySkillOptions}
                     placeholder="All Primary Skills"
+                    contentClassName="max-w-[min(20rem,calc(100vw-1rem))]"
                   />
                   <SelectField
                     label="Secondary Skill"
