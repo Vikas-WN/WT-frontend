@@ -38,6 +38,7 @@ export const DASHBOARD_ROUTES: Record<string, string> = {
   profile: "/dashboard/profile",
   settings: "/dashboard/settings",
   "exit-interview": "/dashboard/exit-interview",
+  guide: "/guide",
 };
 
 export const DASHBOARD_DEFAULT_PATH = DASHBOARD_ROUTES["employee-directory"];
@@ -79,6 +80,7 @@ const PATH_TO_NAV_ID: Array<{ prefix: string; id: string }> = [
   { prefix: "/dashboard/pulse", id: "pulse" },
   { prefix: "/dashboard/profile", id: "profile" },
   { prefix: "/dashboard/settings", id: "settings" },
+  { prefix: "/guide", id: "guide" },
   { prefix: "/dashboard/exit-interview", id: "exit-interview" },
 ];
 

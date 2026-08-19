@@ -213,6 +213,21 @@ export const dashboardNavigation: NavItem[] = [
   },
   {
     kind: "link",
+    id: "guide",
+    label: "Help & Guide",
+    roles: [
+      "ROLE_EMPLOYEE",
+      "ROLE_AM",
+      "ROLE_MANAGER",
+      "ROLE_DM",
+      "ROLE_HR",
+      "ROLE_ADMIN",
+      "ROLE_FINANCE",
+    ],
+    icon: "bookUser",
+  },
+  {
+    kind: "link",
     id: "pulse",
     label: "Pulse",
     roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
@@ -322,6 +337,7 @@ const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   "my-allocations": "My Allocations",
   "leave-team": "Leave Requests",
   "exit-interview": "Exit Survey",
+  guide: "Help & Guide",
 };
 
 function groupChildPageTitle(groupLabel: string, childLabel: string): string {

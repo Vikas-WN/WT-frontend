@@ -1959,3 +1959,49 @@ a:focus:not(:focus-visible) {
     @apply font-sans;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Guide handbook — print / Export PDF                                 */
+/* ------------------------------------------------------------------ */
+@media print {
+  body.guide-printing * {
+    visibility: hidden;
+  }
+
+  body.guide-printing [data-guide-print-root],
+  body.guide-printing [data-guide-print-root] *,
+  body.guide-printing .guide-print-cover,
+  body.guide-printing .guide-print-cover * {
+    visibility: visible;
+  }
+
+  body.guide-printing [data-guide-print-root] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  body.guide-printing .guide-print-cover {
+    display: block !important;
+    margin-bottom: 2rem;
+    page-break-after: always;
+  }
+
+  body.guide-printing[data-guide-export="hr"] [data-guide-chapter]:not([data-audience="hr"]):not([data-audience="shared"]) {
+    display: none !important;
+  }
+
+  body.guide-printing[data-guide-export="manager"] [data-guide-chapter]:not([data-audience="manager"]):not([data-audience="shared"]) {
+    display: none !important;
+  }
+
+  body.guide-printing .guide-chapter {
+    break-inside: avoid-page;
+  }
+
+  body.guide-printing .guide-figure {
+    break-inside: avoid-page;
+    max-width: 100%;
+  }
+}
