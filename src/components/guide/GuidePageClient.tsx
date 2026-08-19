@@ -2,79 +2,88 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, FileDown, Search } from "lucide-react";
+import { ExternalLink, FileDown, Loader2, Search } from "lucide-react";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { Button } from "@/components/ui/button";
 import { GuideFigure } from "@/components/guide/GuideFigure";
 import {
-  filterChaptersByAudience,
+  availableHandbookFilters,
+  filterChaptersForHandbook,
   filterChaptersForRoles,
   guideAudienceLabel,
   GUIDE_CHAPTERS,
-  type GuideExportAudience,
+  handbookMeta,
+  resolvePrimaryHandbook,
+  type GuideHandbookKind,
 } from "@/content/guide/guideContent";
+import { exportGuidePdf } from "@/utils/guide/exportGuidePdf";
 import { cn } from "@/lib/utils";
 
-const AUDIENCE_FILTERS: Array<{ id: GuideExportAudience; label: string }> = [
-  { id: "all", label: "All visible" },
-  { id: "hr", label: "HR handbook" },
-  { id: "manager", label: "Manager handbook" },
-];
-
-function exportPdf(audience: GuideExportAudience) {
-  document.body.classList.add("guide-printing");
-  document.body.dataset.guideExport = audience;
-  window.print();
-}
+const HANDBOOK_FILTER_LABELS: Record<GuideHandbookKind, string> = {
+  employee: "Employee handbook",
+  hr: "HR handbook",
+  manager: "Manager handbook",
+};
 
 export function GuidePageClient() {
-  const { hasHrAccess, hasManagerAccess } = useDashboardAccess();
+  const { hasHrAccess, hasManagerAccess, hasDmAccess } = useDashboardAccess();
+  const primaryHandbook = useMemo(
+    () =>
+      resolvePrimaryHandbook({
+        hasHrAccess,
+        hasManagerAccess,
+        hasDmAccess,
+      }),
+    [hasHrAccess, hasManagerAccess, hasDmAccess]
+  );
+
+  const handbookFilters = useMemo(
+    () => availableHandbookFilters({ hasHrAccess, hasManagerAccess, hasDmAccess }),
+    [hasHrAccess, hasManagerAccess, hasDmAccess]
+  );
+
+  const [handbookView, setHandbookView] = useState<GuideHandbookKind>(primaryHandbook);
   const [query, setQuery] = useState("");
-  const [audienceFilter, setAudienceFilter] = useState<GuideExportAudience>("all");
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    setHandbookView(primaryHandbook);
+  }, [primaryHandbook]);
 
   const roleVisible = useMemo(
     () =>
       filterChaptersForRoles(GUIDE_CHAPTERS, {
         hasHrAccess,
         hasManagerAccess,
+        hasDmAccess,
       }),
-    [hasHrAccess, hasManagerAccess]
+    [hasHrAccess, hasManagerAccess, hasDmAccess]
   );
 
-  const visibleChapters = useMemo(
-    () => filterChaptersByAudience(roleVisible, audienceFilter),
-    [roleVisible, audienceFilter]
+  const handbookChapters = useMemo(
+    () => filterChaptersForHandbook(roleVisible, handbookView),
+    [roleVisible, handbookView]
   );
+
+  const meta = handbookMeta(handbookView);
 
   const filteredChapters = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return visibleChapters;
-    return visibleChapters.filter((chapter) => {
+    if (!q) return handbookChapters;
+    return handbookChapters.filter((chapter) => {
       const haystack = [
         chapter.title,
         chapter.summary,
-        guideAudienceLabel(chapter.audience),
+        guideAudienceLabel(chapter.audience, handbookView),
         ...chapter.steps.map((s) => `${s.title} ${s.body} ${s.tip ?? ""}`),
       ]
         .join(" ")
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [query, visibleChapters]);
-
-  useEffect(() => {
-    const cleanup = () => {
-      document.body.classList.remove("guide-printing");
-      delete document.body.dataset.guideExport;
-    };
-    window.addEventListener("afterprint", cleanup);
-    return () => {
-      window.removeEventListener("afterprint", cleanup);
-      cleanup();
-    };
-  }, []);
+  }, [query, handbookChapters, handbookView]);
 
   useEffect(() => {
     if (!filteredChapters.length) {
@@ -86,61 +95,69 @@ export function GuidePageClient() {
     }
   }, [filteredChapters, activeChapterId]);
 
+  async function handleDownloadPdf() {
+    const chapters = filterChaptersForHandbook(roleVisible, handbookView);
+    if (!chapters.length) return;
+    setExporting(true);
+    try {
+      exportGuidePdf(chapters, handbookView);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <DashboardPageShell>
-      <div className="relative z-[1] mx-auto max-w-6xl guide-screen-root">
-        <header className="mb-6 space-y-3 print:hidden">
+      <div className="relative z-[1] mx-auto max-w-6xl">
+        <header className="mb-6 space-y-3">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--wt-brand)]">
                 WebTrak handbook
               </p>
               <h1 className="mt-1 text-2xl font-semibold tracking-tight text-wt-text sm:text-3xl">
-                HR & Manager Guide
+                {meta.pageTitle}
               </h1>
-              <p className="mt-2 max-w-2xl text-sm text-wt-text-muted">
-                Step-by-step instructions for HR and people managers. Use Export PDF to save
-                the current view — choose &ldquo;Save as PDF&rdquo; in the print dialog.
-              </p>
+              <p className="mt-2 max-w-2xl text-sm text-wt-text-muted">{meta.subtitle}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="brand"
                 size="sm"
                 className="gap-1.5"
-                onClick={() => exportPdf(audienceFilter)}
+                disabled={exporting || !handbookChapters.length}
+                onClick={() => void handleDownloadPdf()}
               >
-                <FileDown className="size-4" />
-                Export PDF
+                {exporting ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <FileDown className="size-4" />
+                )}
+                {meta.downloadLabel}
               </Button>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {AUDIENCE_FILTERS.map((filter) => {
-              const disabled =
-                filter.id === "hr" && !hasHrAccess
-                  ? true
-                  : filter.id === "manager" && !hasManagerAccess;
-              if (disabled) return null;
-              return (
+          {handbookFilters.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {handbookFilters.map((filter) => (
                 <button
-                  key={filter.id}
+                  key={filter}
                   type="button"
-                  onClick={() => setAudienceFilter(filter.id)}
+                  onClick={() => setHandbookView(filter)}
                   className={cn(
                     "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                    audienceFilter === filter.id
+                    handbookView === filter
                       ? "border-[var(--wt-brand)] bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]"
                       : "border-wt-border bg-wt-surface-1 text-wt-text-muted hover:text-wt-text"
                   )}
                 >
-                  {filter.label}
+                  {HANDBOOK_FILTER_LABELS[filter]}
                 </button>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          ) : null}
 
           <div className="relative max-w-md">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-wt-text-muted" />
@@ -148,23 +165,16 @@ export function GuidePageClient() {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search guide…"
+              placeholder="Search this handbook…"
               className="h-10 w-full rounded-lg border border-wt-border bg-wt-surface-1 pl-9 pr-3 text-sm outline-none focus:border-[var(--wt-brand)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--wt-brand)_20%,transparent)]"
             />
           </div>
         </header>
 
-        <div className="guide-print-cover hidden print:block">
-          <h1 className="text-3xl font-bold text-wt-text">WebTrak HR & Manager Guide</h1>
-          <p className="mt-2 text-sm text-wt-text-muted">
-            Generated from the in-app handbook. Audience filter: {audienceFilter}.
-          </p>
-        </div>
-
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <nav
             aria-label="Guide contents"
-            className="guide-toc shrink-0 lg:sticky lg:top-6 lg:w-56 print:hidden"
+            className="shrink-0 lg:sticky lg:top-6 lg:w-56"
           >
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">
               Contents
@@ -183,33 +193,28 @@ export function GuidePageClient() {
                     )}
                   >
                     <span className="block">{chapter.title}</span>
-                    <span className="mt-0.5 block text-[10px] opacity-70">
-                      {guideAudienceLabel(chapter.audience)}
-                    </span>
                   </a>
                 </li>
               ))}
             </ul>
           </nav>
 
-          <div data-guide-print-root className="min-w-0 flex-1 space-y-8">
+          <div className="min-w-0 flex-1 space-y-8">
             {filteredChapters.length === 0 ? (
               <p className="rounded-xl border border-wt-border bg-wt-surface-1 p-6 text-sm text-wt-text-muted">
-                No chapters match your search. Try a different keyword or audience filter.
+                No chapters match your search.
               </p>
             ) : (
               filteredChapters.map((chapter) => (
                 <article
                   key={chapter.id}
                   id={`guide-${chapter.id}`}
-                  data-guide-chapter
-                  data-audience={chapter.audience}
-                  className="guide-chapter scroll-mt-24 rounded-2xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm sm:p-6 print:break-before-page print:rounded-none print:border-0 print:shadow-none"
+                  className="scroll-mt-24 rounded-2xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm sm:p-6"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <span className="inline-flex rounded-full border border-wt-border bg-wt-surface-2 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-wt-text-muted">
-                        {guideAudienceLabel(chapter.audience)}
+                        {guideAudienceLabel(chapter.audience, handbookView)}
                       </span>
                       <h2 className="mt-2 text-xl font-semibold text-wt-text">{chapter.title}</h2>
                       <p className="mt-1 text-sm text-wt-text-muted">{chapter.summary}</p>
@@ -217,7 +222,7 @@ export function GuidePageClient() {
                     {chapter.relatedHref ? (
                       <Link
                         href={chapter.relatedHref}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-[var(--wt-brand)] hover:underline print:hidden"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-[var(--wt-brand)] hover:underline"
                       >
                         Open in WebTrak
                         <ExternalLink className="size-3.5" />

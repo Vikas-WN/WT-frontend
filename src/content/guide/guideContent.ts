@@ -2,6 +2,9 @@ import { DASHBOARD_ROUTES } from "@/constants/routes";
 
 export type GuideAudience = "shared" | "hr" | "manager";
 
+/** Role-specific handbook export / default view. */
+export type GuideHandbookKind = "employee" | "hr" | "manager";
+
 export type GuideStep = {
   title: string;
   body: string;
@@ -485,33 +488,107 @@ export const GUIDE_CHAPTERS: GuideChapter[] = [
   },
 ];
 
-export type GuideExportAudience = "all" | "hr" | "manager";
+export type GuideExportAudience = GuideHandbookKind;
+
+export function resolvePrimaryHandbook(options: {
+  hasHrAccess: boolean;
+  hasManagerAccess: boolean;
+  hasDmAccess?: boolean;
+}): GuideHandbookKind {
+  if (options.hasHrAccess) return "hr";
+  if (options.hasManagerAccess || options.hasDmAccess) return "manager";
+  return "employee";
+}
+
+export function handbookMeta(kind: GuideHandbookKind): {
+  title: string;
+  pageTitle: string;
+  subtitle: string;
+  filename: string;
+  downloadLabel: string;
+} {
+  switch (kind) {
+    case "hr":
+      return {
+        title: "HR Handbook",
+        pageTitle: "WebTrak HR Handbook",
+        subtitle:
+          "Onboarding, directory, offboarding, allocation, reports, and HR team workflows.",
+        filename: "WebTrak-HR-Handbook.pdf",
+        downloadLabel: "Download HR Handbook",
+      };
+    case "manager":
+      return {
+        title: "Manager Handbook",
+        pageTitle: "WebTrak Manager Handbook",
+        subtitle:
+          "Team leave, comp off, time logs, allocation extensions, and people management.",
+        filename: "WebTrak-Manager-Handbook.pdf",
+        downloadLabel: "Download Manager Handbook",
+      };
+    default:
+      return {
+        title: "Employee Handbook",
+        pageTitle: "WebTrak Employee Handbook",
+        subtitle:
+          "Profile, leave, comp off, time logs, allocations, and everyday self-service tasks.",
+        filename: "WebTrak-Employee-Handbook.pdf",
+        downloadLabel: "Download Employee Handbook",
+      };
+  }
+}
 
 export function filterChaptersForRoles(
   chapters: GuideChapter[],
-  options: { hasHrAccess: boolean; hasManagerAccess: boolean }
+  options: { hasHrAccess: boolean; hasManagerAccess: boolean; hasDmAccess?: boolean }
 ): GuideChapter[] {
+  const canManager = options.hasManagerAccess || options.hasDmAccess;
   return chapters.filter((chapter) => {
     if (chapter.audience === "shared") return true;
     if (chapter.audience === "hr") return options.hasHrAccess;
-    if (chapter.audience === "manager") return options.hasManagerAccess;
+    if (chapter.audience === "manager") return canManager;
     return false;
   });
 }
 
-export function filterChaptersByAudience(
+export function filterChaptersForHandbook(
   chapters: GuideChapter[],
-  audience: GuideExportAudience
+  handbook: GuideHandbookKind
 ): GuideChapter[] {
-  if (audience === "all") return chapters;
-  if (audience === "hr") {
+  if (handbook === "employee") {
+    return chapters.filter((c) => c.audience === "shared");
+  }
+  if (handbook === "hr") {
     return chapters.filter((c) => c.audience === "shared" || c.audience === "hr");
   }
   return chapters.filter((c) => c.audience === "shared" || c.audience === "manager");
 }
 
-export function guideAudienceLabel(audience: GuideAudience): string {
-  if (audience === "shared") return "Everyone";
+/** @deprecated Use filterChaptersForHandbook */
+export function filterChaptersByAudience(
+  chapters: GuideChapter[],
+  handbook: GuideHandbookKind
+): GuideChapter[] {
+  return filterChaptersForHandbook(chapters, handbook);
+}
+
+export function guideAudienceLabel(
+  audience: GuideAudience,
+  handbook?: GuideHandbookKind
+): string {
+  if (audience === "shared") {
+    return handbook === "employee" || !handbook ? "Employee" : "Everyone";
+  }
   if (audience === "hr") return "HR";
   return "Manager";
+}
+
+export function availableHandbookFilters(options: {
+  hasHrAccess: boolean;
+  hasManagerAccess: boolean;
+  hasDmAccess?: boolean;
+}): GuideHandbookKind[] {
+  const canManager = options.hasManagerAccess || options.hasDmAccess;
+  if (options.hasHrAccess && canManager) return ["hr", "manager"];
+  return [];
 }
