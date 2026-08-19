@@ -81,6 +81,7 @@ import {
   requestHrStatus,
   requestManagerStatus,
 } from "@/utils/userRequest";
+import { pickManagerEmailList } from "@/utils/leaveManagerDisplay";
 import {
   compareApiDates,
   formatApiDate,
@@ -104,9 +105,13 @@ function todayYmd(): string {
 }
 
 function defaultRequestRange(): { from: string; to: string } {
-  const now = new Date();
-  const from = new Date(now.getFullYear(), now.getMonth(), 1);
-  const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  // Match Leave Team Requests: wide window so assigned earn credits are not
+  // hidden when the worked date falls outside the current calendar month.
+  const today = new Date();
+  const to = new Date(today);
+  to.setFullYear(to.getFullYear() + 1);
+  const from = new Date(to);
+  from.setDate(from.getDate() - 730);
   return { from: formatApiDate(from), to: formatApiDate(to) };
 }
 
@@ -1279,14 +1284,22 @@ export function CompOffPageClient({
                     )
                       .trim()
                       .toLowerCase();
+                    const primaryManagers = pickManagerEmailList(row, "primary");
+                    const secondaryManagers = pickManagerEmailList(row, "secondary");
+                    const isAssignedEarnManager =
+                      flow === "COMP_OFF_EARN" &&
+                      Boolean(userEmail) &&
+                      (primaryManagers.some((email) => email.trim().toLowerCase() === userEmail) ||
+                        secondaryManagers.some((email) => email.trim().toLowerCase() === userEmail));
                     const managerRoutedOk =
                       hasManagerAccess &&
-                      ((userEmail && routedManager === userEmail) ||
+                      (isAssignedEarnManager ||
+                        (userEmail && routedManager === userEmail) ||
                         (rowEmail ? managerTeamEmails.has(rowEmail) : false));
                     const isRowUpdating = teamRequestUpdatingId === id;
                     const canManagerActEarn =
                       flow === "COMP_OFF_EARN" &&
-                      hasManagerAccess &&
+                      (hasManagerAccess || isAssignedEarnManager) &&
                       !isHrOnly &&
                       managerStatus === "PENDING" &&
                       managerRoutedOk;

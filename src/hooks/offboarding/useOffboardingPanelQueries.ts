@@ -14,6 +14,7 @@ import {
   isServingNoticeUserStatus,
 } from "@/utils/userStatus";
 import { extractSkillNames } from "@/utils/employeeDirectory";
+import { normalizeDirectoryUserType } from "@/utils/userTypeTransition";
 
 export type OffboardCandidate = {
   emp_id: string;
@@ -160,7 +161,7 @@ function buildOffboardCandidates(
           }
           const name = String(row.name ?? "—").trim() || "—";
           const email = String(row.email ?? "—").trim() || "—";
-          const user_type = String(row.user_type ?? row.userType ?? "").trim().toUpperCase();
+          const user_type = normalizeDirectoryUserType(row.user_type ?? row.userType);
           const band =
             String(row.band ?? row.band_name ?? row.bandName ?? row.band_id ?? row.bandId ?? "")
               .trim() || "—";
@@ -303,8 +304,9 @@ export function useOffboardingPanelQueries() {
           : [];
       return buildOffboardCandidates(onboardRows, offboardedItems);
     },
-    staleTime: OFFBOARDING_STALE_MS,
-    refetchOnMount: false,
+    // user_type drives consultant vs FTE fields — avoid serving a stale type after transitions
+    staleTime: 30_000,
+    refetchOnMount: true,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });

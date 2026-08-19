@@ -32,13 +32,14 @@ import {
   hasSecondaryLeaveManagers,
   isAssignedPrimaryLeaveManager,
   isAssignedSecondaryLeaveManager,
+  pickManagerEmailList,
 } from "@/utils/leaveManagerDisplay";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
 
 export type UserRequestStatusValue = ApprovalStage;
 
 /** Canonical request types for list fetches — avoid duplicate alias calls (COMPOFF, COMP-OFF, etc.). */
-export const USER_REQUEST_FETCH_TYPES = ["LEAVE", "WFH", "COMP_OFF"] as const;
+export const USER_REQUEST_FETCH_TYPES = ["LEAVE", "OPTIONAL", "WFH", "COMP_OFF"] as const;
 
 function dedupeUserRequestRows(
   rows: Array<Record<string, unknown>>
@@ -66,6 +67,7 @@ export function resolveRequestTypesForFetch(requestType: string): string[] {
   const normalized = requestType.trim().toUpperCase() || "ALL";
   if (normalized === "ALL") return ["ALL"];
   if (normalized === "LEAVE") return ["LEAVE"];
+  if (normalized === "OPTIONAL" || normalized === "OPTIONAL_LEAVE") return ["OPTIONAL"];
   if (normalized === "WFH") return ["WFH"];
   if (
     normalized === "COMP_OFF" ||
@@ -198,7 +200,7 @@ export async function fetchPaginatedScopedUserRequests(params: {
 
 
 
-export const STAGE_USER_REQUEST_TYPES = ["LEAVE", "WFH", "COMP_OFF"] as const;
+export const STAGE_USER_REQUEST_TYPES = ["LEAVE", "OPTIONAL", "WFH", "COMP_OFF"] as const;
 
 
 
@@ -228,9 +230,11 @@ export function isLeaveOrWfhRequestType(value: unknown): boolean {
 
     .trim()
 
-    .toUpperCase();
+    .toUpperCase()
 
-  return raw === "LEAVE" || raw === "WFH";
+    .replace(/[\s-]+/g, "_");
+
+  return raw === "LEAVE" || raw === "OPTIONAL" || raw === "OPTIONAL_LEAVE" || raw === "WFH";
 
 }
 
@@ -255,7 +259,11 @@ export function isHrDirectLeaveOrWfhRequestType(value: unknown): boolean {
 
 
 export function isLeaveRequestType(value: unknown): boolean {
-  return String(value ?? "").trim().toUpperCase() === "LEAVE";
+  const raw = String(value ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "_");
+  return raw === "LEAVE" || raw === "OPTIONAL" || raw === "OPTIONAL_LEAVE";
 }
 
 
@@ -298,7 +306,6 @@ export function canManagerActOnCompOffEarn(
   row: Record<string, unknown>,
   options: { hasManagerAccess: boolean; actorEmail?: string | null }
 ): boolean {
-  if (!options.hasManagerAccess) return false;
   if (!isCompOffEarnRequestType(pickRowField(row, "request_type", "requestType"))) {
     return false;
   }
@@ -314,7 +321,18 @@ export function canManagerActOnCompOffEarn(
     .trim()
     .toLowerCase();
   if (empEmail && empEmail === actor) return false;
-  return true;
+
+  const primary = pickManagerEmailList(row, "primary");
+  const secondary = pickManagerEmailList(row, "secondary");
+  if (primary.length || secondary.length) {
+    return (
+      primary.some((email) => email.trim().toLowerCase() === actor) ||
+      secondary.some((email) => email.trim().toLowerCase() === actor)
+    );
+  }
+
+  // Legacy rows without stored manager emails: any manager who can see the inbox may act.
+  return Boolean(options.hasManagerAccess);
 }
 
 

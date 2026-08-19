@@ -72,7 +72,8 @@ export function parseLeaveNotificationDeepLink(message: string): {
 function withLeaveDeepLink(
   basePath: string,
   row: NotificationItem | Record<string, unknown>,
-  tab: string
+  tab: string,
+  requestType?: string
 ): string {
   const { requestId, from, to } = parseLeaveNotificationDeepLink(readNotificationMessage(row));
   const params = new URLSearchParams();
@@ -82,6 +83,7 @@ function withLeaveDeepLink(
   if (requestId) params.set("requestId", requestId);
   if (from) params.set("from", from);
   if (to) params.set("to", to);
+  if (requestType?.trim()) params.set("requestType", requestType.trim().toUpperCase());
   return `${basePath}?${params.toString()}`;
 }
 
@@ -190,7 +192,9 @@ export function resolveNotificationHref(
       return withLeaveDeepLink(DASHBOARD_ROUTES.leave, row, "wfh");
 
     case "COMP_OFF_REQUEST":
-      return isRequestApprover(roles) ? DASHBOARD_ROUTES["leave-team"] : COMP_OFF_SELF;
+      return isRequestApprover(roles)
+        ? withLeaveDeepLink(DASHBOARD_ROUTES["leave-team"], row, "team", "COMP_OFF_EARN")
+        : COMP_OFF_SELF;
 
     case "COMP_OFF_APPROVED":
     case "COMP_OFF_REJECTED":

@@ -66,6 +66,13 @@ export const compOffService = {
     const managers = payload.manager_emails ?? payload.managerEmails;
     if (Array.isArray(managers) && managers.length) {
       normalized.managerEmails = managers;
+      normalized.manager_emails = managers;
+    }
+    const secondaryManagers =
+      payload.secondary_manager_emails ?? payload.secondaryManagerEmails;
+    if (Array.isArray(secondaryManagers) && secondaryManagers.length) {
+      normalized.secondaryManagerEmails = secondaryManagers;
+      normalized.secondary_manager_emails = secondaryManagers;
     }
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.compOff.earn, {
       contentType: "application/json",

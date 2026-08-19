@@ -114,6 +114,8 @@ export function mapEarnListRow(row: Record<string, unknown>): Record<string, unk
   const projectName = String(pickRowField(row, "project_name", "projectName") ?? "").trim();
   const requestId =
     pickRowField(row, "user_request_id", "userRequestId", "id") ?? row.id ?? null;
+  const primaryManagers = pickRowField(row, "primary_managers", "primaryManagers") ?? [];
+  const secondaryManagers = pickRowField(row, "secondary_managers", "secondaryManagers") ?? [];
   return {
     ...row,
     id: requestId ?? row.id,
@@ -133,6 +135,10 @@ export function mapEarnListRow(row: Record<string, unknown>): Record<string, unk
     user_request_status: pickRowField(row, "status") ?? "PENDING",
     manager_status: pickRowField(row, "manager_status", "managerStatus") ?? String(pickRowField(row, "status") ?? "PENDING"),
     manager_reason: pickRowField(row, "manager_reason", "managerReason") ?? null,
+    primary_managers: primaryManagers,
+    primaryManagers: primaryManagers,
+    secondary_managers: secondaryManagers,
+    secondaryManagers: secondaryManagers,
   };
 }
 

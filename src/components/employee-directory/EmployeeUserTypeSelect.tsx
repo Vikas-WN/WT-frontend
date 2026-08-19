@@ -122,6 +122,9 @@ export function EmployeeUserTypeSelect({
       });
       await queryClient.invalidateQueries({ queryKey: ["employee-directory", "onboard"] });
       await queryClient.invalidateQueries({ queryKey: ["employee-profile"] });
+      // Offboarding candidates cache user_type independently — must refresh or
+      // Full-Time fields stay visible after FULLTIME → CONSULTANT transitions.
+      await queryClient.invalidateQueries({ queryKey: ["offboarding"] });
       showSuccessToast(
         normalizedNext === "CONSULTANT"
           ? "User type updated. Designation was cleared — set a consultant designation on the profile."

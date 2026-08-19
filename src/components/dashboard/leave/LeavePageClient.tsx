@@ -259,6 +259,9 @@ export function LeavePageClient() {
   const deepLinkRequestId = String(searchParams.get("requestId") ?? "").trim();
   const deepLinkFrom = String(searchParams.get("from") ?? "").trim();
   const deepLinkTo = String(searchParams.get("to") ?? "").trim();
+  const deepLinkRequestType = String(searchParams.get("requestType") ?? "")
+    .trim()
+    .toUpperCase();
   const [highlightRequestId, setHighlightRequestId] = useState("");
   const deepLinkAppliedKeyRef = useRef("");
   const [leaveSubTab, setLeaveSubTab] = useState<
@@ -522,8 +525,8 @@ export function LeavePageClient() {
 
   // Notification deep-link: open the matching leave request regardless of prior date filters.
   useEffect(() => {
-    if (!deepLinkRequestId && !deepLinkFrom && !deepLinkTo) return;
-    const key = `${deepLinkRequestId}|${deepLinkFrom}|${deepLinkTo}|${tabFromQuery}|${pathname}`;
+    if (!deepLinkRequestId && !deepLinkFrom && !deepLinkTo && !deepLinkRequestType) return;
+    const key = `${deepLinkRequestId}|${deepLinkFrom}|${deepLinkTo}|${deepLinkRequestType}|${tabFromQuery}|${pathname}`;
     if (deepLinkAppliedKeyRef.current === key) return;
     deepLinkAppliedKeyRef.current = key;
 
@@ -546,6 +549,7 @@ export function LeavePageClient() {
       ...prev,
       fromDate: "",
       toDate: "",
+      ...(deepLinkRequestType ? { requestType: deepLinkRequestType } : {}),
     }));
     setMyRequestsFromDate("");
     setMyRequestsToDate("");
@@ -558,6 +562,7 @@ export function LeavePageClient() {
   }, [
     deepLinkFrom,
     deepLinkRequestId,
+    deepLinkRequestType,
     deepLinkTo,
     isTeamLeaveRoute,
     pathname,

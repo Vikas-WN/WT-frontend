@@ -46,6 +46,8 @@ import { formatApiDateDisplay } from "@/utils/apiDate";
 import {
   useOffboardingPanelQueries,
 } from "@/hooks/offboarding/useOffboardingPanelQueries";
+import { useEmployeeProfile } from "@/hooks/employee-directory/useEmployeeProfile";
+import { normalizeDirectoryUserType } from "@/utils/userTypeTransition";
 import {
   CONSULTANT_EXIT_TYPE,
   createEmptyOffboardingForm,
@@ -163,13 +165,53 @@ export function OffboardingPanel() {
     () => offboardCandidates.find((row) => row.emp_id === offboardingForm.emp_id) ?? null,
     [offboardCandidates, offboardingForm.emp_id]
   );
-  const selectedUserType = selectedCandidate?.user_type ?? "";
-  const isInternOffboarding = selectedUserType.toUpperCase() === "INTERN";
-  const isConsultantOffboarding = selectedUserType.toUpperCase() === "CONSULTANT";
+
+  // Prefer live profile user_type so FULLTIME → CONSULTANT transitions aren't masked by
+  // a stale offboarding candidates cache.
+  const selectedEmpId = offboardingForm.emp_id.trim();
+  const selectedProfileQ = useEmployeeProfile(selectedEmpId, {
+    enabled: Boolean(selectedEmpId),
+  });
+  const selectedUserType = useMemo(() => {
+    const fromProfile = normalizeDirectoryUserType(
+      selectedProfileQ.data?.user_type ?? selectedProfileQ.data?.userType
+    );
+    if (fromProfile) return fromProfile;
+    return normalizeDirectoryUserType(selectedCandidate?.user_type);
+  }, [selectedProfileQ.data, selectedCandidate?.user_type]);
+  const isInternOffboarding = selectedUserType === "INTERN";
+  const isConsultantOffboarding = selectedUserType === "CONSULTANT";
   const isInvitedOffboarding =
     normalizeEmployeeStatusKey(selectedCandidate?.status) === "INVITED";
 
   const canSubmit = isOffboardingFormValid(offboardingForm, selectedUserType);
+
+  // When live type resolves (or candidates refresh), drop Full-Time-only fields for consultants.
+  useEffect(() => {
+    if (!selectedEmpId || !selectedUserType) return;
+    setOffboardingForm((prev) => {
+      if (prev.emp_id.trim() !== selectedEmpId) return prev;
+      if (selectedUserType === "CONSULTANT") {
+        if (prev.exit_type === CONSULTANT_EXIT_TYPE && !prev.resignation_date.trim()) {
+          return prev;
+        }
+        return {
+          ...prev,
+          resignation_date: "",
+          exit_type: CONSULTANT_EXIT_TYPE,
+        };
+      }
+      if (selectedUserType === "INTERN") {
+        const lwd = prev.last_working_day.trim();
+        if (!lwd || prev.resignation_date.trim() === lwd) return prev;
+        return { ...prev, resignation_date: lwd };
+      }
+      if (prev.exit_type === CONSULTANT_EXIT_TYPE) {
+        return { ...prev, exit_type: "" };
+      }
+      return prev;
+    });
+  }, [selectedEmpId, selectedUserType]);
 
   useEffect(() => {
     setSelectedEmpIds([]);
@@ -337,8 +379,9 @@ export function OffboardingPanel() {
 
   function handleEmployeeChange(empId: string) {
     const candidate = offboardCandidates.find((row) => row.emp_id === empId);
-    const isIntern = candidate?.user_type === "INTERN";
-    const isConsultant = candidate?.user_type === "CONSULTANT";
+    const type = normalizeDirectoryUserType(candidate?.user_type);
+    const isIntern = type === "INTERN";
+    const isConsultant = type === "CONSULTANT";
     const skills = extractSkillNames(candidate?.primary_skills).join(", ");
     setOffboardingForm((prev) => {
       const next = {
