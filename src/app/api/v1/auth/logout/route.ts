@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   backendMisconfiguredResponse,
   backendUnavailableResponse,
-  buildCookieHeader,
   clearAuthCookies,
   getBackendBaseUrl,
   isBackendMisconfigured,
@@ -17,7 +16,16 @@ export async function POST(request: NextRequest) {
     return response;
   }
 
-  const cookieHeader = buildCookieHeader(request, ["tokenId"]);
+  // Prefer NextRequest cookie jar (more reliable than parsing Cookie header).
+  // Forward identity cookies so the API can revoke all sessions for presence.
+  const cookieParts = ["tokenId", "accessToken", "email"]
+    .map((name) => {
+      const value = request.cookies.get(name)?.value?.trim();
+      return value ? `${name}=${value}` : "";
+    })
+    .filter(Boolean);
+  const cookieHeader = cookieParts.join("; ");
+
   let upstream: Response;
   try {
     upstream = await fetch(`${getBackendBaseUrl()}/api/v1/auth/logout`, {

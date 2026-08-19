@@ -13,11 +13,27 @@ export type RoleEmployeeOption = {
 type RoleEmployeeRow = Record<string, unknown>;
 
 function parseRoleEmployeeOptions(payload: unknown): RoleEmployeeOption[] {
+  const root = payload as { data?: unknown; items?: unknown; managers?: unknown } | null;
+  const nested = root && typeof root === "object" ? root.data : null;
+  const nestedObj =
+    nested && typeof nested === "object" && !Array.isArray(nested)
+      ? (nested as { items?: unknown; managers?: unknown; data?: unknown })
+      : null;
   const rows = Array.isArray(payload)
     ? payload
-    : Array.isArray((payload as { data?: unknown } | null)?.data)
-      ? ((payload as { data: unknown }).data as unknown[])
-      : [];
+    : Array.isArray(nested)
+      ? nested
+      : Array.isArray(nestedObj?.items)
+        ? nestedObj.items
+        : Array.isArray(nestedObj?.managers)
+          ? nestedObj.managers
+          : Array.isArray(nestedObj?.data)
+            ? nestedObj.data
+            : Array.isArray(root?.items)
+              ? root.items
+              : Array.isArray(root?.managers)
+                ? root.managers
+                : [];
   const out: RoleEmployeeOption[] = [];
   for (const row of rows) {
     if (!row || typeof row !== "object") continue;

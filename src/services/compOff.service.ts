@@ -7,6 +7,7 @@ import { applyApiDateFields, applyApiDateQuery, toApiDateParam } from "@/utils/a
 import {
   availableUnitsFromGrants,
   dedupeCompOffRequestRows,
+  inferStatusFromAlreadyActedError,
   isAlreadyActedOnRequestError,
   mapEarnListRow,
 } from "@/utils/compOff";
@@ -418,7 +419,11 @@ export const compOffService = {
       });
     } catch (firstError) {
       if (isAlreadyActedOnRequestError(firstError)) {
-        return { message: "ok", data: null } as ApiEnvelope<unknown>;
+        const inferred = inferStatusFromAlreadyActedError(firstError);
+        if (inferred === status) {
+          return { message: "ok", data: null } as ApiEnvelope<unknown>;
+        }
+        throw firstError;
       }
       try {
         const legacy: Record<string, unknown> = {
@@ -435,7 +440,10 @@ export const compOffService = {
         });
       } catch (secondError) {
         if (isAlreadyActedOnRequestError(secondError)) {
-          return { message: "ok", data: null } as ApiEnvelope<unknown>;
+          const inferred = inferStatusFromAlreadyActedError(secondError);
+          if (inferred === status) {
+            return { message: "ok", data: null } as ApiEnvelope<unknown>;
+          }
         }
         throw firstError;
       }

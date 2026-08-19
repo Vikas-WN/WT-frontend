@@ -64,6 +64,7 @@ import {
   resendableOffboardEmpIds,
 } from "@/utils/exitSurveyFollowUp";
 import { normalizeEmployeeStatusKey } from "@/utils/userStatus";
+import { extractSkillNames } from "@/utils/employeeDirectory";
 
 const USER_TYPE_FILTER_OPTIONS = ["", "FULLTIME", "INTERN", "CONSULTANT"] as const;
 
@@ -338,9 +339,7 @@ export function OffboardingPanel() {
     const candidate = offboardCandidates.find((row) => row.emp_id === empId);
     const isIntern = candidate?.user_type === "INTERN";
     const isConsultant = candidate?.user_type === "CONSULTANT";
-    const skills = Array.isArray(candidate?.primary_skills)
-      ? candidate.primary_skills.join(", ")
-      : "";
+    const skills = extractSkillNames(candidate?.primary_skills).join(", ");
     setOffboardingForm((prev) => {
       const next = {
         ...createEmptyOffboardingForm(),

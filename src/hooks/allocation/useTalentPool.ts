@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { PAGE_SIZE_OPTIONS } from "@/hooks/useClientPagination";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@/hooks/useClientPagination";
 import { hrmsService } from "@/services/hrms.service";
 import {
   dashboardFromOnBenchPage,
@@ -14,8 +14,6 @@ import {
 } from "@/utils/talentPool";
 
 export const TALENT_POOL_QUERY_KEY = ["allocation", "talent-pool"] as const;
-
-const DEFAULT_PAGE_SIZE = 25;
 
 export type TalentPoolPages = {
   onBench: number;

@@ -131,8 +131,8 @@ export function isAssignedLeaveManager(
   );
 }
 
-/** Primary stage: assigned primary, request still open, primary has not decided yet. */
-export function canPrimaryManagerActOnLeave(
+/** Primary may approve only while the request is still pending. */
+export function canPrimaryManagerApproveOnLeave(
   row: Record<string, unknown>,
   actorEmail: string | null | undefined
 ): boolean {
@@ -142,14 +142,44 @@ export function canPrimaryManagerActOnLeave(
   return isPendingApprovalStage(requestManagerStatus(row));
 }
 
-/** Secondary can act while overall request is still pending and their stage is open. */
+/**
+ * Primary may reject while pending, or veto after another assigned manager already approved.
+ */
+export function canPrimaryManagerRejectOnLeave(
+  row: Record<string, unknown>,
+  actorEmail: string | null | undefined
+): boolean {
+  if (!isAssignedPrimaryLeaveManager(row, actorEmail)) return false;
+  if (isOwnUserRequest(row, actorEmail)) return false;
+  const finalStatus = requestFinalStatus(row);
+  if (finalStatus === "APPROVED") return true;
+  if (finalStatus !== "PENDING") return false;
+  return isPendingApprovalStage(requestManagerStatus(row));
+}
+
+/** @deprecated Prefer canPrimaryManagerApproveOnLeave / canPrimaryManagerRejectOnLeave */
+export function canPrimaryManagerActOnLeave(
+  row: Record<string, unknown>,
+  actorEmail: string | null | undefined
+): boolean {
+  return (
+    canPrimaryManagerApproveOnLeave(row, actorEmail) ||
+    canPrimaryManagerRejectOnLeave(row, actorEmail)
+  );
+}
+
+/**
+ * Secondary can reject while pending, or veto after another assigned manager already approved.
+ */
 export function canSecondaryManagerRejectOnLeave(
   row: Record<string, unknown>,
   actorEmail: string | null | undefined
 ): boolean {
   if (!isAssignedSecondaryLeaveManager(row, actorEmail)) return false;
   if (isOwnUserRequest(row, actorEmail)) return false;
-  if (requestFinalStatus(row) !== "PENDING") return false;
+  const finalStatus = requestFinalStatus(row);
+  if (finalStatus === "APPROVED") return true;
+  if (finalStatus !== "PENDING") return false;
   return isPendingApprovalStage(requestSecondaryManagerStatus(row));
 }
 
@@ -161,7 +191,10 @@ export function canSecondaryManagerApproveOnLeave(
   row: Record<string, unknown>,
   actorEmail: string | null | undefined
 ): boolean {
-  return canSecondaryManagerRejectOnLeave(row, actorEmail);
+  if (!isAssignedSecondaryLeaveManager(row, actorEmail)) return false;
+  if (isOwnUserRequest(row, actorEmail)) return false;
+  if (requestFinalStatus(row) !== "PENDING") return false;
+  return isPendingApprovalStage(requestSecondaryManagerStatus(row));
 }
 
 /** True when the actor can approve and/or reject as an assigned leave manager. */

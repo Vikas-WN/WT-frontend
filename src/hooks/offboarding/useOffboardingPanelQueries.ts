@@ -13,6 +13,7 @@ import {
   isEligibleOffboardCandidateStatus,
   isServingNoticeUserStatus,
 } from "@/utils/userStatus";
+import { extractSkillNames } from "@/utils/employeeDirectory";
 
 export type OffboardCandidate = {
   emp_id: string;
@@ -164,9 +165,7 @@ function buildOffboardCandidates(
             String(row.band ?? row.band_name ?? row.bandName ?? row.band_id ?? row.bandId ?? "")
               .trim() || "—";
           const rawSkills = row.primary_skills ?? row.primarySkills;
-          const primary_skills = Array.isArray(rawSkills)
-            ? (rawSkills as unknown[]).map(String)
-            : [];
+          const primary_skills = extractSkillNames(rawSkills);
           const candidate: OffboardCandidate = {
             emp_id,
             name,

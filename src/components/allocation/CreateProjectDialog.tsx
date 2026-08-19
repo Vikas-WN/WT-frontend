@@ -7,6 +7,7 @@ import { useClientOpportunities } from "@/hooks/clients/useClientOpportunities";
 import { ClientSelect } from "@/components/allocation/ClientSelect";
 import { OpportunityMultiSelect } from "@/components/allocation/OpportunityMultiSelect";
 import { ProjectTypeSelect } from "@/components/allocation/ProjectTypeSelect";
+import { RoleEmployeeSelect } from "@/components/allocation/RoleEmployeeSelect";
 import {
   ManagerAllocationFields,
   createEmptyManagerAllocationFields,
@@ -28,7 +29,6 @@ import {
   isValidAllocationPercentForDesignation,
 } from "@/utils/allocationPercent";
 import { parseEmployeeAllocationsResponse } from "@/utils/allocationList";
-import { isExternalClientId } from "@/utils/client";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { UI_COPY } from "@/constants/uiCopy";
 
@@ -257,15 +257,14 @@ export function CreateProjectDialog({
       return;
     }
     const accountManagerEmail = normalizePickerEmail(form.account_manager_email);
-    const externalClientSelected = isExternalClientId(form.client_id);
     if (
       !isEditing &&
       (!accountManagerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountManagerEmail))
     ) {
       showErrorToast(
-        externalClientSelected
-          ? "Enter a valid account manager email for this client."
-          : "Select a client with a valid account manager."
+        form.client_id.trim()
+          ? "Select an account manager from the list."
+          : "Select a client, then choose an account manager."
       );
       return;
     }
@@ -503,17 +502,17 @@ export function CreateProjectDialog({
               }}
             />
             {!isEditing ? (
-              <InputField
+              <RoleEmployeeSelect
                 label="Account Manager"
+                role="AM"
+                required
                 value={form.account_manager_email}
                 onChange={(value) =>
                   setForm((prev) => ({ ...prev, account_manager_email: value }))
                 }
-                disabled={!isExternalClientId(form.client_id)}
-                placeholder={
-                  isExternalClientId(form.client_id)
-                    ? "Enter account manager email"
-                    : "Filled from selected client"
+                disabled={!form.client_id.trim()}
+                extraEmails={
+                  form.account_manager_email ? [form.account_manager_email] : []
                 }
               />
             ) : null}

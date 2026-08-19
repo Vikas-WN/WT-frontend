@@ -60,7 +60,7 @@ import { OnboardingPendingBanner } from "@/components/dashboard/shared/Onboardin
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { EmployeeProfileHeaderCard } from "@/components/employee-directory/EmployeeProfileHeaderCard";
 import { ProfileSectionsView } from "@/components/employee-directory/ProfileSectionsView";
-import { pickEmployeeRole } from "@/utils/employeeDirectory";
+import { pickDesignationForDisplay } from "@/utils/employeeDirectory";
 
 export function ProfilePageLeanClient() {
   const { user, logout } = useAuth();
@@ -547,7 +547,7 @@ export function ProfilePageLeanClient() {
                     <EmployeeProfileHeaderCard
                       profile={employeeProfile ?? {}}
                       displayName={profileDisplayName}
-                      designation={pickEmployeeRole(employeeProfile ?? {})}
+                      designation={pickDesignationForDisplay(employeeProfile ?? {})}
                       department={String(
                         readProfileField(employeeProfile, "department") ?? "",
                       )}

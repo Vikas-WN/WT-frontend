@@ -661,6 +661,8 @@ export function CompOffPageClient({
       merged = merged.filter((row) => {
         const t = normalizeCompOffRequestType(row.request_type ?? row.requestType);
         if (t !== "COMP_OFF_EARN" && t !== "COMP_OFF") return false;
+        // Earn inbox from managerOnly already scopes to assigned managers — keep those rows.
+        if (t === "COMP_OFF_EARN") return true;
         const routedManager = String(
           pickRowField(row, "manager_comp_off_email", "managerCompOffEmail") ?? ""
         )

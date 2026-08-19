@@ -6,23 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FieldLabel } from "@/components/ui/field";
 import { useEmployeeManagers } from "@/hooks/leave/useEmployeeManagers";
-import { formatEmployeePickerLabel } from "@/utils/employeePickerLabel";
 import { filterEligibleLeaveManagers } from "@/utils/leaveManagerEligibility";
 import { ChevronsUpDown, X, Check, Search, Loader2 } from "lucide-react";
 
 function optionLabel(option: LeaveManagerOption): string {
-  return formatEmployeePickerLabel({
-    employeeName: option.name?.trim() || option.email,
-    employeeEmail: option.email,
-    empId: option.employee_id?.trim() || undefined,
-  });
-}
-
-function optionTitle(option: LeaveManagerOption): string | undefined {
-  const name = option.name?.trim();
-  const email = option.email?.trim();
-  if (email && name && name !== email) return email;
-  return undefined;
+  return option.name?.trim() || option.email;
 }
 
 function matchesQuery(option: LeaveManagerOption, query: string): boolean {
@@ -270,9 +258,10 @@ export function LeaveManagerSelector({
                           disabled={disabled}
                           onChange={() => toggleEmail(email, !checked)}
                         />
-                        <span className="flex-1">
-                          <span className="font-medium" title={optionTitle(option)}>
-                            {optionLabel(option)}
+                        <span className="flex-1 min-w-0">
+                          <span className="font-medium">{optionLabel(option)}</span>
+                          <span className="block text-xs text-muted-foreground truncate">
+                            {email}
                           </span>
                           {option.project_name ? (
                             <span className="block text-xs text-muted-foreground">

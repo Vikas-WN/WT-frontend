@@ -117,6 +117,22 @@ export function pickEmployeeRole(profile: Record<string, unknown>): string {
   return raw;
 }
 
+/** True when the profile has an assigned band (name or id). */
+export function hasAssignedBand(profile: Record<string, unknown>): boolean {
+  return formatBandForProfile(profile) !== "—";
+}
+
+/**
+ * Designation for profile display. For band-dependent user types (non-consultant),
+ * hide designation when no band is assigned so orphan role values are not shown.
+ */
+export function pickDesignationForDisplay(profile: Record<string, unknown>): string {
+  if (!isConsultantProfile(profile) && !hasAssignedBand(profile)) {
+    return "";
+  }
+  return pickEmployeeRole(profile);
+}
+
 /** @deprecated Use pickEmployeeRole — kept for existing imports. */
 export function pickDesignation(profile: Record<string, unknown>): string {
   return pickEmployeeRole(profile);
@@ -280,6 +296,9 @@ export type EmployeeProfileEditForm = {
   band_id: string;
   primary_skills: SkillRating[];
   secondary_skills: SkillRating[];
+  /** Required when transitioning status to Serving Notice Period. */
+  resignation_date: string;
+  last_working_day: string;
 };
 
 export function profileToEditForm(profile: Record<string, unknown>): EmployeeProfileEditForm {
@@ -312,7 +331,14 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
     phone_country: phoneParts.countryIso,
     phone_number: phoneParts.nationalNumber,
     department: String(pickProfileField(profile, ["department"]) ?? "").trim(),
-    role: String(pickProfileField(profile, ["role", "designation"]) ?? "").trim(),
+    // Band-dependent designations: do not seed edit form with an orphan role when band is missing.
+    role: (() => {
+      const stored = String(pickProfileField(profile, ["role", "designation"]) ?? "").trim();
+      if (!stored) return "";
+      if (isConsultantProfile(profile)) return stored;
+      if (!hasAssignedBand(profile)) return "";
+      return stored;
+    })(),
     user_status: String(
       pickProfileField(profile, ["user_status", "status", "userStatus"]) ?? ""
     ).trim(),
@@ -325,6 +351,20 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
     ).trim(),
     primary_skills: primarySkills,
     secondary_skills: secondarySkills,
+    resignation_date: String(
+      pickProfileField(profile, [
+        "exit_interview_resignation_date",
+        "resignation_date",
+        "resignationDate",
+      ]) ?? ""
+    ).trim(),
+    last_working_day: String(
+      pickProfileField(profile, [
+        "exit_interview_last_working_day",
+        "last_working_day",
+        "lastWorkingDay",
+      ]) ?? ""
+    ).trim(),
   };
 }
 
@@ -441,7 +481,7 @@ export function buildGroupedProfileSections(
     ),
     profileEntry("Work Email", pickProfileField(profile, ["email"])),
     profileEntry("Department", pickProfileField(profile, ["department"])),
-    profileEntry("Designation / Role", pickEmployeeRole(profile) || null),
+    profileEntry("Designation / Role", pickDesignationForDisplay(profile) || null),
     ...(consultantProfile ? [] : [profileEntry("Band", formatBandForProfile(profile))]),
     profileEntry(
       "User Type",

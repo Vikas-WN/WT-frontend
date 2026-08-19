@@ -18,6 +18,19 @@ export type SkillRatingsListInputProps = {
 };
 
 const RATING_OPTIONS = ["1", "2", "3", "4", "5"];
+const DEFAULT_SELF_RATING = 3;
+
+function parseSelfRating(raw: string, fallback: number = DEFAULT_SELF_RATING): number {
+  const parsed = Number(String(raw ?? "").trim());
+  if (!Number.isFinite(parsed) || parsed < 1 || parsed > 5) return fallback;
+  return parsed;
+}
+
+function displaySelfRating(value: unknown): string {
+  const parsed = Number(value);
+  if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 5) return String(parsed);
+  return String(DEFAULT_SELF_RATING);
+}
 
 export function SkillRatingsListInput({
   label,
@@ -30,7 +43,10 @@ export function SkillRatingsListInput({
   hint,
 }: SkillRatingsListInputProps) {
   const handleAdd = () => {
-    onChange([...value, { skill: "", self_rating: 3, webknot_rating: null }]);
+    onChange([
+      ...value,
+      { skill: "", self_rating: DEFAULT_SELF_RATING, webknot_rating: null },
+    ]);
   };
 
   const handleRemove = (index: number) => {
@@ -50,7 +66,9 @@ export function SkillRatingsListInput({
     if (field === "skill") {
       row.skill = newVal;
     } else if (field === "self_rating") {
-      row.self_rating = Number(newVal);
+      // Never store 0/NaN from an emptied combobox — that still displayed as "3"
+      // via `|| 3` and then failed submit validation.
+      row.self_rating = parseSelfRating(newVal, row.self_rating || DEFAULT_SELF_RATING);
     } else if (field === "webknot_rating") {
       row.webknot_rating = newVal ? Number(newVal) : null;
     }
@@ -99,13 +117,13 @@ export function SkillRatingsListInput({
           <p className="text-xs text-wt-text-muted">Include a self rating from 1–5</p>
         </button>
       ) : (
-        <div className="space-y-2.5">
+        <div className="space-y-2.5 overflow-x-clip">
           {value.map((item, idx) => (
             <div
               key={idx}
-              className="flex items-start gap-2 rounded-xl border border-wt-border bg-wt-surface-2/80 p-2.5 transition-shadow hover:shadow-sm dark:bg-black/25"
+              className="flex min-w-0 items-start gap-2 rounded-xl border border-wt-border bg-wt-surface-2/80 p-2.5 transition-shadow hover:shadow-sm dark:bg-black/25"
             >
-              <div className="flex-1 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="min-w-0 flex-1 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <InputField
                   label="Skill Name"
                   placeholder="e.g. React, Python"
@@ -114,19 +132,22 @@ export function SkillRatingsListInput({
                   disabled={disabled}
                   required
                 />
-                <div className="flex gap-2">
-                  <div className="flex-1">
+                <div className="flex min-w-0 gap-2">
+                  <div className="min-w-0 flex-1">
                     <SelectField
                       label="Self Rating"
                       options={RATING_OPTIONS}
-                      value={String(item.self_rating || 3)}
+                      value={displaySelfRating(item.self_rating)}
                       onChange={(v) => handleChange(idx, "self_rating", v)}
                       disabled={disabled}
                       required
+                      clearSelectionOnEmptyInput={false}
+                      align="end"
+                      contentClassName="max-w-[min(12rem,calc(100vw-1rem))]"
                     />
                   </div>
                   {showWebknotRating ? (
-                    <div className="flex-1">
+                    <div className="min-w-0 flex-1">
                       <SelectField
                         label="WK Rating"
                         options={[
@@ -136,6 +157,8 @@ export function SkillRatingsListInput({
                         value={item.webknot_rating ? String(item.webknot_rating) : ""}
                         onChange={(v) => handleChange(idx, "webknot_rating", v)}
                         disabled={disabled}
+                        align="end"
+                        contentClassName="max-w-[min(12rem,calc(100vw-1rem))]"
                       />
                     </div>
                   ) : null}

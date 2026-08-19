@@ -30,7 +30,8 @@ import { formatUserRequestTypeLabel, userRequestActionLabel } from "@/utils/acti
 import { formatLeaveDateRange, formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
 import {
   canAssignedLeaveManagerActOnLeave,
-  canPrimaryManagerActOnLeave,
+  canPrimaryManagerApproveOnLeave,
+  canPrimaryManagerRejectOnLeave,
   canSecondaryManagerApproveOnLeave,
   canSecondaryManagerRejectOnLeave,
   hasSecondaryLeaveManagers,
@@ -260,10 +261,10 @@ export function LeaveApprovalsPanel({
                       const primaryStage = requestManagerStatus(rowRecord);
                       const secondaryStage = requestSecondaryManagerStatus(rowRecord);
                       const canApprove =
-                        canPrimaryManagerActOnLeave(rowRecord, actorEmail) ||
+                        canPrimaryManagerApproveOnLeave(rowRecord, actorEmail) ||
                         canSecondaryManagerApproveOnLeave(rowRecord, actorEmail);
                       const canReject =
-                        canPrimaryManagerActOnLeave(rowRecord, actorEmail) ||
+                        canPrimaryManagerRejectOnLeave(rowRecord, actorEmail) ||
                         canSecondaryManagerRejectOnLeave(rowRecord, actorEmail);
                       const rejectionReason =
                         rowStatus === "REJECTED" ? requestRejectionReason(rowRecord) : null;

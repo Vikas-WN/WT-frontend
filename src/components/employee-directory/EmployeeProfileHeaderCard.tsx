@@ -8,6 +8,7 @@ import { resolveProfilePhotoSrc, avatarInitials, avatarGradientStyle } from "@/c
 import { EmployeeResumeLink } from "@/components/resumes/EmployeeResumeLink";
 import {
   formatProfileDisplayValue,
+  pickDesignationForDisplay,
   pickProfileField,
   rowIsBirthdayToday,
 } from "@/utils/employeeDirectory";
@@ -116,9 +117,8 @@ export function EmployeeProfileHeaderCard({
 }) {
   const roleLine =
     designation ||
-    formatProfileDisplayValue(
-      pickProfileField(profile, ["role", "designation", "designation_name"])
-    );
+    pickDesignationForDisplay(profile) ||
+    "—";
   const departmentLine =
     department || formatProfileDisplayValue(pickProfileField(profile, ["department"]));
   const subtitle = [roleLine !== "—" ? roleLine : "", departmentLine !== "—" ? departmentLine : ""]

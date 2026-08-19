@@ -122,7 +122,11 @@ export function EmployeeUserTypeSelect({
       });
       await queryClient.invalidateQueries({ queryKey: ["employee-directory", "onboard"] });
       await queryClient.invalidateQueries({ queryKey: ["employee-profile"] });
-      showSuccessToast("User type updated successfully.");
+      showSuccessToast(
+        normalizedNext === "CONSULTANT"
+          ? "User type updated. Designation was cleared — set a consultant designation on the profile."
+          : "User type updated successfully."
+      );
       setDialogOpen(false);
       setPendingType(null);
       setDraftType(null);
@@ -189,15 +193,19 @@ export function EmployeeUserTypeSelect({
   const bandFieldLabel =
     pendingType === "INTERN" ? "Intern Band" : pendingType === "FULLTIME" ? "Full-time Band" : "Band";
   const bandHelperText =
-    pendingType === "INTERN"
-      ? "Interns must use band B8 (or B8 - Intern). Select it here to complete the conversion."
-      : pendingType === "FULLTIME" && needsFulltimeBand
-        ? "This employee is on an intern band (B8). Select a valid full-time band to continue."
-        : undefined;
+    pendingType === "CONSULTANT"
+      ? "Consultants have no band. The current Intern/Full-time designation will be cleared — set a consultant-valid designation on the employee profile after confirming."
+      : pendingType === "INTERN"
+        ? "Interns must use band B8 (or B8 - Intern). Select it here to complete the conversion."
+        : pendingType === "FULLTIME" && needsFulltimeBand
+          ? "This employee is on an intern band (B8). Select a valid full-time band to continue."
+          : undefined;
   const dateHelperText =
     pendingType === "FULLTIME"
       ? "Set the transition date for this employee's full-time start."
-      : "Set the transition date for this user-type change.";
+      : pendingType === "CONSULTANT"
+        ? "Confirm the transition date. The previous designation will not be retained."
+        : "Set the transition date for this user-type change.";
 
   return (
     <>

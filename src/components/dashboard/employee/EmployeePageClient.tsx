@@ -134,8 +134,15 @@ export function EmployeePageClient() {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     queryFn: async () => {
+      // Consultants are not assigned a band, but designation options are still
+      // keyed by department + non-intern bands. Load the FULLTIME band set for
+      // that lookup (API returns no bands for user_type=CONSULTANT).
+      const userTypeForBands =
+        onboardForm.user_type === "CONSULTANT"
+          ? "FULLTIME"
+          : onboardForm.user_type || undefined;
       const res = await hrmsService.getBands({
-        userType: onboardForm.user_type || undefined,
+        userType: userTypeForBands,
       });
       return parseBandsList(res);
     },

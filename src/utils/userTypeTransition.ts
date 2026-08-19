@@ -19,5 +19,7 @@ export function requiresUserTypeTransitionDialog(
   if (to === "FULLTIME" && (from === "INTERN" || from === "CONSULTANT")) return true;
   // Full-time / consultant → Intern needs B8 when the current band is not already intern-only.
   if (to === "INTERN" && from !== "INTERN" && !options?.currentBandIsInternOnly) return true;
+  // Intern / Full-time → Consultant clears band and may clear an invalid designation.
+  if (to === "CONSULTANT" && (from === "INTERN" || from === "FULLTIME")) return true;
   return false;
 }

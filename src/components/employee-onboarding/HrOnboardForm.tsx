@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { useEffect, useMemo, useRef, useState, useId } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { useDesignationSelectOptions } from "@/hooks/useDesignationSelectOptions";
-import { FieldLabel, InputField, DropdownSelectField, DatePickerField } from "@/components/dashboard/ui/forms";
+import { FieldLabel, InputField, DropdownSelectField, DatePickerField, AdaptiveSelectField } from "@/components/dashboard/ui/forms";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { CARD_FORM_GRID_CLASS, CARD_FORM_ACTIONS_CLASS, FORM_FIELD_CLASS } from "@/components/dashboard/ui/uiLayout";
@@ -24,6 +24,13 @@ import type { OnboardFormState } from "@/utils/onboardFormState";
 import type { OnboardOptionsResponse } from "@/types/onboard-options";
 import { useAuth } from "@/context/AuthContext";
 import { PORTAL_ROLE_SELECT_OPTIONS, portalRoleOptionsForActor } from "@/utils/roles";
+import {
+  PHONE_COUNTRY_OPTIONS,
+  defaultPhoneCountryIso,
+  digitsOnly,
+  formatPhoneNumberForApi,
+  validatePhoneNumber,
+} from "@/utils/phoneCountries";
 
 function emailFromOnboardOptionLabel(label: string): string | undefined {
   const match = /\(([^)]*@[^)]*)\)\s*$/.exec(label.trim());
@@ -114,6 +121,12 @@ function validateWorkStep(
   if (!isValidPersonName(name)) {
     throw new Error("Name should be 2–120 characters and contain letters (and spaces) only.");
   }
+  const phoneCountry = form.phone_country?.trim() || defaultPhoneCountryIso();
+  if (!phoneCountry) throw new Error("Please select a country code.");
+  const phoneError = validatePhoneNumber(phoneCountry, form.phone_number);
+  if (phoneError) throw new Error(phoneError);
+  const phoneNumber = formatPhoneNumberForApi(phoneCountry, form.phone_number);
+  if (!phoneNumber) throw new Error("Phone Number is required.");
   if (!form.user_type) throw new Error("User Type is required.");
   const portalRole = form.portal_role.trim();
   if (!portalRole) throw new Error("Portal Role is required.");
@@ -177,7 +190,7 @@ function validateWorkStep(
   const designationError = designationLengthError(role);
   if (designationError) throw new Error(designationError);
 
-  return { empId, email, name, department, role, bandId, reportingManagerId, portalRole };
+  return { empId, email, name, department, role, bandId, reportingManagerId, portalRole, phoneNumber };
 }
 
 export function HrOnboardForm({
@@ -304,8 +317,17 @@ export function HrOnboardForm({
     }
 
     void runAction("Create And Invite Employee", async () => {
-      const { empId, email, name, department, role, bandId, reportingManagerId, portalRole } =
-        validateWorkStep(form, internBandId, {
+      const {
+        empId,
+        email,
+        name,
+        department,
+        role,
+        bandId,
+        reportingManagerId,
+        portalRole,
+        phoneNumber,
+      } = validateWorkStep(form, internBandId, {
           designationLoading,
           designationOptionsCount: designationOptions.length,
         });
@@ -318,6 +340,7 @@ export function HrOnboardForm({
         department,
         role,
         portal_role: portalRole,
+        phone_number: phoneNumber,
         work_mode: form.work_mode,
         work_location_type: form.work_location_type,
         category: form.category,
@@ -379,6 +402,22 @@ export function HrOnboardForm({
           required
           value={form.name}
           onChange={(v) => setForm((p) => ({ ...p, name: v }))}
+        />
+        <AdaptiveSelectField
+          label="Country Code"
+          required
+          value={form.phone_country || defaultPhoneCountryIso()}
+          placeholder="Select Country Code"
+          searchPlaceholder="Search Country Code…"
+          options={PHONE_COUNTRY_OPTIONS}
+          onChange={(v) => setForm((p) => ({ ...p, phone_country: v }))}
+        />
+        <InputField
+          label="Phone Number"
+          type="tel"
+          required
+          value={form.phone_number}
+          onChange={(v) => setForm((p) => ({ ...p, phone_number: digitsOnly(v) }))}
         />
         <DropdownSelectField
           label="User Type"

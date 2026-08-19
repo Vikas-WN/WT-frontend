@@ -92,7 +92,8 @@ export function SkillsMultiSelectField({
       const openUpward = spaceBelow < DROPDOWN_MAX_HEIGHT && spaceAbove > spaceBelow;
       const available = openUpward ? spaceAbove : spaceBelow;
       const maxHeight = Math.min(DROPDOWN_MAX_HEIGHT, Math.max(available, 1));
-      const width = Math.min(Math.max(rect.width, 180), dropdownMaxWidth);
+      const maxWidth = Math.max(120, window.innerWidth - 2 * VIEWPORT_MARGIN);
+      const width = Math.min(Math.max(rect.width, 180), dropdownMaxWidth, maxWidth);
       const left = Math.min(
         Math.max(VIEWPORT_MARGIN, rect.left),
         Math.max(VIEWPORT_MARGIN, window.innerWidth - width - VIEWPORT_MARGIN)

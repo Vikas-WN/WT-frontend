@@ -151,13 +151,24 @@ export function SelfOnboardingPanel({
         throw new Error("At least one secondary skill is required.");
       }
       const missingSelfRating = [...form.primary_skills, ...form.secondary_skills].filter(
-        (item) =>
-          String(item.skill ?? "").trim() &&
-          (!Number.isFinite(item.self_rating) || item.self_rating < 1 || item.self_rating > 5)
+        (item) => {
+          if (!String(item.skill ?? "").trim()) return false;
+          const rating = Number(item.self_rating);
+          return !Number.isFinite(rating) || rating < 1 || rating > 5;
+        }
       );
       if (missingSelfRating.length) {
         throw new Error("Each skill must have a self rating between 1 and 5.");
       }
+
+      const withNumericRatings = (skills: SkillRating[]) =>
+        skills
+          .filter((item) => String(item.skill ?? "").trim())
+          .map((item) => ({
+            ...item,
+            skill: String(item.skill).trim(),
+            self_rating: Number(item.self_rating),
+          }));
 
       const resumeShareLink = form.resume_share_link.trim();
       const resumeLinkError = validateResumeShareLink(resumeShareLink);
@@ -211,8 +222,8 @@ export function SelfOnboardingPanel({
       if (yoeValue !== null)       userData.yoe = yoeValue;
       if (experience) userData.experience = experience;
       
-      userData.primary_skills = primarySkills;
-      userData.secondary_skills = form.secondary_skills.filter((item) => String(item.skill ?? "").trim());
+      userData.primary_skills = withNumericRatings(primarySkills);
+      userData.secondary_skills = withNumericRatings(form.secondary_skills);
       if (form.work_location_type) userData.work_location_type = form.work_location_type;
       if (form.local_address.trim()) userData.local_address = form.local_address.trim();
       if (form.permanent_address.trim()) userData.permanent_address = form.permanent_address.trim();

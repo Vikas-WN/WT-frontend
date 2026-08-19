@@ -119,7 +119,8 @@ import {
 import {
   canSecondaryManagerApproveOnLeave,
   canSecondaryManagerRejectOnLeave,
-  canPrimaryManagerActOnLeave,
+  canPrimaryManagerApproveOnLeave,
+  canPrimaryManagerRejectOnLeave,
   filterTeamRequestsForPrimaryManager,
   hasSecondaryLeaveManagers,
   requestSecondaryManagerStatus,
@@ -698,9 +699,15 @@ export function LeavePageClient() {
           requestType: "LEAVE",
           size: 5,
         });
+        const optionalRows = await listScopedUserRequests({
+          fromDate: from,
+          toDate: to,
+          requestType: "OPTIONAL",
+          size: 5,
+        });
         // Without manager role, /userRequest may fall back to the actor's own leave —
         // only treat other employees' leave as a primary-manager inbox.
-        const inboxRows = rows.filter((row) => {
+        const inboxRows = [...rows, ...optionalRows].filter((row) => {
           const email = requestRowEmail(row).trim().toLowerCase();
           return Boolean(email) && email !== selfEmail;
         });
@@ -1029,12 +1036,16 @@ export function LeavePageClient() {
       const wantsManagerInbox =
         normalizedType === "ALL" ||
         normalizedType === "LEAVE" ||
+        normalizedType === "OPTIONAL" ||
         normalizedType === "WFH" ||
         normalizedType === "COMP_OFF";
       const managerInboxTypes =
         normalizedType === "ALL"
-          ? (["LEAVE", "WFH", "COMP_OFF"] as const)
-          : normalizedType === "LEAVE" || normalizedType === "WFH" || normalizedType === "COMP_OFF"
+          ? (["LEAVE", "OPTIONAL", "WFH", "COMP_OFF"] as const)
+          : normalizedType === "LEAVE" ||
+              normalizedType === "OPTIONAL" ||
+              normalizedType === "WFH" ||
+              normalizedType === "COMP_OFF"
             ? ([normalizedType] as const)
             : ([] as const);
       const canLoadManagerInbox =
@@ -2458,7 +2469,11 @@ export function LeavePageClient() {
                                         hasHrAccess,
                                       });
                                     // Assigned primary/secondary managers can act even without ROLE_MANAGER.
-                                    const assignedPrimaryAct = canPrimaryManagerActOnLeave(
+                                    const assignedPrimaryApprove = canPrimaryManagerApproveOnLeave(
+                                      rowRecord,
+                                      userEmail
+                                    );
+                                    const assignedPrimaryReject = canPrimaryManagerRejectOnLeave(
                                       rowRecord,
                                       userEmail
                                     );
@@ -2485,22 +2500,24 @@ export function LeavePageClient() {
                                         hasDmAccess,
                                         actorEmail: userEmail,
                                       }) &&
-                                      !assignedPrimaryAct &&
+                                      !assignedPrimaryApprove &&
+                                      !assignedPrimaryReject &&
                                       !assignedSecondaryReject;
                                     const showManagerApprove =
                                       !hrCanActOnRow &&
                                       status === "PENDING" &&
                                       (earnManagerAct ||
-                                        assignedPrimaryAct ||
+                                        assignedPrimaryApprove ||
                                         assignedSecondaryApprove ||
                                         legacyManagerAct);
                                     const showManagerReject =
                                       !hrCanActOnRow &&
-                                      status === "PENDING" &&
+                                      (status === "PENDING" || status === "APPROVED") &&
                                       (earnManagerAct ||
-                                        assignedPrimaryAct ||
+                                        assignedPrimaryReject ||
                                         assignedSecondaryReject ||
-                                        (legacyManagerAct &&
+                                        (status === "PENDING" &&
+                                          legacyManagerAct &&
                                           canManagerRejectRequest(rowRecord, {
                                             hasManagerAccess: hasManagerAccess || hasDmAccess,
                                             hasDmAccess,

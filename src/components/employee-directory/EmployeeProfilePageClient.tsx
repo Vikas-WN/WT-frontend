@@ -23,7 +23,7 @@ import {
   cleanEmployeeName,
   editFormToUpdatePayload,
   formatProfileDisplayValue,
-  pickEmployeeRole,
+  pickDesignationForDisplay,
   pickProfileField,
   profileToEditForm,
   rowEmail,
@@ -51,11 +51,11 @@ import {
   lookupResumeShareLink,
 } from "@/utils/employeeResume";
 import { canFetchEmployeeResumeApi, pickPortalRoles } from "@/utils/roles";
-import { normalizeEmployeeStatusKey } from "@/utils/userStatus";
+import { normalizeEmployeeStatusKey, isServingNoticeUserStatus } from "@/utils/userStatus";
 import { useAuth } from "@/context/AuthContext";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { AdaptiveSelectField, InputField } from "@/components/dashboard/ui/forms";
+import { AdaptiveSelectField, DatePickerField, InputField } from "@/components/dashboard/ui/forms";
 import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
 import { FormActionBar } from "@/components/dashboard/ui/FormActionBar";
 import { FormSection, FormSubsection } from "@/components/dashboard/ui/FormSection";
@@ -66,9 +66,29 @@ import { IconPencil } from "@/components/employee-directory/employeeDirectoryIco
 import { buildProfileRowsFromEmployeeAllocations, formatCurrentAllocationSummary, selectProfileAllocationRows } from "@/utils/dashboard/projects";
 import { isSystemProjectAllocationRow } from "@/utils/allocationList";
 import { showErrorToast } from "@/lib/toast";
+import { compareApiDates } from "@/utils/apiDate";
+import {
+  defaultLastWorkingDayFromResignation,
+  previousWeekdayOrSame,
+} from "@/utils/offboardingFormState";
 const WORK_MODES = ["WFO", "WFH", "HYBRID"];
 const WORK_LOCATIONS = ["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"];
 const USER_STATUSES = ["ACTIVE", "INACTIVE", "PENDING", "ONBOARDING", "INVITED", "SERVING_NOTICE"];
+
+/** Validate exit dates when HR moves an employee onto Serving Notice from the profile editor. */
+function servingNoticeExitDateError(resignationDate: string, lastWorkingDay: string): string | null {
+  const resignation = resignationDate.trim();
+  const lwd = lastWorkingDay.trim();
+  if (!resignation && !lwd) {
+    return "Resignation Date and Last Working Day are required before changing status to Serving Notice Period.";
+  }
+  if (!resignation) return "Resignation Date is required.";
+  if (!lwd) return "Last Working Day is required.";
+  if (compareApiDates(resignation, lwd) > 0) {
+    return "Resignation Date must be on or before Last Working Day.";
+  }
+  return null;
+}
 
 type BandOption = { value: string; label: string };
 
@@ -173,7 +193,7 @@ export function EmployeeProfilePageClient() {
   const profileUserId = String(
     profileRecord.user_id ?? profileRecord.userId ?? ""
   ).trim();
-  const employeeRole = pickEmployeeRole(profileRecord);
+  const employeeRole = pickDesignationForDisplay(profileRecord);
   const isFulltimeEmployee =
     String(pickProfileField(profileRecord, ["user_type", "userType"]) ?? "")
       .toUpperCase()
@@ -182,6 +202,13 @@ export function EmployeeProfilePageClient() {
     String(pickProfileField(profileRecord, ["user_type", "userType"]) ?? "")
       .toUpperCase()
       .replace(/[\s\-_]/g, "") === "CONSULTANT";
+  const currentProfileStatus = String(
+    pickProfileField(profileRecord, ["user_status", "status", "userStatus"]) ?? ""
+  ).trim();
+  const transitioningToServingNotice =
+    Boolean(editForm) &&
+    isServingNoticeUserStatus(editForm?.user_status) &&
+    !isServingNoticeUserStatus(currentProfileStatus);
 
   const resumeShareHref = useMemo(() => {
     const index = buildResumeShareLinkIndex(resumePayload?.rows ?? []);
@@ -393,6 +420,81 @@ export function EmployeeProfilePageClient() {
     void runAction(
       statusOnlyEdit ? "Update employee status" : "Update employee profile",
       async () => {
+        if (transitioningToServingNotice) {
+          const exitDateError = servingNoticeExitDateError(
+            editForm.resignation_date,
+            editForm.last_working_day
+          );
+          if (exitDateError) throw new Error(exitDateError);
+
+          const resignationDate = editForm.resignation_date.trim();
+          const lastWorkingDay = editForm.last_working_day.trim();
+          await hrmsService.offboardEmployee(empId, {
+            resignation_date: resignationDate,
+            last_working_day: lastWorkingDay,
+            exit_type: "VOLUNTARY",
+          });
+
+          if (!statusOnlyEdit) {
+            if (!isValidPersonName(editForm.name.trim())) {
+              throw new Error("Name should be 2–120 characters and contain letters (and spaces) only.");
+            }
+            const workEmailError = validateWorkEmail(editForm.email);
+            if (workEmailError) throw new Error(workEmailError);
+            const phoneCountry = editForm.phone_country?.trim();
+            if (!phoneCountry) throw new Error("Please select a country code.");
+            const phoneError = validatePhoneNumber(phoneCountry, editForm.phone_number);
+            if (phoneError) throw new Error(phoneError);
+            if (designationLoading) {
+              throw new Error("Designations are still loading. Please wait a moment.");
+            }
+            if (!editForm.role.trim()) {
+              throw new Error("Designation is required.");
+            }
+            const designationError = designationLengthError(editForm.role);
+            if (designationError) throw new Error(designationError);
+            if (!designationOptions.some((option) => option.value === editForm.role.trim())) {
+              throw new Error(
+                isConsultantEmployee
+                  ? "Selected designation is not valid for the chosen department."
+                  : "Selected designation is not valid for the chosen department and band."
+              );
+            }
+            if (onboardOptionsLoading) {
+              throw new Error("Primary skills are still loading. Please wait a moment.");
+            }
+            const primarySkills = normalizePrimarySkills(editForm.primary_skills);
+            const missingSelfRating = [...editForm.primary_skills, ...editForm.secondary_skills].filter(
+              (item) => {
+                if (!String(item.skill ?? "").trim()) return false;
+                const rating = Number(item.self_rating);
+                return !Number.isFinite(rating) || rating < 1 || rating > 5;
+              }
+            );
+            if (missingSelfRating.length) {
+              throw new Error("Each skill must have a self rating between 1 and 5.");
+            }
+            const normalizedEditForm = {
+              ...editForm,
+              primary_skills: primarySkills,
+              // Status already applied by offboarding.
+              user_status: "SERVING_NOTICE",
+            };
+            const payload = editFormToUpdatePayload(normalizedEditForm, {
+              statusOnly: false,
+              omitBand: isConsultantEmployee,
+            });
+            // Avoid a second SERVING_NOTICE transition check without attrition race.
+            delete payload.user_status;
+            await updateMutation.mutateAsync(payload);
+          }
+
+          await refetch();
+          setIsEditing(false);
+          setEditForm(null);
+          return;
+        }
+
         if (!statusOnlyEdit) {
           if (!isValidPersonName(editForm.name.trim())) {
             throw new Error("Name should be 2–120 characters and contain letters (and spaces) only.");
@@ -427,9 +529,11 @@ export function EmployeeProfilePageClient() {
           }
           const primarySkills = normalizePrimarySkills(editForm.primary_skills);
           const missingSelfRating = [...editForm.primary_skills, ...editForm.secondary_skills].filter(
-            (item) =>
-              String(item.skill ?? "").trim() &&
-              (!Number.isFinite(item.self_rating) || item.self_rating < 1 || item.self_rating > 5)
+            (item) => {
+              if (!String(item.skill ?? "").trim()) return false;
+              const rating = Number(item.self_rating);
+              return !Number.isFinite(rating) || rating < 1 || rating > 5;
+            }
           );
           if (missingSelfRating.length) {
             throw new Error("Each skill must have a self rating between 1 and 5.");
@@ -549,7 +653,7 @@ export function EmployeeProfilePageClient() {
                         : "Update the employee account status. Other profile fields cannot be changed from this role."
                     }
                   >
-                    <div className="max-w-sm">
+                    <div className={transitioningToServingNotice ? "max-w-xl" : "max-w-sm"}>
                       {adminFieldsLocked ? (
                         <ViewOnlyField
                           label="Status"
@@ -566,6 +670,46 @@ export function EmployeeProfilePageClient() {
                           disabled={saving}
                         />
                       )}
+                      {transitioningToServingNotice ? (
+                        <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                          <DatePickerField
+                            label="Resignation Date"
+                            required
+                            value={editForm.resignation_date}
+                            onChange={(v) =>
+                              setEditForm((prev) =>
+                                prev
+                                  ? {
+                                      ...prev,
+                                      resignation_date: v,
+                                      last_working_day: v.trim()
+                                        ? defaultLastWorkingDayFromResignation(v)
+                                        : "",
+                                    }
+                                  : prev
+                              )
+                            }
+                            disabled={saving}
+                          />
+                          <DatePickerField
+                            label="Last Working Day"
+                            required
+                            value={editForm.last_working_day}
+                            onChange={(v) =>
+                              setEditForm((prev) =>
+                                prev
+                                  ? { ...prev, last_working_day: previousWeekdayOrSame(v) }
+                                  : prev
+                              )
+                            }
+                            disabled={saving}
+                          />
+                          <p className="sm:col-span-2 text-xs text-wt-text-muted">
+                            Resignation Date and Last Working Day are mandatory when moving an
+                            employee to Serving Notice Period.
+                          </p>
+                        </div>
+                      ) : null}
                     </div>
                   </FormSection>
                 ) : (
@@ -673,6 +817,46 @@ export function EmployeeProfilePageClient() {
                           disabled={saving}
                         />
                       )}
+                      {transitioningToServingNotice ? (
+                        <>
+                          <DatePickerField
+                            label="Resignation Date"
+                            required
+                            value={editForm.resignation_date}
+                            onChange={(v) =>
+                              setEditForm((prev) =>
+                                prev
+                                  ? {
+                                      ...prev,
+                                      resignation_date: v,
+                                      last_working_day: v.trim()
+                                        ? defaultLastWorkingDayFromResignation(v)
+                                        : "",
+                                    }
+                                  : prev
+                              )
+                            }
+                            disabled={saving}
+                          />
+                          <DatePickerField
+                            label="Last Working Day"
+                            required
+                            value={editForm.last_working_day}
+                            onChange={(v) =>
+                              setEditForm((prev) =>
+                                prev
+                                  ? { ...prev, last_working_day: previousWeekdayOrSame(v) }
+                                  : prev
+                              )
+                            }
+                            disabled={saving}
+                          />
+                          <p className="sm:col-span-2 text-xs text-wt-text-muted">
+                            Resignation Date and Last Working Day are mandatory when moving an
+                            employee to Serving Notice Period.
+                          </p>
+                        </>
+                      ) : null}
                       {adminFieldsLocked ? (
                         <ViewOnlyField
                           label="Work Mode"

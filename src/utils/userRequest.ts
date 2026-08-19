@@ -16,6 +16,8 @@ import {
 
   isAlreadyActedOnRequestError,
 
+  inferStatusFromAlreadyActedError,
+
   normalizeRequestStatus,
 
   pickRowField,
@@ -661,9 +663,13 @@ export async function updateUserRequestStatus(
   } catch (firstError) {
 
     if (isAlreadyActedOnRequestError(firstError)) {
-
-      return { message: "ok", data: null } as ApiEnvelope<unknown>;
-
+      // Idempotent only when the server already matches the requested action.
+      // e.g. reject after another manager approved must not look like success.
+      const inferred = inferStatusFromAlreadyActedError(firstError);
+      if (inferred === status) {
+        return { message: "ok", data: null } as ApiEnvelope<unknown>;
+      }
+      throw firstError;
     }
 
     if (status === "PENDING") {
@@ -705,9 +711,10 @@ export async function updateUserRequestStatus(
     } catch (secondError) {
 
       if (isAlreadyActedOnRequestError(secondError)) {
-
-        return { message: "ok", data: null } as ApiEnvelope<unknown>;
-
+        const inferred = inferStatusFromAlreadyActedError(secondError);
+        if (inferred === status) {
+          return { message: "ok", data: null } as ApiEnvelope<unknown>;
+        }
       }
 
       throw firstError;
@@ -835,6 +842,14 @@ export function applyLeaveTeamRequestDecisions(
     const decision = decisions.get(id);
     if (!decision) return row;
     const serverStatus = requestFinalStatus(row);
+    // A session reject must win over a stale APPROVED row (another manager approved first).
+    if (decision.status === "REJECTED") {
+      if (serverStatus === "REJECTED") return row;
+      return patchLeaveTeamRequestStatus(row, "REJECTED", {
+        reason: decision.reason,
+        actorEmail,
+      });
+    }
     if (serverStatus === "APPROVED" || serverStatus === "REJECTED") return row;
     return patchLeaveTeamRequestStatus(row, decision.status, {
       reason: decision.reason,

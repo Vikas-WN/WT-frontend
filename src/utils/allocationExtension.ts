@@ -456,9 +456,35 @@ export type AllocationExtensionListPage = {
 };
 
 export function parseAllocationExtensionListResponse(
-  res: ApiEnvelope<unknown>
+  res: ApiEnvelope<unknown> | Record<string, unknown> | null | undefined
 ): AllocationExtensionListPage {
-  const page = (res.data ?? {}) as Record<string, unknown>;
+  const root = (res ?? {}) as Record<string, unknown>;
+  const nested = root.data;
+  // Support both `{ message, data: page }` envelopes and a bare page payload.
+  const page: Record<string, unknown> =
+    nested &&
+    typeof nested === "object" &&
+    !Array.isArray(nested) &&
+    ("total_elements" in nested ||
+      "totalElements" in nested ||
+      "current_page" in nested ||
+      "currentPage" in nested ||
+      "total_pages" in nested ||
+      "totalPages" in nested ||
+      "data" in nested ||
+      "items" in nested)
+      ? (nested as Record<string, unknown>)
+      : Array.isArray(nested)
+        ? { data: nested }
+        : "total_elements" in root ||
+            "totalElements" in root ||
+            "current_page" in root ||
+            "currentPage" in root ||
+            Array.isArray(root.data) ||
+            Array.isArray(root.items)
+          ? root
+          : { data: nested };
+
   const rowsFromHelpers = toRows(page);
   const rowsRaw = rowsFromHelpers.length
     ? rowsFromHelpers
@@ -469,15 +495,27 @@ export function parseAllocationExtensionListResponse(
         : [];
 
   const current_page = Number(page.current_page ?? page.currentPage ?? 0);
-  const total_pages = Number(page.total_pages ?? page.totalPages ?? 1);
-  const page_size = Number(page.page_size ?? page.pageSize ?? 10);
-  const total_elements = Number(page.total_elements ?? page.totalElements ?? rowsRaw.length);
+  const page_size_raw = Number(page.page_size ?? page.pageSize ?? 10);
+  const page_size = Number.isFinite(page_size_raw) && page_size_raw > 0 ? page_size_raw : 10;
+
+  const total_elements_raw = Number(page.total_elements ?? page.totalElements);
+  const total_elements =
+    Number.isFinite(total_elements_raw) && total_elements_raw >= 0
+      ? Math.max(total_elements_raw, rowsRaw.length)
+      : rowsRaw.length;
+
+  const total_pages_raw = Number(page.total_pages ?? page.totalPages);
+  const derived_pages = Math.max(1, Math.ceil(total_elements / page_size) || 1);
+  const total_pages =
+    Number.isFinite(total_pages_raw) && total_pages_raw > 0
+      ? Math.max(total_pages_raw, derived_pages)
+      : derived_pages;
 
   return {
     current_page: Number.isFinite(current_page) ? current_page : 0,
-    total_pages: Number.isFinite(total_pages) && total_pages > 0 ? total_pages : 1,
-    page_size: Number.isFinite(page_size) ? page_size : 10,
-    total_elements: Number.isFinite(total_elements) ? total_elements : rowsRaw.length,
+    total_pages,
+    page_size,
+    total_elements,
     data: rowsRaw
       .filter((row): row is Record<string, unknown> => row !== null && typeof row === "object")
       .map(normalizeAllocationExtensionRow),

@@ -17,7 +17,7 @@ import {
 import Link from "next/link";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
@@ -189,6 +189,15 @@ export function EmployeeDirectoryPageClient() {
   const { data: rows = [], isLoading, isError, error, refetch } = useEmployeeDirectoryList({
     enabled: queriesEnabled,
   });
+
+  // Keep Online Now accurate shortly after someone logs out.
+  useEffect(() => {
+    if (!queriesEnabled || presenceFilter !== "online") return;
+    const id = window.setInterval(() => {
+      void refetch();
+    }, 30_000);
+    return () => window.clearInterval(id);
+  }, [queriesEnabled, presenceFilter, refetch]);
 
   const primarySkillOptions = useMemo(() => {
     const fromOptions = onboardOptionsQ.data?.primary_skills || [];
@@ -497,6 +506,8 @@ export function EmployeeDirectoryPageClient() {
                     onChange={setSecondarySkillFilter}
                     options={secondarySkillOptions}
                     placeholder="All Secondary Skills"
+                    align="end"
+                    contentClassName="max-w-[min(20rem,calc(100vw-1rem))]"
                   />
                 </div>
               </div>

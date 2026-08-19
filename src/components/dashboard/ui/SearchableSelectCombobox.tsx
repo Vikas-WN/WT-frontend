@@ -35,6 +35,8 @@ export function SearchableSelectCombobox({
   inputMode,
   /** When false, emptying the input only resets the filter — selection stays. */
   clearSelectionOnEmptyInput = true,
+  /** Prefer end alignment for right-edge fields so the panel stays on-screen. */
+  align = "start",
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -54,6 +56,7 @@ export function SearchableSelectCombobox({
   sanitizeInput?: (next: string) => string;
   inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"];
   clearSelectionOnEmptyInput?: boolean;
+  align?: "start" | "center" | "end";
 }) {
   // Empty-value entries are legacy placeholder rows (e.g. { value: "", label: "Select…" }).
   // They must never render as selectable items: with an empty selection they would match
@@ -177,7 +180,7 @@ export function SearchableSelectCombobox({
       <ComboboxContent
         side="bottom"
         sideOffset={4}
-        align="start"
+        align={align}
         // Inside modals: portal into the body host and use absolute positioning so
         // clipping-ancestors bound height above Cancel/Next. Outside: fixed to body.
         container={modalPanel}

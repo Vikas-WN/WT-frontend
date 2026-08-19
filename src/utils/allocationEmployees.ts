@@ -6,6 +6,8 @@ export type AllocationEmployeeOption = {
   userId?: number;
   empId?: string;
   role?: string;
+  /** Date of joining when available from onboard/list payloads. */
+  doj?: string;
 };
 
 /** Parse GET /allocation/employees → data.items */
@@ -41,12 +43,16 @@ export function parseAllocationEmployees(data: unknown): AllocationEmployeeOptio
         ? Number(userIdRaw)
         : undefined;
     const role = String(row.role ?? row.designation ?? row.project_role ?? "").trim();
+    const doj = String(
+      row.doj ?? row.date_of_joining ?? row.dateOfJoining ?? row.joining_date ?? row.joiningDate ?? ""
+    ).trim();
     out.push({
       employeeEmail: email,
       employeeName: name || email,
       userId: Number.isFinite(userId) ? userId : undefined,
       empId: String(row.empId ?? row.emp_id ?? "").trim() || undefined,
       ...(role ? { role } : {}),
+      ...(doj ? { doj } : {}),
     });
   }
 
@@ -75,12 +81,16 @@ export function parseActiveOnboardEmployees(
       userIdRaw !== undefined && userIdRaw !== null && userIdRaw !== ""
         ? Number(userIdRaw)
         : undefined;
+    const doj = String(
+      row.doj ?? row.date_of_joining ?? row.dateOfJoining ?? row.joining_date ?? row.joiningDate ?? ""
+    ).trim();
     out.push({
       employeeEmail: email,
       employeeName: name || email,
       userId: Number.isFinite(userId) ? userId : undefined,
       empId: String(row.empId ?? row.emp_id ?? "").trim() || undefined,
       ...(role ? { role } : {}),
+      ...(doj ? { doj } : {}),
     });
   }
 

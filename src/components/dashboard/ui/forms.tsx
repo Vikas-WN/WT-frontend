@@ -383,6 +383,7 @@ export function AdaptiveSelectField({
   clearSelectionOnEmptyInput = true,
   contentClassName,
   inputClassName,
+  align = "start",
   error,
 }: {
   label: string;
@@ -406,6 +407,8 @@ export function AdaptiveSelectField({
    * to adjust the actual text inset.
    */
   inputClassName?: string;
+  /** Prefer "end" for right-edge fields so the menu stays on-screen. */
+  align?: "start" | "center" | "end";
   error?: string | null;
 }) {
   const fieldId = useId();
@@ -430,6 +433,7 @@ export function AdaptiveSelectField({
         clearSelectionOnEmptyInput={clearSelectionOnEmptyInput}
         contentClassName={contentClassName}
         inputClassName={inputClassName}
+        align={align}
       />
       {error ? <FieldError id={errorId}>{error}</FieldError> : null}
     </Field>
@@ -449,6 +453,7 @@ export function SelectField({
   className,
   contentClassName,
   clearSelectionOnEmptyInput = true,
+  align = "start",
   error,
 }: {
   label: string;
@@ -464,6 +469,8 @@ export function SelectField({
   /** Widen/style the dropdown popup independently of the trigger's own width. */
   contentClassName?: string;
   clearSelectionOnEmptyInput?: boolean;
+  /** Prefer "end" for right-edge fields so the menu stays on-screen. */
+  align?: "start" | "center" | "end";
   error?: string | null;
 }) {
   return (
@@ -481,6 +488,7 @@ export function SelectField({
       contentClassName={contentClassName}
       clearSelectionOnEmptyInput={clearSelectionOnEmptyInput}
       searchPlaceholder={placeholder ?? "Search…"}
+      align={align}
       error={error}
     />
   );

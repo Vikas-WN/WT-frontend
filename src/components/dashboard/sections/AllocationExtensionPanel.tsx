@@ -24,6 +24,7 @@ import {
   DEFAULT_PAGE_SIZE,
   PAGE_SIZE_OPTIONS,
 } from "@/hooks/useClientPagination";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { formatApiDateDisplay, inputValueToApiDate } from "@/utils/apiDate";
 import { RequestStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
@@ -76,6 +77,7 @@ export function AllocationExtensionPanel() {
 
   // Lists (HR list + Manager status)
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
@@ -243,27 +245,40 @@ export function AllocationExtensionPanel() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const searchTerm = debouncedSearch.trim() || undefined;
       if (visibleMode === "hr") {
         const res = await hrmsService.listAllocationExtensionRequests({
           page,
           size: pageSize,
-          search: search.trim() || undefined,
+          search: searchTerm,
           status: hrStatusFilter ? hrStatusFilter : undefined,
         });
-        setRows(res.data.data ?? []);
-        setTotalPages(res.data.total_pages ?? 1);
-        setTotalElements(res.data.total_elements ?? 0);
+        const pageRows = res.data.data ?? [];
+        const elements = Math.max(res.data.total_elements ?? 0, pageRows.length);
+        const pages = Math.max(
+          res.data.total_pages ?? 1,
+          Math.ceil(elements / pageSize) || 1
+        );
+        setRows(pageRows);
+        setTotalPages(pages);
+        setTotalElements(elements);
         return;
       }
 
       const res = await hrmsService.listManagerAllocationExtensionStatus({
         page,
         size: pageSize,
-        search: search.trim() || undefined,
+        search: searchTerm,
       });
-      setRows(res.data.data ?? []);
-      setTotalPages(res.data.total_pages ?? 1);
-      setTotalElements(res.data.total_elements ?? 0);
+      const pageRows = res.data.data ?? [];
+      const elements = Math.max(res.data.total_elements ?? 0, pageRows.length);
+      const pages = Math.max(
+        res.data.total_pages ?? 1,
+        Math.ceil(elements / pageSize) || 1
+      );
+      setRows(pageRows);
+      setTotalPages(pages);
+      setTotalElements(elements);
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : "Failed to load extension requests.";
       showErrorToast(msg);
@@ -273,7 +288,7 @@ export function AllocationExtensionPanel() {
     } finally {
       setLoading(false);
     }
-  }, [visibleMode, page, pageSize, search, hrStatusFilter]);
+  }, [visibleMode, page, pageSize, debouncedSearch, hrStatusFilter]);
 
   useEffect(() => {
     void load();
@@ -285,6 +300,10 @@ export function AllocationExtensionPanel() {
   useEffect(() => {
     void loadAllocationContext();
   }, [loadAllocationContext]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, hrStatusFilter, visibleMode]);
 
   async function submitCreate() {
     const userEmails = createForm.userEmails.map((email) => email.trim().toLowerCase()).filter(Boolean);
@@ -427,8 +446,39 @@ export function AllocationExtensionPanel() {
     await updateStatus(rejectDialog.requestId, "REJECTED", rejectDialog.reason);
   }
 
-  const rangeStart = totalElements === 0 ? 0 : page * pageSize + 1;
-  const rangeEnd = Math.min(totalElements, (page + 1) * pageSize);
+  const effectiveTotal = Math.max(totalElements, rows.length);
+  const effectiveTotalPages = Math.max(
+    1,
+    totalPages,
+    Math.ceil(effectiveTotal / pageSize) || 1
+  );
+  // If the API returns an unpaginated full list, page it on the client.
+  const clientPaged = rows.length > pageSize;
+  const visibleRows = clientPaged
+    ? rows.slice(page * pageSize, (page + 1) * pageSize)
+    : rows;
+  const rangeStart = effectiveTotal === 0 ? 0 : page * pageSize + 1;
+  const rangeEnd = Math.min(effectiveTotal, (page + 1) * pageSize);
+  const showListPagination = effectiveTotal > 0 || visibleRows.length > 0;
+
+  const listPagination = showListPagination ? (
+    <ListPagination
+      className="pt-1"
+      page={page}
+      totalPages={effectiveTotalPages}
+      totalItems={effectiveTotal}
+      rangeStart={rangeStart}
+      rangeEnd={rangeEnd}
+      pageSize={pageSize}
+      pageSizeOptions={PAGE_SIZE_OPTIONS}
+      loading={loading}
+      onPageChange={setPage}
+      onPageSizeChange={(nextSize) => {
+        setPageSize(nextSize);
+        setPage(0);
+      }}
+    />
+  ) : null;
 
   if (!hasHrAccess && !hasManagerRole && !hasAmRole) {
     return (
@@ -613,7 +663,7 @@ export function AllocationExtensionPanel() {
                   : "My Extension Requests"}
               </h3>
               <p className="text-xs text-wt-text-muted">
-                {loading ? "Loading…" : `${totalElements} Total`}
+                {loading ? "Loading…" : `${effectiveTotal} Total`}
                 {visibleMode === "hr" && !loading
                   ? " · Approve or reject pending extension requests"
                   : ""}
@@ -625,7 +675,6 @@ export function AllocationExtensionPanel() {
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
-                  setPage(0);
                 }}
                 className="h-10 w-full min-w-[200px] rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm outline-none focus:border-[var(--wt-brand)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)] sm:w-64"
                 placeholder="Search"
@@ -641,7 +690,6 @@ export function AllocationExtensionPanel() {
               value={hrStatusFilter || "ALL"}
               onChange={(v) => {
                 setHrStatusFilter(normalizeHrStatusFilter(v));
-                setPage(0);
               }}
               options={[
                 { value: "ALL", label: "All Statuses" },
@@ -651,9 +699,11 @@ export function AllocationExtensionPanel() {
               ]}
             />
           ) : null}
+
+          {listPagination}
         </div>
 
-        {rows.length ? (
+        {visibleRows.length ? (
           <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
             <WtTable>
               <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
@@ -673,7 +723,7 @@ export function AllocationExtensionPanel() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((r) => {
+                {visibleRows.map((r) => {
                   const status = String(r.status ?? "PENDING").toUpperCase();
                   const isPending = status === "PENDING";
                   const isUpdating = updatingRequestId === r.id;
@@ -751,22 +801,7 @@ export function AllocationExtensionPanel() {
           )
         )}
 
-        <ListPagination
-          className="pt-1"
-          page={page}
-          totalPages={Math.max(1, totalPages)}
-          totalItems={totalElements}
-          rangeStart={rangeStart}
-          rangeEnd={rangeEnd}
-          pageSize={pageSize}
-          pageSizeOptions={PAGE_SIZE_OPTIONS}
-          loading={loading}
-          onPageChange={setPage}
-          onPageSizeChange={(nextSize) => {
-            setPageSize(nextSize);
-            setPage(0);
-          }}
-        />
+        {visibleRows.length ? listPagination : null}
       </section>
 
       <UserRequestRejectDialog

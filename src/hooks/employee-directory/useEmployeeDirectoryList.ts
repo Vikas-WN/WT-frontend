@@ -74,9 +74,10 @@ export function useEmployeeDirectoryList(options?: Options) {
     queryKey: ["employee-directory", "onboard", endpoints.user.onboard, "all-pages"],
     enabled,
     queryFn: () => fetchAllEmployeeDirectoryRows(),
-    // Directory list changes infrequently; avoid re-fetching on simple navigation.
-    staleTime: 5 * 60_000,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
+    // Presence (Online Now) must not sit on a multi-minute cache after logout.
+    staleTime: 30_000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 }

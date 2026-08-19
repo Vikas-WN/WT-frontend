@@ -1,23 +1,28 @@
 "use client";
 
-import { InternalEmployeeSelect } from "@/components/allocation/InternalEmployeeSelect";
+import { RoleEmployeeSelect } from "@/components/allocation/RoleEmployeeSelect";
 
-/** Account manager picker — all employees (same directory as other internal assignees). */
+/** Account manager picker — employees with ROLE_AM from GET /employees/account-managers. */
 export function AccountManagerSelect({
   value,
   onChange,
   required = false,
+  disabled = false,
 }: {
   value: string;
   onChange: (value: string) => void;
   required?: boolean;
+  disabled?: boolean;
 }) {
   return (
-    <InternalEmployeeSelect
+    <RoleEmployeeSelect
       label="Account manager"
+      role="AM"
       value={value}
       onChange={onChange}
       required={required}
+      disabled={disabled}
+      extraEmails={value ? [value] : []}
     />
   );
 }

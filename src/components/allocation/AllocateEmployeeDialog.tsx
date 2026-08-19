@@ -10,7 +10,7 @@ import { WtFormDialog } from "@/components/allocation/WtFormDialog";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { useAllocationPercentages } from "@/hooks/useAllocationPercentages";
 import { hrmsService } from "@/services/hrms.service";
-import { parseApiDate, validateRequiredApiDate } from "@/utils/apiDate";
+import { parseApiDate, validateRequiredApiDate, formatApiDateDisplay } from "@/utils/apiDate";
 import {
   createEmptyAllocationForm,
   type AllocationFormState,
@@ -36,6 +36,7 @@ import {
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { UI_COPY } from "@/constants/uiCopy";
+import { useAllocationEmployees } from "@/hooks/useAllocationEmployees";
 
 const CUSTOM_ROLE_VALUE = "__custom_role__";
 const ALLOCATE_STEPS = ["Employee", "Project", "Details"] as const;
@@ -71,6 +72,7 @@ export function AllocateEmployeeDialog({
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<AllocateStep>("Employee");
   const [allocationVersion, setAllocationVersion] = useState(0);
+  const { data: allocationEmployees = [] } = useAllocationEmployees(open && enabled);
 
   const isEditMode = Boolean(editingAllocationId);
   const stepIndex = ALLOCATE_STEPS.indexOf(step);
@@ -215,6 +217,18 @@ export function AllocateEmployeeDialog({
       return;
     }
     const startDate = startResult.date;
+
+    const selectedEmployee = allocationEmployees.find(
+      (row) => row.employeeEmail === employeeEmail.toLowerCase()
+    );
+    const dojParsed = parseApiDate(selectedEmployee?.doj ?? "");
+    const startParsedForDoj = parseApiDate(startDate);
+    if (dojParsed && startParsedForDoj && startParsedForDoj < dojParsed) {
+      showErrorToast(
+        `Allocation start date cannot be before date of joining (${formatApiDateDisplay(selectedEmployee?.doj)}).`
+      );
+      return;
+    }
 
     const endResult = validateRequiredApiDate(form.end_date, "End date");
     if (!endResult.ok) {

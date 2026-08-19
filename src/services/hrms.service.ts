@@ -1360,9 +1360,15 @@ export const hrmsService = {
     search?: string;
     projectCode?: string;
   }) {
+    const query: Record<string, string | number> = {};
+    if (params.page != null) query.page = params.page;
+    if (params.size != null) query.size = params.size;
+    if (params.search?.trim()) query.search = params.search.trim();
+    if (params.projectCode?.trim()) query.projectCode = params.projectCode.trim();
+
     const res = await apiClient.get<ApiEnvelope<unknown>>(
       endpoints.allocation.managerExtensionStatus,
-      { query: params }
+      { query }
     );
     const page = parseAllocationExtensionListResponse(res);
     return { ...res, data: page } as ApiEnvelope<ApiPage<AllocationExtensionRequestRow>>;

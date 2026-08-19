@@ -5,7 +5,7 @@ import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeSta
 import { resolveProfilePhotoSrc, avatarInitials, avatarGradientStyle } from "@/components/dashboard/ui/profile";
 import {
   formatProfileDisplayValue,
-  pickEmployeeRole,
+  pickDesignationForDisplay,
   pickProfileField,
 } from "@/utils/employeeDirectory";
 
@@ -30,7 +30,7 @@ export function EmployeeProfileSummaryCard({
   const phone = formatProfileDisplayValue(
     pickProfileField(profile, ["phone_number", "phoneNumber"])
   );
-  const roleLine = designation || pickEmployeeRole(profile) || "—";
+  const roleLine = designation || pickDesignationForDisplay(profile) || "—";
   const status = String(
     pickProfileField(profile, ["user_status", "status", "userStatus"]) ?? ""
   ).trim();
