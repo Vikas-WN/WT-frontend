@@ -55,6 +55,7 @@ import {
   EXIT_TYPE_OPTIONS,
   formatExitTypeLabel,
   formatUserTypeLabel,
+  isLwdOnlyOffboarding,
   isOffboardingFormValid,
   previousWeekdayOrSame,
   type ExitType,
@@ -570,7 +571,7 @@ export function OffboardingPanel() {
                   />
                 </>
               )}
-              {!isConsultantOffboarding ? (
+              {!selectedCandidate ? null : isConsultantOffboarding ? null : (
                 <DropdownSelectField
                   label="Exit Type"
                   required
@@ -588,14 +589,15 @@ export function OffboardingPanel() {
                   }
                   disabled={submitting}
                 />
-              ) : (
+              )}
+              {selectedCandidate && isConsultantOffboarding ? (
                 <div className="text-xs text-wt-text-muted flex flex-col gap-1">
                   <span>Exit Type</span>
                   <p className="rounded-lg border border-wt-border bg-wt-surface-2 px-3 py-2 text-sm text-wt-text">
                     Contractual
                   </p>
                 </div>
-              )}
+              ) : null}
               <TextAreaField
                 label="Details"
                 required
@@ -614,16 +616,18 @@ export function OffboardingPanel() {
                 onChange={(v) => setOffboardingForm((p) => ({ ...p, critical_skill: v }))}
                 placeholder="Describe critical skills impacted by this exit"
               />
-              <Label className="flex items-center gap-2 text-xs font-normal text-wt-text-muted md:col-span-2">
-                <Checkbox
-                  checked={offboardingForm.is_regretted}
-                  disabled={submitting}
-                  onCheckedChange={(checked) =>
-                    setOffboardingForm((p) => ({ ...p, is_regretted: Boolean(checked) }))
-                  }
-                />
-                Is Regretted
-              </Label>
+              <div className="md:col-span-2">
+                <Label className="inline-flex w-fit cursor-pointer items-center gap-2 text-xs font-normal text-wt-text-muted">
+                  <Checkbox
+                    checked={offboardingForm.is_regretted}
+                    disabled={submitting}
+                    onCheckedChange={(checked) =>
+                      setOffboardingForm((p) => ({ ...p, is_regretted: Boolean(checked) }))
+                    }
+                  />
+                  Is Regretted
+                </Label>
+              </div>
             </div>
             {offboardingNoticeLabel ? (
               <p className="text-sm text-wt-text-muted">{offboardingNoticeLabel}</p>
@@ -857,13 +861,17 @@ export function OffboardingPanel() {
                           {formatExitTypeLabel(row.exit_type)}
                         </TableCell>
                         <TableCell className="px-3 py-2 whitespace-nowrap tabular-nums">
-                          {formatApiDateDisplay(row.resignation_date) || "—"}
+                          {isLwdOnlyOffboarding({ exitType: row.exit_type })
+                            ? "—"
+                            : formatApiDateDisplay(row.resignation_date) || "—"}
                         </TableCell>
                         <TableCell className="px-3 py-2 whitespace-nowrap tabular-nums">
                           {formatApiDateDisplay(row.last_working_day) || "—"}
                         </TableCell>
                         <TableCell className="px-3 py-2 text-right whitespace-nowrap tabular-nums">
-                          {row.notice_period_days ?? "—"}
+                          {isLwdOnlyOffboarding({ exitType: row.exit_type })
+                            ? "—"
+                            : (row.notice_period_days ?? "—")}
                         </TableCell>
                         <TableCell className="px-3 py-2 whitespace-nowrap max-w-[200px] truncate">
                           {row.designation ?? "—"}

@@ -11,6 +11,7 @@ import { useExitInterviewFormDefinition } from "@/hooks/exit-interview/useExitIn
 import { useExitInterviewSubmissionDetail } from "@/hooks/exit-interview/useExitInterviewSubmissionDetail";
 
 import { formatApiDateDisplay } from "@/utils/apiDate";
+import { isLwdOnlyOffboarding } from "@/utils/offboardingFormState";
 import {
   exitInterviewFieldsWithResponses,
   formFieldForResponseItem,
@@ -122,12 +123,16 @@ export function ExitInterviewSubmissionDetailPageClient({ lookupId }: { lookupId
                     {formatEmployeeStatusLabel(detail.employee_status)}
                   </dd>
                 </div>
-                <div>
-                  <dt className="text-xs text-wt-text-muted">Resignation date</dt>
-                  <dd className="font-medium tabular-nums">
-                    {formatApiDateDisplay(detail.resignation_date) || "—"}
-                  </dd>
-                </div>
+                {!isLwdOnlyOffboarding({
+                  exitType: detail.exit_type ?? detail.separation_type,
+                }) ? (
+                  <div>
+                    <dt className="text-xs text-wt-text-muted">Resignation date</dt>
+                    <dd className="font-medium tabular-nums">
+                      {formatApiDateDisplay(detail.resignation_date) || "—"}
+                    </dd>
+                  </div>
+                ) : null}
                 <div>
                   <dt className="text-xs text-wt-text-muted">Last working day</dt>
                   <dd className="font-medium tabular-nums">

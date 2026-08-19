@@ -116,6 +116,18 @@ export function formatUserTypeLabel(value: string): string {
   return v || "—";
 }
 
+/** Consultant / contractual exits have LWD only — no separate resignation or notice period. */
+export function isLwdOnlyOffboarding(opts: {
+  userType?: string | null;
+  exitType?: string | null;
+}): boolean {
+  const userType = normalizeDirectoryUserType(opts.userType);
+  const exitType = String(opts.exitType ?? "")
+    .trim()
+    .toUpperCase();
+  return userType === "CONSULTANT" || exitType === "CONTRACTUAL";
+}
+
 export function isOffboardingFormValid(
   form: OffboardingFormState,
   userType: string
