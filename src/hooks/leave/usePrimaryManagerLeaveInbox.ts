@@ -80,11 +80,11 @@ export function usePrimaryManagerLeaveInbox(actorEmail: string, enabled = true) 
   const query = useQuery({
     queryKey: primaryManagerInboxQueryKey(normalizedEmail),
     enabled: enabled && Boolean(normalizedEmail),
-    staleTime: 120_000,
+    staleTime: 30_000,
     gcTime: 300_000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     queryFn: () => fetchLeaveManagerInbox(normalizedEmail),
   });
 

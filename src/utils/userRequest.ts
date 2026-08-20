@@ -26,12 +26,14 @@ import {
 
 import {
   canPrimaryManagerActOnLeave,
+  canPrimaryManagerRejectOnLeave,
   canSecondaryManagerApproveOnLeave,
   canSecondaryManagerRejectOnLeave,
   hasPrimaryLeaveManagers,
   hasSecondaryLeaveManagers,
   isAssignedPrimaryLeaveManager,
   isAssignedSecondaryLeaveManager,
+  isLeaveRequestClosedForManagerAction,
   pickManagerEmailList,
 } from "@/utils/leaveManagerDisplay";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
@@ -579,6 +581,11 @@ export function canManagerActOnRequest(
   // Custom WFH is HR-only; managers are notified but cannot decide.
   if (isWfhExceptionRequestType(requestType)) return false;
 
+  // Leave/WFH/optional: one manager decision closes the request for everyone else.
+  if (isLeaveOrWfhRequestType(requestType) && isLeaveRequestClosedForManagerAction(row)) {
+    return false;
+  }
+
   if (canPrimaryManagerActOnLeave(row, options.actorEmail)) return true;
   if (canSecondaryManagerApproveOnLeave(row, options.actorEmail)) return true;
   if (canSecondaryManagerRejectOnLeave(row, options.actorEmail)) return true;
@@ -611,12 +618,16 @@ export function canManagerRejectRequest(
 
 ): boolean {
 
-  if (canPrimaryManagerActOnLeave(row, options.actorEmail)) return true;
+  if (canPrimaryManagerRejectOnLeave(row, options.actorEmail)) return true;
   if (canSecondaryManagerRejectOnLeave(row, options.actorEmail)) return true;
 
   if (!canManagerActOnRequest(row, options)) return false;
 
   const requestType = pickRowField(row, "request_type", "requestType");
+
+  if (isLeaveOrWfhRequestType(requestType) && isLeaveRequestClosedForManagerAction(row)) {
+    return false;
+  }
 
   if (isLeaveOrWfhRequestType(requestType) && requestFinalStatus(row) === "APPROVED") {
 
@@ -901,15 +912,14 @@ export function applyLeaveTeamRequestDecisions(
     const decision = decisions.get(id);
     if (!decision) return row;
     const serverStatus = requestFinalStatus(row);
-    // A session reject must win over a stale APPROVED row (another manager approved first).
+    // Never let a session decision override a finalized server status.
+    if (serverStatus === "APPROVED" || serverStatus === "REJECTED") return row;
     if (decision.status === "REJECTED") {
-      if (serverStatus === "REJECTED") return row;
       return patchLeaveTeamRequestStatus(row, "REJECTED", {
         reason: decision.reason,
         actorEmail,
       });
     }
-    if (serverStatus === "APPROVED" || serverStatus === "REJECTED") return row;
     return patchLeaveTeamRequestStatus(row, decision.status, {
       reason: decision.reason,
       actorEmail,

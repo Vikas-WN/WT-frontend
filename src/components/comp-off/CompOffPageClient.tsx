@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Clock, Loader2, Inbox } from "lucide-react";
+import { IconPencil, IconTrash } from "@/components/dashboard/ui/icons";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
@@ -854,9 +855,14 @@ export function CompOffPageClient({
     if (!selectedAdditionalManagerEmails.length) throw new Error("At least one secondary manager must be selected.");
     if (!comments) throw new Error("Comments are required.");
     if (comments.length > 2000) throw new Error("Comments must be 2000 characters or less.");
-    if (editingRequestId) {
-      throw new Error("Editing earn requests is not supported. Revoke and submit a new earn request.");
+
+    const editingId = Number(editingRequestId);
+    const isEditing = Number.isFinite(editingId) && editingId > 0;
+    if (isEditing) {
+      // Earn has no update API — revoke the pending row, then create with the new details.
+      await compOffService.cancelEarnRequest(editingId);
     }
+
     await compOffService.createEarnRequest({
       worked_date: workedDate,
       workedDate,
@@ -876,6 +882,55 @@ export function CompOffPageClient({
     setEditingRequestId("");
     void loadMyRequests().catch(() => undefined);
     void loadBalanceAndGrants();
+  }
+
+  function startEditEarnRequest(row: Record<string, unknown>) {
+    if (!isPendingRequestStatus(requestRowStatus(row))) {
+      return;
+    }
+    const requestId = requestRowId(row);
+    if (!requestId) return;
+    const workedDate = normalizeToApiDate(
+      String(
+        pickRowField(row, "worked_date", "workedDate", "request_from_date", "requestFromDate") ?? ""
+      )
+    );
+    const projectCode = String(pickRowField(row, "project_code", "projectCode") ?? "").trim();
+    const comments = String(
+      pickRowField(row, "work_description", "workDescription", "comments", "comment") ?? ""
+    ).trim();
+    const primary = pickManagerEmailList(row, "primary");
+    const secondary = pickManagerEmailList(row, "secondary");
+    setEditingRequestId(requestId);
+    setEarnForm({
+      worked_date: workedDate || "",
+      project_code: projectCode,
+      manager_comp_off_email: primary[0] ?? "",
+      comments,
+    });
+    setSelectedManagerEmails(primary);
+    setSelectedAdditionalManagerEmails(secondary);
+    setCompOffSubTab("apply");
+  }
+
+  function clearEarnEdit() {
+    setEditingRequestId("");
+    setEarnForm({ worked_date: "", project_code: "", manager_comp_off_email: "", comments: "" });
+    setSelectedManagerEmails([]);
+    setSelectedAdditionalManagerEmails([]);
+  }
+
+  async function revokeEarnRequest(requestId: string) {
+    const idNum = Number(requestId);
+    if (!Number.isFinite(idNum) || idNum <= 0) {
+      throw new Error("Could not resolve request id for revoke.");
+    }
+    await compOffService.cancelEarnRequest(idNum);
+    myRequestsCacheRef.current.clear();
+    if (editingRequestId === requestId) {
+      clearEarnEdit();
+    }
+    await loadMyRequests();
   }
 
   async function submitUsage() {
@@ -984,7 +1039,9 @@ export function CompOffPageClient({
 
                 {/* Earn Credit form */}
                 <div className="bg-muted/40 rounded-xl p-6 space-y-4 shadow-sm">
-                  <h3 className="font-semibold tracking-tight text-foreground">Earn Credit</h3>
+                  <h3 className="font-semibold tracking-tight text-foreground">
+                    {editingRequestId ? "Edit Earn Credit" : "Earn Credit"}
+                  </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <ProjectSelectField
                       label="Project"
@@ -1052,18 +1109,46 @@ export function CompOffPageClient({
                     value={earnForm.comments}
                     onChange={(v) => setEarnForm((p) => ({ ...p, comments: v }))}
                   />
-                  <Button variant="brand" type="button" className="px-3 py-2" disabled={actionLoading || !earnForm.project_code.trim() || !earnForm.worked_date.trim() || !selectedManagerEmails.length || !selectedAdditionalManagerEmails.length || !earnForm.comments.trim()} onClick={() =>
-                      runAction(compOffEarnActionLabel(editingRequestId ? "update" : "submit"), submitEarn)
-                    }
-                  >
-                    {actionLoading
-                      ? editingRequestId
-                        ? "Saving…"
-                        : "Submitting…"
-                      : editingRequestId
-                        ? "Save Earn Request"
-                        : "Submit Earn Request"}
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="brand"
+                      type="button"
+                      className="px-3 py-2"
+                      disabled={
+                        actionLoading ||
+                        !earnForm.project_code.trim() ||
+                        !earnForm.worked_date.trim() ||
+                        !selectedManagerEmails.length ||
+                        !selectedAdditionalManagerEmails.length ||
+                        !earnForm.comments.trim()
+                      }
+                      onClick={() =>
+                        runAction(
+                          compOffEarnActionLabel(editingRequestId ? "update" : "submit"),
+                          submitEarn
+                        )
+                      }
+                    >
+                      {actionLoading
+                        ? editingRequestId
+                          ? "Saving…"
+                          : "Submitting…"
+                        : editingRequestId
+                          ? "Save Earn Request"
+                          : "Submit Earn Request"}
+                    </Button>
+                    {editingRequestId ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="px-3 py-2"
+                        disabled={actionLoading}
+                        onClick={clearEarnEdit}
+                      >
+                        Cancel edit
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
 
                 {!earnOnly ? (
@@ -1112,6 +1197,7 @@ export function CompOffPageClient({
                       <TableHead className="font-semibold px-3">Project</TableHead>
                       <TableHead className="font-semibold px-3">Comp Off Days</TableHead>
                       <TableHead className="font-semibold px-3">Status</TableHead>
+                      <TableHead className="font-semibold px-3 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1120,6 +1206,8 @@ export function CompOffPageClient({
                         const id = requestRowId(row);
                         const status = requestRowStatus(row);
                         const flow = normalizeCompOffRequestType(row.request_type ?? row.requestType);
+                        const canEditOrRevoke =
+                          flow === "COMP_OFF_EARN" && isPendingRequestStatus(status) && Boolean(id);
                         const dateDisplay =
                           flow === "COMP_OFF_EARN"
                             ? String(
@@ -1158,12 +1246,46 @@ export function CompOffPageClient({
                             <TableCell className="px-3 py-2.5 whitespace-nowrap">
                               <RequestStatusBadge status={status} />
                             </TableCell>
+                            <TableCell className="px-3 py-2.5 text-right">
+                              {canEditOrRevoke ? (
+                                <div className="inline-flex items-center justify-end gap-0.5">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    type="button"
+                                    disabled={actionLoading}
+                                    onClick={() => startEditEarnRequest(row)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                    title="Edit"
+                                  >
+                                    <IconPencil className="size-4" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    disabled={actionLoading}
+                                    onClick={() =>
+                                      runAction(compOffEarnActionLabel("revoke"), () =>
+                                        revokeEarnRequest(id)
+                                      )
+                                    }
+                                    className="text-muted-foreground hover:text-destructive"
+                                    title="Revoke"
+                                  >
+                                    <IconTrash className="size-4" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground/50">—</span>
+                              )}
+                            </TableCell>
                           </TableRow>
                         );
                       })
                     ) : (
                       <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={5} className="h-[200px] text-center align-middle">
+                        <TableCell colSpan={6} className="h-[200px] text-center align-middle">
                           <div className="flex flex-col items-center gap-2">
                             <Inbox className="size-8 text-muted-foreground/40" />
                             <span className="text-sm text-muted-foreground">
