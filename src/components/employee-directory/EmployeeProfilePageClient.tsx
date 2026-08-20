@@ -514,15 +514,14 @@ export function EmployeeProfilePageClient() {
             const normalizedEditForm = {
               ...editForm,
               primary_skills: primarySkills,
-              // Status already applied by offboarding.
+              // Status already applied by offboarding; keep it on the payload so
+              // full-profile validation still receives required user_status.
               user_status: "SERVING_NOTICE",
             };
             const payload = editFormToUpdatePayload(normalizedEditForm, {
               statusOnly: false,
               omitBand: isConsultantEmployee,
             });
-            // Avoid a second SERVING_NOTICE transition check without attrition race.
-            delete payload.user_status;
             await updateMutation.mutateAsync(payload);
           }
 

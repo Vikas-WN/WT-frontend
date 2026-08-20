@@ -11,7 +11,7 @@ export interface HrOffboardListItem {
   is_regretted: boolean;
   resignation_date: string;
   last_working_day: string;
-  notice_period_days: number;
+  notice_period_days: number | null;
   designation: string | null;
   band_name: string | null;
   band_role: string | null;

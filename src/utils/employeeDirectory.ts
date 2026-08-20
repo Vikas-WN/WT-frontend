@@ -9,6 +9,7 @@ import {
   formatPhoneNumberForApi,
   splitPhoneNumber,
 } from "@/utils/phoneCountries";
+import { normalizeEmployeeStatusKey } from "@/utils/userStatus";
 
 function formatWorkModeLabel(value: unknown): string {
   const normalized = String(value ?? "").trim().toUpperCase();
@@ -339,9 +340,9 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
       if (!hasAssignedBand(profile)) return "";
       return stored;
     })(),
-    user_status: String(
-      pickProfileField(profile, ["user_status", "status", "userStatus"]) ?? ""
-    ).trim(),
+    user_status: normalizeEmployeeStatusKey(
+      pickProfileField(profile, ["user_status", "status", "userStatus"])
+    ),
     work_mode: String(pickProfileField(profile, ["work_mode", "workMode"]) ?? "").trim(),
     work_location_type: String(
       pickProfileField(profile, ["work_location_type", "workLocationType", "work_location"]) ?? ""
@@ -372,8 +373,10 @@ export function editFormToUpdatePayload(
   form: EmployeeProfileEditForm,
   options?: { statusOnly?: boolean; omitBand?: boolean }
 ): Record<string, unknown> {
+  const normalizedStatus =
+    normalizeEmployeeStatusKey(form.user_status) || form.user_status.trim();
   if (options?.statusOnly) {
-    return { user_status: form.user_status.trim() };
+    return { user_status: normalizedStatus };
   }
 
   const payload: Record<string, unknown> = {
@@ -385,7 +388,7 @@ export function editFormToUpdatePayload(
     ),
     department: form.department.trim(),
     role: form.role.trim(),
-    user_status: form.user_status.trim(),
+    user_status: normalizedStatus,
     work_mode: form.work_mode.trim(),
     work_location_type: form.work_location_type.trim(),
     primary_skills: form.primary_skills.length ? form.primary_skills : null,

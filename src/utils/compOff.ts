@@ -283,7 +283,7 @@ export function remainingCreditUnitsFromGrants(grants: CompOffGrant[], asOfYmd: 
     .reduce((sum, g) => sum + grantRemainingUnits(g), 0);
 }
 
-/** Inclusive usage days that collide with an ACTIVE grant's worked/earn date. */
+/** Inclusive usage days that collide with a grant's worked/earn date (ACTIVE or exhausted). */
 export function sameDayCompOffEarnDatesInUsageRange(
   grants: CompOffGrant[],
   fromDate: string,
@@ -294,8 +294,8 @@ export function sameDayCompOffEarnDatesInUsageRange(
   if (!from || !to) return [];
   const collisions = new Set<string>();
   for (const grant of grants) {
-    if (grantStatus(grant) !== "ACTIVE") continue;
-    if (grantRemainingUnits(grant) <= 0) continue;
+    const status = grantStatus(grant);
+    if (status !== "ACTIVE" && status !== "EXHAUSTED") continue;
     const worked = grantWorkedDate(grant);
     if (!worked) continue;
     if (compareApiDates(worked, from) >= 0 && compareApiDates(worked, to) <= 0) {
@@ -316,5 +316,19 @@ export function sameDayCompOffUsageErrorMessage(earnDates: string[]): string {
   return (
     `Comp-off cannot be used on the same date it was earned (${formatted || "selected date"}). ` +
     "Choose a later leave date after the credit has been earned."
+  );
+}
+
+export function sameDayOptionalLeaveEarnErrorMessage(earnDates: string[]): string {
+  const formatted = earnDates
+    .map((d) => {
+      const parsed = parseApiDate(d);
+      if (!parsed) return d;
+      return formatApiDate(parsed);
+    })
+    .join(", ");
+  return (
+    `Optional leave cannot be applied on the same date a Comp Off Credit was earned ` +
+    `(${formatted || "selected date"}). Choose a different date.`
   );
 }

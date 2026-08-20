@@ -165,7 +165,6 @@ export function CompOffPageClient({
   const { data: accountManagerEmails = new Set<string>() } = useAccountManagerEmails();
   const managerOnlyReview = hasManagerAccess && !hasHrAccess;
   const isHrOnly = hasHrAccess && !hasManagerAccess;
-  const canApplyCompOff = !hasHrAccess && !hasManagerAccess;
   const {
     teamEmails: managerTeamEmails,
     loading: managerPortfolioLoading,

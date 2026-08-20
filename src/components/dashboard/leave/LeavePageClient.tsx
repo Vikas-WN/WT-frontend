@@ -158,6 +158,7 @@ import { buildUserRequestBody } from "@/utils/leaveRequestPayload";
 import { activeAllocationsRequireClientApproval, isTalentPoolLeaveRouting } from "@/utils/leaveAllocations";
 import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSummary";
 import { HrLeaveBalancesPanel } from "@/components/dashboard/leave/HrLeaveBalancesPanel";
+import { useMyLeaveBalance } from "@/hooks/leave/useMyLeaveBalance";
 import { CONTENT_CARD_CLASS, FILTER_BAR_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { cn } from "@/lib/utils";
 
@@ -171,6 +172,7 @@ import {
   pickRowField,
   sameDayCompOffEarnDatesInUsageRange,
   sameDayCompOffUsageErrorMessage,
+  sameDayOptionalLeaveEarnErrorMessage,
 } from "@/utils/compOff";
 import { compOffService } from "@/services/compOff.service";
 import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
@@ -750,19 +752,26 @@ export function LeavePageClient() {
   const { requiresSelfOnboarding } = useDashboardAccess();
   /** Self-service profile + onboarding (non-HR employees only) */
   const employeeSelfServeProfile = isEmployee || hasHrAccess;
-  const canApplyCompOff = !hasHrAccess && !hasManagerAccess;
   const teamRequestType = employeeRequestFilters.requestType || "ALL";
   /** Personal leave page only — team leave keeps Approvals without the Comp Off Credit tab. */
-  const showCompOffTab =
-    !isTeamLeaveRoute &&
-    (canApplyCompOff || hasManagerAccess || hasHrAccess || hasDmAccess);
+  const showCompOffTab = !isTeamLeaveRoute;
   const showLeaveSubTabBar = showCompOffTab || hasHrAccess || !isTeamLeaveRoute;
+
+  const { data: myLeaveBalance } = useMyLeaveBalance({
+    enabled: !isTeamLeaveRoute && leaveSubTab === "my",
+  });
+  const availableCompOffCredits = Number(myLeaveBalance?.comp_off_balance ?? 0);
+  const hasAvailableCompOffCredits =
+    Number.isFinite(availableCompOffCredits) && availableCompOffCredits > 0;
 
   const leaveRequestTypeOptions = useMemo(() => {
     const base = USER_REQUEST_TYPE_SELECT_OPTIONS.filter((opt) => opt.value !== "WFH");
-    if (!canApplyCompOff) return base;
-    return [...base, { value: "COMP_OFF" as const, label: "Comp off" }];
-  }, [canApplyCompOff]);
+    const editingCompOff =
+      normalizeUserRequestType(leaveRequestForm.request_type) === "COMP_OFF";
+    // Show Comp Off usage only when the employee has usable credits (or is editing one).
+    if (!hasAvailableCompOffCredits && !editingCompOff) return base;
+    return [...base, { value: "COMP_OFF" as const, label: "Comp Off" }];
+  }, [hasAvailableCompOffCredits, leaveRequestForm.request_type]);
 
   const myAllocationRowsForLeave = useMemo(
     () => profileAssignedProjects,
@@ -2220,6 +2229,29 @@ export function LeavePageClient() {
                                         const isLeaveOrOptional =
                                           normalizeUserRequestType(requestType) === "LEAVE" ||
                                           normalizeUserRequestType(requestType) === "OPTIONAL";
+                                        if (normalizeUserRequestType(requestType) === "OPTIONAL") {
+                                          try {
+                                            const grantsRes = await compOffService.getGrants();
+                                            const sameDay = sameDayCompOffEarnDatesInUsageRange(
+                                              compOffService.parseGrantsResponse(grantsRes),
+                                              fromDate,
+                                              toDate
+                                            );
+                                            if (sameDay.length > 0) {
+                                              throw new Error(
+                                                sameDayOptionalLeaveEarnErrorMessage(sameDay)
+                                              );
+                                            }
+                                          } catch (err) {
+                                            if (
+                                              err instanceof Error &&
+                                              err.message.includes("Comp Off Credit was earned")
+                                            ) {
+                                              throw err;
+                                            }
+                                            // If grants cannot be loaded, let the backend enforce the rule.
+                                          }
+                                        }
                                         const payload = buildUserRequestBody(
                                           {
                                             request_from_date: fromDate,

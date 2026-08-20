@@ -91,7 +91,12 @@ function parseOffboardListItem(row: Record<string, unknown>): HrOffboardListItem
     last_working_day: String(
       pickRowField(row, "last_working_day", "lastWorkingDay") ?? ""
     ).trim(),
-    notice_period_days: Number(pickRowField(row, "notice_period_days", "noticePeriodDays") ?? 0),
+    notice_period_days: (() => {
+      const raw = pickRowField(row, "notice_period_days", "noticePeriodDays");
+      if (raw === null || raw === undefined || raw === "") return null;
+      const parsed = Number(raw);
+      return Number.isFinite(parsed) ? parsed : null;
+    })(),
     designation: (pickRowField(row, "designation") as string | null | undefined) ?? null,
     band_name: (pickRowField(row, "band_name", "bandName") as string | null | undefined) ?? null,
     band_role: (pickRowField(row, "band_role", "bandRole") as string | null | undefined) ?? null,
@@ -141,20 +146,13 @@ function parseOffboardListPayload(payload: unknown): { items: HrOffboardListItem
   };
 }
 
-function buildOffboardCandidates(
-  onboardRows: Array<Record<string, unknown>>,
-  offboardedItems: HrOffboardListItem[]
-): OffboardCandidate[] {
-  const offboardedIds = new Set(
-    offboardedItems.map((row) => String(row.emp_id ?? "").trim().toLowerCase())
-  );
-
+function buildOffboardCandidates(onboardRows: Array<Record<string, unknown>>): OffboardCandidate[] {
   return Array.from(
     new Map(
       onboardRows
         .map((row) => {
           const emp_id = String(row.emp_id ?? row.empId ?? "").trim();
-          if (!emp_id || offboardedIds.has(emp_id.toLowerCase())) return null;
+          if (!emp_id) return null;
           const status = String(row.status ?? "").trim().toUpperCase();
           if (!isEligibleOffboardCandidateStatus(status) || isServingNoticeUserStatus(status)) {
             return null;
@@ -181,6 +179,59 @@ function buildOffboardCandidates(
         .filter((entry): entry is readonly [string, OffboardCandidate] => Boolean(entry))
     ).values()
   ).sort((a, b) => a.emp_id.localeCompare(b.emp_id));
+}
+
+function extractOnboardListPage(payload: unknown): {
+  rows: Array<Record<string, unknown>>;
+  total: number;
+} {
+  const envelope =
+    payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+  const data =
+    envelope.data && typeof envelope.data === "object"
+      ? (envelope.data as Record<string, unknown>)
+      : envelope;
+  const rows = toPagedRows(data);
+  const totalRaw = Number(
+    data.total ?? data.total_elements ?? data.totalElements ?? data.total_count ?? data.totalCount
+  );
+  return {
+    rows,
+    total: Number.isFinite(totalRaw) && totalRaw >= 0 ? totalRaw : rows.length,
+  };
+}
+
+/** Fetch every page for one onboard status so the offboarding picker is not capped at 500. */
+async function fetchAllOnboardRowsForStatus(
+  onboardingStatus: "ACTIVE" | "INVITED"
+): Promise<Array<Record<string, unknown>>> {
+  const pageSize = 500;
+  const all: Array<Record<string, unknown>> = [];
+  let page = 0;
+  let total = Number.POSITIVE_INFINITY;
+
+  while (all.length < total && page < 50) {
+    const res = await hrmsService.getOnboardList({
+      page: String(page),
+      size: String(pageSize),
+      onboardingStatus,
+    });
+    const { rows, total: pageTotal } = extractOnboardListPage(res);
+    total = pageTotal;
+    all.push(...rows);
+    if (rows.length === 0 || rows.length < pageSize) break;
+    page += 1;
+  }
+
+  return all;
+}
+
+async function fetchEligibleOffboardOnboardRows(): Promise<Array<Record<string, unknown>>> {
+  const [activeRows, invitedRows] = await Promise.all([
+    fetchAllOnboardRowsForStatus("ACTIVE"),
+    fetchAllOnboardRowsForStatus("INVITED"),
+  ]);
+  return [...activeRows, ...invitedRows];
 }
 
 export function useOffboardingPanelQueries() {
@@ -284,25 +335,8 @@ export function useOffboardingPanelQueries() {
   const candidatesQ = useQuery({
     queryKey: ["offboarding", "candidates"],
     queryFn: async () => {
-      const [onboardResult, offboardResult] = await Promise.allSettled([
-        hrmsService.getOnboardList({ page: "0", size: "500" }),
-        hrmsService.getOffboardList({ page: 0, size: 200 }),
-      ]);
-
-      if (onboardResult.status === "rejected") {
-        throw onboardResult.reason instanceof Error
-          ? onboardResult.reason
-          : new Error("Failed to load employees for offboarding.");
-      }
-
-      const onboardRows = toPagedRows(
-        (onboardResult.value as { data?: unknown }).data ?? onboardResult.value
-      );
-      const offboardedItems =
-        offboardResult.status === "fulfilled"
-          ? parseOffboardListPayload(offboardResult.value).items
-          : [];
-      return buildOffboardCandidates(onboardRows, offboardedItems);
+      const onboardRows = await fetchEligibleOffboardOnboardRows();
+      return buildOffboardCandidates(onboardRows);
     },
     // user_type drives consultant vs FTE fields — avoid serving a stale type after transitions
     staleTime: 30_000,

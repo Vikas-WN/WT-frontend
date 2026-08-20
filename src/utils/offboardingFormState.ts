@@ -128,6 +128,18 @@ export function isLwdOnlyOffboarding(opts: {
   return userType === "CONSULTANT" || exitType === "CONTRACTUAL";
 }
 
+/** Inclusive notice days from resignation through LWD, or null when not applicable. */
+export function calculateNoticePeriodDays(
+  resignationDate: string | null | undefined,
+  lastWorkingDay: string | null | undefined
+): number | null {
+  const resignation = parseApiDate(String(resignationDate ?? "").trim());
+  const lwd = parseApiDate(String(lastWorkingDay ?? "").trim());
+  if (!resignation || !lwd || lwd < resignation) return null;
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return Math.floor((lwd.getTime() - resignation.getTime()) / msPerDay) + 1;
+}
+
 export function isOffboardingFormValid(
   form: OffboardingFormState,
   userType: string

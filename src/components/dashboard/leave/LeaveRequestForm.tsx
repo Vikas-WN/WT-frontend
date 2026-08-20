@@ -83,7 +83,7 @@ export function LeaveRequestForm({
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <Field>
             <FieldLabel>
-              Request Type
+              Leave Type
               <span className="text-destructive" aria-hidden>
                 *
               </span>

@@ -51,6 +51,7 @@ import { normalizeDirectoryUserType } from "@/utils/userTypeTransition";
 import {
   CONSULTANT_EXIT_TYPE,
   createEmptyOffboardingForm,
+  calculateNoticePeriodDays,
   defaultLastWorkingDayFromResignation,
   EXIT_TYPE_OPTIONS,
   formatExitTypeLabel,
@@ -879,9 +880,21 @@ export function OffboardingPanel() {
                           {formatApiDateDisplay(row.last_working_day) || "—"}
                         </TableCell>
                         <TableCell className="px-3 py-2 text-right whitespace-nowrap tabular-nums">
-                          {isLwdOnlyOffboarding({ exitType: row.exit_type })
-                            ? "—"
-                            : (row.notice_period_days ?? "—")}
+                          {(() => {
+                            if (isLwdOnlyOffboarding({ exitType: row.exit_type })) return "—";
+                            const fromApi =
+                              row.notice_period_days != null &&
+                              Number.isFinite(Number(row.notice_period_days)) &&
+                              Number(row.notice_period_days) > 0
+                                ? Number(row.notice_period_days)
+                                : null;
+                            const fromDates = calculateNoticePeriodDays(
+                              row.resignation_date,
+                              row.last_working_day
+                            );
+                            const days = fromApi ?? fromDates;
+                            return days != null ? days : "—";
+                          })()}
                         </TableCell>
                         <TableCell className="px-3 py-2 whitespace-nowrap max-w-[200px] truncate">
                           {row.designation ?? "—"}
