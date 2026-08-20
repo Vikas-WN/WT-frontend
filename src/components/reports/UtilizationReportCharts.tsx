@@ -8,22 +8,31 @@ type Props = {
   rows: Array<Record<string, unknown>>;
 };
 
+function withoutTotalRow(rows: Array<Record<string, unknown>>) {
+  return rows.filter((row) => {
+    const department = String(row.department ?? "").trim().toLowerCase();
+    return department !== "total";
+  });
+}
+
 export function UtilizationReportCharts({ rows }: Props) {
+  const chartRows = useMemo(() => withoutTotalRow(rows), [rows]);
+
   const utilizationBars = useMemo(
     () =>
       rowsToBarSeries(
-        rows,
+        chartRows,
         "department",
         [{ key: "utilization_percent", name: "Utilization %" }],
         { limit: 12 }
       ),
-    [rows]
+    [chartRows]
   );
 
   const capacityStack = useMemo(
     () =>
       rowsToBarSeries(
-        rows,
+        chartRows,
         "department",
         [
           { key: "actual_billed", name: "Billed" },
@@ -33,10 +42,10 @@ export function UtilizationReportCharts({ rows }: Props) {
         ],
         { limit: 10 }
       ),
-    [rows]
+    [chartRows]
   );
 
-  if (!rows.length) return null;
+  if (!chartRows.length) return null;
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">

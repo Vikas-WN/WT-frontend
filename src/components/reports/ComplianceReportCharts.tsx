@@ -9,23 +9,32 @@ type Props = {
   rows: Array<Record<string, unknown>>;
 };
 
+function withoutTotalContractRows(rows: Array<Record<string, unknown>>) {
+  return rows.filter((row) => {
+    const label = String(row.employment_type ?? "").trim().toLowerCase();
+    return label !== "total";
+  });
+}
+
 export function ComplianceReportCharts({ rows }: Props) {
+  const chartRows = useMemo(() => withoutTotalContractRows(rows), [rows]);
+
   const pieData = useMemo(
     () =>
-      aggregateNumericByKey(rows, "employment_type", "count", { limit: 10 }),
-    [rows]
+      aggregateNumericByKey(chartRows, "employment_type", "count", { limit: 10 }),
+    [chartRows]
   );
 
   const percentBars = useMemo(
     () =>
-      rows
+      chartRows
         .map((row) => ({
           name: String(row.employment_type ?? "—").trim() || "—",
           workforce_percent: Number(row.workforce_percent ?? 0) || 0,
         }))
         .filter((r) => r.workforce_percent > 0)
         .sort((a, b) => b.workforce_percent - a.workforce_percent),
-    [rows]
+    [chartRows]
   );
 
   if (!rows.length) return null;

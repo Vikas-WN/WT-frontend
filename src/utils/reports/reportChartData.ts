@@ -2,6 +2,14 @@
 
 function asNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const ym = value.trim().match(/^(\d+)\s*Y(?:\s+(\d+)\s*M)?$/i);
+    if (ym) {
+      const years = Number(ym[1]) || 0;
+      const months = Number(ym[2] ?? 0) || 0;
+      return years + months / 12;
+    }
+  }
   const parsed = Number(String(value ?? "").replace(/[,%]/g, "").trim());
   return Number.isFinite(parsed) ? parsed : 0;
 }
@@ -110,6 +118,44 @@ export function countByKey(
   }
   const all = Array.from(map.entries()).map(([name, value]) => ({ name, value }));
   return topN(all, options?.limit ?? 8);
+}
+
+function skillTokensFromValue(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    const tokens: string[] = [];
+    for (const item of raw) {
+      if (typeof item === "string") {
+        const text = item.trim();
+        if (text) tokens.push(text);
+        continue;
+      }
+      if (item && typeof item === "object") {
+        const rec = item as Record<string, unknown>;
+        const skill = String(rec.skill ?? rec.name ?? "").trim();
+        if (skill) tokens.push(skill);
+      }
+    }
+    return tokens;
+  }
+  return String(raw ?? "")
+    .split(/[,|;/]/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+export function countSkillTokens(
+  rows: Array<Record<string, unknown>>,
+  key: string,
+  options?: { limit?: number }
+): Array<{ name: string; value: number }> {
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    for (const token of skillTokensFromValue(row[key])) {
+      map.set(token, (map.get(token) ?? 0) + 1);
+    }
+  }
+  const all = Array.from(map.entries()).map(([name, value]) => ({ name, value }));
+  return topN(all, options?.limit ?? 10);
 }
 
 export function experienceBandBuckets(

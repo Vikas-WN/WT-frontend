@@ -3,31 +3,11 @@
 import { useMemo } from "react";
 import { ReportBarChart } from "@/components/reports/charts/ReportBarChart";
 import { ReportPieChart } from "@/components/reports/charts/ReportPieChart";
-import { countByKey } from "@/utils/reports/reportChartData";
+import { countByKey, countSkillTokens } from "@/utils/reports/reportChartData";
 
 type Props = {
   rows: Array<Record<string, unknown>>;
 };
-
-function skillTokenCount(rows: Array<Record<string, unknown>>, key: string) {
-  const map = new Map<string, number>();
-  for (const row of rows) {
-    const raw = row[key];
-    const tokens = Array.isArray(raw)
-      ? raw.map(String)
-      : String(raw ?? "")
-          .split(/[,|;/]/)
-          .map((part) => part.trim())
-          .filter(Boolean);
-    for (const token of tokens) {
-      map.set(token, (map.get(token) ?? 0) + 1);
-    }
-  }
-  return Array.from(map.entries())
-    .map(([name, value]) => ({ name, people: value }))
-    .sort((a, b) => b.people - a.people)
-    .slice(0, 10);
-}
 
 export function SkillReportCharts({ rows }: Props) {
   const byDepartment = useMemo(
@@ -40,7 +20,11 @@ export function SkillReportCharts({ rows }: Props) {
   );
 
   const primarySkills = useMemo(
-    () => skillTokenCount(rows, "primary_skills"),
+    () =>
+      countSkillTokens(rows, "primary_skills", { limit: 10 }).map((d) => ({
+        name: d.name,
+        people: d.value,
+      })),
     [rows]
   );
 

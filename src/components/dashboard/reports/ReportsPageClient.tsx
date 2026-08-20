@@ -233,7 +233,7 @@ export function ReportsPageClient() {
   });
   const [utilizationFilters, setUtilizationFilters] = useState({
     page: "0",
-    size: "10",
+    size: "500",
     search: "",
     as_of: "",
   });
@@ -2384,7 +2384,7 @@ export function ReportsPageClient() {
   const loadWorkforceOverviewReports = useCallback(async () => {
     const params = {
       page: 0,
-      size: 10,
+      size: 500,
       search: undefined,
     };
     const [headcountRes, billingRes, expRes] = await Promise.all([
@@ -2492,14 +2492,23 @@ export function ReportsPageClient() {
     }]);
   }, [attritionFyStartYear]);
   const loadSkillInventoryReport = useCallback(async () => {
-    const res = await hrmsService.getSkillInventory({ page: 0, size: 10 });
+    const res = await hrmsService.getSkillInventory({ page: 0, size: 500 });
     const payload = ((res as { data?: unknown }).data ?? {}) as Record<string, unknown>;
     const rows = toRows(payload.data ?? payload).map((row) => {
       const primarySkillsRaw = row.primary_skills ?? row.primarySkills;
       const secondarySkillsRaw = row.secondary_skills ?? row.secondarySkills;
       const certsRaw = row.certifications ?? row.certs;
       const primarySkills = Array.isArray(primarySkillsRaw)
-        ? primarySkillsRaw.map((item) => String(item ?? "").trim()).filter(Boolean).join(", ")
+        ? primarySkillsRaw
+            .map((item) => {
+              if (item && typeof item === "object") {
+                const rec = item as Record<string, unknown>;
+                return String(rec.skill ?? rec.name ?? "").trim();
+              }
+              return String(item ?? "").trim();
+            })
+            .filter(Boolean)
+            .join(", ")
         : String(primarySkillsRaw ?? "—").trim() || "—";
       const secondarySkills = Array.isArray(secondarySkillsRaw)
         ? secondarySkillsRaw
@@ -2507,8 +2516,8 @@ export function ReportsPageClient() {
               if (item && typeof item === "object") {
                 const rec = item as Record<string, unknown>;
                 const skill = String(rec.skill ?? rec.name ?? "").trim();
-                const rating = rec.rating ?? rec.level;
-                return skill ? `${skill}${rating !== undefined ? ` (${String(rating)})` : ""}` : "";
+                const rating = rec.rating ?? rec.self_rating ?? rec.level;
+                return skill ? `${skill}${rating !== undefined && rating !== null ? ` (${String(rating)})` : ""}` : "";
               }
               return String(item ?? "").trim();
             })
@@ -2544,7 +2553,7 @@ export function ReportsPageClient() {
   const loadBgvDashboardReport = useCallback(async () => {
     const params = {
       page: 0,
-      size: 10,
+      size: 500,
       search: bgvReportSearch.trim() || undefined,
       overall_status:
         bgvReportStatusFilter !== "ALL" ? bgvReportStatusFilter.trim().toUpperCase() : undefined,
