@@ -37,6 +37,10 @@ export function parseOpportunityRow(row: Record<string, unknown>): OpportunityRe
     clientId = readString(clientObj, "id");
     clientName = readString(clientObj, "name");
   }
+  if (!clientId) {
+    clientId = readString(row, "client_id", "clientId", "client_external_id", "clientExternalId");
+    clientName = clientName || readString(row, "client_name", "clientName");
+  }
 
   return {
     id,

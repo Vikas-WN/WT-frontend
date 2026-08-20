@@ -113,10 +113,32 @@ export function ProjectEmployeesDetailDialog({
   const metaName = employeesQ.data?.meta.projectName;
   const titleName = projectName?.trim() || metaName || code;
   const rows = useMemo(() => employees, [employees]);
-  const opportunities = useMemo(
-    () => opportunitiesQ.data?.items ?? [],
-    [opportunitiesQ.data]
-  );
+  const opportunities = useMemo(() => {
+    const raw = opportunitiesQ.data?.items ?? [];
+    // Hard filter: only this project's WK client.
+    const forClient = raw.filter((opp) => {
+      const oppClient = String(opp.clientId ?? "").trim().toLowerCase();
+      if (!wkClientId) return false;
+      if (oppClient && oppClient !== wkClientId.toLowerCase()) return false;
+      return true;
+    });
+    // Project scope: when the project has explicit opportunity links, only show those.
+    if (linkedOppKeys.size > 0) {
+      return forClient.filter(
+        (opp) => Boolean(opp.oppId) && linkedOppKeys.has(String(opp.oppId).toUpperCase())
+      );
+    }
+    // No project-level links from WK — do not dump the entire client catalog here.
+    return [];
+  }, [opportunitiesQ.data, wkClientId, linkedOppKeys]);
+  const clientOpportunityCount = useMemo(() => {
+    const raw = opportunitiesQ.data?.items ?? [];
+    if (!wkClientId) return 0;
+    return raw.filter((opp) => {
+      const oppClient = String(opp.clientId ?? "").trim().toLowerCase();
+      return !oppClient || oppClient === wkClientId.toLowerCase();
+    }).length;
+  }, [opportunitiesQ.data, wkClientId]);
 
   async function handleDeallocate(allocationId: number | null | undefined) {
     if (allocationId == null || deallocatingId != null) return;
@@ -178,9 +200,10 @@ export function ProjectEmployeesDetailDialog({
             <div className="flex items-center gap-2">
               {!opportunitiesQ.isLoading && !opportunitiesQ.isError && wkClientId ? (
                 <p className="text-xs text-wt-text-muted tabular-nums">
-                  {opportunities.length} opportunit
-                  {opportunities.length === 1 ? "y" : "ies"}
-                  {linkedOppIds.length ? ` · ${linkedOppIds.length} linked` : ""}
+                  {opportunities.length} linked to project
+                  {clientOpportunityCount
+                    ? ` · ${clientOpportunityCount} for client`
+                    : ""}
                 </p>
               ) : null}
               {wkClientId ? (
@@ -206,8 +229,12 @@ export function ProjectEmployeesDetailDialog({
             </div>
           ) : !opportunities.length ? (
             <EmptyState
-              title="No opportunities"
-              description="No opportunities are currently linked to this client."
+              title="No opportunities linked to this project"
+              description={
+                clientOpportunityCount
+                  ? `This project has no opportunity_ids from WK Business. The client has ${clientOpportunityCount} opportunit${clientOpportunityCount === 1 ? "y" : "ies"}, but they are not linked to this project.`
+                  : "No opportunities are linked on this project for the current WK client."
+              }
               icon={<Briefcase className="size-5" aria-hidden />}
             />
           ) : (
@@ -224,25 +251,18 @@ export function ProjectEmployeesDetailDialog({
                 </TableHeader>
                 <TableBody>
                   {opportunities.map((opp: OpportunityRecord) => {
-                    const isLinked =
-                      Boolean(opp.oppId) && linkedOppKeys.has(String(opp.oppId).toUpperCase());
                     return (
-                      <TableRow
-                        key={opp.id}
-                        className={cn(isLinked && "bg-blue-50/40 dark:bg-wt-surface-2/60")}
-                      >
+                      <TableRow key={opp.id} className="bg-blue-50/40 dark:bg-wt-surface-2/60">
                         <TableCell className="align-top">
                           <div className="min-w-0 max-w-[18rem]">
                             <div className="flex flex-wrap items-center gap-1.5">
                               <p className="font-medium text-wt-text">{opp.opportunityName}</p>
-                              {isLinked ? (
-                                <Badge
-                                  variant="secondary"
-                                  className={cn(filledBadgeClass("info"), "text-[10px]")}
-                                >
-                                  Linked
-                                </Badge>
-                              ) : null}
+                              <Badge
+                                variant="secondary"
+                                className={cn(filledBadgeClass("info"), "text-[10px]")}
+                              >
+                                Linked
+                              </Badge>
                             </div>
                             {opp.oppId ? (
                               <p className="text-[11px] text-wt-text-faint">{opp.oppId}</p>

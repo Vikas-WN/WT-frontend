@@ -3526,9 +3526,7 @@ export function AllocationPageClient() {
                                                 ? (row.opportunity_ids as unknown[])
                                                 : Array.isArray(row.opportunityIds)
                                                   ? (row.opportunityIds as unknown[])
-                                                  : opportunitiesRaw.map(
-                                                      (item) => item.opp_id ?? item.oppId
-                                                    );
+                                                  : [];
                                               setProjectDetail({
                                                 code,
                                                 name: name || code,
