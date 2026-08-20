@@ -168,18 +168,28 @@ export function OffboardingPanel() {
   );
 
   // Prefer live profile user_type so FULLTIME → CONSULTANT transitions aren't masked by
-  // a stale offboarding candidates cache.
+  // a stale offboarding candidates cache. Ignore profile payloads that belong to another emp.
   const selectedEmpId = offboardingForm.emp_id.trim();
   const selectedProfileQ = useEmployeeProfile(selectedEmpId, {
     enabled: Boolean(selectedEmpId),
   });
   const selectedUserType = useMemo(() => {
-    const fromProfile = normalizeDirectoryUserType(
-      selectedProfileQ.data?.user_type ?? selectedProfileQ.data?.userType
-    );
+    const fromCandidate = normalizeDirectoryUserType(selectedCandidate?.user_type);
+    const profileEmpId = String(
+      selectedProfileQ.data?.emp_id ?? selectedProfileQ.data?.empId ?? ""
+    ).trim();
+    const profileMatchesSelected =
+      Boolean(selectedEmpId) &&
+      Boolean(profileEmpId) &&
+      profileEmpId.toLowerCase() === selectedEmpId.toLowerCase();
+    const fromProfile = profileMatchesSelected
+      ? normalizeDirectoryUserType(
+          selectedProfileQ.data?.user_type ?? selectedProfileQ.data?.userType
+        )
+      : "";
     if (fromProfile) return fromProfile;
-    return normalizeDirectoryUserType(selectedCandidate?.user_type);
-  }, [selectedProfileQ.data, selectedCandidate?.user_type]);
+    return fromCandidate;
+  }, [selectedEmpId, selectedProfileQ.data, selectedCandidate?.user_type]);
   const isInternOffboarding = selectedUserType === "INTERN";
   const isConsultantOffboarding = selectedUserType === "CONSULTANT";
   const isInvitedOffboarding =

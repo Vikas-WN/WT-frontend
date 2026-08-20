@@ -16,12 +16,15 @@ import {
   SECTION_TITLE_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
 import { cn } from "@/lib/utils";
+import { hrmsService } from "@/services/hrms.service";
 import { formatApiDate, parseApiDate } from "@/utils/apiDate";
+import { parseDesignationList } from "@/utils/masters";
 import { formatUserTypeLabel } from "@/utils/offboardingFormState";
 
 export type UserTypeTransitionConfirmPayload = {
   transitionDate: string;
   bandId?: number;
+  role?: string;
 };
 
 type UserTypeTransitionDialogProps = {
@@ -31,6 +34,9 @@ type UserTypeTransitionDialogProps = {
   saving?: boolean;
   /** When true, user must pick a band before confirming. */
   requireBand?: boolean;
+  /** When true (typically with requireBand), user must pick a designation for the selected band. */
+  requireDesignation?: boolean;
+  department?: string;
   bandOptions?: Array<{ value: string; label: string }>;
   bandsLoading?: boolean;
   bandFieldLabel?: string;
@@ -46,6 +52,8 @@ export function UserTypeTransitionDialog({
   toType,
   saving = false,
   requireBand = false,
+  requireDesignation = false,
+  department = "",
   bandOptions = [],
   bandsLoading = false,
   bandFieldLabel = "Band",
@@ -56,6 +64,11 @@ export function UserTypeTransitionDialog({
 }: UserTypeTransitionDialogProps) {
   const [transitionDate, setTransitionDate] = useState(() => formatApiDate(new Date()));
   const [bandId, setBandId] = useState("");
+  const [role, setRole] = useState("");
+  const [designationOptions, setDesignationOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
+  const [designationsLoading, setDesignationsLoading] = useState(false);
   const [portalHost, setPortalHost] = useState<HTMLElement | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -67,6 +80,8 @@ export function UserTypeTransitionDialog({
     if (!open) return;
     setTransitionDate(formatApiDate(new Date()));
     setBandId("");
+    setRole("");
+    setDesignationOptions([]);
   }, [open, fromType, toType]);
 
   useEffect(() => {
@@ -75,6 +90,51 @@ export function UserTypeTransitionDialog({
       setBandId(bandOptions[0]?.value ?? "");
     }
   }, [open, requireBand, bandsLoading, bandOptions, bandId]);
+
+  useEffect(() => {
+    if (!open || !requireDesignation) {
+      setDesignationOptions([]);
+      setDesignationsLoading(false);
+      return;
+    }
+    const dept = department.trim();
+    const selectedBandId = Number(bandId);
+    if (!dept || !Number.isFinite(selectedBandId) || selectedBandId <= 0) {
+      setDesignationOptions([]);
+      setRole("");
+      setDesignationsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setDesignationsLoading(true);
+    setRole("");
+    void (async () => {
+      try {
+        const res = await hrmsService.searchDesignations({
+          band_id: selectedBandId,
+          department: dept,
+        });
+        if (cancelled) return;
+        const options = parseDesignationList(res).map((item) => ({
+          value: item.name,
+          label: item.name,
+        }));
+        setDesignationOptions(options);
+        if (options.length === 1) {
+          setRole(options[0]?.value ?? "");
+        }
+      } catch {
+        if (!cancelled) setDesignationOptions([]);
+      } finally {
+        if (!cancelled) setDesignationsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, requireDesignation, department, bandId]);
 
   useEffect(() => {
     if (!open) return;
@@ -95,7 +155,14 @@ export function UserTypeTransitionDialog({
   if (!open || !mounted || typeof document === "undefined") return null;
 
   const bandReady = !requireBand || Boolean(bandId.trim());
-  const canConfirm = Boolean(transitionDate.trim()) && bandReady && !saving && !bandsLoading;
+  const canConfirm =
+    Boolean(transitionDate.trim()) &&
+    bandReady &&
+    (!requireDesignation || Boolean(role.trim())) &&
+    !saving &&
+    !bandsLoading &&
+    !(requireDesignation && designationsLoading);
+
   const defaultDateHelper =
     dateHelperText ??
     (String(toType).toUpperCase().replace(/[\s_-]+/g, "") === "FULLTIME"
@@ -130,12 +197,43 @@ export function UserTypeTransitionDialog({
               <DropdownSelectField
                 label={bandFieldLabel}
                 value={bandId}
-                onChange={setBandId}
+                onChange={(value) => {
+                  setBandId(value);
+                  setRole("");
+                }}
                 options={bandOptions}
                 required
                 placeholder={bandsLoading ? "Loading bands…" : "Select band"}
                 disabled={saving || bandsLoading}
                 loading={bandsLoading}
+              />
+            ) : null}
+            {requireDesignation ? (
+              <DropdownSelectField
+                label="Designation"
+                value={role}
+                onChange={setRole}
+                options={designationOptions}
+                required
+                placeholder={
+                  !bandId.trim()
+                    ? "Select a band first"
+                    : !department.trim()
+                      ? "Employee department is required"
+                      : designationsLoading
+                        ? "Loading designations…"
+                        : designationOptions.length
+                          ? "Select designation"
+                          : "No designations for this band"
+                }
+                disabled={
+                  saving ||
+                  designationsLoading ||
+                  !bandId.trim() ||
+                  !department.trim() ||
+                  !designationOptions.length
+                }
+                loading={designationsLoading}
               />
             ) : null}
             <div>
@@ -177,6 +275,9 @@ export function UserTypeTransitionDialog({
               };
               if (requireBand && bandId.trim()) {
                 payload.bandId = Number(bandId);
+              }
+              if (requireDesignation && role.trim()) {
+                payload.role = role.trim();
               }
               void onConfirm(payload);
             }}

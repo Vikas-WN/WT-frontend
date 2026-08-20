@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { InputField, TextAreaField, SelectField } from "@/components/dashboard/ui/forms";
 import { AccountManagerSelect } from "@/components/allocation/AccountManagerSelect";
-import { InternalEmployeeSelect } from "@/components/allocation/InternalEmployeeSelect";
+import { DeliveryManagerSelect } from "@/components/allocation/DeliveryManagerSelect";
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { UI_COPY } from "@/constants/uiCopy";
@@ -169,8 +169,7 @@ export function ClientFormDialog({
               onChange={(value) => setForm((prev) => ({ ...prev, account_manager_email: value }))}
               required
             />
-            <InternalEmployeeSelect
-              label="Delivery Manager"
+            <DeliveryManagerSelect
               value={form.delivery_manager_email}
               onChange={(value) => setForm((prev) => ({ ...prev, delivery_manager_email: value }))}
               required

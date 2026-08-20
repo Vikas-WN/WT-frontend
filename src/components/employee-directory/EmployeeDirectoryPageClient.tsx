@@ -720,6 +720,7 @@ export function EmployeeDirectoryPageClient() {
                                       bandName={
                                         record.band ?? record.band_name ?? record.bandName
                                       }
+                                      department={record.department}
                                       canEdit={
                                         canEditDirectory &&
                                         String(record.email ?? display.email ?? "")

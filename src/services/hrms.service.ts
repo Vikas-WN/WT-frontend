@@ -324,7 +324,7 @@ export const hrmsService = {
 
   updateEmployeeUserType(
     empId: string,
-    payload: { user_type: string; transition_date?: string; band_id?: number }
+    payload: { user_type: string; transition_date?: string; band_id?: number; role?: string }
   ) {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.profile.employeeUserType(empId), {
       contentType: "application/json",

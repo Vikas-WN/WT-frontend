@@ -68,17 +68,33 @@ import { isSystemProjectAllocationRow } from "@/utils/allocationList";
 import { showErrorToast } from "@/lib/toast";
 import { compareApiDates } from "@/utils/apiDate";
 import {
+  CONSULTANT_EXIT_TYPE,
   defaultLastWorkingDayFromResignation,
   previousWeekdayOrSame,
 } from "@/utils/offboardingFormState";
+import { normalizeDirectoryUserType } from "@/utils/userTypeTransition";
 const WORK_MODES = ["WFO", "WFH", "HYBRID"];
 const WORK_LOCATIONS = ["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"];
 const USER_STATUSES = ["ACTIVE", "INACTIVE", "PENDING", "ONBOARDING", "INVITED", "SERVING_NOTICE"];
 
 /** Validate exit dates when HR moves an employee onto Serving Notice from the profile editor. */
-function servingNoticeExitDateError(resignationDate: string, lastWorkingDay: string): string | null {
+function servingNoticeExitDateError(
+  resignationDate: string,
+  lastWorkingDay: string,
+  userType: string
+): string | null {
   const resignation = resignationDate.trim();
   const lwd = lastWorkingDay.trim();
+  const type = normalizeDirectoryUserType(userType);
+
+  if (type === "CONSULTANT") {
+    if (!lwd) return "Last Working Day is required for consultant offboarding.";
+    return null;
+  }
+  if (type === "INTERN") {
+    if (!lwd) return "Last Working Day is required before changing status to Serving Notice Period.";
+    return null;
+  }
   if (!resignation && !lwd) {
     return "Resignation Date and Last Working Day are required before changing status to Serving Notice Period.";
   }
@@ -202,6 +218,13 @@ export function EmployeeProfilePageClient() {
     String(pickProfileField(profileRecord, ["user_type", "userType"]) ?? "")
       .toUpperCase()
       .replace(/[\s\-_]/g, "") === "CONSULTANT";
+  const isInternEmployee =
+    String(pickProfileField(profileRecord, ["user_type", "userType"]) ?? "")
+      .toUpperCase()
+      .replace(/[\s\-_]/g, "") === "INTERN";
+  const profileUserType = normalizeDirectoryUserType(
+    pickProfileField(profileRecord, ["user_type", "userType"])
+  );
   const currentProfileStatus = String(
     pickProfileField(profileRecord, ["user_status", "status", "userStatus"]) ?? ""
   ).trim();
@@ -423,17 +446,31 @@ export function EmployeeProfilePageClient() {
         if (transitioningToServingNotice) {
           const exitDateError = servingNoticeExitDateError(
             editForm.resignation_date,
-            editForm.last_working_day
+            editForm.last_working_day,
+            profileUserType
           );
           if (exitDateError) throw new Error(exitDateError);
 
           const resignationDate = editForm.resignation_date.trim();
           const lastWorkingDay = editForm.last_working_day.trim();
-          await hrmsService.offboardEmployee(empId, {
-            resignation_date: resignationDate,
-            last_working_day: lastWorkingDay,
-            exit_type: "VOLUNTARY",
-          });
+          const offboardPayload =
+            isConsultantEmployee
+              ? {
+                  last_working_day: lastWorkingDay,
+                  exit_type: CONSULTANT_EXIT_TYPE,
+                }
+              : isInternEmployee
+                ? {
+                    resignation_date: lastWorkingDay,
+                    last_working_day: lastWorkingDay,
+                    exit_type: "VOLUNTARY" as const,
+                  }
+                : {
+                    resignation_date: resignationDate,
+                    last_working_day: lastWorkingDay,
+                    exit_type: "VOLUNTARY" as const,
+                  };
+          await hrmsService.offboardEmployee(empId, offboardPayload);
 
           if (!statusOnlyEdit) {
             if (!isValidPersonName(editForm.name.trim())) {
@@ -672,41 +709,68 @@ export function EmployeeProfilePageClient() {
                       )}
                       {transitioningToServingNotice ? (
                         <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
-                          <DatePickerField
-                            label="Resignation Date"
-                            required
-                            value={editForm.resignation_date}
-                            onChange={(v) =>
-                              setEditForm((prev) =>
-                                prev
-                                  ? {
-                                      ...prev,
-                                      resignation_date: v,
-                                      last_working_day: v.trim()
-                                        ? defaultLastWorkingDayFromResignation(v)
-                                        : "",
-                                    }
-                                  : prev
-                              )
-                            }
-                            disabled={saving}
-                          />
-                          <DatePickerField
-                            label="Last Working Day"
-                            required
-                            value={editForm.last_working_day}
-                            onChange={(v) =>
-                              setEditForm((prev) =>
-                                prev
-                                  ? { ...prev, last_working_day: previousWeekdayOrSame(v) }
-                                  : prev
-                              )
-                            }
-                            disabled={saving}
-                          />
+                          {isConsultantEmployee || isInternEmployee ? (
+                            <DatePickerField
+                              label="Last Working Day"
+                              required
+                              value={editForm.last_working_day}
+                              onChange={(v) =>
+                                setEditForm((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        last_working_day: previousWeekdayOrSame(v),
+                                        ...(isInternEmployee
+                                          ? { resignation_date: previousWeekdayOrSame(v) }
+                                          : { resignation_date: "" }),
+                                      }
+                                    : prev
+                                )
+                              }
+                              disabled={saving}
+                            />
+                          ) : (
+                            <>
+                              <DatePickerField
+                                label="Resignation Date"
+                                required
+                                value={editForm.resignation_date}
+                                onChange={(v) =>
+                                  setEditForm((prev) =>
+                                    prev
+                                      ? {
+                                          ...prev,
+                                          resignation_date: v,
+                                          last_working_day: v.trim()
+                                            ? defaultLastWorkingDayFromResignation(v)
+                                            : "",
+                                        }
+                                      : prev
+                                  )
+                                }
+                                disabled={saving}
+                              />
+                              <DatePickerField
+                                label="Last Working Day"
+                                required
+                                value={editForm.last_working_day}
+                                onChange={(v) =>
+                                  setEditForm((prev) =>
+                                    prev
+                                      ? { ...prev, last_working_day: previousWeekdayOrSame(v) }
+                                      : prev
+                                  )
+                                }
+                                disabled={saving}
+                              />
+                            </>
+                          )}
                           <p className="sm:col-span-2 text-xs text-wt-text-muted">
-                            Resignation Date and Last Working Day are mandatory when moving an
-                            employee to Serving Notice Period.
+                            {isConsultantEmployee
+                              ? "Consultants are offboarded as a Contractual exit. Only Last Working Day is required (no resignation date or notice period)."
+                              : isInternEmployee
+                                ? "Intern offboarding uses a single exit date for resignation and last working day."
+                                : "Resignation Date and Last Working Day are mandatory when moving an employee to Serving Notice Period."}
                           </p>
                         </div>
                       ) : null}
@@ -819,41 +883,68 @@ export function EmployeeProfilePageClient() {
                       )}
                       {transitioningToServingNotice ? (
                         <>
-                          <DatePickerField
-                            label="Resignation Date"
-                            required
-                            value={editForm.resignation_date}
-                            onChange={(v) =>
-                              setEditForm((prev) =>
-                                prev
-                                  ? {
-                                      ...prev,
-                                      resignation_date: v,
-                                      last_working_day: v.trim()
-                                        ? defaultLastWorkingDayFromResignation(v)
-                                        : "",
-                                    }
-                                  : prev
-                              )
-                            }
-                            disabled={saving}
-                          />
-                          <DatePickerField
-                            label="Last Working Day"
-                            required
-                            value={editForm.last_working_day}
-                            onChange={(v) =>
-                              setEditForm((prev) =>
-                                prev
-                                  ? { ...prev, last_working_day: previousWeekdayOrSame(v) }
-                                  : prev
-                              )
-                            }
-                            disabled={saving}
-                          />
+                          {isConsultantEmployee || isInternEmployee ? (
+                            <DatePickerField
+                              label="Last Working Day"
+                              required
+                              value={editForm.last_working_day}
+                              onChange={(v) =>
+                                setEditForm((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        last_working_day: previousWeekdayOrSame(v),
+                                        ...(isInternEmployee
+                                          ? { resignation_date: previousWeekdayOrSame(v) }
+                                          : { resignation_date: "" }),
+                                      }
+                                    : prev
+                                )
+                              }
+                              disabled={saving}
+                            />
+                          ) : (
+                            <>
+                              <DatePickerField
+                                label="Resignation Date"
+                                required
+                                value={editForm.resignation_date}
+                                onChange={(v) =>
+                                  setEditForm((prev) =>
+                                    prev
+                                      ? {
+                                          ...prev,
+                                          resignation_date: v,
+                                          last_working_day: v.trim()
+                                            ? defaultLastWorkingDayFromResignation(v)
+                                            : "",
+                                        }
+                                      : prev
+                                  )
+                                }
+                                disabled={saving}
+                              />
+                              <DatePickerField
+                                label="Last Working Day"
+                                required
+                                value={editForm.last_working_day}
+                                onChange={(v) =>
+                                  setEditForm((prev) =>
+                                    prev
+                                      ? { ...prev, last_working_day: previousWeekdayOrSame(v) }
+                                      : prev
+                                  )
+                                }
+                                disabled={saving}
+                              />
+                            </>
+                          )}
                           <p className="sm:col-span-2 text-xs text-wt-text-muted">
-                            Resignation Date and Last Working Day are mandatory when moving an
-                            employee to Serving Notice Period.
+                            {isConsultantEmployee
+                              ? "Consultants are offboarded as a Contractual exit. Only Last Working Day is required (no resignation date or notice period)."
+                              : isInternEmployee
+                                ? "Intern offboarding uses a single exit date for resignation and last working day."
+                                : "Resignation Date and Last Working Day are mandatory when moving an employee to Serving Notice Period."}
                           </p>
                         </>
                       ) : null}

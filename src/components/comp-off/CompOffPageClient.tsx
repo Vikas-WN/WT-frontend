@@ -593,12 +593,15 @@ export function CompOffPageClient({
             if (inferred === "APPROVED" || inferred === "REJECTED") {
               patchTeamRequestStatus(requestId, inferred);
             }
+            teamRequestsCacheRef.current.clear();
             // Always surface the conflict — another manager may have already decided.
             throw error;
           }
           throw error;
         }
         patchTeamRequestStatus(requestId, status);
+        // Drop stale team list so other managers / next refresh see REJECTED/APPROVED.
+        teamRequestsCacheRef.current.clear();
         if (status === "APPROVED" && flow === "COMP_OFF") {
           void loadBalanceAndGrants();
         }
@@ -609,18 +612,22 @@ export function CompOffPageClient({
     [hasManagerAccess, isHrOnly, patchTeamRequestStatus, loadBalanceAndGrants]
   );
 
-  const loadTeamRequests = useCallback(async (opts?: { raiseOnError?: boolean }) => {
+  const loadTeamRequests = useCallback(async (opts?: { raiseOnError?: boolean; force?: boolean }) => {
     const from = teamFilters.from.trim() || defaultRequestRange().from;
     const to = teamFilters.to.trim() || defaultRequestRange().to;
     const cacheKey = `${from}:${to}:${earnOnly}:${teamFilters.flow}:${managerOnlyReview}`;
-    const cached = teamRequestsCacheRef.current.get(cacheKey);
-    if (cached) {
-      setTeamRequests(applyTeamRequestDecisions(cached, teamDecisionsRef.current));
-      const emails = cached.map((row) => requestRowEmail(row)).filter(Boolean);
-      if (emails.length) {
-        resolveEmployeeNamesByEmail(emails).then((names) => setTeamEmployeeNames(names)).catch(() => {});
+    if (!opts?.force) {
+      const cached = teamRequestsCacheRef.current.get(cacheKey);
+      if (cached) {
+        setTeamRequests(applyTeamRequestDecisions(cached, teamDecisionsRef.current));
+        const emails = cached.map((row) => requestRowEmail(row)).filter(Boolean);
+        if (emails.length) {
+          resolveEmployeeNamesByEmail(emails).then((names) => setTeamEmployeeNames(names)).catch(() => {});
+        }
+        return;
       }
-      return;
+    } else {
+      teamRequestsCacheRef.current.delete(cacheKey);
     }
 
     try {
@@ -759,6 +766,17 @@ export function CompOffPageClient({
   ]);
 
   function openRejectDialog(requestId: string, flow: "COMP_OFF_EARN" | "COMP_OFF") {
+    const row = teamRequests.find((item) => requestRowId(item) === requestId);
+    if (row) {
+      const finalStatus = requestFinalStatus(row);
+      const managerStatus =
+        flow === "COMP_OFF_EARN" ? requestEarnManagerStatus(row) : requestManagerStatus(row);
+      if (finalStatus !== "PENDING" || managerStatus !== "PENDING") {
+        // Request already decided — hide reject and refresh from server.
+        void loadTeamRequests({ force: true });
+        return;
+      }
+    }
     setRejectReason("");
     setPendingReject({ requestId, flow });
   }
@@ -770,7 +788,7 @@ export function CompOffPageClient({
     await decideTeamRequest(pendingReject.requestId, pendingReject.flow, "REJECTED", reason);
     setPendingReject(null);
     setRejectReason("");
-    await loadTeamRequests();
+    await loadTeamRequests({ force: true });
   }
 
   const canReviewTeam = managerOnlyReview || hasHrAccess;
@@ -1350,7 +1368,7 @@ export function CompOffPageClient({
               <RefreshIconButton
                 onClick={() =>
                   runAction(compOffTeamReviewActionLabel("COMP_OFF", "fetch"), () =>
-                    loadTeamRequests({ raiseOnError: true })
+                    loadTeamRequests({ raiseOnError: true, force: true })
                   )
                 }
                 disabled={actionLoading}
@@ -1513,7 +1531,7 @@ export function CompOffPageClient({
                                         compOffTeamReviewActionLabel(flow, "approve"),
                                         async () => {
                                           await decideTeamRequest(id, flow, "APPROVED");
-                                          await loadTeamRequests();
+                                          await loadTeamRequests({ force: true });
                                         }
                                       )
                                     }
