@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FieldLabel } from "@/components/ui/field";
 import { useEmployeeManagers } from "@/hooks/leave/useEmployeeManagers";
 import { filterEligibleLeaveManagers } from "@/utils/leaveManagerEligibility";
+import { resolveEmployeeNamesByEmail } from "@/utils/compOff/resolveEmployeeDisplayNames";
 import { ChevronsUpDown, X, Check, Search, Loader2 } from "lucide-react";
 
 function optionLabel(option: LeaveManagerOption): string {
@@ -92,14 +93,41 @@ export function LeaveManagerSelector({
     [selectedEmails]
   );
 
-  const optionByEmail = useMemo(() => {
-    const map = new Map<string, LeaveManagerOption>();
+  const [resolvedNames, setResolvedNames] = useState<Record<string, string>>({});
+
+  const namesByEmail = useMemo(() => {
+    const map = new Map<string, string>();
     for (const option of options) {
       const email = String(option.email ?? "").trim().toLowerCase();
-      if (email) map.set(email, option);
+      const name = option.name?.trim();
+      if (email && name) map.set(email, name);
+    }
+    for (const [email, name] of Object.entries(resolvedNames)) {
+      if (name) map.set(email.toLowerCase(), name);
     }
     return map;
-  }, [options]);
+  }, [options, resolvedNames]);
+
+  useEffect(() => {
+    const missing = selectedEmails
+      .map((email) => email.trim().toLowerCase())
+      .filter((email) => email && !namesByEmail.has(email));
+    if (!missing.length) return;
+    let cancelled = false;
+    void resolveEmployeeNamesByEmail(missing).then((names) => {
+      if (cancelled) return;
+      setResolvedNames((prev) => {
+        const next = { ...prev };
+        for (const [email, name] of Object.entries(names)) {
+          if (name && name.trim()) next[email.toLowerCase()] = name.trim();
+        }
+        return next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedEmails, namesByEmail]);
 
   const filteredOptions = useMemo(
     () => options.filter((option) => matchesQuery(option, query)),
@@ -134,11 +162,14 @@ export function LeaveManagerSelector({
     () =>
       selectedEmails
         .map((email) => {
-          const opt = optionByEmail.get(email.trim().toLowerCase());
-          return { email: email.trim(), label: opt?.name?.trim() || email };
+          const lower = email.trim().toLowerCase();
+          return {
+            email: email.trim(),
+            label: namesByEmail.get(lower) ?? email.trim(),
+          };
         })
         .filter(Boolean),
-    [selectedEmails, optionByEmail]
+    [selectedEmails, namesByEmail]
   );
 
   return (

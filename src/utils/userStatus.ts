@@ -77,6 +77,12 @@ export function isActiveUserStatus(status: unknown): boolean {
   return normalizeEmployeeStatusKey(status) === "ACTIVE";
 }
 
+/** Employees who completed onboarding and may be assigned to client projects. */
+export function isEligibleForProjectAllocation(status: unknown): boolean {
+  const key = normalizeEmployeeStatusKey(status);
+  return key === "ACTIVE" || key === "SERVING_NOTICE";
+}
+
 export function isOffboardedUserStatus(status: unknown): boolean {
   return normalizeEmployeeStatusKey(status) === "INACTIVE";
 }

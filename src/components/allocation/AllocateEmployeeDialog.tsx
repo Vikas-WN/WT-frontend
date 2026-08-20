@@ -37,12 +37,19 @@ import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { UI_COPY } from "@/constants/uiCopy";
 import { useAllocationEmployees } from "@/hooks/useAllocationEmployees";
+import { validateAllocationWithinProjectDates } from "@/utils/allocationProjectDates";
+import { isEligibleForProjectAllocation } from "@/utils/userStatus";
 
 const CUSTOM_ROLE_VALUE = "__custom_role__";
 const ALLOCATE_STEPS = ["Employee", "Project", "Details"] as const;
 type AllocateStep = (typeof ALLOCATE_STEPS)[number];
 
-type ProjectOption = { code: string; name: string };
+type ProjectOption = {
+  code: string;
+  name: string;
+  start_date?: string | null;
+  end_date?: string | null;
+};
 
 export function AllocateEmployeeDialog({
   open,
@@ -221,6 +228,12 @@ export function AllocateEmployeeDialog({
     const selectedEmployee = allocationEmployees.find(
       (row) => row.employeeEmail === employeeEmail.toLowerCase()
     );
+    if (selectedEmployee?.status && !isEligibleForProjectAllocation(selectedEmployee.status)) {
+      showErrorToast(
+        "This employee has not completed onboarding yet. Allocation is allowed only after onboarding is complete and the employee is Active."
+      );
+      return;
+    }
     const dojParsed = parseApiDate(selectedEmployee?.doj ?? "");
     const startParsedForDoj = parseApiDate(startDate);
     if (dojParsed && startParsedForDoj && startParsedForDoj < dojParsed) {
@@ -242,6 +255,21 @@ export function AllocateEmployeeDialog({
     if (startParsed && endParsed && !(startParsed < endParsed)) {
       showErrorToast("End date must be after the start date.");
       return;
+    }
+
+    const selectedProject = projects.find(
+      (project) => project.code.trim().toUpperCase() === projectCode.toUpperCase()
+    );
+    if (selectedProject) {
+      const projectDateError = validateAllocationWithinProjectDates(
+        startDate,
+        endDate,
+        selectedProject
+      );
+      if (projectDateError) {
+        showErrorToast(projectDateError);
+        return;
+      }
     }
 
     const nextPercent = Number(form.allocated_percent);

@@ -227,10 +227,9 @@ export function CreateProjectDialog({
       return;
     }
     const clientIdRaw = form.client_id.trim();
-    const clientName = form.client_name.trim();
     const numericClientId = Number(clientIdRaw);
     const hasNumericClientId = /^\d+$/.test(clientIdRaw) && Number.isFinite(numericClientId) && numericClientId > 0;
-    if (!hasNumericClientId && !clientName) {
+    if (!hasNumericClientId) {
       showErrorToast("Client is required.");
       return;
     }
@@ -328,7 +327,7 @@ export function CreateProjectDialog({
         await hrmsService.updateProject(code, {
           project_name: name,
           project_type: form.project_type,
-          ...(hasNumericClientId ? { client_id: numericClientId } : { client_name: clientName }),
+          client_id: numericClientId,
           start_date: startDate,
           end_date: endDate,
         });
@@ -373,7 +372,7 @@ export function CreateProjectDialog({
         project_code: projectCode,
         project_name: name,
         project_type: DEFAULT_CREATE_PROJECT_TYPE,
-        ...(hasNumericClientId ? { client_id: numericClientId } : { client_name: clientName }),
+        client_id: numericClientId,
         account_manager_email: accountManagerEmail,
         start_date: startDate,
         end_date: endDate,
@@ -448,8 +447,10 @@ export function CreateProjectDialog({
                   client_id: value,
                   ...(value !== prev.client_id
                     ? {
+                        client_name: value ? prev.client_name : "",
                         opportunity_ids: [],
                         account_manager_email: value ? prev.account_manager_email : "",
+                        delivery_manager_email: value ? prev.delivery_manager_email : "",
                       }
                     : {}),
                 }))

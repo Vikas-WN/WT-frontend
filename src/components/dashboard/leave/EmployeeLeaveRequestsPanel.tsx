@@ -297,8 +297,8 @@ export function EmployeeLeaveRequestsPanel({
                     : editingLeaveRequestId
                       ? UI_COPY.saveChanges
                       : isLeave
-                        ? "Submit Leave Request"
-                        : "Submit WFH Request"}
+                        ? "Submiting Leave Request"
+                        : "Submiting WFH Request"}
                 </Button>
               </div>
             </div>

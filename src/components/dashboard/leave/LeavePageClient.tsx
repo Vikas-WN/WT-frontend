@@ -123,6 +123,8 @@ import {
   canPrimaryManagerRejectOnLeave,
   filterTeamRequestsForPrimaryManager,
   hasSecondaryLeaveManagers,
+  isLeaveRequestClosedForManagerAction,
+  pickManagerEmailList,
   requestSecondaryManagerStatus,
 } from "@/utils/leaveManagerDisplay";
 import {
@@ -134,6 +136,7 @@ import {
   formatApprovalStageLabel,
   formatStageRejectionReason,
   isCompOffEarnRequestType,
+  isEmployeeEditableUserRequest,
   listScopedUserRequests,
   fetchPaginatedScopedUserRequests,
   mergeStatusUpdateIntoRow,
@@ -142,7 +145,10 @@ import {
   requestFinalStatus,
   requestHrStatus,
   requestManagerStatus,
+  resolveUserRequestId,
+  revokeOwnedUserRequest,
   hrTeamActionBlockedHint,
+  updateOwnedUserRequest,
   updateUserRequestStatus,
   type UserRequestStatusValue,
 } from "@/utils/userRequest";
@@ -1350,21 +1356,28 @@ export function LeavePageClient() {
   const teamTableColCount = showTeamActionsColumn ? 5 : 4;
 
   const fetchTeamRequests = useCallback(
-    async (scope: "team" | "org", page: number = 0, size: number = 200) => {
+    async (
+      scope: "team" | "org",
+      page: number = 0,
+      size: number = 200,
+      force = false
+    ) => {
       setTeamRequestsLoading(true);
       try {
         const cacheKey = `${scope}:${employeeRequestFilters.fromDate}:${employeeRequestFilters.toDate}:${employeeRequestFilters.requestType}:0:200`;
-        const cached = teamCacheRef.current.get(cacheKey);
-        if (cached) {
-          const withDecisions = applyLeaveTeamRequestDecisions(
-            cached.rows,
-            teamDecisionsRef.current,
-            userEmail
-          );
-          setEmployeeRequests(withDecisions);
-          setTeamTotalPages(cached.totalPages);
-          setTeamTotalElements(cached.totalElements);
-          return;
+        if (!force) {
+          const cached = teamCacheRef.current.get(cacheKey);
+          if (cached) {
+            const withDecisions = applyLeaveTeamRequestDecisions(
+              cached.rows,
+              teamDecisionsRef.current,
+              userEmail
+            );
+            setEmployeeRequests(withDecisions);
+            setTeamTotalPages(cached.totalPages);
+            setTeamTotalElements(cached.totalElements);
+            return;
+          }
         }
         await loadEmployeeRequestsForApprover(scope, page, size);
       } catch {
@@ -1379,6 +1392,32 @@ export function LeavePageClient() {
   const invalidateTeamCache = useCallback(() => {
     teamCacheRef.current.clear();
   }, []);
+
+  // Notification deep-link: refetch after filter reset so new inbox rows appear without a manual refresh.
+  useEffect(() => {
+    if (!deepLinkRequestId && !(deepLinkFrom && deepLinkTo)) return;
+    if (!canViewTeamLeave) return;
+    if (leaveSubTab !== "team" && leaveSubTab !== "org") return;
+    if (employeeRequestFilters.fromDate || employeeRequestFilters.toDate) return;
+    if (deepLinkRequestType && employeeRequestFilters.requestType !== deepLinkRequestType) {
+      return;
+    }
+
+    invalidateTeamCache();
+    void fetchTeamRequests(leaveSubTab === "org" ? "org" : "team", 0, 200, true);
+  }, [
+    canViewTeamLeave,
+    deepLinkFrom,
+    deepLinkRequestId,
+    deepLinkRequestType,
+    deepLinkTo,
+    employeeRequestFilters.fromDate,
+    employeeRequestFilters.requestType,
+    employeeRequestFilters.toDate,
+    fetchTeamRequests,
+    invalidateTeamCache,
+    leaveSubTab,
+  ]);
 
   function applyLocalTeamRequestStatus(
     requestId: string,
@@ -1655,16 +1694,19 @@ export function LeavePageClient() {
   useEffect(() => {
     if (!canViewTeamLeave) return;
     if (leaveSubTab !== "team" && leaveSubTab !== "org") return;
+    const hasDeepLinkTarget = Boolean(
+      deepLinkRequestId || (deepLinkFrom && deepLinkTo)
+    );
     const cacheKey = `${currentScope}:${employeeRequestFilters.fromDate}:${employeeRequestFilters.toDate}:${employeeRequestFilters.requestType}:0:200`;
     const cached = teamCacheRef.current.get(cacheKey);
-    if (cached) {
+    if (cached && !hasDeepLinkTarget) {
       setEmployeeRequests(
         applyLeaveTeamRequestDecisions(cached.rows, teamDecisionsRef.current, userEmail)
       );
       setTeamTotalPages(cached.totalPages);
       setTeamTotalElements(cached.totalElements);
     } else {
-      fetchTeamRequests(currentScope, 0, 200);
+      fetchTeamRequests(currentScope, 0, 200, hasDeepLinkTarget);
     }
   }, [leaveSubTab]);
 
@@ -1871,7 +1913,7 @@ export function LeavePageClient() {
                                                   throw new Error("Please provide a valid To date (dd/mm/yyyy).");
                                                 }
                                                 if (parseApiDate(toDate)! < parseApiDate(fromDate)!) {
-                                                  throw new Error("Start Date cannot be later than End Date.");
+                                                  throw new Error("Start Date cannot be after the End Date.");
                                                 }
                                                 const comments = leaveRequestForm.comments.trim();
                                                 if (!comments) {
@@ -1909,10 +1951,7 @@ export function LeavePageClient() {
                                                   }
                                                 );
                                                 if (editingLeaveRequestId) {
-                                                  await apiClient.put(endpoints.userRequest.root, {
-                                                    contentType: "application/json",
-                                                    body: JSON.stringify(payload),
-                                                  });
+                                                  await updateOwnedUserRequest(payload);
                                                 } else {
                                                   await apiClient.post(endpoints.userRequest.root, {
                                                     contentType: "application/json",
@@ -1965,6 +2004,10 @@ export function LeavePageClient() {
                                     onFromDateChange={setMyRequestsFromDate}
                                     onToDateChange={setMyRequestsToDate}
                                     onEdit={(row) => {
+                                      if (!isEmployeeEditableUserRequest(row)) {
+                                        showErrorToast("Only pending requests can be edited.");
+                                        return;
+                                      }
                                       const rowType = String(
                                         row.request_type ?? row.requestType ?? "WFH"
                                       );
@@ -1976,14 +2019,14 @@ export function LeavePageClient() {
                                         is_half_day: Boolean(row.is_half_day ?? row.isHalfDay ?? false),
                                         client_approval: false,
                                       });
-                                      const requestId = String(
-                                        row.user_request_id ??
-                                          row.userRequestId ??
-                                          row.request_id ??
-                                          row.requestId ??
-                                          row.id ??
-                                          ""
-                                      ).trim();
+                                      setSelectedWfhManagerEmails(
+                                        pickManagerEmailList(row, "primary")
+                                      );
+                                      const requestId = resolveUserRequestId(row);
+                                      if (!requestId) {
+                                        showErrorToast("Could not resolve request id for editing.");
+                                        return;
+                                      }
                                       setEditingLeaveRequestId(requestId);
                                       setWfhRequestViewTab("request");
                                     }}
@@ -1991,15 +2034,11 @@ export function LeavePageClient() {
                                       runAction(
                                         userRequestActionLabel("WFH", "revoke"),
                                         async () => {
-                                        await apiClient.delete(endpoints.userRequest.root, {
-                                          contentType: "application/json",
-                                          body: JSON.stringify({
-                                            user_request_id: Number(requestId),
-                                          }),
-                                        });
+                                        await revokeOwnedUserRequest(Number(requestId));
                                         if (editingLeaveRequestId === requestId) {
                                           setEditingLeaveRequestId("");
                                           setLeaveRequestForm(createDefaultLeaveRequestForm());
+                                          setSelectedWfhManagerEmails([]);
                                         }
                                         await loadMyLeaveRequests();
                                       })
@@ -2051,7 +2090,7 @@ export function LeavePageClient() {
                                           throw new Error("Please provide valid dates (dd/mm/yyyy).");
                                         }
                                         if (compareApiDates(toDate, fromDate) < 0) {
-                                          throw new Error("Start Date cannot be later than End Date.");
+                                          throw new Error("Start Date cannot be after the End Date.");
                                         }
                                         const comments = leaveRequestForm.comments.trim();
                                         if (!comments) {
@@ -2204,10 +2243,7 @@ export function LeavePageClient() {
                                           }
                                         );
                                         if (editingLeaveRequestId) {
-                                          await apiClient.put(endpoints.userRequest.root, {
-                                            contentType: "application/json",
-                                            body: JSON.stringify(payload),
-                                          });
+                                          await updateOwnedUserRequest(payload);
                                         } else {
                                           await apiClient.post(endpoints.userRequest.root, {
                                             contentType: "application/json",
@@ -2250,6 +2286,10 @@ export function LeavePageClient() {
                                     onFromDateChange={setMyRequestsFromDate}
                                     onToDateChange={setMyRequestsToDate}
                                     onEdit={(row) => {
+                                      if (!isEmployeeEditableUserRequest(row)) {
+                                        showErrorToast("Only pending requests can be edited.");
+                                        return;
+                                      }
                                       const rowType = String(
                                         row.request_type ?? row.requestType ?? "LEAVE"
                                       );
@@ -2261,28 +2301,17 @@ export function LeavePageClient() {
                                         is_half_day: Boolean(row.is_half_day ?? row.isHalfDay ?? false),
                                         client_approval: false,
                                       });
-                                      const primaryManagers =
-                                        row.primary_managers ?? row.primaryManagers ?? [];
-                                      const secondaryManagers =
-                                        row.secondary_managers ?? row.secondaryManagers ?? [];
                                       setSelectedLeaveManagerEmails(
-                                        Array.isArray(primaryManagers)
-                                          ? primaryManagers.map(String)
-                                          : []
+                                        pickManagerEmailList(row, "primary")
                                       );
                                       setSelectedAdditionalRecipientEmails(
-                                        Array.isArray(secondaryManagers)
-                                          ? secondaryManagers.map(String)
-                                          : []
+                                        pickManagerEmailList(row, "secondary")
                                       );
-                                      const requestId = String(
-                                        row.user_request_id ??
-                                          row.userRequestId ??
-                                          row.request_id ??
-                                          row.requestId ??
-                                          row.id ??
-                                          ""
-                                      ).trim();
+                                      const requestId = resolveUserRequestId(row);
+                                      if (!requestId) {
+                                        showErrorToast("Could not resolve request id for editing.");
+                                        return;
+                                      }
                                       setEditingLeaveRequestId(requestId);
                                       setRequestViewTab("request");
                                     }}
@@ -2290,15 +2319,12 @@ export function LeavePageClient() {
                                       runAction(
                                         userRequestActionLabel("LEAVE", "revoke"),
                                         async () => {
-                                        await apiClient.delete(endpoints.userRequest.root, {
-                                          contentType: "application/json",
-                                          body: JSON.stringify({
-                                            user_request_id: Number(requestId),
-                                          }),
-                                        });
+                                        await revokeOwnedUserRequest(Number(requestId));
                                         if (editingLeaveRequestId === requestId) {
                                           setEditingLeaveRequestId("");
                                           setLeaveRequestForm(createDefaultLeaveRequestForm());
+                                          setSelectedLeaveManagerEmails([]);
+                                          setSelectedAdditionalRecipientEmails([]);
                                         }
                                         await loadMyLeaveRequests();
                                       })
@@ -2454,8 +2480,23 @@ export function LeavePageClient() {
                                         row.id ??
                                         ""
                                     ).trim();
-                                    const status = requestFinalStatus(row as Record<string, unknown>);
-                                    const managerStatus = requestManagerStatus(row as Record<string, unknown>);
+                                    const rowRecord = row as Record<string, unknown>;
+                                    const rawFinalStatus = requestFinalStatus(rowRecord);
+                                    const leaveClosedForManagers =
+                                      !isCompOffEarnRequestType(
+                                        rowRecord.request_type ?? rowRecord.requestType
+                                      ) && isLeaveRequestClosedForManagerAction(rowRecord);
+                                    const status =
+                                      rawFinalStatus === "PENDING" && leaveClosedForManagers
+                                        ? requestManagerStatus(rowRecord) === "APPROVED" ||
+                                          requestSecondaryManagerStatus(rowRecord) === "APPROVED"
+                                          ? "APPROVED"
+                                          : requestManagerStatus(rowRecord) === "REJECTED" ||
+                                              requestSecondaryManagerStatus(rowRecord) === "REJECTED"
+                                            ? "REJECTED"
+                                            : rawFinalStatus
+                                        : rawFinalStatus;
+                                    const managerStatus = requestManagerStatus(rowRecord);
                                     const managerReason = String(
                                       pickRowField(
                                         row as Record<string, unknown>,
@@ -2463,7 +2504,6 @@ export function LeavePageClient() {
                                         "managerReason"
                                       ) ?? ""
                                     ).trim();
-                                    const rowRecord = row as Record<string, unknown>;
                                     const rowRequestType = rowRecord.request_type ?? rowRecord.requestType;
                                     const isEarnRequest = isCompOffEarnRequestType(rowRequestType);
                                     const hrCanActOnRow =
@@ -2499,6 +2539,7 @@ export function LeavePageClient() {
                                     const legacyManagerAct =
                                       !hrCanActOnRow &&
                                       !isEarnRequest &&
+                                      !leaveClosedForManagers &&
                                       status === "PENDING" &&
                                       canManagerActOnRequest(rowRecord, {
                                         hasManagerAccess: hasManagerAccess || hasDmAccess,
@@ -2510,6 +2551,7 @@ export function LeavePageClient() {
                                       !assignedSecondaryReject;
                                     const showManagerApprove =
                                       !hrCanActOnRow &&
+                                      !leaveClosedForManagers &&
                                       status === "PENDING" &&
                                       (earnManagerAct ||
                                         assignedPrimaryApprove ||
@@ -2517,12 +2559,12 @@ export function LeavePageClient() {
                                         legacyManagerAct);
                                     const showManagerReject =
                                       !hrCanActOnRow &&
-                                      (status === "PENDING" || status === "APPROVED") &&
+                                      !leaveClosedForManagers &&
+                                      status === "PENDING" &&
                                       (earnManagerAct ||
                                         assignedPrimaryReject ||
                                         assignedSecondaryReject ||
-                                        (status === "PENDING" &&
-                                          legacyManagerAct &&
+                                        (legacyManagerAct &&
                                           canManagerRejectRequest(rowRecord, {
                                             hasManagerAccess: hasManagerAccess || hasDmAccess,
                                             hasDmAccess,

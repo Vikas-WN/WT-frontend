@@ -9,11 +9,9 @@ import { useAuth } from "@/context/AuthContext";
 import { hrmsService, type NotificationItem } from "@/services/hrms.service";
 import {
   formatNotificationTimestamp,
-  humanizeNotificationProjectRefs,
+  resolveNotificationDisplayCopy,
   notificationIsRead,
-  notificationMessage,
   notificationRowId,
-  notificationTitle,
   parseNotificationItems,
   dedupeLeaveRequestNotifications,
 } from "@/utils/notifications";
@@ -496,11 +494,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                     notifications.map((row, idx) => {
                       const id = notificationRowId(row);
                       const isRead = notificationIsRead(row);
-                      const title = notificationTitle(row);
-                      const message = humanizeNotificationProjectRefs(
-                        notificationMessage(row),
-                        projectNameByCode
-                      );
+                      const { title, message } = resolveNotificationDisplayCopy(row, projectNameByCode);
                       const createdAt = formatNotificationTimestamp(row.created_at);
                       const categoryLabel = notificationCategoryLabel(row);
                       const roleLabel =

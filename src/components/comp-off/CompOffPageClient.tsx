@@ -870,11 +870,13 @@ export function CompOffPageClient({
       secondary_manager_emails: selectedAdditionalManagerEmails,
       secondaryManagerEmails: selectedAdditionalManagerEmails,
     });
+    myRequestsCacheRef.current.clear();
     setEarnForm({ worked_date: "", project_code: "", manager_comp_off_email: "", comments: "" });
     setSelectedManagerEmails([]);
     setSelectedAdditionalManagerEmails([]);
     setEditingRequestId("");
-    await Promise.all([loadMyRequests(), loadBalanceAndGrants()]);
+    void loadMyRequests().catch(() => undefined);
+    void loadBalanceAndGrants();
   }
 
   async function submitUsage() {
@@ -891,7 +893,7 @@ export function CompOffPageClient({
       throw new Error("Please provide valid dates (dd/mm/yyyy).");
     }
     if (compareApiDates(fromDate, toDate) > 0) {
-      throw new Error("Start Date cannot be later than End Date.");
+      throw new Error("Start Date cannot be after the End Date.");
     }
     const days = calendarDaysInclusive(fromDate, toDate);
     if (days < 1) throw new Error("Select at least one calendar day.");

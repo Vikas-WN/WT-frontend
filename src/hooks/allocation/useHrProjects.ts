@@ -17,6 +17,8 @@ export type HrProjectsData = {
     client_id?: number | null;
     client_name?: string | null;
     is_active?: boolean;
+    start_date?: string | null;
+    end_date?: string | null;
   }>;
 };
 

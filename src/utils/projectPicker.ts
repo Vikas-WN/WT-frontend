@@ -19,6 +19,8 @@ export type ProjectPickerRow = {
   client_id?: number | null;
   client_name?: string | null;
   is_active?: boolean;
+  start_date?: string | null;
+  end_date?: string | null;
 };
 
 /** Normalize GET /projects/all (or paginated /projects) rows for pickers. */
@@ -43,6 +45,8 @@ export function parseProjectPickerRows(
     const clientName = String(row.client_name ?? row.clientName ?? "").trim() || null;
     const isActiveRaw = row.is_active ?? row.isActive;
     const is_active = isActiveRaw === undefined || isActiveRaw === null ? true : Boolean(isActiveRaw);
+    const start_date = String(row.start_date ?? row.startDate ?? "").trim() || null;
+    const end_date = String(row.end_date ?? row.endDate ?? "").trim() || null;
 
     mapped.push([
       code,
@@ -54,6 +58,8 @@ export function parseProjectPickerRows(
         client_id: Number.isFinite(clientNum) ? clientNum : null,
         client_name: clientName,
         is_active,
+        start_date,
+        end_date,
       },
     ]);
   }

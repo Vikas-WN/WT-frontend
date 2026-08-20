@@ -58,25 +58,42 @@ export const compOffService = {
 
   createEarnRequest(body: Record<string, unknown>) {
     const payload = applyApiDateFields(body, ["workedDate", "worked_date"]);
-    const normalized: Record<string, unknown> = {
-      workedDate: payload.workedDate ?? payload.worked_date,
-      projectCode: payload.projectCode ?? payload.project_code,
-      workDescription: payload.workDescription ?? payload.work_description,
+    const workedDate =
+      toApiDateParam(String(payload.workedDate ?? payload.worked_date ?? "")) ?? "";
+    const projectCode = String(payload.projectCode ?? payload.project_code ?? "").trim();
+    const workDescription = String(
+      payload.workDescription ?? payload.work_description ?? ""
+    ).trim();
+    const normalizeEmails = (value: unknown): string[] => [
+      ...new Set(
+        (Array.isArray(value) ? value : [])
+          .map((email) => String(email).trim().toLowerCase())
+          .filter(Boolean)
+      ),
+    ];
+    const managerEmails = normalizeEmails(payload.manager_emails ?? payload.managerEmails);
+    const secondaryManagerEmails = normalizeEmails(
+      payload.secondary_manager_emails ?? payload.secondaryManagerEmails
+    );
+    const requestBody: Record<string, unknown> = {
+      worked_date: workedDate,
+      workedDate,
+      project_code: projectCode,
+      projectCode,
+      work_description: workDescription,
+      workDescription,
     };
-    const managers = payload.manager_emails ?? payload.managerEmails;
-    if (Array.isArray(managers) && managers.length) {
-      normalized.managerEmails = managers;
-      normalized.manager_emails = managers;
+    if (managerEmails.length) {
+      requestBody.manager_emails = managerEmails;
+      requestBody.managerEmails = managerEmails;
     }
-    const secondaryManagers =
-      payload.secondary_manager_emails ?? payload.secondaryManagerEmails;
-    if (Array.isArray(secondaryManagers) && secondaryManagers.length) {
-      normalized.secondaryManagerEmails = secondaryManagers;
-      normalized.secondary_manager_emails = secondaryManagers;
+    if (secondaryManagerEmails.length) {
+      requestBody.secondary_manager_emails = secondaryManagerEmails;
+      requestBody.secondaryManagerEmails = secondaryManagerEmails;
     }
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.compOff.earn, {
       contentType: "application/json",
-      body: JSON.stringify(normalized),
+      body: JSON.stringify(requestBody),
     });
   },
 

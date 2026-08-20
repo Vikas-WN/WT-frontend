@@ -46,7 +46,7 @@ export function WfhExceptionModal({ open, onClose, onSubmit }: WfhExceptionModal
       return;
     }
     if (compareApiDates(startDate, endDate) > 0) {
-      showErrorToast("Start Date cannot be later than End Date.");
+      showErrorToast("Start Date cannot be after the End Date.");
       return;
     }
     if (!reason.trim()) {

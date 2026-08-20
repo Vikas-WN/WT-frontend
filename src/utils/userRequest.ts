@@ -367,9 +367,10 @@ export function requestHrStatus(row: Record<string, unknown>): string {
 
 
 
-export function requestFinalStatus(row: Record<string, unknown>): string {
+/** Canonical server status for a user request row (prefer `status` from list API). */
+export function requestRowFinalStatus(row: Record<string, unknown>): string {
   const raw = normalizeRequestStatus(
-    pickRowField(row, "user_request_status", "userRequestStatus", "status") ?? "PENDING"
+    pickRowField(row, "status", "user_request_status", "userRequestStatus") ?? "PENDING"
   );
   if (
     raw === "SUBMITTED" &&
@@ -378,6 +379,46 @@ export function requestFinalStatus(row: Record<string, unknown>): string {
     return "PENDING";
   }
   return raw;
+}
+
+export function requestFinalStatus(row: Record<string, unknown>): string {
+  return requestRowFinalStatus(row);
+}
+
+export function resolveUserRequestId(row: Record<string, unknown>): string {
+  return String(
+    pickRowField(row, "user_request_id", "userRequestId", "request_id", "requestId", "id") ??
+      ""
+  ).trim();
+}
+
+/** Employee self-service edit/revoke — must match backend update/delete gates. */
+export function isEmployeeEditableUserRequest(row: Record<string, unknown>): boolean {
+  const status = requestRowFinalStatus(row);
+  return status === "PENDING" || status === "SUBMITTED";
+}
+
+export async function updateOwnedUserRequest(
+  body: Record<string, unknown>
+): Promise<ApiEnvelope<unknown>> {
+  return apiClient.put<ApiEnvelope<unknown>>(endpoints.userRequest.root, {
+    contentType: "application/json",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function revokeOwnedUserRequest(userRequestId: number): Promise<ApiEnvelope<unknown>> {
+  const idNum = Number(userRequestId);
+  if (!Number.isFinite(idNum) || idNum <= 0) {
+    throw new Error("Invalid request id.");
+  }
+  return apiClient.delete<ApiEnvelope<unknown>>(endpoints.userRequest.root, {
+    contentType: "application/json",
+    body: JSON.stringify({
+      user_request_id: idNum,
+      userRequestId: idNum,
+    }),
+  });
 }
 
 

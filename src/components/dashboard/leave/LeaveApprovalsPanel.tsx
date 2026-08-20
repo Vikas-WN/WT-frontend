@@ -35,6 +35,7 @@ import {
   canSecondaryManagerApproveOnLeave,
   canSecondaryManagerRejectOnLeave,
   hasSecondaryLeaveManagers,
+  isLeaveRequestClosedForManagerAction,
   requestSecondaryManagerStatus,
 } from "@/utils/leaveManagerDisplay";
 import {
@@ -257,9 +258,18 @@ export function LeaveApprovalsPanel({
                         rowRecord.is_half_day ?? rowRecord.isHalfDay ?? false
                       );
                       const isUpdating = statusUpdatingId === requestId;
-                      const rowStatus = requestFinalStatus(rowRecord);
+                      const rawFinalStatus = requestFinalStatus(rowRecord);
                       const primaryStage = requestManagerStatus(rowRecord);
                       const secondaryStage = requestSecondaryManagerStatus(rowRecord);
+                      const leaveClosed = isLeaveRequestClosedForManagerAction(rowRecord);
+                      const rowStatus =
+                        rawFinalStatus === "PENDING" && leaveClosed
+                          ? primaryStage === "APPROVED" || secondaryStage === "APPROVED"
+                            ? "APPROVED"
+                            : primaryStage === "REJECTED" || secondaryStage === "REJECTED"
+                              ? "REJECTED"
+                              : rawFinalStatus
+                          : rawFinalStatus;
                       const canApprove =
                         canPrimaryManagerApproveOnLeave(rowRecord, actorEmail) ||
                         canSecondaryManagerApproveOnLeave(rowRecord, actorEmail);
