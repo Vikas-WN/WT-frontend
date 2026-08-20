@@ -451,10 +451,7 @@ export function CompOffPageClient({
         setRedirectingToProjects(true);
         const params = new URLSearchParams({
           tab: "project",
-          createProject: "1",
         });
-        const name = projectName.trim();
-        if (name) params.set("projectName", name);
         router.push(`${DASHBOARD_ROUTES.allocation}?${params.toString()}`);
         return;
       }

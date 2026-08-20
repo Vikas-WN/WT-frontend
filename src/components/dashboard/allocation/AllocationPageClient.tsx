@@ -433,6 +433,12 @@ export function AllocationPageClient() {
   const [projectDetail, setProjectDetail] = useState<{
     code: string;
     name: string;
+    clientExternalId?: string | null;
+    clientName?: string | null;
+    projectType?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    opportunityIds?: string[];
   } | null>(null);
   const [createProjectDialogOpen, setCreateProjectDialogOpen] = useState(false);
   const [createProjectPrefillName, setCreateProjectPrefillName] = useState("");
@@ -2494,12 +2500,8 @@ export function AllocationPageClient() {
     if (createProjectDeepLinkHandled.current) return;
     createProjectDeepLinkHandled.current = true;
 
-    const projectName = searchParams.get("projectName")?.trim() ?? "";
-    setEditingProjectCode("");
-    setEditingProjectForm(null);
-    setCreateProjectPrefillName(projectName);
+    // Create is disabled while projects sync from WK Business — just land on the list.
     setAllocationHrSubTab("project");
-    setCreateProjectDialogOpen(true);
     router.replace(DASHBOARD_ROUTES.allocation, { scroll: false });
   }, [hasHrAccess, searchParams, router]);
 
@@ -3418,24 +3420,9 @@ export function AllocationPageClient() {
                                   <div>
                                     <h3 className="font-semibold">Projects</h3>
                                     <p className="text-sm text-wt-text-muted">
-                                      Create projects with client and managers. Click a project to
-                                      view employees and allocation dates.
+                                      Projects sync from WK Business. Click a project to view
+                                      employees and allocation dates.
                                     </p>
-                                  </div>
-                                  <div className="flex flex-wrap gap-2">
-                                    <Button
-                                      variant="brand"
-                                      type="button"
-                                      className="px-3 py-2"
-                                      onClick={() => {
-                                        setEditingProjectCode("");
-                                        setEditingProjectForm(null);
-                                        setCreateProjectPrefillName("");
-                                        setCreateProjectDialogOpen(true);
-                                      }}
-                                    >
-                                      Create Project
-                                    </Button>
                                   </div>
                                 </div>
                                 <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-3">
@@ -3520,31 +3507,67 @@ export function AllocationPageClient() {
                                               ? (row.opportunities as Array<Record<string, unknown>>)
                                               : [];
                                             const opportunityLabels = opportunitiesRaw
-                                              .map((item) =>
-                                                String(
+                                              .map((item) => {
+                                                const oppId = String(
+                                                  item.opp_id ?? item.oppId ?? ""
+                                                ).trim();
+                                                const oppName = String(
                                                   item.opportunity_name ??
                                                     item.opportunityName ??
-                                                    item.opp_id ??
-                                                    item.oppId ??
                                                     ""
-                                                ).trim()
-                                              )
+                                                ).trim();
+                                                if (oppId && oppName) return `${oppId} — ${oppName}`;
+                                                return oppId || oppName;
+                                              })
                                               .filter(Boolean);
+                                            const openProjectDetail = () => {
+                                              if (!code) return;
+                                              const oppIdsRaw = Array.isArray(row.opportunity_ids)
+                                                ? (row.opportunity_ids as unknown[])
+                                                : Array.isArray(row.opportunityIds)
+                                                  ? (row.opportunityIds as unknown[])
+                                                  : opportunitiesRaw.map(
+                                                      (item) => item.opp_id ?? item.oppId
+                                                    );
+                                              setProjectDetail({
+                                                code,
+                                                name: name || code,
+                                                clientExternalId:
+                                                  String(
+                                                    row.client_external_id ??
+                                                      row.clientExternalId ??
+                                                      ""
+                                                  ).trim() || null,
+                                                clientName:
+                                                  String(row.client_name ?? row.clientName ?? "").trim() ||
+                                                  null,
+                                                projectType: typ,
+                                                startDate:
+                                                  String(row.start_date ?? row.startDate ?? "").trim() ||
+                                                  null,
+                                                endDate:
+                                                  String(row.end_date ?? row.endDate ?? "").trim() || null,
+                                                opportunityIds: oppIdsRaw
+                                                  .map((id) => String(id ?? "").trim())
+                                                  .filter(Boolean),
+                                              });
+                                            };
                                             return (
                                               <TableRow
                                                 key={code || String(idx)}
-                                                className="transition hover:bg-blue-50/50 dark:hover:bg-wt-surface-2"
+                                                className="cursor-pointer transition hover:bg-blue-50/50 dark:hover:bg-wt-surface-2"
+                                                onClick={openProjectDetail}
                                               >
                                                 <TableCell className="px-3 py-2 max-w-[240px] truncate font-medium">{name || "—"}</TableCell>
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{typ}</TableCell>
                                                 <TableCell className="px-3 py-2 align-top">
                                                   {opportunityLabels.length ? (
-                                                    <div className="flex min-w-[10rem] flex-col gap-1">
+                                                    <div className="flex min-w-[12rem] flex-col gap-1">
                                                       {opportunityLabels.slice(0, 2).map((label) => (
                                                         <span
                                                           key={label}
                                                           title={label}
-                                                          className="inline-flex max-w-[12rem] truncate rounded-md bg-wt-surface-2 px-1.5 py-0.5 text-[11px] text-wt-text-muted"
+                                                          className="inline-flex max-w-[16rem] truncate rounded-md bg-wt-surface-2 px-1.5 py-0.5 text-[11px] text-wt-text-muted"
                                                         >
                                                           {label}
                                                         </span>
@@ -3561,7 +3584,10 @@ export function AllocationPageClient() {
                                                 </TableCell>
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{startDate || "—"}</TableCell>
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{endDate || "—"}</TableCell>
-                                                <TableCell className="px-3 py-2 text-right">
+                                                <TableCell
+                                                  className="px-3 py-2 text-right"
+                                                  onClick={(e) => e.stopPropagation()}
+                                                >
                                                   <div className="inline-flex items-center justify-end gap-1">
                                                     <Button
                                                       type="button"
@@ -3569,12 +3595,9 @@ export function AllocationPageClient() {
                                                       size="icon-sm"
                                                       className="text-wt-text-muted hover:text-wt-text"
                                                       disabled={!code}
-                                                      aria-label={`View employees for ${name || code}`}
-                                                      title="View employees"
-                                                      onClick={() => {
-                                                        if (!code) return;
-                                                        setProjectDetail({ code, name: name || code });
-                                                      }}
+                                                      aria-label={`View details for ${name || code}`}
+                                                      title="View project details"
+                                                      onClick={openProjectDetail}
                                                     >
                                                       <IconUsers />
                                                     </Button>
@@ -4382,6 +4405,12 @@ export function AllocationPageClient() {
                                 open={Boolean(projectDetail)}
                                 projectCode={projectDetail?.code ?? ""}
                                 projectName={projectDetail?.name}
+                                clientExternalId={projectDetail?.clientExternalId}
+                                clientName={projectDetail?.clientName}
+                                projectType={projectDetail?.projectType}
+                                startDate={projectDetail?.startDate}
+                                endDate={projectDetail?.endDate}
+                                opportunityIds={projectDetail?.opportunityIds}
                                 onClose={() => {
                                   setProjectDetail(null);
                                   invalidateAllocationDependentQueries(queryClient);
