@@ -13,12 +13,9 @@ export interface ReferralListItem {
   job_title: string;
   job_id: string;
   status: string;
+  ats_score: number | null;
+  ats_score_ready: boolean;
   created_at: string; // isoformat from backend
-}
-
-interface ReferralListResponse {
-  items: ReferralListItem[];
-  total: number;
 }
 
 function mapReferral(raw: Record<string, unknown>): ReferralListItem {
@@ -30,6 +27,9 @@ function mapReferral(raw: Record<string, unknown>): ReferralListItem {
     job_title: String(raw.job_title ?? ""),
     job_id: String(raw.job_id ?? ""),
     status: String(raw.status ?? "SUBMITTED"),
+    ats_score:
+      raw.ats_score == null || raw.ats_score === "" ? null : Number(raw.ats_score),
+    ats_score_ready: Boolean(raw.ats_score_ready),
     created_at: String(raw.created_at ?? ""),
   };
 }
@@ -60,6 +60,11 @@ export function useReferralList(referrerEmail: string): UseReferralListResult {
     },
     enabled: Boolean(referrerEmail),
     staleTime: 30_000,
+    refetchInterval: (query) => {
+      const items = query.state.data?.items ?? [];
+      const anyScoring = items.some((item) => !item.ats_score_ready);
+      return anyScoring ? 5_000 : false;
+    },
   });
 
   return {

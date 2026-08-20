@@ -253,7 +253,13 @@ export function LeaveRequestForm({
               onClick={onSubmit}
               disabled={actionLoading}
             >
-              {editingLeaveRequestId ? "Save Changes" : "Submit Request"}
+              {actionLoading
+                ? editingLeaveRequestId
+                  ? "Saving…"
+                  : "Submitting…"
+                : editingLeaveRequestId
+                  ? "Save Changes"
+                  : "Submit Request"}
             </Button>
             {editingLeaveRequestId ? (
               <Button

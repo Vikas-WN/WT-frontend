@@ -155,6 +155,8 @@ export function patchRequestRowStatus(
     status,
     user_request_status: status,
     userRequestStatus: status,
+    manager_status: status,
+    managerStatus: status,
   };
 }
 

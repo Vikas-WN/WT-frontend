@@ -152,7 +152,7 @@ export function CompOffPageClient({
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuth();
-  const { actionLoading, runAction } = useDashboardAction();
+  const { actionLoading, actionBusyLabel, runAction } = useDashboardAction();
   const {
     hasHrAccess,
     hasManagerAccess,
@@ -591,13 +591,12 @@ export function CompOffPageClient({
           }
         } catch (error) {
           if (isAlreadyActedOnRequestError(error)) {
-            patchTeamRequestStatus(requestId, status);
-            return;
-          }
-          const inferred = inferStatusFromAlreadyActedError(error);
-          if (inferred === "APPROVED" || inferred === "REJECTED") {
-            patchTeamRequestStatus(requestId, inferred);
-            return;
+            const inferred = inferStatusFromAlreadyActedError(error);
+            if (inferred === "APPROVED" || inferred === "REJECTED") {
+              patchTeamRequestStatus(requestId, inferred);
+            }
+            // Always surface the conflict — another manager may have already decided.
+            throw error;
           }
           throw error;
         }
@@ -1057,7 +1056,13 @@ export function CompOffPageClient({
                       runAction(compOffEarnActionLabel(editingRequestId ? "update" : "submit"), submitEarn)
                     }
                   >
-                    {editingRequestId ? "Save Earn Request" : "Submit Earn Request"}
+                    {actionLoading
+                      ? editingRequestId
+                        ? "Saving…"
+                        : "Submitting…"
+                      : editingRequestId
+                        ? "Save Earn Request"
+                        : "Submit Earn Request"}
                   </Button>
                 </div>
 
@@ -1303,11 +1308,13 @@ export function CompOffPageClient({
                       flow === "COMP_OFF_EARN" &&
                       (hasManagerAccess || isAssignedEarnManager) &&
                       !isHrOnly &&
+                      finalStatus === "PENDING" &&
                       managerStatus === "PENDING" &&
                       managerRoutedOk;
                     const canManagerActUsage =
                       flow === "COMP_OFF" &&
                       hasManagerAccess &&
+                      finalStatus === "PENDING" &&
                       managerStatus === "PENDING" &&
                       managerRoutedOk;
                     const canHrActUsage =
@@ -1487,6 +1494,11 @@ export function CompOffPageClient({
       <>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>{pageBody}</OnboardingGate>
         {rejectDialog}
+        {actionLoading ? (
+          <WtLoadingOverlay
+            label={actionBusyLabel ? `${actionBusyLabel}…` : "Processing request…"}
+          />
+        ) : null}
         {redirectingToProjects ? <WtLoadingOverlay label="Opening Projects…" /> : null}
       </>
     );
@@ -1498,6 +1510,11 @@ export function CompOffPageClient({
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>{pageBody}</OnboardingGate>
       </DashboardPageShell>
       {rejectDialog}
+      {actionLoading ? (
+        <WtLoadingOverlay
+          label={actionBusyLabel ? `${actionBusyLabel}…` : "Processing request…"}
+        />
+      ) : null}
       {redirectingToProjects ? <WtLoadingOverlay label="Opening Projects…" /> : null}
     </>
   );

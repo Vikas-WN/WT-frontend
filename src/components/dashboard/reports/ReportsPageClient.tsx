@@ -26,6 +26,11 @@ import { AccountManagerSelect } from "@/components/allocation/AccountManagerSele
 import { normalizePickerEmail } from "@/utils/learning/onboardOptions";
 import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
 import { BenchAgingReportTable } from "@/components/reports/BenchAgingReportTable";
+import { WorkforceReportCharts } from "@/components/reports/WorkforceReportCharts";
+import { UtilizationReportCharts } from "@/components/reports/UtilizationReportCharts";
+import { ComplianceReportCharts } from "@/components/reports/ComplianceReportCharts";
+import { BgvReportCharts } from "@/components/reports/BgvReportCharts";
+import { SkillReportCharts } from "@/components/reports/SkillReportCharts";
 import {
   countPeopleOnBench,
   mergeBenchAgingWithInvestment,
@@ -3248,6 +3253,11 @@ export function ReportsPageClient() {
               <div className="mt-6 space-y-4">
                             {activeSection === "reports-workforce" ? (
                               <div className="space-y-4">
+                                <WorkforceReportCharts
+                                  headcountRows={headcountBreakdown}
+                                  roleBillingRows={roleBillingRows}
+                                  experienceRows={experienceBandRows}
+                                />
                                 <DataTable
                                   title="Headcount Distribution"
                                   columns={["department", "designation", "billing_type", "total_headcount"]}
@@ -3289,6 +3299,7 @@ export function ReportsPageClient() {
                               </div>
                             ) : activeSection === "reports-section-2" ? (
                               <div className="space-y-4">
+                                <UtilizationReportCharts rows={utilizationByDepartmentRows} />
                                 <DataTable
                                   title="Overall Utilization Table"
                                   columns={[
@@ -3336,6 +3347,7 @@ export function ReportsPageClient() {
                               />
                             ) : activeSection === "reports-section-4" ? (
                               <div className="space-y-4">
+                                <SkillReportCharts rows={skillInventoryRows} />
                                 <DataTable
                                   title="Skill Inventory Report"
                                   columns={[
@@ -3360,6 +3372,7 @@ export function ReportsPageClient() {
                               />
                             ) : activeSection === "reports-section-6" ? (
                               <div className="space-y-4">
+                                <ComplianceReportCharts rows={contractDistributionRows} />
                                 <DataTable
                                   title="Contract Distribution"
                                   columns={["employment_type", "count", "workforce_percent"]}
@@ -3395,6 +3408,7 @@ export function ReportsPageClient() {
                                     onChange={(v) => setBgvReportReferenceFilter(v)}
                                   />
                                 </div>
+                                <BgvReportCharts rows={bgvDashboardRows} />
                                 <DataTable
                                   title="BGV Status Dashboard"
                                   columns={["employee", "role", "consent", "identity", "employment", "overall_status"]}

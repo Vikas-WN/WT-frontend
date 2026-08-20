@@ -13,8 +13,14 @@ import {
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { SelectField } from "@/components/dashboard/ui/forms";
+import { ReportBarChart } from "@/components/reports/charts/ReportBarChart";
+import { ReportPieChart } from "@/components/reports/charts/ReportPieChart";
 import { prepareTableForDisplay } from "@/utils/tableDisplay";
 import { formatUILabel } from "@/utils/titleCase";
+import {
+  aggregateNumericByKey,
+  rowsToBarSeries,
+} from "@/utils/reports/reportChartData";
 
 const COLUMN_LABELS: Record<string, string> = {
   fy_start_year: "FY start year",
@@ -198,6 +204,47 @@ export function AttritionRetentionReports({
     (_, idx) => String(2019 + idx)
   );
 
+  const voluntarySplit = useMemo(() => {
+    const voluntaryCount = Number(voluntary?.voluntary_count ?? 0);
+    const involuntaryCount = Number(voluntary?.involuntary_count ?? 0);
+    return [
+      { name: "Voluntary", value: Number.isFinite(voluntaryCount) ? voluntaryCount : 0 },
+      { name: "Involuntary", value: Number.isFinite(involuntaryCount) ? involuntaryCount : 0 },
+    ].filter((slice) => slice.value > 0);
+  }, [voluntary]);
+
+  const roleChartData = useMemo(
+    () =>
+      aggregateNumericByKey(roleWiseRows, "role_or_designation", "exit_count", {
+        limit: 8,
+      }),
+    [roleWiseRows]
+  );
+
+  const managerChartData = useMemo(
+    () =>
+      rowsToBarSeries(managerWiseRows, "reporting_manager", [
+        { key: "exit_count", name: "Exits" },
+      ], { limit: 8 }),
+    [managerWiseRows]
+  );
+
+  const skillChartData = useMemo(
+    () =>
+      aggregateNumericByKey(criticalSkillRows, "critical_skill", "exit_count", {
+        limit: 8,
+      }),
+    [criticalSkillRows]
+  );
+
+  const tenureChartData = useMemo(
+    () =>
+      rowsToBarSeries(tenureBucketRows, "tenure_bucket", [
+        { key: "number_of_employees", name: "Employees" },
+      ], { limit: 10 }),
+    [tenureBucketRows]
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -266,6 +313,50 @@ export function AttritionRetentionReports({
           <ReportMetricCard label="Total" value={formatCell("total_count", voluntary?.total_count)} />
         </div>
       </section>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ReportPieChart
+          title="Exit Type Mix"
+          description="Share of voluntary vs involuntary exits"
+          data={voluntarySplit}
+          emptyLabel="No voluntary / involuntary split for this FY."
+        />
+        <ReportBarChart
+          title="Exits by Role"
+          description="Top roles by exit count"
+          data={roleChartData.map((d) => ({ name: d.name, exit_count: d.value }))}
+          categoryKey="name"
+          series={[{ dataKey: "exit_count", name: "Exits" }]}
+          layout="vertical"
+          emptyLabel="No role-wise exits for this FY."
+        />
+        <ReportBarChart
+          title="Exits by Manager"
+          description="Top reporting managers by exit count"
+          data={managerChartData}
+          categoryKey="name"
+          series={[{ dataKey: "exit_count", name: "Exits" }]}
+          layout="vertical"
+          emptyLabel="No manager-wise exits for this FY."
+        />
+        <ReportBarChart
+          title="Critical Skill Exits"
+          description="Exits tagged with a critical skill"
+          data={skillChartData.map((d) => ({ name: d.name, exit_count: d.value }))}
+          categoryKey="name"
+          series={[{ dataKey: "exit_count", name: "Exits", color: "#d97706" }]}
+          layout="vertical"
+          emptyLabel="No critical-skill exits for this FY."
+        />
+        <ReportBarChart
+          title="Tenure at Exit"
+          description="Employee count by tenure bucket"
+          data={tenureChartData}
+          categoryKey="name"
+          series={[{ dataKey: "number_of_employees", name: "Employees", color: "#0d9488" }]}
+          emptyLabel="No tenure bucket data for this FY."
+        />
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <ReportTableCard

@@ -25,6 +25,7 @@ const TABLE_COLUMNS = [
   "Email",
   "Resume",
   "Job Position",
+  "ATS Score",
   "Status",
   "Referred Date",
 ] as const;
@@ -55,6 +56,41 @@ function ResumeLink({ url }: { url: string | null }) {
       <ExternalLink className="size-3" />
     </a>
   );
+}
+
+function AtsScoreBadge({
+  score,
+  ready,
+}: {
+  score: number | null;
+  ready: boolean;
+}) {
+  const base =
+    "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium";
+
+  if (!ready) {
+    return (
+      <span
+        className={`${base} gap-1 bg-wt-surface-2 text-wt-text-muted`}
+        title="ATS scoring in progress"
+      >
+        Scoring…
+      </span>
+    );
+  }
+
+  if (score == null) {
+    return <span className="text-sm text-wt-text-faint">—</span>;
+  }
+
+  const tone =
+    score >= 70
+      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+      : score >= 40
+        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+
+  return <span className={`${base} ${tone}`}>{score}/100</span>;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -198,6 +234,9 @@ export function MyReferralsTable({
                 </TableCell>
                 <TableCell className={`${WT_TABLE_CELL_CLASS} text-wt-text`}>
                   {r.job_title}
+                </TableCell>
+                <TableCell className={WT_TABLE_CELL_CLASS}>
+                  <AtsScoreBadge score={r.ats_score} ready={r.ats_score_ready} />
                 </TableCell>
                 <TableCell className={WT_TABLE_CELL_CLASS}>
                   <StatusBadge status={r.status} />

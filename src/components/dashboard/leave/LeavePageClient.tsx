@@ -1971,7 +1971,13 @@ export function LeavePageClient() {
                                               })
                                             }
                                           >
-                                            {editingLeaveRequestId ? "Save Changes" : "Submit Request"}
+                                            {actionLoading
+                                              ? editingLeaveRequestId
+                                                ? "Saving…"
+                                                : "Submitting…"
+                                              : editingLeaveRequestId
+                                                ? "Save Changes"
+                                                : "Submit Request"}
                                           </Button>
                                           {editingLeaveRequestId ? (
                                             <Button variant="ghost" type="button" className="px-6 h-10 font-medium" onClick={() => {
