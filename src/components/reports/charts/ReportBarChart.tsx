@@ -61,13 +61,16 @@ export function ReportBarChart({
   const isVertical = layout === "vertical";
 
   return (
-    <ReportChartCard title={title} description={description}>
-      <div style={{ width: "100%", height }}>
+    <ReportChartCard title={title} description={description} className="min-w-0">
+      <div
+        className="w-full min-w-0 h-[220px] sm:h-[260px] lg:h-[280px]"
+        style={height !== 280 ? { height } : undefined}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
             layout={isVertical ? "vertical" : "horizontal"}
-            margin={{ top: 8, right: 12, left: 4, bottom: 8 }}
+            margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
           >
             <CartesianGrid stroke={REPORT_CHART_GRID} strokeDasharray="3 3" vertical={!isVertical} />
             {isVertical ? (
@@ -82,8 +85,8 @@ export function ReportBarChart({
                 <YAxis
                   type="category"
                   dataKey={categoryKey}
-                  width={110}
-                  tick={{ fill: REPORT_CHART_MUTED, fontSize: 11 }}
+                  width={88}
+                  tick={{ fill: REPORT_CHART_MUTED, fontSize: 10 }}
                   axisLine={false}
                   tickLine={false}
                 />
@@ -92,7 +95,7 @@ export function ReportBarChart({
               <>
                 <XAxis
                   dataKey={categoryKey}
-                  tick={{ fill: REPORT_CHART_MUTED, fontSize: 11 }}
+                  tick={{ fill: REPORT_CHART_MUTED, fontSize: 10 }}
                   axisLine={false}
                   tickLine={false}
                   interval={0}
@@ -104,7 +107,7 @@ export function ReportBarChart({
                   tick={{ fill: REPORT_CHART_MUTED, fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
-                  width={44}
+                  width={40}
                   tickFormatter={(v) => `${v}${valueSuffix}`}
                 />
               </>

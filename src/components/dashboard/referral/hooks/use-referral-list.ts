@@ -18,9 +18,9 @@ export interface ReferralListItem {
   created_at: string; // isoformat from backend
 }
 
-/** Only poll freshly submitted referrals that are still scoring. */
+/** Soft UI refresh while background ATS worker finishes recent scores. */
 const ATS_POLL_WINDOW_MS = 90_000;
-const ATS_POLL_INTERVAL_MS = 3_000;
+const ATS_POLL_INTERVAL_MS = 4_000;
 
 function mapReferral(raw: Record<string, unknown>): ReferralListItem {
   return {

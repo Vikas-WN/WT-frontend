@@ -33,7 +33,7 @@ export function SkillReportCharts({ rows }: Props) {
   if (!rows.length) return null;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-4 min-w-0 lg:grid-cols-2">
       <ReportBarChart
         title="Skill Inventory by Department"
         description="People represented in the loaded inventory by department"

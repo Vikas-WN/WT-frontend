@@ -51,9 +51,9 @@ function ResumeLink({ url }: { url: string | null }) {
       rel="noopener noreferrer"
       className="inline-flex items-center gap-1 text-sm font-medium text-[var(--wt-brand)] hover:underline"
     >
-      <FileText className="size-3.5" />
+      <FileText className="size-3.5 shrink-0" />
       View
-      <ExternalLink className="size-3" />
+      <ExternalLink className="size-3 shrink-0" />
     </a>
   );
 }
@@ -109,6 +109,42 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`${base} bg-wt-surface-2 text-wt-text-muted`}>{status}</span>;
 }
 
+function ReferralMobileCard({ referral }: { referral: ReferralListItem }) {
+  return (
+    <article className="rounded-xl border border-wt-border bg-wt-surface-1 p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-medium text-wt-text truncate">{referral.candidate_name}</p>
+          <p className="text-sm text-wt-text-muted truncate">{referral.candidate_email}</p>
+        </div>
+        <AtsScoreBadge score={referral.ats_score} ready={referral.ats_score_ready} />
+      </div>
+      <dl className="mt-3 grid gap-2 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <dt className="text-wt-text-muted shrink-0">Role</dt>
+          <dd className="text-right text-wt-text truncate">{referral.job_title || "—"}</dd>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <dt className="text-wt-text-muted shrink-0">Status</dt>
+          <dd>
+            <StatusBadge status={referral.status} />
+          </dd>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <dt className="text-wt-text-muted shrink-0">Referred</dt>
+          <dd className="text-wt-text">{formatDate(referral.created_at)}</dd>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <dt className="text-wt-text-muted shrink-0">Resume</dt>
+          <dd>
+            <ResumeLink url={referral.resume_url} />
+          </dd>
+        </div>
+      </dl>
+    </article>
+  );
+}
+
 export function MyReferralsTable({
   items,
   total,
@@ -159,9 +195,9 @@ export function MyReferralsTable({
   if (error) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-destructive">{error}</p>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={onRefresh}>
+          <Button variant="outline" size="sm" className="gap-1.5 self-start" onClick={onRefresh}>
             <RefreshCw className="size-3.5" />
             Retry
           </Button>
@@ -189,15 +225,15 @@ export function MyReferralsTable({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 min-w-0">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-wt-text-muted">
           {total} referral{total !== 1 ? "s" : ""} total
         </p>
         <Button
           variant="outline"
           size="sm"
-          className="gap-1.5"
+          className="gap-1.5 self-start sm:self-auto"
           onClick={onRefresh}
           disabled={loading}
         >
@@ -206,49 +242,59 @@ export function MyReferralsTable({
         </Button>
       </div>
 
-      <ScrollableTable maxHeightClass="max-h-[min(68vh,640px)]">
-        <WtTable className="w-full">
-          <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-            <TableRow className="hover:bg-transparent">
-              {TABLE_COLUMNS.map((col) => (
-                <TableHead key={col} className={WT_TABLE_HEAD_CLASS}>
-                  {col}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {pageItems.map((r) => (
-              <TableRow
-                key={r.id}
-                className="transition hover:bg-blue-50/40 dark:hover:bg-wt-surface-2"
-              >
-                <TableCell className={`${WT_TABLE_CELL_CLASS} font-medium text-wt-text`}>
-                  {r.candidate_name}
-                </TableCell>
-                <TableCell className={WT_TABLE_CELL_CLASS}>
-                  {r.candidate_email}
-                </TableCell>
-                <TableCell className={WT_TABLE_CELL_CLASS}>
-                  <ResumeLink url={r.resume_url} />
-                </TableCell>
-                <TableCell className={`${WT_TABLE_CELL_CLASS} text-wt-text`}>
-                  {r.job_title}
-                </TableCell>
-                <TableCell className={WT_TABLE_CELL_CLASS}>
-                  <AtsScoreBadge score={r.ats_score} ready={r.ats_score_ready} />
-                </TableCell>
-                <TableCell className={WT_TABLE_CELL_CLASS}>
-                  <StatusBadge status={r.status} />
-                </TableCell>
-                <TableCell className={WT_TABLE_CELL_CLASS}>
-                  {formatDate(r.created_at)}
-                </TableCell>
+      {/* Mobile / narrow: card stack */}
+      <div className="grid gap-3 md:hidden">
+        {pageItems.map((r) => (
+          <ReferralMobileCard key={r.id} referral={r} />
+        ))}
+      </div>
+
+      {/* Tablet / desktop: table */}
+      <div className="hidden md:block min-w-0">
+        <ScrollableTable maxHeightClass="max-h-[min(68vh,640px)]">
+          <WtTable className="w-full min-w-[720px]">
+            <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+              <TableRow className="hover:bg-transparent">
+                {TABLE_COLUMNS.map((col) => (
+                  <TableHead key={col} className={WT_TABLE_HEAD_CLASS}>
+                    {col}
+                  </TableHead>
+                ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </WtTable>
-      </ScrollableTable>
+            </TableHeader>
+            <TableBody>
+              {pageItems.map((r) => (
+                <TableRow
+                  key={r.id}
+                  className="transition hover:bg-blue-50/40 dark:hover:bg-wt-surface-2"
+                >
+                  <TableCell className={`${WT_TABLE_CELL_CLASS} font-medium text-wt-text`}>
+                    {r.candidate_name}
+                  </TableCell>
+                  <TableCell className={WT_TABLE_CELL_CLASS}>
+                    {r.candidate_email}
+                  </TableCell>
+                  <TableCell className={WT_TABLE_CELL_CLASS}>
+                    <ResumeLink url={r.resume_url} />
+                  </TableCell>
+                  <TableCell className={`${WT_TABLE_CELL_CLASS} text-wt-text`}>
+                    {r.job_title}
+                  </TableCell>
+                  <TableCell className={WT_TABLE_CELL_CLASS}>
+                    <AtsScoreBadge score={r.ats_score} ready={r.ats_score_ready} />
+                  </TableCell>
+                  <TableCell className={WT_TABLE_CELL_CLASS}>
+                    <StatusBadge status={r.status} />
+                  </TableCell>
+                  <TableCell className={WT_TABLE_CELL_CLASS}>
+                    {formatDate(r.created_at)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </WtTable>
+        </ScrollableTable>
+      </div>
 
       <ListPagination
         page={page}

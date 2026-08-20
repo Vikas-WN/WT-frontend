@@ -38,7 +38,7 @@ export function BenchAgingReportTable({ rows, peopleOnBench, loading = false }: 
       </div>
 
       {!loading && rows.length > 0 ? (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 min-w-0 lg:grid-cols-2">
           <ReportPieChart
             title="Bench Aging Buckets"
             description="People grouped by days on bench"

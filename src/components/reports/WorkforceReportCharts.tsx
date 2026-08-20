@@ -69,7 +69,7 @@ export function WorkforceReportCharts({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-4 min-w-0 lg:grid-cols-2">
       <ReportBarChart
         title="Headcount by Department"
         description="Total headcount aggregated from the distribution table"

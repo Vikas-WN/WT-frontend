@@ -44,8 +44,11 @@ export function ReportPieChart({
   const total = slices.reduce((sum, s) => sum + s.value, 0);
 
   return (
-    <ReportChartCard title={title} description={description}>
-      <div style={{ width: "100%", height }}>
+    <ReportChartCard title={title} description={description} className="min-w-0">
+      <div
+        className="w-full min-w-0 h-[220px] sm:h-[260px] lg:h-[280px]"
+        style={height !== 280 ? { height } : undefined}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -54,8 +57,8 @@ export function ReportPieChart({
               nameKey="name"
               cx="50%"
               cy="46%"
-              innerRadius={58}
-              outerRadius={88}
+              innerRadius={48}
+              outerRadius={78}
               paddingAngle={2}
               stroke="var(--wt-surface-1)"
               strokeWidth={2}

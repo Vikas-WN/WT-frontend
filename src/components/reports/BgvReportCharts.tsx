@@ -27,7 +27,7 @@ export function BgvReportCharts({ rows }: Props) {
   if (!rows.length) return null;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-4 min-w-0 lg:grid-cols-2">
       <ReportPieChart
         title="BGV Overall Status"
         description="Cases by overall verification status (current filters)"

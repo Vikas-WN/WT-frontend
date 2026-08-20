@@ -267,7 +267,7 @@ export function AttritionRetentionReports({
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 min-w-0 sm:grid-cols-2 xl:grid-cols-4">
         <ReportMetricCard
           label="Overall attrition"
           value={formatCell("attrition_percent", overall?.attrition_percent)}
@@ -299,7 +299,7 @@ export function AttritionRetentionReports({
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-4 sm:p-5">
         <h4 className="text-sm font-semibold mb-4">Voluntary vs Involuntary</h4>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 min-w-0 sm:grid-cols-3">
           <ReportMetricCard
             label="Voluntary"
             value={formatCell("voluntary_count", voluntary?.voluntary_count)}
@@ -314,7 +314,7 @@ export function AttritionRetentionReports({
         </div>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 min-w-0 lg:grid-cols-2">
         <ReportPieChart
           title="Exit Type Mix"
           description="Share of voluntary vs involuntary exits"
@@ -358,7 +358,7 @@ export function AttritionRetentionReports({
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 min-w-0 lg:grid-cols-2">
         <ReportTableCard
           title="Role-wise attrition"
           description="Exits grouped by role or designation"
