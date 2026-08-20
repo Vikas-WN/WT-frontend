@@ -18,6 +18,10 @@ export interface ReferralListItem {
   created_at: string; // isoformat from backend
 }
 
+/** Only poll freshly submitted referrals that are still scoring. */
+const ATS_POLL_WINDOW_MS = 90_000;
+const ATS_POLL_INTERVAL_MS = 3_000;
+
 function mapReferral(raw: Record<string, unknown>): ReferralListItem {
   return {
     id: Number(raw.id ?? 0),
@@ -32,6 +36,13 @@ function mapReferral(raw: Record<string, unknown>): ReferralListItem {
     ats_score_ready: Boolean(raw.ats_score_ready),
     created_at: String(raw.created_at ?? ""),
   };
+}
+
+function isRecentPendingAts(item: ReferralListItem, nowMs: number): boolean {
+  if (item.ats_score_ready) return false;
+  const createdMs = Date.parse(item.created_at);
+  if (Number.isNaN(createdMs)) return false;
+  return nowMs - createdMs < ATS_POLL_WINDOW_MS;
 }
 
 type UseReferralListResult = {
@@ -62,8 +73,9 @@ export function useReferralList(referrerEmail: string): UseReferralListResult {
     staleTime: 30_000,
     refetchInterval: (query) => {
       const items = query.state.data?.items ?? [];
-      const anyScoring = items.some((item) => !item.ats_score_ready);
-      return anyScoring ? 5_000 : false;
+      const now = Date.now();
+      const shouldPoll = items.some((item) => isRecentPendingAts(item, now));
+      return shouldPoll ? ATS_POLL_INTERVAL_MS : false;
     },
   });
 
