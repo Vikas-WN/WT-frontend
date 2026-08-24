@@ -1039,17 +1039,37 @@ export function LeavePageClient() {
       totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
     } else if (scope === "team") {
       const normalizedType = String(requestType || "ALL").trim().toUpperCase();
+      const requestRowKey = (row: Record<string, unknown>) =>
+        String(
+          row.user_request_id ??
+            row.userRequestId ??
+            row.request_id ??
+            row.requestId ??
+            row.id ??
+            Math.random()
+        );
 
-      // Custom WFH is HR-approved; load org-wide for HR without requiring portfolio emails.
-      if (normalizedType === "WFH_EXCEPTION" && hasHrAccess) {
-        const result = await fetchPaginatedScopedUserRequests({
-          fromDate: from,
-          toDate: to,
-          requestType: "WFH_EXCEPTION",
-          page: 0,
-          size: Math.max(size, 200),
-        });
-        rows = applyListSort(result.rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
+      if (hasHrAccess) {
+        // Unallocated / talent-pool employees only. Project-assigned leave is All Employee Requests.
+        const hrTeamTypes =
+          normalizedType === "ALL"
+            ? (["LEAVE", "OPTIONAL", "WFH", "COMP_OFF", "WFH_EXCEPTION"] as const)
+            : ([normalizedType] as const);
+        const results = await Promise.all(
+          hrTeamTypes.map((type) =>
+            fetchPaginatedScopedUserRequests({
+              fromDate: from,
+              toDate: to,
+              requestType: type,
+              page: 0,
+              size: Math.max(size, 200),
+              hrTeamScope: true,
+            })
+          )
+        );
+        const merged = results.flatMap((result) => result.rows);
+        rows = Array.from(new Map(merged.map((row) => [requestRowKey(row), row] as const)).values());
+        rows = applyListSort(rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
         totalElements = rows.length;
         totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
       } else {
@@ -1068,8 +1088,7 @@ export function LeavePageClient() {
               normalizedType === "COMP_OFF"
             ? ([normalizedType] as const)
             : ([] as const);
-      const canLoadManagerInbox =
-        hasManagerAccess || hasDmAccess || hasHrAccess || hasPrimaryLeaveInbox;
+      const canLoadManagerInbox = hasManagerAccess || hasDmAccess || hasPrimaryLeaveInbox;
 
       const portfolioPromise = emailCsv
         ? fetchPaginatedScopedUserRequests({
@@ -1110,59 +1129,19 @@ export function LeavePageClient() {
               totalElements: 0,
             });
 
-      // Bench / HR-department leave & WFH for HR Team Requests.
-      const hrTeamScopePromise =
-        wantsManagerInbox && hasHrAccess && managerInboxTypes.length
-          ? Promise.all(
-              managerInboxTypes.map((type) =>
-                fetchPaginatedScopedUserRequests({
-                  fromDate: from,
-                  toDate: to,
-                  requestType: type,
-                  page: 0,
-                  size: 200,
-                  hrTeamScope: true,
-                })
-              )
-            ).then((results) => ({
-              rows: results.flatMap((result) => result.rows),
-              totalPages: 1,
-              totalElements: results.reduce((sum, result) => sum + result.totalElements, 0),
-            }))
-          : Promise.resolve({
-              rows: [] as Array<Record<string, unknown>>,
-              totalPages: 0,
-              totalElements: 0,
-            });
-
-      const [portfolioRes, leaveInboxRes, hrTeamRes] = await Promise.all([
+      const [portfolioRes, leaveInboxRes] = await Promise.all([
         portfolioPromise,
         managerInboxPromise,
-        hrTeamScopePromise,
       ]);
-      if (wantsManagerInbox && (canLoadManagerInbox || hasHrAccess)) {
-        const merged = [...portfolioRes.rows, ...leaveInboxRes.rows, ...hrTeamRes.rows];
+      if (wantsManagerInbox && canLoadManagerInbox) {
+        const merged = [...portfolioRes.rows, ...leaveInboxRes.rows];
         rows = Array.from(
-          new Map(
-            merged.map((row) => {
-              const key = String(
-                row.user_request_id ??
-                  row.userRequestId ??
-                  row.request_id ??
-                  row.requestId ??
-                  row.id ??
-                  Math.random()
-              );
-              return [key, row] as const;
-            })
-          ).values()
+          new Map(merged.map((row) => [requestRowKey(row), row] as const)).values()
         );
-        // Non-primary managers must not see leave/WFH in Team Requests (HR keeps full list).
         rows = filterTeamRequestsForPrimaryManager(rows, {
           actorEmail: userEmail,
           hasHrAccess,
         });
-        // Newest submissions first for Team Requests.
         rows = applyListSort(rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
         totalElements = rows.length;
         totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
@@ -1175,35 +1154,20 @@ export function LeavePageClient() {
         totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
       }
 
-      // Comp-off earn is not on /userRequest — merge from /comp-off/earn when viewing All types.
-      if (normalizedType === "ALL" && (hasManagerAccess || hasHrAccess || hasDmAccess || hasPrimaryLeaveInbox)) {
+      if (normalizedType === "ALL" && (hasManagerAccess || hasDmAccess || hasPrimaryLeaveInbox)) {
         try {
-          const managerOnly =
-            !hasHrAccess && (hasManagerAccess || hasDmAccess || hasPrimaryLeaveInbox);
           const earnRes = await compOffService.listEarnRequests({
             fromDate: from,
             toDate: to,
             page: 0,
             size: Math.max(size, 200),
-            managerOnly,
+            managerOnly: true,
           });
           const earnRows = compOffService.parseRequestRows(earnRes).map(mapEarnListRow);
           if (earnRows.length) {
             const merged = [...rows, ...earnRows];
             rows = Array.from(
-              new Map(
-                merged.map((row) => {
-                  const key = String(
-                    row.user_request_id ??
-                      row.userRequestId ??
-                      row.request_id ??
-                      row.requestId ??
-                      row.id ??
-                      Math.random()
-                  );
-                  return [key, row] as const;
-                })
-              ).values()
+              new Map(merged.map((row) => [requestRowKey(row), row] as const)).values()
             );
             rows = applyListSort(rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
             totalElements = rows.length;
@@ -1213,45 +1177,9 @@ export function LeavePageClient() {
           /* keep leave/WFH rows */
         }
       }
-
-      // Merge Custom WFH into All types for HR (portfolio-only ALL can miss org-wide exceptions).
-      if (normalizedType === "ALL" && hasHrAccess) {
-        try {
-          const exceptionRes = await fetchPaginatedScopedUserRequests({
-            fromDate: from,
-            toDate: to,
-            requestType: "WFH_EXCEPTION",
-            page: 0,
-            size: Math.max(size, 200),
-          });
-          if (exceptionRes.rows.length) {
-            const merged = [...rows, ...exceptionRes.rows];
-            rows = Array.from(
-              new Map(
-                merged.map((row) => {
-                  const key = String(
-                    row.user_request_id ??
-                      row.userRequestId ??
-                      row.request_id ??
-                      row.requestId ??
-                      row.id ??
-                      Math.random()
-                  );
-                  return [key, row] as const;
-                })
-              ).values()
-            );
-            rows = applyListSort(rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
-            totalElements = rows.length;
-            totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
-          }
-        } catch {
-          /* keep existing rows */
-        }
       }
-      } // end else (non-WFH_EXCEPTION HR path)
     } else if (hasHrAccess) {
-      // Load a full window for client-side pagination (same as team merge path).
+      // Project-allocated employees only (backend allocated_requestors_only).
       const result = await fetchPaginatedScopedUserRequests({
         fromDate: from,
         toDate: to,
@@ -1360,8 +1288,7 @@ export function LeavePageClient() {
     [employeeRequestFilters, hasHrAccess, hasManagerAccess, hasDmAccess, hasPrimaryLeaveInbox, loadScopeEmployees, userEmail]
   );
 
-  /** All Employee Requests (HR org view) is read-only — no Actions column. */
-  const showTeamActionsColumn = leaveSubTab !== "org";
+  const showTeamActionsColumn = true;
   const teamTableColCount = showTeamActionsColumn ? 5 : 4;
 
   const fetchTeamRequests = useCallback(
@@ -1820,9 +1747,7 @@ export function LeavePageClient() {
                                             setLeaveRequestForm((p) => ({
                                               ...p,
                                               request_from_date: v,
-                                              request_to_date: p.is_half_day
-                                                ? v
-                                                : p.request_to_date || v,
+                                              request_to_date: v,
                                             }))
                                           }
                                           disabled={actionLoading}
@@ -1830,21 +1755,15 @@ export function LeavePageClient() {
                                         <DatePicker
                                           label="To Date"
                                           required
-                                          value={
-                                            leaveRequestForm.is_half_day
-                                              ? leaveRequestForm.request_from_date
-                                              : leaveRequestForm.request_to_date
-                                          }
-                                          onChange={(v) => {
-                                            if (leaveRequestForm.is_half_day) return;
-                                            setLeaveRequestForm((p) => ({
-                                              ...p,
-                                              request_to_date: v,
-                                            }));
-                                          }}
-                                          disabled={actionLoading || leaveRequestForm.is_half_day}
+                                          value={leaveRequestForm.request_from_date}
+                                          onChange={() => undefined}
+                                          disabled
                                         />
                                       </div>
+                                      <p className="mt-3 text-xs text-muted-foreground">
+                                        Regular WFH is limited to 1 day per week. Use the custom exception
+                                        link above for additional days.
+                                      </p>
                                       <div className="mt-4">
                                         <label className="flex items-center gap-2 text-sm cursor-pointer">
                                           <Checkbox
@@ -1854,10 +1773,7 @@ export function LeavePageClient() {
                                               setLeaveRequestForm((p) => ({
                                                 ...p,
                                                 is_half_day: checked === true,
-                                                request_to_date:
-                                                  checked === true
-                                                    ? p.request_from_date
-                                                    : p.request_to_date,
+                                                request_to_date: p.request_from_date,
                                               }))
                                             }
                                             disabled={actionLoading}
@@ -1910,19 +1826,9 @@ export function LeavePageClient() {
                                                 const fromDate = normalizeToApiDate(
                                                   leaveRequestForm.request_from_date.trim()
                                                 );
-                                                const toDate = leaveRequestForm.is_half_day
-                                                  ? fromDate
-                                                  : normalizeToApiDate(
-                                                      leaveRequestForm.request_to_date.trim()
-                                                    );
+                                                const toDate = fromDate;
                                                 if (!fromDate || !parseApiDate(fromDate)) {
                                                   throw new Error("Please provide a valid From date (dd/mm/yyyy).");
-                                                }
-                                                if (!toDate || !parseApiDate(toDate)) {
-                                                  throw new Error("Please provide a valid To date (dd/mm/yyyy).");
-                                                }
-                                                if (parseApiDate(toDate)! < parseApiDate(fromDate)!) {
-                                                  throw new Error("Start Date cannot be after the End Date.");
                                                 }
                                                 const comments = leaveRequestForm.comments.trim();
                                                 if (!comments) {
@@ -2026,9 +1932,10 @@ export function LeavePageClient() {
                                       const rowType = String(
                                         row.request_type ?? row.requestType ?? "WFH"
                                       );
+                                      const fromDate = String(row.request_from_date ?? row.requestFromDate ?? "");
                                       setLeaveRequestForm({
-                                        request_from_date: String(row.request_from_date ?? row.requestFromDate ?? ""),
-                                        request_to_date: String(row.request_to_date ?? row.requestToDate ?? ""),
+                                        request_from_date: fromDate,
+                                        request_to_date: fromDate,
                                         request_type: rowType,
                                         comments: String(row.comments ?? ""),
                                         is_half_day: Boolean(row.is_half_day ?? row.isHalfDay ?? false),
@@ -2416,28 +2323,6 @@ export function LeavePageClient() {
                                 placeholder="Search by employee name…"
                                 className="h-11 w-full min-w-0 rounded-xl border border-wt-border bg-wt-surface-1 px-3.5 text-sm text-wt-text outline-none transition-colors placeholder:text-wt-text-faint focus-visible:border-[var(--wt-brand)] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)] dark:border-wt-border-md dark:bg-wt-surface-1 sm:max-w-md"
                               />
-                              {teamLeavePagination.totalItems > 0 ? (
-                                <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
-                                  <span className="text-xs text-wt-text-muted">Rows</span>
-                                  <select
-                                    aria-label="Rows per page"
-                                    className="h-9 rounded-lg border border-wt-border bg-wt-surface-1 px-2 text-xs tabular-nums text-wt-text outline-none focus-visible:border-[var(--wt-brand)]"
-                                    value={teamLeavePagination.pageSize}
-                                    onChange={(event) => {
-                                      const next = Number(event.target.value);
-                                      if (Number.isFinite(next) && next > 0) {
-                                        teamLeavePagination.setPageSize(next);
-                                      }
-                                    }}
-                                  >
-                                    {teamLeavePagination.pageSizeOptions.map((size) => (
-                                      <option key={size} value={size}>
-                                        {size}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              ) : null}
                             </div>
                           </div>
                         </div>
@@ -2545,7 +2430,6 @@ export function LeavePageClient() {
                                     const rowRequestType = rowRecord.request_type ?? rowRecord.requestType;
                                     const isEarnRequest = isCompOffEarnRequestType(rowRequestType);
                                     const hrCanActOnRow =
-                                      leaveSubTab !== "org" &&
                                       status === "PENDING" &&
                                       !isEarnRequest &&
                                       canHrShowTeamRequestActions(rowRecord, {
@@ -2749,11 +2633,14 @@ export function LeavePageClient() {
                                                               requestType: rowRequestType,
                                                             }
                                                           );
-                                                          // Actions column is team-only (hidden on org / All Employee Requests).
-                                                          // Local row is already patched; refresh lists in the background.
                                                           invalidateTeamCache();
                                                           invalidateLeaveBalance();
-                                                          void loadEmployeeRequestsForApprover("team", 0, 200, true);
+                                                          void loadEmployeeRequestsForApprover(
+                                                            leaveSubTab === "org" ? "org" : "team",
+                                                            0,
+                                                            200,
+                                                            true
+                                                          );
                                                         } finally {
                                                           setTeamStatusUpdatingId(null);
                                                         }
@@ -2808,7 +2695,7 @@ export function LeavePageClient() {
                                                             invalidateTeamCache();
                                                             invalidateLeaveBalance();
                                                             void loadEmployeeRequestsForApprover(
-                                                              "team",
+                                                              leaveSubTab === "org" ? "org" : "team",
                                                               0,
                                                               200,
                                                               true
