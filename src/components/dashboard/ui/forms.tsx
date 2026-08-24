@@ -84,7 +84,7 @@ export function ApiDateField({
   const fieldId = useId();
   const errorId = `${fieldId}-error`;
   const pickerRef = useRef<HTMLInputElement>(null);
-  const fieldError = error ?? apiDateFieldError(value, { fieldLabel: label });
+  const fieldError = error ?? apiDateFieldError(value, { required, fieldLabel: label });
   const invalid = Boolean(fieldError);
 
   function openPicker() {
@@ -178,6 +178,7 @@ export function InputField({
   placeholder,
   disabled = false,
   description,
+  error,
   inputMode,
   pattern,
   autoComplete,
@@ -190,12 +191,14 @@ export function InputField({
   placeholder?: string;
   disabled?: boolean;
   description?: string;
+  error?: string | null;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   pattern?: string;
   autoComplete?: string;
 }) {
   const fieldId = useId();
   const descriptionId = description ? `${fieldId}-description` : undefined;
+  const errorId = error ? `${fieldId}-error` : undefined;
 
   if (type === "date") {
     return (
@@ -220,12 +223,14 @@ export function InputField({
         placeholder={placeholder}
         required={required}
         aria-required={required || undefined}
-        aria-describedby={descriptionId}
         disabled={disabled}
         inputMode={inputMode}
         pattern={pattern}
         autoComplete={autoComplete}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={errorId ?? descriptionId}
       />
+      {error ? <FieldError id={errorId}>{error}</FieldError> : null}
       {description ? (
         <FieldDescription id={descriptionId} className="!mt-1 text-wt-text-muted">
           {description}

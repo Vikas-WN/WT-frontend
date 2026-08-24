@@ -350,12 +350,17 @@ export function isPendingApprovalStage(value: unknown): boolean {
 
 
 export function requestManagerStatus(row: Record<string, unknown>): string {
-
-  return normalizeRequestStatus(
-
+  const managerStatus = normalizeRequestStatus(
     pickRowField(row, "manager_status", "managerStatus") ?? "PENDING"
-
   );
+  const finalStatus = requestFinalStatus(row);
+  if (
+    (finalStatus === "APPROVED" || finalStatus === "REJECTED") &&
+    managerStatus === "PENDING"
+  ) {
+    return finalStatus;
+  }
+  return managerStatus;
 
 }
 

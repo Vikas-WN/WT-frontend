@@ -669,6 +669,31 @@ Query: `search?: string`
 
 ---
 
+## Endpoint: POST /api/v1/allocation/roles
+
+### Description
+Creates an allocation role master value, or returns the existing value when the name
+already exists case-insensitively.
+
+### Request
+Headers: Authorization + JSON
+Body:
+```json
+{
+  "name": "string [required, 1..255]"
+}
+```
+
+### Response
+- `200 OK`: allocation role object
+- `422`: missing or invalid role name
+- `403`: insufficient role
+
+### Authentication & Authorization
+- `ROLE_HR`, `ROLE_ADMIN`
+
+---
+
 ## Endpoint: GET /api/v1/allocation/user
 
 ### Description

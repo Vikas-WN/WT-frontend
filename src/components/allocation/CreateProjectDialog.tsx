@@ -227,9 +227,7 @@ export function CreateProjectDialog({
       return;
     }
     const clientIdRaw = form.client_id.trim();
-    const numericClientId = Number(clientIdRaw);
-    const hasNumericClientId = /^\d+$/.test(clientIdRaw) && Number.isFinite(numericClientId) && numericClientId > 0;
-    if (!hasNumericClientId) {
+    if (!clientIdRaw) {
       showErrorToast("Client is required.");
       return;
     }
@@ -286,38 +284,40 @@ export function CreateProjectDialog({
 
     // Create and edit both manage Project Manager here (Account Manager stays on the client).
     const pmEmail = pmFields.email.trim();
-    if (pmEmail) {
-      const pmStartResult = validateRequiredApiDate(
-        pmFields.start_date.trim() || form.start_date,
-        "Project Manager start date"
+    if (!pmEmail) {
+      showErrorToast("Project Manager is required.");
+      return;
+    }
+    const pmStartResult = validateRequiredApiDate(
+      pmFields.start_date.trim() || form.start_date,
+      "Project Manager start date"
+    );
+    if (!pmStartResult.ok) {
+      showErrorToast(pmStartResult.error);
+      return;
+    }
+    const pmEndResult = validateRequiredApiDate(
+      pmFields.end_date.trim() || form.end_date,
+      "Project Manager end date"
+    );
+    if (!pmEndResult.ok) {
+      showErrorToast(pmEndResult.error);
+      return;
+    }
+    const pmStartDate = pmStartResult.date;
+    const pmEndDate = pmEndResult.date;
+    if (compareApiDates(pmStartDate, pmEndDate) > 0) {
+      showErrorToast("Project Manager start date must be on or before end date.");
+      return;
+    }
+    if (
+      compareApiDates(pmStartDate, startDate) < 0 ||
+      compareApiDates(pmEndDate, endDate) > 0
+    ) {
+      showErrorToast(
+        "Project Manager dates must fall within the project start and end dates."
       );
-      if (!pmStartResult.ok) {
-        showErrorToast(pmStartResult.error);
-        return;
-      }
-      const pmEndResult = validateRequiredApiDate(
-        pmFields.end_date.trim() || form.end_date,
-        "Project Manager end date"
-      );
-      if (!pmEndResult.ok) {
-        showErrorToast(pmEndResult.error);
-        return;
-      }
-      const pmStartDate = pmStartResult.date;
-      const pmEndDate = pmEndResult.date;
-      if (compareApiDates(pmStartDate, pmEndDate) > 0) {
-        showErrorToast("Project Manager start date must be on or before end date.");
-        return;
-      }
-      if (
-        compareApiDates(pmStartDate, startDate) < 0 ||
-        compareApiDates(pmEndDate, endDate) > 0
-      ) {
-        showErrorToast(
-          "Project Manager dates must fall within the project start and end dates."
-        );
-        return;
-      }
+      return;
     }
 
     setLoading(true);
@@ -327,7 +327,7 @@ export function CreateProjectDialog({
         await hrmsService.updateProject(code, {
           project_name: name,
           project_type: form.project_type,
-          client_id: numericClientId,
+          client_id: clientIdRaw,
           start_date: startDate,
           end_date: endDate,
         });
@@ -372,7 +372,7 @@ export function CreateProjectDialog({
         project_code: projectCode,
         project_name: name,
         project_type: DEFAULT_CREATE_PROJECT_TYPE,
-        client_id: numericClientId,
+        client_id: clientIdRaw,
         account_manager_email: accountManagerEmail,
         start_date: startDate,
         end_date: endDate,

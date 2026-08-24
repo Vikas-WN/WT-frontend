@@ -511,6 +511,13 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.allocation.roles, { query: params });
   },
 
+  createAllocationRole(payload: { name: string }) {
+    return apiClient.post<ApiEnvelope<unknown>>(endpoints.allocation.roles, {
+      contentType: "application/json",
+      body: JSON.stringify({ name: payload.name.trim() }),
+    });
+  },
+
   /** GET /allocation/percentages — ROLE_HR | ROLE_ADMIN */
   getAllocationPercentages(params: { designation?: string; role?: string } = {}) {
     const query: Record<string, string> = {};
