@@ -20,7 +20,12 @@ import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { isValidIndiaMobile, isValidPersonName } from "@/utils/dashboard/validation";
 import { validatePersonalEmail } from "@/utils/personalEmail";
 import { validateResumeShareLink } from "@/utils/employeeResume";
-import { createEmptySelfOnboardForm } from "@/utils/selfOnboardFormState";
+import {
+  createEmptySelfOnboardForm,
+  loadSavedOnboardForm,
+  saveOnboardFormDraft,
+  clearOnboardFormDraft,
+} from "@/utils/selfOnboardFormState";
 import { SkillRating } from "@/types/onboard";
 import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
 import { useOnboardOptions } from "@/hooks/useOnboardOptions";
@@ -58,7 +63,7 @@ export function SelfOnboardingPanel({
   onSuccess: () => Promise<void>;
 }) {
   const [formKey, setFormKey] = useState(0);
-  const [form, setForm] = useState(createEmptySelfOnboardForm);
+  const [form, setForm] = useState(() => loadSavedOnboardForm() ?? createEmptySelfOnboardForm());
   const [files, setFiles] = useState<OnboardFiles>(EMPTY_FILES);
   const [dobConfirmed, setDobConfirmed] = useState(false);
   const onboardOptionsQ = useOnboardOptions();
@@ -74,6 +79,10 @@ export function SelfOnboardingPanel({
     }));
   }, [initialPersonalEmail, initialResumeShareLink]);
 
+  useEffect(() => {
+    saveOnboardFormDraft(form);
+  }, [form]);
+
   const priorEmploymentDocsRequired = useMemo(() => {
     const raw = String(form.yoe ?? "").trim().replace(",", ".");
     if (!raw) return false;
@@ -82,6 +91,7 @@ export function SelfOnboardingPanel({
   }, [form.yoe]);
 
   const resetForm = () => {
+    clearOnboardFormDraft();
     setForm(createEmptySelfOnboardForm());
     setFiles(EMPTY_FILES);
     setDobConfirmed(false);

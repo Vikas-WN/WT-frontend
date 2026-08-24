@@ -250,6 +250,7 @@ export function ProfilePageLeanClient() {
       <div className="grid gap-4 sm:grid-cols-2">
         <SelectField
           label="Country Code"
+          required
           value={selfProfileForm.phone_country ?? defaultPhoneCountryIso()}
           options={PHONE_COUNTRY_OPTIONS}
           onChange={(v) =>

@@ -19,6 +19,8 @@ export type SelfOnboardFormState = {
   emergency_contact_number: string;
 };
 
+const STORAGE_KEY = "wt.selfOnboardFormDraft";
+
 export function createEmptySelfOnboardForm(): SelfOnboardFormState {
   return {
     personal_email: "",
@@ -38,4 +40,35 @@ export function createEmptySelfOnboardForm(): SelfOnboardFormState {
     emergency_contact_name: "",
     emergency_contact_number: "",
   };
+}
+
+export function loadSavedOnboardForm(): SelfOnboardFormState | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<SelfOnboardFormState>;
+    if (!parsed || typeof parsed !== "object") return null;
+    return { ...createEmptySelfOnboardForm(), ...parsed };
+  } catch {
+    return null;
+  }
+}
+
+export function saveOnboardFormDraft(form: SelfOnboardFormState): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+  } catch {
+    // Storage full or unavailable — ignore.
+  }
+}
+
+export function clearOnboardFormDraft(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Ignore.
+  }
 }
