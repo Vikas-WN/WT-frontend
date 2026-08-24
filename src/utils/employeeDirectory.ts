@@ -5,7 +5,6 @@ import { formatApiDateDisplay } from "@/utils/apiDate";
 import { formatUserTypeLabel } from "@/utils/offboardingFormState";
 import { formatPrimaryPortalRoleLabel, formatRoleDisplayValue, isSessionRoleValue, formatRoleLabel } from "@/utils/roles";
 import {
-  defaultPhoneCountryIso,
   formatPhoneNumberForApi,
   splitPhoneNumber,
 } from "@/utils/phoneCountries";
@@ -321,9 +320,12 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
     webknot_rating: item.webknot_rating != null ? Number(item.webknot_rating) : undefined,
   })).filter(s => !!s.skill);
 
-  const phoneParts = splitPhoneNumber(
-    String(pickProfileField(profile, ["phone_number", "phoneNumber"]) ?? "").trim()
-  );
+  const rawPhone = String(
+    pickProfileField(profile, ["phone_number", "phoneNumber"]) ?? ""
+  ).trim();
+  const phoneParts = rawPhone
+    ? splitPhoneNumber(rawPhone)
+    : { countryIso: "", nationalNumber: "" };
 
   return {
     name: String(pickProfileField(profile, ["name"]) ?? "").trim(),
@@ -382,10 +384,9 @@ export function editFormToUpdatePayload(
   const payload: Record<string, unknown> = {
     name: form.name.trim(),
     email: form.email.trim().toLowerCase(),
-    phone_number: formatPhoneNumberForApi(
-      form.phone_country ?? defaultPhoneCountryIso(),
-      form.phone_number
-    ),
+    phone_number: form.phone_country
+      ? formatPhoneNumberForApi(form.phone_country, form.phone_number)
+      : null,
     department: form.department.trim(),
     role: form.role.trim(),
     user_status: normalizedStatus,

@@ -3,7 +3,7 @@ import { ApiError } from "@/api/error";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
 import { hrmsService } from "@/services/hrms.service";
 import type { CompOffBalanceData, CompOffExpiryData, CompOffExpiryItem, CompOffGrant } from "@/types/compOff";
-import { applyApiDateFields, applyApiDateQuery, toApiDateParam } from "@/utils/apiDate";
+import { applyApiDateFields, applyApiDateQuery, requireApiDateParam, toApiDateParam } from "@/utils/apiDate";
 import {
   availableUnitsFromGrants,
   dedupeCompOffRequestRows,
@@ -313,8 +313,8 @@ export const compOffService = {
     size?: number;
   }) {
     const { fromDate, toDate, requestType, empEmails, page = 0, size = 200 } = params;
-    const normalizedFrom = toApiDateParam(fromDate) ?? fromDate.trim();
-    const normalizedTo = toApiDateParam(toDate) ?? toDate.trim();
+    const normalizedFrom = requireApiDateParam(fromDate, "From date");
+    const normalizedTo = requireApiDateParam(toDate, "To date");
     return apiClient
       .get<ApiEnvelope<unknown>>(endpoints.userRequest.root, {
         query: applyApiDateQuery(

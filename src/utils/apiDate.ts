@@ -103,6 +103,36 @@ export function isValidApiDate(value: string): boolean {
   return parseApiDate(value) !== null;
 }
 
+export const API_DATE_INVALID_MESSAGE =
+  "Please enter a valid date in DD/MM/YYYY format.";
+
+export function invalidApiDateMessage(fieldLabel?: string): string {
+  const label = fieldLabel?.trim();
+  if (!label) return API_DATE_INVALID_MESSAGE;
+  return `Please enter a valid ${label.toLowerCase()} in DD/MM/YYYY format.`;
+}
+
+/**
+ * Field-level error for typed date inputs. Incomplete values stay silent
+ * until the input looks complete (dd/mm/yyyy or yyyy-mm-dd).
+ */
+export function apiDateFieldError(
+  value: string | null | undefined,
+  options?: { required?: boolean; fieldLabel?: string }
+): string | null {
+  const trimmed = String(value ?? "").trim();
+  const fieldLabel = options?.fieldLabel?.trim() || "Date";
+  if (!trimmed) {
+    return options?.required ? `${fieldLabel} is required.` : null;
+  }
+  if (isValidApiDate(trimmed)) return null;
+  const masked = maskApiDateInput(trimmed);
+  const looksComplete =
+    masked.length === 10 || ISO_YMD.test(trimmed) || DASH_DMY.test(trimmed);
+  if (!looksComplete) return null;
+  return invalidApiDateMessage(fieldLabel);
+}
+
 /**
  * Distinguish empty vs unparseable dates so UIs don't report "required"
  * when the user typed an invalid value.
@@ -117,9 +147,20 @@ export function validateRequiredApiDate(
   }
   const date = normalizeToApiDate(trimmed);
   if (!date) {
-    return { ok: false, error: `Please enter a valid ${fieldLabel.toLowerCase()}.` };
+    return { ok: false, error: invalidApiDateMessage(fieldLabel) };
   }
   return { ok: true, date };
+}
+
+export function requireApiDateParam(
+  value: string | null | undefined,
+  fieldLabel = "Date"
+): string {
+  const result = validateRequiredApiDate(value, fieldLabel);
+  if (!result.ok) {
+    throw new Error(result.error);
+  }
+  return result.date;
 }
 
 export const API_DATE_PLACEHOLDER = "dd/mm/yyyy";

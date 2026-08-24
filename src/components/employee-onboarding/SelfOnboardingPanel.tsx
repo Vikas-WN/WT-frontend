@@ -90,6 +90,16 @@ export function SelfOnboardingPanel({
     return Number.isFinite(n) && n > 0;
   }, [form.yoe]);
 
+  const primarySkillOptions = useMemo(
+    () => options.primary_skills.map((item) => ({ value: item.value, label: item.label })),
+    [options.primary_skills]
+  );
+
+  const secondarySkillOptions = useMemo(
+    () => options.secondary_skills.map((item) => ({ value: item.value, label: item.label })),
+    [options.secondary_skills]
+  );
+
   const resetForm = () => {
     clearOnboardFormDraft();
     setForm(createEmptySelfOnboardForm());
@@ -115,7 +125,11 @@ export function SelfOnboardingPanel({
 
       const dateOfBirth = toApiDateParam(form.date_of_birth);
       if (!dateOfBirth) {
-        throw new Error("Date of birth is required. Use DD/MM/YYYY.");
+        throw new Error(
+          form.date_of_birth.trim()
+            ? "Please enter a valid date of birth in DD/MM/YYYY format."
+            : "Date of birth is required. Use DD/MM/YYYY."
+        );
       }
       if (!isDobReadyToSave(form.date_of_birth, dobConfirmed, false)) {
         throw new Error("Confirm your calculated age to lock your date of birth before submitting.");
@@ -142,19 +156,18 @@ export function SelfOnboardingPanel({
         options.primary_skills.map((item) => [item.value.toLowerCase(), item.value]),
       );
       const primarySkills: SkillRating[] = [];
+      const seenPrimarySkills = new Set<string>();
       for (const rawSkill of form.primary_skills) {
         const skillName = String(rawSkill.skill ?? "").trim();
-        const canonical = primarySkillLookup.get(skillName.toLowerCase());
-        if (!canonical) {
-          throw new Error(
-            `Invalid primary skill: ${skillName}. Choose values from the onboard Primary Skills list (e.g. Python, React).`,
-          );
-        }
-        if (!primarySkills.some((item) => item.skill === canonical)) {
+        if (!skillName) continue;
+        const canonical = primarySkillLookup.get(skillName.toLowerCase()) ?? skillName;
+        const dedupeKey = canonical.toLowerCase();
+        if (!seenPrimarySkills.has(dedupeKey)) {
+          seenPrimarySkills.add(dedupeKey);
           primarySkills.push({ ...rawSkill, skill: canonical });
         }
       }
-      if (!form.primary_skills.length) {
+      if (!primarySkills.length) {
         throw new Error("At least one primary skill is required.");
       }
       if (!form.secondary_skills.some((item) => String(item.skill ?? "").trim())) {
@@ -234,7 +247,6 @@ export function SelfOnboardingPanel({
       
       userData.primary_skills = withNumericRatings(primarySkills);
       userData.secondary_skills = withNumericRatings(form.secondary_skills);
-      if (form.work_location_type) userData.work_location_type = form.work_location_type;
       if (form.local_address.trim()) userData.local_address = form.local_address.trim();
       if (form.permanent_address.trim()) userData.permanent_address = form.permanent_address.trim();
       if (form.gender) userData.gender = form.gender;
@@ -317,27 +329,24 @@ export function SelfOnboardingPanel({
         <SkillRatingsListInput
           label="Primary Skills"
           required
-          hint="At least one skill with a self rating"
+          hint="Choose from the predefined list or create a new skill, then add a self rating."
           value={form.primary_skills}
           onChange={(v) => setForm((p) => ({ ...p, primary_skills: v }))}
+          skillOptions={primarySkillOptions}
+          allowCustomSkills
           className="sm:col-span-2"
         />
         <SkillRatingsListInput
           label="Secondary Skills"
           required
-          hint="At least one skill with a self rating"
+          hint="Choose from the predefined list or create a new skill, then add a self rating."
           value={form.secondary_skills}
           onChange={(v) => setForm((p) => ({ ...p, secondary_skills: v }))}
+          skillOptions={secondarySkillOptions}
+          allowCustomSkills
           className="sm:col-span-2"
         />
 
-        <SelectField
-          label="Work Location"
-          placeholder="Select"
-          value={form.work_location_type}
-          options={options.work_location_types}
-          onChange={(v) => setForm((p) => ({ ...p, work_location_type: v }))}
-        />
         <SelectField
           label="Gender"
           placeholder="Select"

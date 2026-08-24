@@ -8,6 +8,7 @@ import {
   ONBOARD_DATE_FIELDS,
   applyApiDateFields,
   applyApiDateQuery,
+  requireApiDateParam,
   toApiDateParam,
 } from "@/utils/apiDate";
 import { timelogViewerRolesQueryValue } from "@/utils/timelog/viewerRoles";
@@ -364,7 +365,7 @@ export const hrmsService = {
 
   /** GET /api/v1/timelog/get/{empEmail}/{logDate} — logDate is dd/mm/yyyy */
   getTimelogByEmployeeAndDate(empEmail: string, logDate: string) {
-    const normalized = toApiDateParam(logDate) ?? logDate.trim();
+    const normalized = requireApiDateParam(logDate, "Log date");
     return apiClient.get<ApiEnvelope<unknown>>(
       endpoints.timelog.legacyGetByDate(empEmail, normalized),
       { query: { page: "0", size: "200" } }

@@ -34,6 +34,14 @@ function messageFromPydanticItem(item: unknown): string | null {
   if (field === "doj") {
     return "Please enter a valid date of joining in DD/MM/YYYY format.";
   }
+  const type = String(record.type ?? "");
+  if (
+    type.startsWith("date_") ||
+    type.startsWith("datetime_") ||
+    /invalid date|not a valid date|dd\/mm\/yyyy/i.test(msg)
+  ) {
+    return "Please enter a valid date in DD/MM/YYYY format.";
+  }
   if (
     (record.type === "string_too_long" || /at most \d+ character/i.test(msg)) &&
     (field === "role" || field === "designation" || field === "name")

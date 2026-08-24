@@ -27,6 +27,7 @@ import { formatUILabel } from "@/utils/titleCase";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
 import {
   API_DATE_PLACEHOLDER,
+  apiDateFieldError,
   apiDateFieldValue,
   apiDateToInputValue,
   finalizeApiDateInput,
@@ -68,6 +69,7 @@ export function ApiDateField({
   min,
   max,
   className,
+  error,
 }: {
   label: string;
   value: string;
@@ -77,9 +79,13 @@ export function ApiDateField({
   min?: string;
   max?: string;
   className?: string;
+  error?: string | null;
 }) {
   const fieldId = useId();
+  const errorId = `${fieldId}-error`;
   const pickerRef = useRef<HTMLInputElement>(null);
+  const fieldError = error ?? apiDateFieldError(value, { fieldLabel: label });
+  const invalid = Boolean(fieldError);
 
   function openPicker() {
     if (disabled) return;
@@ -91,7 +97,7 @@ export function ApiDateField({
   }
 
   return (
-    <Field className={cn(FORM_FIELD_CLASS, className)}>
+    <Field className={cn(FORM_FIELD_CLASS, className)} data-invalid={invalid || undefined}>
       <FieldLabel label={label} required={required} htmlFor={fieldId} />
       <InputGroup className="h-11">
         <InputGroupInput
@@ -105,6 +111,8 @@ export function ApiDateField({
           disabled={disabled}
           required={required}
           aria-required={required || undefined}
+          aria-invalid={invalid || undefined}
+          aria-describedby={invalid ? errorId : undefined}
           pattern="\d{2}/\d{2}/\d{4}"
           title={`Use ${API_DATE_PLACEHOLDER}`}
           onChange={(e) => onChange(maskApiDateInput(e.target.value))}
@@ -137,6 +145,7 @@ export function ApiDateField({
           </InputGroupButton>
         </InputGroupAddon>
       </InputGroup>
+      {fieldError ? <FieldError id={errorId}>{fieldError}</FieldError> : null}
     </Field>
   );
 }
@@ -541,6 +550,7 @@ export function DatePickerField({
   max,
   className,
   required = false,
+  error,
 }: {
   label: string;
   value: string;
@@ -550,6 +560,7 @@ export function DatePickerField({
   max?: string;
   className?: string;
   required?: boolean;
+  error?: string | null;
 }) {
   return (
     <ApiDateField
@@ -561,6 +572,7 @@ export function DatePickerField({
       max={max}
       className={className}
       required={required}
+      error={error}
     />
   );
 }
