@@ -92,7 +92,9 @@ export function normalizeRequestStatus(value: unknown): CompOffRequestStatus | s
   if (!raw) return "PENDING";
   if (raw === "APPROVE" || raw === "APPROVED") return "APPROVED";
   if (raw === "REJECT" || raw === "REJECTED") return "REJECTED";
-  if (raw === "PENDING") return "PENDING";
+  if (raw === "PENDING" || raw === "PENDING_APPROVAL" || raw === "AWAITING_APPROVAL") {
+    return "PENDING";
+  }
   return raw;
 }
 

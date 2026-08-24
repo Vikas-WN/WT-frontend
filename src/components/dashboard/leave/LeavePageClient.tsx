@@ -178,6 +178,7 @@ import { compOffService } from "@/services/compOff.service";
 import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
 import { CompOffCreditsDialog } from "@/components/dashboard/leave/CompOffCreditsDialog";
 import { WfhExceptionModal } from "@/components/dashboard/leave/WfhExceptionModal";
+import { HrWfhExceptionPanel } from "@/components/dashboard/leave/HrWfhExceptionPanel";
 import dynamic from "next/dynamic";
 import { LeaveRequestForm } from "@/components/dashboard/leave/LeaveRequestForm";
 import { MyLeaveRequestsView } from "@/components/dashboard/leave/MyLeaveRequestsView";
@@ -2280,6 +2281,14 @@ export function LeavePageClient() {
                             </>
                           )}
                         </div>
+                          ) : null}
+                          {leaveSubTab === "org" && hasHrAccess ? (
+                            <div className="mb-8">
+                              <HrWfhExceptionPanel
+                                actionLoading={actionLoading}
+                                runAction={runAction}
+                              />
+                            </div>
                           ) : null}
                           {(leaveSubTab === "team" || leaveSubTab === "org") && canViewTeamLeave ? (
                           <div className="space-y-5">
