@@ -22,7 +22,6 @@ type EmployeeProfileViewProps = {
   headerAction?: ReactNode;
   allocationRows?: Array<Record<string, unknown>>;
   allocationsLoading?: boolean;
-  currentAllocationSummary?: string | null;
 };
 
 export function EmployeeProfileView({
@@ -40,7 +39,6 @@ export function EmployeeProfileView({
   headerAction,
   allocationRows = [],
   allocationsLoading = false,
-  currentAllocationSummary,
 }: EmployeeProfileViewProps) {
   return (
     <div className="w-full space-y-5">
@@ -59,7 +57,6 @@ export function EmployeeProfileView({
       <ProfileSectionsView
         profile={profile}
         resumeShareHref={resumeShareHref}
-        currentAllocationSummary={currentAllocationSummary}
       />
 
       <ProfileAssignedProjectsSection

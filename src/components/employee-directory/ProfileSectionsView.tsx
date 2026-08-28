@@ -20,22 +20,18 @@ export function ProfileSectionsView({
   resumeShareHref,
   sections: sectionsOverride,
   includeDateOfBirth = false,
-  currentAllocationSummary,
 }: {
   profile: Record<string, unknown>;
   resumeShareHref?: string | null;
   sections?: ProfileDisplaySection[];
   /** When true (Personal → Profile), show Date of Birth. Directory HR view omits it. */
   includeDateOfBirth?: boolean;
-  /** Current project allocation summary for Work Information. */
-  currentAllocationSummary?: string | null;
   layout?: "stack" | "split";
 }) {
   const sections =
     sectionsOverride ??
     buildProfileViewSections(profile, resumeShareHref, {
       includeDateOfBirth,
-      currentAllocationSummary,
     });
 
   return (
@@ -51,7 +47,6 @@ export function ProfileSectionsView({
         >
           <CardHeader className="space-y-1 px-5 py-4 sm:px-6">
             <CardTitle className="text-base tracking-tight">{section.title}</CardTitle>
-            <p className="text-xs text-wt-text-muted">Key details for this section</p>
           </CardHeader>
           <Separator />
           <CardContent className="flex flex-1 flex-col px-5 py-4 sm:px-6">

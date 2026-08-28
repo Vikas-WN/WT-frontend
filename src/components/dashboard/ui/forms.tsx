@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Children, isValidElement, useId, useRef, type ReactElement, type ReactNode } from "react";
+import { Children, isValidElement, useId, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { CalendarIcon } from "lucide-react";
 import {
   SearchableSelectCombobox,
@@ -84,7 +84,8 @@ export function ApiDateField({
   const fieldId = useId();
   const errorId = `${fieldId}-error`;
   const pickerRef = useRef<HTMLInputElement>(null);
-  const fieldError = error ?? apiDateFieldError(value, { required, fieldLabel: label });
+  const [touched, setTouched] = useState(false);
+  const fieldError = error ?? (touched ? apiDateFieldError(value, { required, fieldLabel: label }) : null);
   const invalid = Boolean(fieldError);
 
   function openPicker() {
@@ -116,7 +117,10 @@ export function ApiDateField({
           pattern="\d{2}/\d{2}/\d{4}"
           title={`Use ${API_DATE_PLACEHOLDER}`}
           onChange={(e) => onChange(maskApiDateInput(e.target.value))}
-          onBlur={(e) => onChange(finalizeApiDateInput(e.target.value))}
+          onBlur={(e) => {
+            setTouched(true);
+            onChange(finalizeApiDateInput(e.target.value));
+          }}
         />
         <input
           ref={pickerRef}

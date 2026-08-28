@@ -10,6 +10,13 @@ import {
 } from "@/utils/phoneCountries";
 import { normalizeEmployeeStatusKey } from "@/utils/userStatus";
 
+const GENDER_LABELS: Record<string, string> = {
+  MALE: "Male",
+  FEMALE: "Female",
+  OTHER: "Other",
+  PREFER_NOT_TO_SAY: "Prefer not to say",
+};
+
 function formatWorkModeLabel(value: unknown): string {
   const normalized = String(value ?? "").trim().toUpperCase();
   if (!normalized) return "—";
@@ -109,7 +116,7 @@ export function cleanEmployeeName(row: Record<string, unknown>): string {
   return raw.replace(/\s*\([^()@\s]+@[^()@\s]+\.[^()@\s]+\)\s*$/, "").trim() || raw || "Employee";
 }
 
-/** Employee role from profile API (`role` field, e.g. UI Developer). */
+/** Employee role from profile API (`role` field, e.g., UI Developer). */
 export function pickEmployeeRole(profile: Record<string, unknown>): string {
   const raw = String(pickProfileField(profile, ["role"]) ?? "").trim();
   if (!raw) return "";
@@ -124,7 +131,7 @@ export function hasAssignedBand(profile: Record<string, unknown>): boolean {
 
 /**
  * Designation for profile display. For band-dependent user types (non-consultant),
- * hide designation when no band is assigned so orphan role values are not shown.
+ * hide designation when no band is assigned, so orphan role values are not shown.
  */
 export function pickDesignationForDisplay(profile: Record<string, unknown>): string {
   if (!isConsultantProfile(profile) && !hasAssignedBand(profile)) {
@@ -233,7 +240,7 @@ export function formatSecondarySkills(profile: Record<string, unknown>): string 
 
 export function onboardRowToListRow(row: OnboardRowInput): Record<string, string> {
   const record = asOnboardRecord(row);
-  const isOnline = Boolean(record.is_online ?? record.isOnline);
+  const isOnline = rowIsOnline(record);
   return {
     emp_id: rowEmpId(record) || "—",
     name: cleanEmployeeName(record),
@@ -265,7 +272,20 @@ export function onboardRowToListRow(row: OnboardRowInput): Record<string, string
 }
 
 export function rowIsOnline(record: Record<string, unknown>): boolean {
-  return Boolean(record.is_online ?? record.isOnline);
+  const explicitOnline = Boolean(record.is_online ?? record.isOnline);
+  if (explicitOnline) return true;
+
+  const lastSeenRaw = String(
+    record.last_seen_at ?? record.lastSeenAt ?? ""
+  ).trim();
+  if (!lastSeenRaw) return false;
+
+  const lastSeen = new Date(lastSeenRaw).getTime();
+  if (isNaN(lastSeen)) return false;
+
+  const now = Date.now();
+  const fiveMinutes = 5 * 60 * 1000;
+  return now - lastSeen <= fiveMinutes;
 }
 
 /** True when DOB month/day matches today (year ignored). */
@@ -418,13 +438,15 @@ export type UserTypeTransitionDisplayRow = {
 export type ProfileDisplayEntry = {
   label: string;
   value: unknown;
-  /** When set, render a clickable “resume” link instead of plain text. */
+  /** When set, render a clickable "resume" link instead of plain text. */
   resumeShareHref?: string | null;
   fullWidth?: boolean;
   /** When true, render value as a color-coded employee status badge. */
   asStatusBadge?: boolean;
   /** When true, render values in the structured table format. */
   asUserTypeHistoryTable?: boolean;
+  /** When true, render skills array as a table with Skill, Self Rating, Webknot Rating columns. */
+  asSkillsTable?: boolean;
 };
 
 export type ProfileDisplaySection = {
@@ -440,6 +462,7 @@ function profileEntry(
     fullWidth?: boolean;
     asStatusBadge?: boolean;
     asUserTypeHistoryTable?: boolean;
+    asSkillsTable?: boolean;
   }
 ): ProfileDisplayEntry {
   return { label, value, ...options };
@@ -493,6 +516,15 @@ function formatPanCardStatus(profile: Record<string, unknown>): string {
   return "Not uploaded";
 }
 
+/** Aadhar Card is stored as a document path - surface on-file status on profiles. */
+function formatAadharCardStatus(profile: Record<string, unknown>): string {
+  const onFile = profile.aadhar_card_on_file ?? profile.aadharCardOnFile;
+  if (onFile === true || onFile === "true" || onFile === 1) return "Uploaded";
+  const raw = pickProfileField(profile, ["aadhar_card", "aadharCard"]);
+  if (raw && String(raw).trim() && String(raw).trim() !== "—") return "Uploaded";
+  return "Not uploaded";
+}
+
 /** Grouped profile fields for the HR employee directory profile view. */
 export function buildGroupedProfileSections(
   profile: Record<string, unknown>,
@@ -539,6 +571,7 @@ export function buildGroupedProfileSections(
         pickProfileField(profile, ["work_location", "work_location_type", "workLocationType"])
       )
     ),
+    profileEntry("Reporting Manager", formatReportingManagerForProfile(profile)),
     ...(internProfile
       ? [
           profileEntry(
@@ -560,9 +593,14 @@ export function buildGroupedProfileSections(
             )
           ),
         ]),
-    profileEntry("Reporting Manager", formatReportingManagerForProfile(profile)),
-    profileEntry("Primary Skills", formatPrimarySkills(profile)),
-    profileEntry("Secondary Skills", formatSecondarySkills(profile)),
+    profileEntry("Primary Skills", pickProfileField(profile, ["primary_skills", "primarySkills"]), {
+      asSkillsTable: true,
+      fullWidth: true,
+    }),
+    profileEntry("Secondary Skills", pickProfileField(profile, ["secondary_skills", "secondarySkills"]), {
+      asSkillsTable: true,
+      fullWidth: true,
+    }),
     profileEntry(
       "Webknot Experience",
       pickProfileField(profile, ["webknot_experience", "webknotExperience"])
@@ -578,6 +616,12 @@ export function buildGroupedProfileSections(
     ),
   ];
 
+  function formatGenderLabel(value: unknown): string {
+    const normalized = String(value ?? "").trim().toUpperCase();
+    if (!normalized) return "—";
+    return GENDER_LABELS[normalized] ?? String(value).trim();
+  }
+
   const personalInformation: ProfileDisplayEntry[] = [
     profileEntry("Personal Email", pickProfileField(profile, ["personal_email", "personalEmail"])),
     profileEntry("Phone Number", pickProfileField(profile, ["phone_number", "phoneNumber"])),
@@ -585,7 +629,7 @@ export function buildGroupedProfileSections(
       "Date of Birth",
       formatDirectoryDate(pickProfileField(profile, ["date_of_birth", "dob", "dateOfBirth"]))
     ),
-    profileEntry("Gender", pickProfileField(profile, ["gender"])),
+    profileEntry("Gender", formatGenderLabel(pickProfileField(profile, ["gender"]))),
     profileEntry("Marital Status", pickProfileField(profile, ["marital_status", "maritalStatus"])),
     profileEntry("Nationality", pickProfileField(profile, ["nationality"])),
     profileEntry("Local Address", pickProfileField(profile, ["local_address", "localAddress"]), {
@@ -606,6 +650,7 @@ export function buildGroupedProfileSections(
     ),
     profileEntry("Blood Group", pickProfileField(profile, ["blood_group", "bloodGroup"])),
     profileEntry("PAN Card", formatPanCardStatus(profile)),
+    profileEntry("Aadhar Card", formatAadharCardStatus(profile)),
     profileEntry("Resume Link", resumeHref ? "resume" : null, {
       resumeShareHref: resumeHref,
       fullWidth: true,
@@ -643,6 +688,7 @@ const PROFILE_VIEW_PERSONAL_LABELS = new Set([
   "Local Address",
   "Permanent Address",
   "PAN Card",
+  "Aadhar Card",
 ]);
 
 const PROFILE_VIEW_LABEL_OVERRIDES: Record<string, string> = {
@@ -680,27 +726,9 @@ export function buildProfileViewSections(
   resumeShareHref?: string | null,
   options?: {
     includeDateOfBirth?: boolean;
-    currentAllocationSummary?: string | null;
   }
 ): ProfileDisplaySection[] {
   return buildGroupedProfileSections(profile, resumeShareHref)
-    .map((section) => {
-      if (
-        section.title === "Work Information" &&
-        options?.currentAllocationSummary !== undefined
-      ) {
-        return {
-          ...section,
-          entries: [
-            ...section.entries,
-            profileEntry("Current Allocation", options.currentAllocationSummary || "—", {
-              fullWidth: true,
-            }),
-          ],
-        };
-      }
-      return section;
-    })
     .map((section) => ({
       ...section,
       entries: filterProfileViewEntries(section.title, section.entries, options),

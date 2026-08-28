@@ -62,7 +62,7 @@ import { EmployeeProfileHeaderCard } from "@/components/employee-directory/Emplo
 import { EmployeeProfileView } from "@/components/employee-directory/EmployeeProfileView";
 import { EmployeePortalRoleSelect } from "@/components/employee-directory/EmployeePortalRoleSelect";
 import { IconPencil } from "@/components/employee-directory/employeeDirectoryIcons";
-import { buildProfileRowsFromEmployeeAllocations, formatCurrentAllocationSummary, selectProfileAllocationRows } from "@/utils/dashboard/projects";
+import { buildProfileRowsFromEmployeeAllocations, selectProfileAllocationRows } from "@/utils/dashboard/projects";
 import { isSystemProjectAllocationRow } from "@/utils/allocationList";
 import { showErrorToast } from "@/lib/toast";
 import { compareApiDates } from "@/utils/apiDate";
@@ -1132,7 +1132,6 @@ export function EmployeeProfilePageClient() {
                 queriesEnabled={queriesEnabled}
                 allocationRows={allocationRows}
                 allocationsLoading={allocationsLoading}
-                currentAllocationSummary={formatCurrentAllocationSummary(allocationRows)}
                 headerAction={
                   canOpenProfileEditor ? (
                     <Button

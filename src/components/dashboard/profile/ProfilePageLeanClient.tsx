@@ -48,18 +48,18 @@ import {
   TableRowsSkeleton,
 } from "@/components/dashboard/ui/SectionSkeleton";
 import { shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
+import { pickDesignationForDisplay } from "@/utils/employeeDirectory";
+import { OffboardedBanner } from "@/components/dashboard/shared/OffboardedBanner";
+import { OnboardingPendingBanner } from "@/components/dashboard/shared/OnboardingPendingBanner";
+import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import {
   buildProfileAssignedProjects,
   buildProfileRowsFromMyAllocationsDetail,
   formatCurrentAllocationSummary,
   selectProfileAllocationRows,
 } from "@/utils/dashboard/projects";
-import { OffboardedBanner } from "@/components/dashboard/shared/OffboardedBanner";
-import { OnboardingPendingBanner } from "@/components/dashboard/shared/OnboardingPendingBanner";
-import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { EmployeeProfileHeaderCard } from "@/components/employee-directory/EmployeeProfileHeaderCard";
 import { ProfileSectionsView } from "@/components/employee-directory/ProfileSectionsView";
-import { pickDesignationForDisplay } from "@/utils/employeeDirectory";
 
 export function ProfilePageLeanClient() {
   const { user, logout } = useAuth();
@@ -607,9 +607,6 @@ export function ProfilePageLeanClient() {
                           "resumeShareLink",
                         ) || null
                       }
-                      currentAllocationSummary={formatCurrentAllocationSummary(
-                        profileAssignedProjects,
-                      )}
                     />
                     {!requiresSelfOnboarding ? (
                       <ProfileAssignedProjectsSection

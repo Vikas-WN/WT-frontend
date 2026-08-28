@@ -17,7 +17,8 @@ import {
 } from "@/components/dashboard/ui/forms";
 import { Input } from "@/components/ui/input";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
-import { isValidIndiaMobile, isValidPersonName } from "@/utils/dashboard/validation";
+import { isValidPersonName } from "@/utils/dashboard/validation";
+import { digitsOnly } from "@/utils/phoneCountries";
 import { validatePersonalEmail } from "@/utils/personalEmail";
 import { validateResumeShareLink } from "@/utils/employeeResume";
 import {
@@ -198,8 +199,11 @@ export function SelfOnboardingPanel({
       if (resumeLinkError) throw new Error(resumeLinkError);
 
       const emergencyNumber = form.emergency_contact_number.trim();
-      if (emergencyNumber && !isValidIndiaMobile(emergencyNumber)) {
-        throw new Error("Enter a valid emergency contact number.");
+      if (emergencyNumber) {
+        const digits = digitsOnly(emergencyNumber);
+        if (digits.length < 7 || digits.length > 15) {
+          throw new Error("Enter a valid emergency contact number (7-15 digits).");
+        }
       }
 
       if (!files.profile_photo) throw new Error("Please upload profile photo.");
