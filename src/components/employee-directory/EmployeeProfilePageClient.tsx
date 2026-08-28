@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
+import { AccessRestricted } from "@/components/auth/AccessRestricted";
 import { HARDCODED_DEPARTMENT_OPTIONS } from "@/constants/dashboard";
 import { useEmployeeDirectoryAccess } from "@/hooks/employee-directory/useEmployeeDirectoryAccess";
 import {
@@ -603,19 +604,7 @@ export function EmployeeProfilePageClient() {
   };
 
   if (authStatus !== "loading" && !canViewProfile) {
-    return (
-      <DashboardPageShell>
-        <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
-          <h3 className="text-lg font-semibold">Access Restricted</h3>
-          <p className="mt-2 text-sm text-wt-text-muted">
-            Employee profiles in the directory are available to HR and admin users only.
-          </p>
-          <Link href={DASHBOARD_ROUTES.profile} className="mt-4 inline-block text-sm text-[var(--wt-brand)] hover:underline">
-            Back To Home
-          </Link>
-        </div>
-      </DashboardPageShell>
-    );
+    return <AccessRestricted />;
   }
 
   if (!empId) {

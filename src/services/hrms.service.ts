@@ -1211,6 +1211,12 @@ export const hrmsService = {
     return apiClient.get<unknown>(endpoints.masters.opportunities, { query });
   },
 
+  getAllClientsWithOpportunities() {
+    return apiClient.get<unknown>(endpoints.masters.clients, {
+      query: { include_opportunities: "true" },
+    });
+  },
+
   getClient(clientId: string | number, params: { includeProjects?: boolean } = {}) {
     const query: Record<string, string> = {};
     if (params.includeProjects) query.include_projects = "true";

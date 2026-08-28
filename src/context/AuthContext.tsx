@@ -18,7 +18,7 @@ import {
   persistSessionTiming,
   useSessionTimeout,
 } from "@/hooks/useSessionTimeout";
-import { type SessionLogoutReason } from "@/constants/sessionPolicy";
+import { SESSION_REFRESH_INTERVAL_MS, type SessionLogoutReason } from "@/constants/sessionPolicy";
 import { SessionLogoutDialog } from "@/components/auth/SessionLogoutDialog";
 import { SessionIdleWarningDialog } from "@/components/auth/SessionIdleWarningDialog";
 import {
@@ -267,6 +267,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     {
       inactivityMs: sessionInactivityMs,
       maxMs: sessionMaxMs,
+      refreshIntervalMs: SESSION_REFRESH_INTERVAL_MS,
     }
   );
 

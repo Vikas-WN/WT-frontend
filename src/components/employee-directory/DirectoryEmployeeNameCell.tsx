@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   avatarInitials,
   avatarGradientStyle,
   resolveProfilePhotoSrc,
 } from "@/components/dashboard/ui/profile";
 import { cn } from "@/lib/utils";
+import { employeeDirectoryProfilePath } from "@/constants/routes";
 
 export function DirectoryEmployeeNameCell({
   name,
@@ -26,6 +28,7 @@ export function DirectoryEmployeeNameCell({
   const showFallback = !photoSrc || imageFailed;
   const displayName = name.trim() || "Employee";
   const gradientSeed = String(empId ?? profile.email ?? profile.work_email ?? "").trim();
+  const profileHref = empId && empId !== "—" ? employeeDirectoryProfilePath(empId) : null;
 
   return (
     <div className="flex min-w-0 items-center gap-3">
@@ -71,19 +74,39 @@ export function DirectoryEmployeeNameCell({
         )}
       </span>
       <span className="min-w-0">
-        <span className="block truncate text-sm font-semibold tracking-tight text-wt-text">
-          {displayName}
-          {isBirthday ? (
-            <span className="ml-1.5 inline-block align-middle text-[11px] font-medium text-amber-600 dark:text-amber-300">
-              Birthday
+        {profileHref ? (
+          <Link href={profileHref} className="block">
+            <span className="block truncate text-sm font-semibold tracking-tight text-wt-text hover:text-[var(--wt-brand)] transition-colors">
+              {displayName}
+              {isBirthday ? (
+                <span className="ml-1.5 inline-block align-middle text-[11px] font-medium text-amber-600 dark:text-amber-300">
+                  Birthday
+                </span>
+              ) : null}
             </span>
-          ) : null}
-        </span>
-        {empId && empId !== "—" ? (
-          <span className="mt-0.5 block truncate text-[11px] font-medium text-wt-text-faint">
-            {empId}
-          </span>
-        ) : null}
+            {empId && empId !== "—" ? (
+              <span className="mt-0.5 block truncate text-[11px] font-medium text-wt-text-faint">
+                {empId}
+              </span>
+            ) : null}
+          </Link>
+        ) : (
+          <>
+            <span className="block truncate text-sm font-semibold tracking-tight text-wt-text">
+              {displayName}
+              {isBirthday ? (
+                <span className="ml-1.5 inline-block align-middle text-[11px] font-medium text-amber-600 dark:text-amber-300">
+                  Birthday
+                </span>
+              ) : null}
+            </span>
+            {empId && empId !== "—" ? (
+              <span className="mt-0.5 block truncate text-[11px] font-medium text-wt-text-faint">
+                {empId}
+              </span>
+            ) : null}
+          </>
+        )}
       </span>
     </div>
   );

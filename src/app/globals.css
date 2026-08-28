@@ -1150,6 +1150,118 @@ select.input-field {
   animation: wt-soft-in var(--wt-duration-slow) var(--wt-ease-out) both;
 }
 
+/* Access Restricted page animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp var(--wt-duration-slow) var(--wt-ease-out) both;
+}
+
+.animate-fade-in-up.delay-100 {
+  animation-delay: 100ms;
+}
+
+.animate-fade-in-up.delay-200 {
+  animation-delay: 200ms;
+}
+
+.animate-fade-in-up.delay-300 {
+  animation-delay: 300ms;
+}
+
+.animate-fade-in-up.delay-400 {
+  animation-delay: 400ms;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) rotate(-5deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn var(--wt-duration-slow) var(--wt-ease-out) both;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate(20px, -20px) scale(1.1);
+    opacity: 0.5;
+  }
+}
+
+.animate-float {
+  animation: float 8s ease-in-out infinite;
+}
+
+.animate-float.delay-1000 {
+  animation-delay: 1s;
+}
+
+@keyframes pulseSlow {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulseSlow 4s ease-in-out infinite;
+}
+
+/* Expand/collapse animations for accordion sections */
+@keyframes expand {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: auto;
+    opacity: 1;
+  }
+}
+
+@keyframes collapse {
+  from {
+    height: auto;
+    opacity: 1;
+  }
+  to {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+.animate-expand {
+  animation: expand 0.25s ease-in-out forwards;
+}
+
+.animate-collapse {
+  animation: collapse 0.25s ease-in-out forwards;
+}
+
 /* Pulse dot */
 @keyframes pulseDot {
   0%,

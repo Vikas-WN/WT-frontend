@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { FormFieldsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
@@ -69,6 +69,21 @@ export function ExitInterviewSurveyPanel({
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [initialized, setInitialized] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
+  const scrollPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  const saveScrollPos = () => {
+    if (formRef.current) {
+      scrollPosRef.current = { x: formRef.current.scrollLeft, y: formRef.current.scrollTop };
+    }
+  };
+
+  const restoreScrollPos = () => {
+    if (formRef.current) {
+      formRef.current.scrollLeft = scrollPosRef.current.x;
+      formRef.current.scrollTop = scrollPosRef.current.y;
+    }
+  };
 
   useEffect(() => {
     if (!formDefQ.data || initialized || !showForm) return;
@@ -101,11 +116,16 @@ export function ExitInterviewSurveyPanel({
   }, [profileQ.isLoading, flags, enabledByStatus]);
 
   const onChange = (key: string, value: unknown) => {
+    saveScrollPos();
     setAnswers((prev) => ({ ...prev, [key]: value }));
     setFieldErrors((prev) => {
       const next = { ...prev };
       delete next[key];
       return next;
+    });
+    // Restore scroll position after state update
+    requestAnimationFrame(() => {
+      restoreScrollPos();
     });
   };
 
@@ -195,7 +215,7 @@ export function ExitInterviewSurveyPanel({
             ) : null}
 
             {formDefQ.data && fields.length ? (
-              <div className="mt-6">
+              <div className="mt-6" ref={formRef}>
                 <ExitInterviewFormFields
                   fields={fields}
                   autofill={autofill}

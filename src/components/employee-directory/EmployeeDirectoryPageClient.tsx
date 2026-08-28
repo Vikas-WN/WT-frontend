@@ -22,6 +22,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
 import { DASHBOARD_ROUTES, employeeDirectoryProfilePath } from "@/constants/routes";
+import { AccessRestricted } from "@/components/auth/AccessRestricted";
 import { useEmployeeDirectoryAccess } from "@/hooks/employee-directory/useEmployeeDirectoryAccess";
 import { useEmployeeDirectoryList } from "@/hooks/employee-directory/useEmployeeDirectoryList";
 import { useOnboardOptions } from "@/hooks/useOnboardOptions";
@@ -395,19 +396,7 @@ export function EmployeeDirectoryPageClient() {
   }, [deleteTarget, deleteEmployeeMutation]);
 
   if (authStatus !== "loading" && !canViewDirectory) {
-    return (
-      <DashboardPageShell>
-        <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
-          <h3 className="text-lg font-semibold">Access Restricted</h3>
-          <p className="mt-2 text-sm text-wt-text-muted">
-            Employee Directory is available to HR and admin users only.
-          </p>
-          <Link href={DASHBOARD_ROUTES.profile} className="mt-4 inline-block text-sm text-[var(--wt-brand)] hover:underline">
-            Back To Home
-          </Link>
-        </div>
-      </DashboardPageShell>
-    );
+    return <AccessRestricted message="Employee Directory is available to HR and admin users only." backLabel="Back to Dashboard" />;
   }
 
   return (
