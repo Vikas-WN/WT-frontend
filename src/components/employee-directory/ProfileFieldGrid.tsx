@@ -2,7 +2,7 @@
 
 import {
   TableBody,
-  TableCell,
+  TableCell, TableHeader,
   TableRow,
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
@@ -15,15 +15,68 @@ import {
 import {
   formatProfileDisplayValue,
   type ProfileDisplayEntry,
+  type UserTypeTransitionDisplayRow,
 } from "@/utils/employeeDirectory";
 import { cn } from "@/lib/utils";
+function UserTypeHistoryTable({ rows } : { rows: UserTypeTransitionDisplayRow[] }) {
+  if (!rows.length){
+    return<>—</>
+  }
 
+  return(
+      <div className="overflow-x-auto rounded-xl border border-wt-border">
+        <WtTable>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableCell className="bg-wt-surface-2/60 px-3 py-2 text-xs font-semibold text-wt-text-muted">
+                Previous User Type
+              </TableCell>
+              <TableCell className="bg-wt-surface-2/60 px-3 py-2 text-xs font-semibold text-wt-text-muted">
+                New User Type
+              </TableCell>
+              <TableCell className="bg-wt-surface-2/60 px-3 py-2 text-xs font-semibold text-wt-text-muted">
+                Effective Date
+              </TableCell>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row, index) => (
+                <TableRow
+                key={`${row.previousUserType}-${row.newUserType}-${row.effectiveDate}-${index}`}
+                className="hover:bg-transparent"
+                >
+                  <TableCell className="px-3 py-2 text-sm text-wt-text">
+                    {row.previousUserType}
+                  </TableCell>
+                  <TableCell className="px-3 py-2 text-sm text-wt-text">
+                    {row.newUserType}
+                  </TableCell>
+                  <TableCell className="px-3 py-3 text-sm text-wt-text">
+                    {row.effectiveDate}
+                  </TableCell>
+                </TableRow>
+            ))}
+          </TableBody>
+        </WtTable>
+      </div>
+  )
+}
 function ProfileFieldValue({ entry }: { entry: ProfileDisplayEntry }) {
   if (entry.resumeShareHref !== undefined) {
     return <EmployeeResumeLink href={entry.resumeShareHref} />;
   }
   if (entry.asStatusBadge) {
     return <EmployeeStatusBadge status={String(entry.value ?? "")} />;
+  }
+
+  if(entry.asUserTypeHistoryTable){
+    return(
+        <UserTypeHistoryTable
+            rows={Array.isArray(entry.value)
+                ? (entry.value as UserTypeTransitionDisplayRow[])
+                : []}
+        />
+    )
   }
   return <>{formatProfileDisplayValue(entry.value)}</>;
 }

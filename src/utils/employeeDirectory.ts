@@ -408,6 +408,12 @@ export function editFormToUpdatePayload(
   return payload;
 }
 
+export type UserTypeTransitionDisplayRow = {
+  previousUserType: string;
+  newUserType: string;
+  effectiveDate: string;
+};
+
 export type ProfileDisplayEntry = {
   label: string;
   value: unknown;
@@ -416,6 +422,8 @@ export type ProfileDisplayEntry = {
   fullWidth?: boolean;
   /** When true, render value as a color-coded employee status badge. */
   asStatusBadge?: boolean;
+  /** When true, render values in the structured table format. */
+  asUserTypeHistoryTable?: boolean;
 };
 
 export type ProfileDisplaySection = {
@@ -426,28 +434,53 @@ export type ProfileDisplaySection = {
 function profileEntry(
   label: string,
   value: unknown,
-  options?: { resumeShareHref?: string | null; fullWidth?: boolean; asStatusBadge?: boolean }
+  options?: {
+    resumeShareHref?: string | null;
+    fullWidth?: boolean;
+    asStatusBadge?: boolean;
+    asUserTypeHistoryTable?: boolean;
+  }
 ): ProfileDisplayEntry {
   return { label, value, ...options };
 }
 
-function formatUserTypeTransitionHistory(profile: Record<string, unknown>): string {
+function formatUserTypeTransitionHistory(profile: Record<string, unknown>): UserTypeTransitionDisplayRow[] {
   const raw = profile.user_type_transitions ?? profile.userTypeTransitions;
-  if (!Array.isArray(raw) || !raw.length) return "—";
+  if (!Array.isArray(raw) || !raw.length) return [];
 
-  const lines = raw
-    .map((item) => {
-      if (!item || typeof item !== "object") return "";
-      const row = item as Record<string, unknown>;
-      const fromType = formatUserTypeLabel(String(row.from_type ?? row.fromType ?? ""));
-      const toType = formatUserTypeLabel(String(row.to_type ?? row.toType ?? ""));
-      const date = formatDirectoryDate(row.transition_date ?? row.transitionDate);
-      if (!fromType || fromType === "—" || !toType || toType === "—") return "";
-      return `${fromType} → ${toType} (${date})`;
-    })
-    .filter(Boolean);
+  return raw.map((item) => {
+    if(!item || typeof item !== "object") return null;
 
-  return lines.length ? lines.join("; ") : "—";
+    const row = item as Record<string, unknown>;
+
+    const previousUserType = formatUserTypeLabel(
+        String(row.from_type ?? row.fromType ?? "")
+    );
+
+    const newUserType = formatUserTypeLabel(
+        String(row.to_type ?? row.toType ?? "")
+    );
+
+    const effectiveDate = formatDirectoryDate(
+        row.transition_date ?? row.transitionDate
+    );
+
+    if(
+        !previousUserType ||
+        previousUserType === "—" ||
+        !newUserType ||
+        newUserType === "—"
+    ){
+      return null;
+    }
+
+    return{
+      previousUserType,
+      newUserType,
+      effectiveDate
+    };
+  })
+      .filter((row): row is UserTypeTransitionDisplayRow => row !== null);
 }
 
 /** PAN is stored as a document path — surface on-file status on profiles. */
@@ -490,7 +523,10 @@ export function buildGroupedProfileSections(
       "User Type",
       formatUserTypeLabel(String(pickProfileField(profile, ["user_type", "userType"]) ?? ""))
     ),
-    profileEntry("User Type History", formatUserTypeTransitionHistory(profile), { fullWidth: true }),
+    profileEntry("User Type History", formatUserTypeTransitionHistory(profile), {
+      fullWidth: true,
+      asUserTypeHistoryTable: true,
+    }),
     profileEntry("Category", formatCategoryLabel(category)),
     profileEntry(
       "Work Mode",
