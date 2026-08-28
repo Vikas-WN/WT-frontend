@@ -9,6 +9,7 @@ import { parseApiDate } from "@/utils/apiDate";
 
 export function normalizeAssignedProjects(rows: Array<Record<string, unknown>>) {
   return rows.map((row) => {
+    const nestedProject = row.project as Record<string, unknown> | undefined;
     const isManagerRaw = row.is_manager ?? null;
     const isManager =
       isManagerFlagTruthy(isManagerRaw) || isManagerRoleLabel(row.role ?? row.designation)
@@ -16,9 +17,9 @@ export function normalizeAssignedProjects(rows: Array<Record<string, unknown>>) 
         : "No";
 
     return {
-      project_code: row.project_code ?? row.projectCode ?? row.code ?? "—",
-      project_name: row.project_name ?? row.projectName ?? row.name ?? "—",
-      project_type: row.project_type ?? row.projectType ?? "—",
+      project_code: row.project_code ?? row.projectCode ?? row.code ?? nestedProject?.project_code ?? nestedProject?.projectCode ?? nestedProject?.code ?? "—",
+      project_name: row.project_name ?? row.projectName ?? row.name ?? row.allocated_project_name ?? nestedProject?.project_name ?? nestedProject?.projectName ?? nestedProject?.name ?? "—",
+      project_type: row.project_type ?? row.projectType ?? nestedProject?.project_type ?? nestedProject?.projectType ?? "—",
       role: row.role ?? row.designation ?? "—",
       allocated_hours: row.allocated_hours ?? row.allocatedHours ?? row.hours ?? "—",
       allocated_percent: row.allocated_percent ?? row.allocatedPercent ?? "—",
@@ -62,6 +63,7 @@ export function buildProfileRowsFromMyAllocationsDetail(
   for (const item of currentRaw) {
     if (!item || typeof item !== "object") continue;
     const o = item as Record<string, unknown>;
+    const nestedProject = o.project as Record<string, unknown> | undefined;
     const my =
       o.my_allocation && typeof o.my_allocation === "object"
         ? (o.my_allocation as Record<string, unknown>)
@@ -69,7 +71,7 @@ export function buildProfileRowsFromMyAllocationsDetail(
           ? (o.myAllocation as Record<string, unknown>)
           : null;
     const projectCode = String(
-      o.project_code ?? o.projectCode ?? my?.project_code ?? my?.projectCode ?? ""
+      o.project_code ?? o.projectCode ?? my?.project_code ?? my?.projectCode ?? nestedProject?.project_code ?? nestedProject?.projectCode ?? nestedProject?.code ?? ""
     ).trim();
     if (!projectCode) continue;
     rows.push({
@@ -79,6 +81,9 @@ export function buildProfileRowsFromMyAllocationsDetail(
         o.projectName ??
         my?.project_name ??
         my?.projectName ??
+        nestedProject?.project_name ??
+        nestedProject?.projectName ??
+        nestedProject?.name ??
         projectCode,
       role: my?.role ?? o.role ?? "—",
       allocated_hours:
