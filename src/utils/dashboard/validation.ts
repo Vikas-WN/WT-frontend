@@ -6,6 +6,9 @@ export const MAX_DESIGNATION_LENGTH = 50;
 export const DESIGNATION_MAX_LENGTH_MESSAGE =
   "Designation cannot exceed the maximum allowed length.";
 
+export const ROLE_NAME_FORMAT_MESSAGE =
+  "Role can contain only letters, spaces, periods, apostrophes, and hyphens.";
+
 /** Letters, spaces, common punctuation; 2–120 chars */
 export function isValidPersonName(name: string): boolean {
   const t = name.trim();
@@ -19,6 +22,13 @@ export function designationLengthError(value: string): string | null {
     return DESIGNATION_MAX_LENGTH_MESSAGE;
   }
   return null;
+}
+
+export function roleNameError(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.length > MAX_DESIGNATION_LENGTH) return DESIGNATION_MAX_LENGTH_MESSAGE;
+  return /^[a-zA-Z][a-zA-Z\s.'-]*$/.test(trimmed) ? null : ROLE_NAME_FORMAT_MESSAGE;
 }
 
 /** Collapse spaces/dashes so "B8 - Intern", "B8-intern", and "B8 Intern" all match B8INTERN. */

@@ -39,6 +39,7 @@ import { UI_COPY } from "@/constants/uiCopy";
 import { useAllocationEmployees } from "@/hooks/useAllocationEmployees";
 import { validateAllocationWithinProjectDates } from "@/utils/allocationProjectDates";
 import { isEligibleForProjectAllocation } from "@/utils/userStatus";
+import { roleNameError } from "@/utils/dashboard/validation";
 
 const CUSTOM_ROLE_VALUE = "__custom_role__";
 const ALLOCATE_STEPS = ["Employee", "Project", "Details"] as const;
@@ -91,6 +92,8 @@ export function AllocateEmployeeDialog({
 
   const resolvedRole =
     form.role === CUSTOM_ROLE_VALUE ? customRole.trim() : form.role.trim();
+  const customRoleError =
+    form.role === CUSTOM_ROLE_VALUE ? roleNameError(customRole) : null;
 
   const { data: rolePercentOptions = [] } = useAllocationPercentages(
     resolvedRole,
@@ -189,6 +192,10 @@ export function AllocateEmployeeDialog({
     if (!validateEmployeeStep() || !validateProjectStep()) return;
     if (!role) {
       showErrorToast("Please select or enter a project role.");
+      return;
+    }
+    if (customRoleError) {
+      showErrorToast(customRoleError);
       return;
     }
     if (!form.allocated_percent || Number(form.allocated_percent) <= 0 || Number(form.allocated_percent) > 100) {
@@ -311,6 +318,9 @@ export function AllocateEmployeeDialog({
           return;
         }
         lockedInDate = lockedResult.date;
+      }
+      if (form.role === CUSTOM_ROLE_VALUE) {
+        await hrmsService.createAllocationRole({ name: role });
       }
       const payload = {
         employeeEmail,
@@ -483,6 +493,7 @@ export function AllocateEmployeeDialog({
               value={customRole}
               onChange={setCustomRole}
               placeholder="Enter role name"
+              error={customRoleError}
             />
           ) : null}
           <AllocatedPercentSelect

@@ -42,7 +42,6 @@ import {
 } from "@/utils/dashboard/validation";
 import {
   PHONE_COUNTRY_OPTIONS,
-  defaultPhoneCountryIso,
   digitsOnly,
   validatePhoneNumber,
 } from "@/utils/phoneCountries";
@@ -179,14 +178,14 @@ export function EmployeeProfilePageClient() {
   );
   const normalizePrimarySkills = (skills: EmployeeProfileEditForm["primary_skills"]) => {
     const normalizedSkills: EmployeeProfileEditForm["primary_skills"] = [];
+    const seenSkills = new Set<string>();
     for (const item of skills) {
       const skillName = String(item.skill ?? "").trim();
       if (!skillName) continue;
-      const canonicalSkill = primarySkillLookup.get(skillName.toLowerCase());
-      if (!canonicalSkill) {
-        throw new Error("Selected primary skills must come from the predefined list.");
-      }
-      if (!normalizedSkills.some((existing) => existing.skill === canonicalSkill)) {
+      const canonicalSkill = primarySkillLookup.get(skillName.toLowerCase()) ?? skillName;
+      const dedupeKey = canonicalSkill.toLowerCase();
+      if (!seenSkills.has(dedupeKey)) {
+        seenSkills.add(dedupeKey);
         normalizedSkills.push({ ...item, skill: canonicalSkill });
       }
     }
@@ -218,6 +217,10 @@ export function EmployeeProfilePageClient() {
     String(pickProfileField(profileRecord, ["user_type", "userType"]) ?? "")
       .toUpperCase()
       .replace(/[\s\-_]/g, "") === "CONSULTANT";
+  const userStatusOptions = useMemo(
+    () => (isConsultantEmployee ? USER_STATUSES.filter((status) => status !== "SERVING_NOTICE") : USER_STATUSES),
+    [isConsultantEmployee]
+  );
   const isInternEmployee =
     String(pickProfileField(profileRecord, ["user_type", "userType"]) ?? "")
       .toUpperCase()
@@ -701,7 +704,7 @@ export function EmployeeProfilePageClient() {
                           label="Status"
                           required
                           value={editForm.user_status}
-                          options={USER_STATUSES}
+                          options={userStatusOptions}
                           onChange={(v) => setEditForm({ ...editForm, user_status: v })}
                           disabled={saving}
                         />
@@ -827,7 +830,7 @@ export function EmployeeProfilePageClient() {
                       <AdaptiveSelectField
                         label="Country Code"
                         required
-                        value={editForm.phone_country ?? defaultPhoneCountryIso()}
+                        value={editForm.phone_country ?? ""}
                         placeholder="Select Country Code"
                         searchPlaceholder="Search Country Code…"
                         options={PHONE_COUNTRY_OPTIONS}
@@ -875,7 +878,7 @@ export function EmployeeProfilePageClient() {
                           label="Status"
                           required
                           value={editForm.user_status}
-                          options={USER_STATUSES}
+                          options={userStatusOptions}
                           onChange={(v) => setEditForm({ ...editForm, user_status: v })}
                           disabled={saving}
                         />
@@ -1067,22 +1070,26 @@ export function EmployeeProfilePageClient() {
                       <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
                         <SkillRatingsListInput
                           label="Primary Skills"
-                          hint="Optional. Add any skills and ratings you want to save."
+                          hint="Optional. Choose from the list or create a new skill."
                           value={editForm.primary_skills}
                           onChange={(skills) =>
                             setEditForm((prev) => (prev ? { ...prev, primary_skills: skills } : prev))
                           }
+                          skillOptions={primarySkillOptions}
+                          allowCustomSkills
                           disabled={saving}
                           showWebknotRating
                           className="sm:col-span-3"
                         />
                         <SkillRatingsListInput
                           label="Secondary Skills"
-                          hint="Optional. Add any supporting skills and ratings you want to save."
+                          hint="Optional. Choose from the list or create a new skill."
                           value={editForm.secondary_skills}
                           onChange={(skills) =>
                             setEditForm((prev) => (prev ? { ...prev, secondary_skills: skills } : prev))
                           }
+                          skillOptions={primarySkillOptions}
+                          allowCustomSkills
                           disabled={saving}
                           showWebknotRating
                           className="sm:col-span-3"

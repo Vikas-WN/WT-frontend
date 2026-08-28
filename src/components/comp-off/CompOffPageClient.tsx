@@ -467,11 +467,6 @@ export function CompOffPageClient({
     const from = myRequestsFrom || defaultRequestRange().from;
     const to = myRequestsTo || defaultRequestRange().to;
     const cacheKey = `${from}:${to}:${earnOnly}`;
-    const cached = myRequestsCacheRef.current.get(cacheKey);
-    if (cached) {
-      setMyRequests(cached);
-      return;
-    }
     const earnRows = await compOffService.listEarnRequestRows({
       fromDate: from,
       toDate: to,
@@ -939,7 +934,13 @@ export function CompOffPageClient({
     if (!Number.isFinite(idNum) || idNum <= 0) {
       throw new Error("Could not resolve request id for revoke.");
     }
-    await compOffService.cancelEarnRequest(idNum);
+    try {
+      await compOffService.cancelEarnRequest(idNum);
+    } catch (error) {
+      myRequestsCacheRef.current.clear();
+      await loadMyRequests();
+      throw error;
+    }
     myRequestsCacheRef.current.clear();
     if (editingRequestId === requestId) {
       clearEarnEdit();
@@ -1219,9 +1220,13 @@ export function CompOffPageClient({
                       viewPagination.pageItems.map((row, idx) => {
                         const id = requestRowId(row);
                         const status = requestRowStatus(row);
+                        const finalStatus = requestFinalStatus(row);
                         const flow = normalizeCompOffRequestType(row.request_type ?? row.requestType);
                         const canEditOrRevoke =
-                          flow === "COMP_OFF_EARN" && isPendingRequestStatus(status) && Boolean(id);
+                          flow === "COMP_OFF_EARN" &&
+                          isPendingRequestStatus(finalStatus) &&
+                          isPendingRequestStatus(requestEarnManagerStatus(row)) &&
+                          Boolean(id);
                         const dateDisplay =
                           flow === "COMP_OFF_EARN"
                             ? String(

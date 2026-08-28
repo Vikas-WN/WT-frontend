@@ -1,4 +1,4 @@
-import { parseApiDate } from "@/utils/apiDate";
+import { isValidApiDate, parseApiDate } from "@/utils/apiDate";
 import { normalizeDirectoryUserType } from "@/utils/userTypeTransition";
 
 export type ExitType = "VOLUNTARY" | "INVOLUNTARY" | "CONTRACTUAL";
@@ -149,12 +149,19 @@ export function isOffboardingFormValid(
   if (!form.reason.trim() || !form.critical_skill.trim()) return false;
   if (normalizedType === "INTERN") {
     const lwd = form.last_working_day.trim();
-    return Boolean(lwd && form.resignation_date.trim() === lwd);
+    return Boolean(
+      lwd &&
+        isValidApiDate(lwd) &&
+        form.resignation_date.trim() === lwd &&
+        isValidApiDate(form.resignation_date)
+    );
   }
   if (normalizedType === "CONSULTANT") {
     // Consultant: LWD only — resignation date / exit-type picker must not be required
-    return Boolean(form.last_working_day.trim());
+    return isValidApiDate(form.last_working_day);
   }
-  if (!form.resignation_date.trim() || !form.last_working_day.trim()) return false;
+  if (!isValidApiDate(form.resignation_date) || !isValidApiDate(form.last_working_day)) {
+    return false;
+  }
   return Boolean(form.exit_type);
 }

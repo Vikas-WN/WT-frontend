@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
@@ -22,6 +22,7 @@ import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserReques
 import { useHrWfhExceptionRequests } from "@/hooks/leave/useHrWfhExceptionRequests";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import { formatLeaveDateRange, formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
+import { parseApiDate } from "@/utils/apiDate";
 import { requestFinalStatus, updateUserRequestStatus } from "@/utils/userRequest";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { apiClient } from "@/api/httpClient";
@@ -69,15 +70,6 @@ export function HrWfhExceptionPanel({
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [pendingFromDate, setPendingFromDate] = useState(filters.fromDate);
   const [pendingToDate, setPendingToDate] = useState(filters.toDate);
-  const mountedRef = useRef(false);
-
-  useEffect(() => {
-    if (!mountedRef.current) {
-      mountedRef.current = true;
-      void load();
-    }
-  }, [load]);
-
   const [rejectDialog, setRejectDialog] = useState<{
     open: boolean;
     row: Record<string, unknown> | null;
@@ -85,8 +77,9 @@ export function HrWfhExceptionPanel({
   }>({ open: false, row: null, reason: "" });
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!parseApiDate(filters.fromDate) || !parseApiDate(filters.toDate)) return;
+    void load().catch(() => undefined);
+  }, [load, filters.fromDate, filters.toDate]);
 
   const filteredRows = useMemo(() => {
     let result = rows.filter((row) => exceptionRowMatchesSearch(row, search));
@@ -184,8 +177,11 @@ export function HrWfhExceptionPanel({
           type="button"
           className="h-10 shrink-0 px-3 py-2"
           onClick={() => {
+            if (!parseApiDate(pendingFromDate) || !parseApiDate(pendingToDate)) return;
             setFilters({ fromDate: pendingFromDate, toDate: pendingToDate });
-            void runAction("Refresh WFH exceptions", () => load());
+            void runAction("Refresh WFH exceptions", () =>
+              load({ fromDate: pendingFromDate, toDate: pendingToDate })
+            );
           }}
           disabled={actionLoading || loading}
         >

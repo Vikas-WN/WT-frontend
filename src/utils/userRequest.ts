@@ -8,7 +8,7 @@ import type { ApiEnvelope } from "@/api/httpClient";
 
 import type { ApprovalStage } from "@/types/userRequest";
 
-import { applyApiDateQuery, toApiDateParam } from "@/utils/apiDate";
+import { applyApiDateQuery, requireApiDateParam } from "@/utils/apiDate";
 
 import { toPagedRows, extractFirstObjectArray } from "@/utils/apiRows";
 
@@ -98,8 +98,8 @@ async function fetchUserRequestsFromRoot(params: {
   empEmails?: string;
   hrTeamScope?: boolean;
 }): Promise<Array<Record<string, unknown>>> {
-  const normalizedFrom = toApiDateParam(params.fromDate) ?? params.fromDate.trim();
-  const normalizedTo = toApiDateParam(params.toDate) ?? params.toDate.trim();
+  const normalizedFrom = requireApiDateParam(params.fromDate, "From date");
+  const normalizedTo = requireApiDateParam(params.toDate, "To date");
   const query: Record<string, string> = {
     fromDate: normalizedFrom,
     toDate: normalizedTo,
@@ -160,8 +160,8 @@ export async function fetchPaginatedScopedUserRequests(params: {
   totalPages: number;
   totalElements: number;
 }> {
-  const normalizedFrom = toApiDateParam(params.fromDate) ?? params.fromDate.trim();
-  const normalizedTo = toApiDateParam(params.toDate) ?? params.toDate.trim();
+  const normalizedFrom = requireApiDateParam(params.fromDate, "From date");
+  const normalizedTo = requireApiDateParam(params.toDate, "To date");
   const query: Record<string, string> = {
     fromDate: normalizedFrom,
     toDate: normalizedTo,
@@ -350,12 +350,17 @@ export function isPendingApprovalStage(value: unknown): boolean {
 
 
 export function requestManagerStatus(row: Record<string, unknown>): string {
-
-  return normalizeRequestStatus(
-
+  const managerStatus = normalizeRequestStatus(
     pickRowField(row, "manager_status", "managerStatus") ?? "PENDING"
-
   );
+  const finalStatus = requestFinalStatus(row);
+  if (
+    (finalStatus === "APPROVED" || finalStatus === "REJECTED") &&
+    managerStatus === "PENDING"
+  ) {
+    return finalStatus;
+  }
+  return managerStatus;
 
 }
 

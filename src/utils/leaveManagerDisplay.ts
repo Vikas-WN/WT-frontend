@@ -74,7 +74,7 @@ export function hasSecondaryLeaveManagers(row: Record<string, unknown>): boolean
  */
 export function requestSecondaryManagerStatus(row: Record<string, unknown>): string {
   if (!hasSecondaryLeaveManagers(row)) return "APPROVED";
-  return normalizeRequestStatus(
+  const secondaryStatus = normalizeRequestStatus(
     pickRowField(
       row,
       "secondary_status",
@@ -83,6 +83,14 @@ export function requestSecondaryManagerStatus(row: Record<string, unknown>): str
       "hrStatus"
     ) ?? "PENDING"
   );
+  const finalStatus = requestFinalStatus(row);
+  if (
+    (finalStatus === "APPROVED" || finalStatus === "REJECTED") &&
+    secondaryStatus === "PENDING"
+  ) {
+    return finalStatus;
+  }
+  return secondaryStatus;
 }
 
 export function isOwnUserRequest(

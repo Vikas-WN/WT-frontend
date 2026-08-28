@@ -87,6 +87,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     return rawUser;
   }, [rawUser, activePersona]);
+  const sessionInactivityMs = useMemo(
+    () => Math.max(1, Number(user?.session_inactivity_minutes ?? 30)) * 60 * 1000,
+    [user?.session_inactivity_minutes]
+  );
+  const sessionMaxMs = useMemo(
+    () => Math.max(1, Number(user?.session_max_hours ?? 8)) * 60 * 60 * 1000,
+    [user?.session_max_hours]
+  );
 
   useEffect(() => {
     userRef.current = user;
@@ -255,7 +263,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { extendSession } = useSessionTimeout(
     status === "authenticated",
     handleSessionTimeout,
-    handleIdleWarning
+    handleIdleWarning,
+    {
+      inactivityMs: sessionInactivityMs,
+      maxMs: sessionMaxMs,
+    }
   );
 
   useEffect(() => {

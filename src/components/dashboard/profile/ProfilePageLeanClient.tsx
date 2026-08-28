@@ -24,7 +24,6 @@ import {
 import { createEmptySelfProfileForm } from "@/utils/profileFormState";
 import {
   PHONE_COUNTRY_OPTIONS,
-  defaultPhoneCountryIso,
   digitsOnly,
   formatPhoneNumberForApi,
   splitPhoneNumber,
@@ -37,7 +36,7 @@ import {
   SelectField,
   FileField,
 } from "@/components/dashboard/ui/forms";
-import { toApiDateParam } from "@/utils/apiDate";
+import { validateRequiredApiDate } from "@/utils/apiDate";
 import { readProfileField } from "@/components/dashboard/ui/profile";
 import { pickProfileField } from "@/utils/employeeDirectory";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
@@ -210,9 +209,8 @@ export function ProfilePageLeanClient() {
     const primarySkills = toSkillRatings(profile.primary_skills ?? profile.primarySkills ?? []);
     const secondarySkills = toSkillRatings(profile.secondary_skills ?? profile.secondarySkills ?? []);
 
-    const phoneParts = splitPhoneNumber(
-      String(profile.phone_number ?? profile.phoneNumber ?? "").trim(),
-    );
+    const rawPhone = String(profile.phone_number ?? profile.phoneNumber ?? "").trim();
+    const phoneParts = rawPhone ? splitPhoneNumber(rawPhone) : { countryIso: "", nationalNumber: "" };
 
     const profileDob = String(
       pickProfileField(profile, ["date_of_birth", "dob", "dateOfBirth"]) ?? "",
@@ -239,6 +237,13 @@ export function ProfilePageLeanClient() {
 
   const profileDisplayName =
     String(employeeProfile?.name ?? user?.name ?? "").trim() || "Profile";
+  const currentProfilePhotoName = useMemo(() => {
+    if (selfProfilePic?.name) return selfProfilePic.name;
+    const raw = String(employeeProfile?.profile_photo ?? employeeProfile?.profilePhoto ?? "").trim();
+    if (!raw) return "";
+    const parts = raw.split("/");
+    return parts[parts.length - 1] ?? raw;
+  }, [employeeProfile?.profilePhoto, employeeProfile?.profile_photo, selfProfilePic?.name]);
 
   const renderEditPanel = () => {
     return (
@@ -250,7 +255,8 @@ export function ProfilePageLeanClient() {
       <div className="grid gap-4 sm:grid-cols-2">
         <SelectField
           label="Country Code"
-          value={selfProfileForm.phone_country ?? defaultPhoneCountryIso()}
+          required
+          value={selfProfileForm.phone_country ?? ""}
           options={PHONE_COUNTRY_OPTIONS}
           onChange={(v) =>
             setSelfProfileForm((p) => ({ ...p, phone_country: v }))
@@ -332,10 +338,11 @@ export function ProfilePageLeanClient() {
       ) : null}
       <div className="mt-3">
         <FileField
-          label="Profile Picture (required)"
-          required
+          label={currentProfilePhotoName ? "Profile Picture" : "Profile Picture (required)"}
+          required={!currentProfilePhotoName}
           accept="image/*"
           onPick={setSelfProfilePic}
+          currentFileName={currentProfilePhotoName || undefined}
         />
       </div>
       <div className="mt-4">
@@ -363,8 +370,10 @@ export function ProfilePageLeanClient() {
                     : "Confirm your calculated age to lock your date of birth before saving."
                 );
               }
-              const selectedPhoneCountry =
-                selfProfileForm.phone_country ?? defaultPhoneCountryIso();
+              const selectedPhoneCountry = selfProfileForm.phone_country?.trim();
+              if (!selectedPhoneCountry) {
+                throw new Error("Please select a country code.");
+              }
               const phoneValidationError = validatePhoneNumber(
                 selectedPhoneCountry,
                 selfProfileForm.phone_number,
@@ -376,7 +385,7 @@ export function ProfilePageLeanClient() {
                 selectedPhoneCountry,
                 selfProfileForm.phone_number,
               );
-              if (!selfProfilePic) {
+              if (!selfProfilePic && !currentProfilePhotoName) {
                 throw new Error(
                   "Profile picture is mandatory. Please upload your profile picture.",
                 );
@@ -430,14 +439,16 @@ export function ProfilePageLeanClient() {
                   yoeValue > 0 ? `${yoeValue} years` : null,
                 yoe: yoeValue,
               };
-              const dobValue =
-                toApiDateParam(selfProfileForm.date_of_birth) ||
-                selfProfileForm.date_of_birth.trim();
-              if (dobValue) {
-                profilePayload.date_of_birth = dobValue;
-                if (!dobLocked) {
-                  profilePayload.date_of_birth_confirmed = true;
-                }
+              const dobResult = validateRequiredApiDate(
+                selfProfileForm.date_of_birth,
+                "Date of birth"
+              );
+              if (!dobResult.ok) {
+                throw new Error(dobResult.error);
+              }
+              profilePayload.date_of_birth = dobResult.date;
+              if (!dobLocked) {
+                profilePayload.date_of_birth_confirmed = true;
               }
               fd.append("body", JSON.stringify(profilePayload));
               if (selfProfilePic) fd.append("profilePic", selfProfilePic);
