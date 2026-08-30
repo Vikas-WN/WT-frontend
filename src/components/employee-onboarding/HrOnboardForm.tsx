@@ -19,6 +19,12 @@ import {
   resolveInternBandId,
 } from "@/utils/dashboard/validation";
 import { parseApiDate } from "@/utils/apiDate";
+import {
+  PHONE_COUNTRY_OPTIONS,
+  digitsOnly,
+  formatPhoneNumberForApi,
+  validatePhoneNumber,
+} from "@/utils/phoneCountries";
 import { nameFromOnboardOptionLabel } from "@/utils/exitInterviewManagers";
 import type { OnboardFormState } from "@/utils/onboardFormState";
 import type { OnboardOptionsResponse } from "@/types/onboard-options";
@@ -125,6 +131,18 @@ function validateWorkStep(
   }
   if (!department) throw new Error("Department is required.");
 
+  // Optional at onboarding — the employee can still supply it during self-service —
+  // but anything typed here must be a complete, country-coded number.
+  let phoneNumber: string | null = null;
+  const phoneDigits = digitsOnly(form.phone_number);
+  if (phoneDigits) {
+    const phoneCountry = form.phone_country.trim();
+    if (!phoneCountry) throw new Error("Please select a country code.");
+    const phoneError = validatePhoneNumber(phoneCountry, phoneDigits);
+    if (phoneError) throw new Error(phoneError);
+    phoneNumber = formatPhoneNumberForApi(phoneCountry, phoneDigits);
+  }
+
   const isConsultant = form.user_type === "CONSULTANT";
   const bandId =
     form.user_type === "INTERN"
@@ -179,7 +197,17 @@ function validateWorkStep(
   const designationError = designationLengthError(role);
   if (designationError) throw new Error(designationError);
 
-  return { empId, email, name, department, role, bandId, reportingManagerId, portalRole };
+  return {
+    empId,
+    email,
+    name,
+    department,
+    role,
+    bandId,
+    reportingManagerId,
+    portalRole,
+    phoneNumber,
+  };
 }
 
 export function HrOnboardForm({
@@ -315,6 +343,7 @@ export function HrOnboardForm({
         bandId,
         reportingManagerId,
         portalRole,
+        phoneNumber,
       } = validateWorkStep(form, internBandId, {
           designationLoading,
           designationOptionsCount: designationOptions.length,
@@ -335,6 +364,9 @@ export function HrOnboardForm({
       };
       if (bandId != null) {
         basePayload.band_id = bandId;
+      }
+      if (phoneNumber) {
+        basePayload.phone_number = phoneNumber;
       }
       if (form.user_type === "INTERN") {
         await hrmsService.createOnboard({
@@ -389,6 +421,19 @@ export function HrOnboardForm({
           required
           value={form.name}
           onChange={(v) => setForm((p) => ({ ...p, name: v }))}
+        />
+        <DropdownSelectField
+          label="Country Code"
+          placeholder="Search Country Code"
+          value={form.phone_country ?? ""}
+          options={PHONE_COUNTRY_OPTIONS}
+          onChange={(v) => setForm((p) => ({ ...p, phone_country: v }))}
+        />
+        <InputField
+          label="Phone Number"
+          inputMode="numeric"
+          value={form.phone_number}
+          onChange={(v) => setForm((p) => ({ ...p, phone_number: digitsOnly(v) }))}
         />
         <DropdownSelectField
           label="User Type"

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { InputField } from "@/components/dashboard/ui/forms";
 import { useAllocationPercentages } from "@/hooks/useAllocationPercentages";
 import { useClientOpportunities } from "@/hooks/clients/useClientOpportunities";
+import { useClients } from "@/hooks/clients/useClients";
 import { ClientSelect } from "@/components/allocation/ClientSelect";
 import { OpportunityMultiSelect } from "@/components/allocation/OpportunityMultiSelect";
 import { ProjectTypeSelect } from "@/components/allocation/ProjectTypeSelect";
@@ -187,6 +188,11 @@ export function CreateProjectDialog({
     : allocationPercentOptions;
 
   const clientIdForOpportunities = form.client_id.trim();
+  // Same query key as ClientSelect, so this shares the cached list rather than refetching.
+  // Needed at submit time: a stored client that is inactive (or otherwise absent from the
+  // list) leaves the picker rendering its placeholder, so the field looks empty while the
+  // form still holds the old id.
+  const clientsQ = useClients({ activeOnly: true, enabled: open });
   const opportunitiesQ = useClientOpportunities({
     clientId: clientIdForOpportunities || null,
     enabled: open && !isEditing && Boolean(clientIdForOpportunities),
@@ -229,6 +235,19 @@ export function CreateProjectDialog({
     const clientIdRaw = form.client_id.trim();
     if (!clientIdRaw) {
       showErrorToast("Client is required.");
+      return;
+    }
+    // Guard against saving an id the picker cannot display, which would let a blank-looking
+    // mandatory field through.
+    if (clientsQ.isLoading) {
+      showErrorToast("Still loading clients. Try again in a moment.");
+      return;
+    }
+    const clientIsSelectable = (clientsQ.data ?? []).some(
+      (client) => String(client.id) === clientIdRaw
+    );
+    if (!clientIsSelectable) {
+      showErrorToast("Select a client from the list.");
       return;
     }
     if (!isEditing && clientIdForOpportunities) {

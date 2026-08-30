@@ -97,6 +97,7 @@ async function fetchUserRequestsFromRoot(params: {
   selfOnly?: boolean;
   empEmails?: string;
   hrTeamScope?: boolean;
+  orgScope?: boolean;
 }): Promise<Array<Record<string, unknown>>> {
   const normalizedFrom = requireApiDateParam(params.fromDate, "From date");
   const normalizedTo = requireApiDateParam(params.toDate, "To date");
@@ -110,6 +111,7 @@ async function fetchUserRequestsFromRoot(params: {
   if (params.selfOnly) query.selfOnly = "true";
   if (params.empEmails?.trim()) query.empEmails = params.empEmails.trim();
   if (params.hrTeamScope) query.hrTeamScope = "true";
+  if (params.orgScope) query.orgScope = "true";
 
   try {
     const res = await apiClient.get<ApiEnvelope<unknown>>(endpoints.userRequest.root, {
@@ -136,6 +138,7 @@ export async function listScopedUserRequests(params: {
   empEmails?: string;
   size?: number;
   hrTeamScope?: boolean;
+  orgScope?: boolean;
 }): Promise<Array<Record<string, unknown>>> {
   return fetchUserRequestsFromRoot({
     fromDate: params.fromDate,
@@ -144,6 +147,7 @@ export async function listScopedUserRequests(params: {
     empEmails: params.empEmails,
     size: params.size,
     hrTeamScope: params.hrTeamScope,
+    orgScope: params.orgScope,
   });
 }
 
@@ -154,7 +158,10 @@ export async function fetchPaginatedScopedUserRequests(params: {
   empEmails?: string;
   page: number;
   size: number;
+  /** Team Requests: employees with no client project allocation. */
   hrTeamScope?: boolean;
+  /** All Employee Requests: project-allocated employees. */
+  orgScope?: boolean;
 }): Promise<{
   rows: Array<Record<string, unknown>>;
   totalPages: number;
@@ -412,6 +419,36 @@ export async function updateOwnedUserRequest(
     contentType: "application/json",
     body: JSON.stringify(body),
   });
+}
+
+/**
+ * True when an action failed because the owner had already deleted the request.
+ *
+ * A manager's cached inbox can still show a request the employee deleted moments
+ * earlier; callers use this to drop the stale row instead of leaving dead buttons.
+ */
+export function isDeletedUserRequestError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return message.toLowerCase().includes("has been deleted");
+}
+
+/**
+ * True when an action failed because the request was no longer pending on the server.
+ *
+ * A cached list can keep showing Approve / Reject / Delete for a request another
+ * reviewer already decided. Callers use this to refresh from the server so the stale
+ * actions disappear instead of failing again on the next click.
+ */
+export function isAlreadyDecidedUserRequestError(error: unknown): boolean {
+  const message = (error instanceof Error ? error.message : String(error ?? "")).toLowerCase();
+  return (
+    message.includes("already been approved") ||
+    message.includes("already been rejected") ||
+    message.includes("already been cancelled") ||
+    message.includes("only pending request can be deleted") ||
+    message.includes("only pending earn requests can be cancelled") ||
+    message.includes("only pending earn requests can be updated")
+  );
 }
 
 export async function revokeOwnedUserRequest(userRequestId: number): Promise<ApiEnvelope<unknown>> {

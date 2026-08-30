@@ -37,7 +37,10 @@ import {
   FileField,
 } from "@/components/dashboard/ui/forms";
 import { validateRequiredApiDate } from "@/utils/apiDate";
-import { readProfileField } from "@/components/dashboard/ui/profile";
+import {
+  readProfileField,
+  resolveProfilePhotoSrc,
+} from "@/components/dashboard/ui/profile";
 import { pickProfileField } from "@/utils/employeeDirectory";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { ProfileEmployeeTrainingsSection } from "@/components/dashboard/profile/ProfileEmployeeTrainingsSection";
@@ -245,6 +248,21 @@ export function ProfilePageLeanClient() {
     return parts[parts.length - 1] ?? raw;
   }, [employeeProfile?.profilePhoto, employeeProfile?.profile_photo, selfProfilePic?.name]);
 
+  // Preview the freshly picked file when there is one, otherwise the stored photo, so the
+  // field shows the picture that will be saved instead of looking unset.
+  const pickedProfilePicPreview = useMemo(() => {
+    if (!selfProfilePic) return "";
+    return URL.createObjectURL(selfProfilePic);
+  }, [selfProfilePic]);
+
+  useEffect(() => {
+    if (!pickedProfilePicPreview) return;
+    return () => URL.revokeObjectURL(pickedProfilePicPreview);
+  }, [pickedProfilePicPreview]);
+
+  const profilePhotoPreviewSrc =
+    pickedProfilePicPreview || resolveProfilePhotoSrc(employeeProfile) || "";
+
   const renderEditPanel = () => {
     return (
     <div className="rounded-3xl border border-wt-border bg-wt-surface-1 p-6 shadow-[var(--wt-shadow-md)] wt-soft-in dark:shadow-none md:p-10">
@@ -343,6 +361,7 @@ export function ProfilePageLeanClient() {
           accept="image/*"
           onPick={setSelfProfilePic}
           currentFileName={currentProfilePhotoName || undefined}
+          currentPreviewSrc={profilePhotoPreviewSrc || undefined}
         />
       </div>
       <div className="mt-4">

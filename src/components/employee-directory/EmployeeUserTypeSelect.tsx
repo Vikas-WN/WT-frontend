@@ -247,7 +247,8 @@ export function EmployeeUserTypeSelect({
           aria-label="User Type"
           variant="table-inline"
           className="w-full min-w-0"
-          contentClassName="min-w-[14rem] w-max"
+          align="end"
+          contentClassName="min-w-[min(14rem,calc(100vw-1rem))] w-max max-w-[min(var(--available-width,100vw),calc(100vw-1rem))]"
           placeholder="Select user type"
           clearSelectionOnEmptyInput
         />

@@ -42,6 +42,7 @@ export function DropdownSelect({
   className = "",
   selectClassName,
   contentClassName,
+  align,
   variant = "default",
   id,
   "aria-label": ariaLabel,
@@ -60,6 +61,8 @@ export function DropdownSelect({
   className?: string;
   selectClassName?: string;
   contentClassName?: string;
+  /** Anchor edge for the popup. Use "end" for triggers near the right viewport edge. */
+  align?: "start" | "center" | "end";
   variant?: DropdownSelectVariant;
   id?: string;
   "aria-label"?: string;
@@ -85,6 +88,7 @@ export function DropdownSelect({
       clearSelectionOnEmptyInput={clearSelectionOnEmptyInput}
       className={className}
       contentClassName={contentClassName}
+      {...(align ? { align } : {})}
       inputClassName={cn(
         triggerClassForVariant(variant),
         selectClassName,

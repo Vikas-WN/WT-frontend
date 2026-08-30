@@ -31,6 +31,10 @@ import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { WtStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import {
+  DEFAULT_PAGE_SIZE,
+  PAGE_SIZE_OPTIONS as SHARED_PAGE_SIZE_OPTIONS,
+} from "@/hooks/useClientPagination";
 import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { ClientDetailDialog } from "@/components/dashboard/clients/ClientDetailDialog";
@@ -46,7 +50,7 @@ const STATUS_FILTER_OPTIONS = [
   { value: "inactive", label: "Inactive" },
 ];
 
-const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
+const PAGE_SIZE_OPTIONS = SHARED_PAGE_SIZE_OPTIONS;
 
 function PersonCell({
   name,
@@ -136,7 +140,7 @@ export function ClientsPageClient() {
   const debouncedSearch = useDebouncedValue(search, 300);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [selectedClient, setSelectedClient] = useState<ClientRecord | null>(null);
 
   useEffect(() => {

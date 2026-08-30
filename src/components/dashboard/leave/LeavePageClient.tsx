@@ -146,6 +146,7 @@ import {
   requestHrStatus,
   requestManagerStatus,
   resolveUserRequestId,
+  isAlreadyDecidedUserRequestError,
   revokeOwnedUserRequest,
   hrTeamActionBlockedHint,
   updateOwnedUserRequest,
@@ -736,6 +737,9 @@ export function LeavePageClient() {
   }, [userEmail, hasManagerAccess, hasHrAccess, hasDmAccess]);
 
   const canViewTeamLeave = hasManagerAccess || hasHrAccess || hasDmAccess || hasPrimaryLeaveInbox;
+  // All Employee Requests holds the project-allocated side of the split. Managers see it
+  // scoped to the allocated employees routed to them; HR sees every allocated employee.
+  const canViewOrgLeaveRequests = hasHrAccess || hasManagerAccess || hasDmAccess;
   const firstLineStatusColumnLabel = hasHrAccess
     ? "Manager/DM status"
     : hasDmAccess && !hasManagerAccess
@@ -825,10 +829,13 @@ export function LeavePageClient() {
     }
   }, [hasManagerAccess, hasHrAccess, timelogSubTab]);
   useEffect(() => {
-    if ((leaveSubTab === "org" || leaveSubTab === "balances") && !hasHrAccess) {
+    if (leaveSubTab === "balances" && !hasHrAccess) {
       setLeaveSubTab("team");
     }
-  }, [leaveSubTab, hasHrAccess]);
+    if (leaveSubTab === "org" && !canViewOrgLeaveRequests) {
+      setLeaveSubTab("team");
+    }
+  }, [leaveSubTab, hasHrAccess, canViewOrgLeaveRequests]);
 
   useEffect(() => {
     if (!canViewTeamLeave && (leaveSubTab === "team" || leaveSubTab === "org")) {
@@ -1011,7 +1018,13 @@ export function LeavePageClient() {
   }, [hasHrAccess, hasManagerAccess, managerPortfolioRows, loadManagerData]);
 
   const loadEmployeeRequestsForApprover = useCallback(
-    async (scope: "team" | "org" = "team", page: number = 0, size: number = 10, skipScopeLoad = false) => {
+    async (
+      scope: "team" | "org" = "team",
+      // Both scopes fetch a single wide page and paginate client-side.
+      _page: number = 0,
+      size: number = 10,
+      skipScopeLoad = false
+    ) => {
     const selectedFrom = employeeRequestFilters.fromDate.trim();
     const selectedTo = employeeRequestFilters.toDate.trim();
     const fallbackRange = unfilteredLeaveRequestRange();
@@ -1025,7 +1038,7 @@ export function LeavePageClient() {
     if (!skipScopeLoad) {
       await loadScopeEmployees(scope);
     }
-    const { idToName, emailToName, userIdToEmail, emailCsv } = scopeEmployeesRef.current;
+    const { idToName, emailToName, userIdToEmail } = scopeEmployeesRef.current;
 
     let rows: Array<Record<string, unknown>> = [];
     let totalPages = 1;
@@ -1062,110 +1075,34 @@ export function LeavePageClient() {
             Math.random()
         );
 
-      if (hasHrAccess) {
-        // Unallocated / talent-pool employees only. Project-assigned leave is All Employee Requests.
-        const hrTeamTypes =
-          normalizedType === "ALL"
-            ? (["LEAVE", "OPTIONAL", "WFH", "COMP_OFF", "WFH_EXCEPTION"] as const)
-            : ([normalizedType] as const);
-        const results = await Promise.all(
-          hrTeamTypes.map((type) =>
-            fetchPaginatedScopedUserRequests({
-              fromDate: from,
-              toDate: to,
-              requestType: type,
-              page: 0,
-              size: Math.max(size, 200),
-              hrTeamScope: true,
-            })
-          )
-        );
-        const merged = results.flatMap((result) => result.rows);
-        rows = Array.from(new Map(merged.map((row) => [requestRowKey(row), row] as const)).values());
-        rows = applyListSort(rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
-        totalElements = rows.length;
-        totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
-      } else {
-      const wantsManagerInbox =
-        normalizedType === "ALL" ||
-        normalizedType === "LEAVE" ||
-        normalizedType === "OPTIONAL" ||
-        normalizedType === "WFH" ||
-        normalizedType === "COMP_OFF";
-      const managerInboxTypes =
+      // Team Requests is the unallocated / talent-pool side of the split. The backend
+      // applies that filter for HR and managers alike, scoping managers to the requests
+      // they are assigned to, so both personas use the same query here.
+      const teamTypes =
         normalizedType === "ALL"
-          ? (["LEAVE", "OPTIONAL", "WFH", "COMP_OFF"] as const)
-          : normalizedType === "LEAVE" ||
-              normalizedType === "OPTIONAL" ||
-              normalizedType === "WFH" ||
-              normalizedType === "COMP_OFF"
-            ? ([normalizedType] as const)
-            : ([] as const);
-      const canLoadManagerInbox = hasManagerAccess || hasDmAccess || hasPrimaryLeaveInbox;
-
-      const portfolioPromise = emailCsv
-        ? fetchPaginatedScopedUserRequests({
+          ? (["LEAVE", "OPTIONAL", "WFH", "COMP_OFF", "WFH_EXCEPTION"] as const)
+          : ([normalizedType] as const);
+      const results = await Promise.all(
+        teamTypes.map((type) =>
+          fetchPaginatedScopedUserRequests({
             fromDate: from,
             toDate: to,
-            requestType,
-            empEmails: emailCsv,
-            page: wantsManagerInbox && canLoadManagerInbox ? 0 : page,
-            size: wantsManagerInbox && canLoadManagerInbox ? 200 : size,
+            requestType: type,
+            page: 0,
+            size: Math.max(size, 200),
+            hrTeamScope: true,
           })
-        : Promise.resolve({
-            rows: [] as Array<Record<string, unknown>>,
-            totalPages: 0,
-            totalElements: 0,
-          });
-
-      // Primary-manager leave/WFH inbox (no empEmails) — selected managers see routed requests under Team Requests.
-      const managerInboxPromise =
-        wantsManagerInbox && canLoadManagerInbox && managerInboxTypes.length
-          ? Promise.all(
-              managerInboxTypes.map((type) =>
-                fetchPaginatedScopedUserRequests({
-                  fromDate: from,
-                  toDate: to,
-                  requestType: type,
-                  page: 0,
-                  size: 200,
-                })
-              )
-            ).then((results) => ({
-              rows: results.flatMap((result) => result.rows),
-              totalPages: 1,
-              totalElements: results.reduce((sum, result) => sum + result.totalElements, 0),
-            }))
-          : Promise.resolve({
-              rows: [] as Array<Record<string, unknown>>,
-              totalPages: 0,
-              totalElements: 0,
-            });
-
-      const [portfolioRes, leaveInboxRes] = await Promise.all([
-        portfolioPromise,
-        managerInboxPromise,
-      ]);
-      if (wantsManagerInbox && canLoadManagerInbox) {
-        const merged = [...portfolioRes.rows, ...leaveInboxRes.rows];
-        rows = Array.from(
-          new Map(merged.map((row) => [requestRowKey(row), row] as const)).values()
-        );
-        rows = filterTeamRequestsForPrimaryManager(rows, {
-          actorEmail: userEmail,
-          hasHrAccess,
-        });
-        rows = applyListSort(rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
-        totalElements = rows.length;
-        totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
-      } else {
-        rows = filterTeamRequestsForPrimaryManager(
-          applyListSort(portfolioRes.rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS),
-          { actorEmail: userEmail, hasHrAccess }
-        );
-        totalElements = rows.length;
-        totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
-      }
+        )
+      );
+      const merged = results.flatMap((result) => result.rows);
+      rows = Array.from(new Map(merged.map((row) => [requestRowKey(row), row] as const)).values());
+      rows = filterTeamRequestsForPrimaryManager(rows, {
+        actorEmail: userEmail,
+        hasHrAccess,
+      });
+      rows = applyListSort(rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
+      totalElements = rows.length;
+      totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
 
       if (normalizedType === "ALL" && (hasManagerAccess || hasDmAccess || hasPrimaryLeaveInbox)) {
         try {
@@ -1178,9 +1115,9 @@ export function LeavePageClient() {
           });
           const earnRows = compOffService.parseRequestRows(earnRes).map(mapEarnListRow);
           if (earnRows.length) {
-            const merged = [...rows, ...earnRows];
+            const withEarn = [...rows, ...earnRows];
             rows = Array.from(
-              new Map(merged.map((row) => [requestRowKey(row), row] as const)).values()
+              new Map(withEarn.map((row) => [requestRowKey(row), row] as const)).values()
             );
             rows = applyListSort(rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
             totalElements = rows.length;
@@ -1190,15 +1127,16 @@ export function LeavePageClient() {
           /* keep leave/WFH rows */
         }
       }
-      }
-    } else if (hasHrAccess) {
-      // Project-allocated employees only (backend allocated_requestors_only).
+    } else if (canViewOrgLeaveRequests) {
+      // All Employee Requests: the project-allocated side of the split. Managers see only
+      // the allocated employees whose requests are routed to them; HR sees all of them.
       const result = await fetchPaginatedScopedUserRequests({
         fromDate: from,
         toDate: to,
         requestType,
         page: 0,
         size: Math.max(size, 200),
+        orgScope: true,
       });
       rows = applyListSort(result.rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
       totalElements = rows.length;
@@ -1298,7 +1236,16 @@ export function LeavePageClient() {
       totalElements,
     });
   },
-    [employeeRequestFilters, hasHrAccess, hasManagerAccess, hasDmAccess, hasPrimaryLeaveInbox, loadScopeEmployees, userEmail]
+    [
+      canViewOrgLeaveRequests,
+      employeeRequestFilters,
+      hasHrAccess,
+      hasManagerAccess,
+      hasDmAccess,
+      hasPrimaryLeaveInbox,
+      loadScopeEmployees,
+      userEmail,
+    ]
   );
 
   const showTeamActionsColumn = true;
@@ -1676,7 +1623,7 @@ export function LeavePageClient() {
     if (isTeamLeaveRoute) {
       return [
         canViewTeamLeave ? { value: "team", label: "Team Requests" } : null,
-        hasHrAccess ? { value: "org", label: "All Employee Requests" } : null,
+        canViewOrgLeaveRequests ? { value: "org", label: "All Employee Requests" } : null,
         hasHrAccess ? { value: "balances", label: "Balances" } : null,
       ].filter((item): item is { value: string; label: string } => Boolean(item));
     }
@@ -1686,7 +1633,13 @@ export function LeavePageClient() {
       showCompOffTab ? { value: "comp-off", label: "Compensation Off Credit" } : null,
       { value: "wfh", label: "Work From Home" },
     ].filter((item): item is { value: string; label: string } => Boolean(item));
-  }, [canViewTeamLeave, hasHrAccess, isTeamLeaveRoute, showCompOffTab]);
+  }, [
+    canViewTeamLeave,
+    canViewOrgLeaveRequests,
+    hasHrAccess,
+    isTeamLeaveRoute,
+    showCompOffTab,
+  ]);
 
   return (
     <>
@@ -1969,7 +1922,16 @@ export function LeavePageClient() {
                                       runAction(
                                         userRequestActionLabel("WFH", "revoke"),
                                         async () => {
-                                        await revokeOwnedUserRequest(Number(requestId));
+                                        try {
+                                          await revokeOwnedUserRequest(Number(requestId));
+                                        } catch (error) {
+                                          // A reviewer decided it while this list was cached.
+                                          // Refresh so Delete stops being offered.
+                                          if (isAlreadyDecidedUserRequestError(error)) {
+                                            await loadMyLeaveRequests();
+                                          }
+                                          throw error;
+                                        }
                                         if (editingLeaveRequestId === requestId) {
                                           setEditingLeaveRequestId("");
                                           setLeaveRequestForm(createDefaultLeaveRequestForm());
@@ -2313,7 +2275,16 @@ export function LeavePageClient() {
                                       runAction(
                                         userRequestActionLabel("LEAVE", "revoke"),
                                         async () => {
-                                        await revokeOwnedUserRequest(Number(requestId));
+                                        try {
+                                          await revokeOwnedUserRequest(Number(requestId));
+                                        } catch (error) {
+                                          // A reviewer decided it while this list was cached.
+                                          // Refresh so Delete stops being offered.
+                                          if (isAlreadyDecidedUserRequestError(error)) {
+                                            await loadMyLeaveRequests();
+                                          }
+                                          throw error;
+                                        }
                                         if (editingLeaveRequestId === requestId) {
                                           setEditingLeaveRequestId("");
                                           setLeaveRequestForm(createDefaultLeaveRequestForm());

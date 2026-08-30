@@ -197,7 +197,12 @@ export function OffboardingPanel() {
   const isInvitedOffboarding =
     normalizeEmployeeStatusKey(selectedCandidate?.status) === "INVITED";
 
-  const canSubmit = isOffboardingFormValid(offboardingForm, selectedUserType);
+  // Until the live profile resolves, selectedUserType falls back to the cached candidate
+  // row, which can still say FULLTIME after a switch to CONSULTANT. Hold submission so HR
+  // cannot commit Full-Time fields against the new user type.
+  const userTypeStillResolving = Boolean(selectedEmpId) && selectedProfileQ.isLoading;
+  const canSubmit =
+    isOffboardingFormValid(offboardingForm, selectedUserType) && !userTypeStillResolving;
 
   // When live type resolves (or candidates refresh), drop Full-Time-only fields for consultants.
   useEffect(() => {
@@ -472,7 +477,7 @@ export function OffboardingPanel() {
           <DropdownSelectField
             label="Financial Year (Start)"
             className="w-[13.5rem] shrink-0"
-            contentClassName="min-w-[13.5rem] w-max"
+            contentClassName="min-w-[min(13.5rem,calc(100vw-1rem))] w-max max-w-[min(var(--available-width,100vw),calc(100vw-1rem))]"
             value={fyStartYear}
             onChange={setFyStartYear}
             options={financialYearOptions}
@@ -682,7 +687,6 @@ export function OffboardingPanel() {
             onChange={setSearch}
             placeholder="Search"
             aria-label="Search offboarded employees"
-            disabled={loadingList}
           />
         }
         filters={

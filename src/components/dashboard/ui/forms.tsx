@@ -595,6 +595,7 @@ export function FileField({
   required = false,
   showDeleteButton = false,
   currentFileName,
+  currentPreviewSrc,
   onDelete,
 }: {
   label: string;
@@ -605,6 +606,8 @@ export function FileField({
   onPickFiles?: (files: File[]) => void;
   showDeleteButton?: boolean;
   currentFileName?: string;
+  /** Thumbnail of the already-stored file, so the field does not read as empty. */
+  currentPreviewSrc?: string;
   onDelete?: () => void;
 }) {
   const fieldId = useId();
@@ -615,6 +618,16 @@ export function FileField({
     <Field className={FORM_FIELD_CLASS}>
       <FieldLabel label={label} required={required} htmlFor={fieldId} />
       <div className="flex items-center gap-2">
+        {currentPreviewSrc ? (
+          // The native file input always reads "No file chosen", which makes a saved file
+          // look lost. The thumbnail shows what is currently on record.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={currentPreviewSrc}
+            alt={currentFileName ? `Current ${label}: ${currentFileName}` : `Current ${label}`}
+            className="border-wt-border size-10 shrink-0 rounded-full border object-cover"
+          />
+        ) : null}
         <Input
           id={fieldId}
           type="file"
@@ -643,7 +656,9 @@ export function FileField({
         ) : null}
       </div>
       {currentFileName ? (
-        <p className="text-xs text-wt-text-muted mt-1">Current: {currentFileName}</p>
+        <p className="text-xs text-wt-text-muted mt-1">
+          Current: {currentFileName} — kept unless you choose a new file.
+        </p>
       ) : null}
     </Field>
   );

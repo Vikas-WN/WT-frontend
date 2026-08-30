@@ -195,6 +195,10 @@ export function SkillRatingsListInput({
                       required
                       searchPlaceholder="Search available skills…"
                       placeholder="Select Skill"
+                      // Skill names are long, so clamp to the viewport rather than the
+                      // portal host: inside a modal the reported width is the panel's and
+                      // the list still spills past the page edge.
+                      contentClassName="max-w-[min(20rem,calc(100vw-1rem))]"
                     />
                   ) : (
                     <InputField

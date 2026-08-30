@@ -8,14 +8,17 @@ export function useExitInterviewSubmissionDetail(
   lookupId: string,
   options?: { enabled?: boolean }
 ) {
-  const id = decodeURIComponent(lookupId.trim());
+  // Already decoded by the router; decoding again would corrupt ids containing "%".
+  const id = lookupId.trim();
   const enabled = (options?.enabled ?? true) && Boolean(id);
 
   return useQuery({
     queryKey: ["exit-interview", "submission", id, endpoints.exitInterview.submissionByLookupId(id)],
     enabled,
     staleTime: 60_000,
-    refetchOnMount: false,
+    // A submission can be reopened or deleted between listing and viewing, so always
+    // refetch on open rather than rendering a stale "submitted" record.
+    refetchOnMount: "always",
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     queryFn: async () => {

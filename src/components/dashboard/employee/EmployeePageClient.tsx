@@ -411,7 +411,6 @@ export function EmployeePageClient() {
                     onChange={setInvitedNameSearch}
                     placeholder="Search by employee name"
                     aria-label="Search invited employees by name"
-                    disabled={invitedListLoading}
                   />
                 }
                 filters={

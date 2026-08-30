@@ -23,10 +23,21 @@ function PopoverTrigger({ className, ...props }: PopoverPrimitive.Trigger.Props)
   )
 }
 
-function PopoverPositioner({ className, ...props }: PopoverPrimitive.Positioner.Props) {
+function PopoverPositioner({
+  collisionPadding = 12,
+  collisionAvoidance = { side: "flip", align: "shift", fallbackAxisSide: "end" },
+  positionMethod = "fixed",
+  className,
+  ...props
+}: PopoverPrimitive.Positioner.Props) {
   return (
+    // Flip/shift back into view by default. Without these, a popup anchored near the
+    // right edge renders past the viewport and its content becomes unreachable.
     <PopoverPrimitive.Positioner
       data-slot="popover-positioner"
+      collisionPadding={collisionPadding}
+      collisionAvoidance={collisionAvoidance}
+      positionMethod={positionMethod}
       className={cn("z-[250] outline-none", className)}
       {...props}
     />
@@ -41,6 +52,9 @@ const PopoverPopup = React.forwardRef<HTMLDivElement, PopoverPrimitive.Popup.Pro
         data-slot="popover-popup"
         className={cn(
           "w-auto rounded-xl border border-border bg-popover p-0 shadow-lg shadow-black/5 outline-none data-[side='bottom']:animate-in data-[side='top']:animate-out data-[side='top']:fade-out-0 data-[side='bottom']:fade-in-0 data-[side='bottom']:slide-in-from-top-2 data-[side='top']:slide-out-from-bottom-2",
+          // Clamp to the viewport, not just the space the positioner reports: inside a
+          // portalled modal the reported width is the panel's, which can still overflow.
+          "max-w-[min(var(--available-width,100vw),calc(100vw-1rem))]",
           className
         )}
         {...props}

@@ -51,7 +51,12 @@ import {
   lookupResumeShareLink,
 } from "@/utils/employeeResume";
 import { canFetchEmployeeResumeApi, pickPortalRoles } from "@/utils/roles";
-import { normalizeEmployeeStatusKey, isServingNoticeUserStatus } from "@/utils/userStatus";
+import {
+  normalizeEmployeeStatusKey,
+  isServingNoticeUserStatus,
+  isExitUserStatus,
+  isPreActiveEmployeeStatus,
+} from "@/utils/userStatus";
 import { useAuth } from "@/context/AuthContext";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
@@ -77,26 +82,24 @@ const WORK_MODES = ["WFO", "WFH", "HYBRID"];
 const WORK_LOCATIONS = ["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"];
 const USER_STATUSES = ["ACTIVE", "INACTIVE", "PENDING", "ONBOARDING", "INVITED", "SERVING_NOTICE"];
 
-/** Validate exit dates when HR moves an employee onto Serving Notice from the profile editor. */
-function servingNoticeExitDateError(
+/** Validate exit dates when HR moves an employee onto an exit status from the profile editor. */
+function exitDateError(
   resignationDate: string,
   lastWorkingDay: string,
-  userType: string
+  userType: string,
+  targetLabel: string
 ): string | null {
   const resignation = resignationDate.trim();
   const lwd = lastWorkingDay.trim();
   const type = normalizeDirectoryUserType(userType);
 
-  if (type === "CONSULTANT") {
-    if (!lwd) return "Last Working Day is required for consultant offboarding.";
-    return null;
-  }
-  if (type === "INTERN") {
-    if (!lwd) return "Last Working Day is required before changing status to Serving Notice Period.";
+  // Interns and consultants exit on a last working day only — they have no resignation date.
+  if (type === "CONSULTANT" || type === "INTERN") {
+    if (!lwd) return `Last Working Day is required before changing status to ${targetLabel}.`;
     return null;
   }
   if (!resignation && !lwd) {
-    return "Resignation Date and Last Working Day are required before changing status to Serving Notice Period.";
+    return `Resignation Date and Last Working Day are required before changing status to ${targetLabel}.`;
   }
   if (!resignation) return "Resignation Date is required.";
   if (!lwd) return "Last Working Day is required.";
@@ -218,10 +221,6 @@ export function EmployeeProfilePageClient() {
     String(pickProfileField(profileRecord, ["user_type", "userType"]) ?? "")
       .toUpperCase()
       .replace(/[\s\-_]/g, "") === "CONSULTANT";
-  const userStatusOptions = useMemo(
-    () => (isConsultantEmployee ? USER_STATUSES.filter((status) => status !== "SERVING_NOTICE") : USER_STATUSES),
-    [isConsultantEmployee]
-  );
   const isInternEmployee =
     String(pickProfileField(profileRecord, ["user_type", "userType"]) ?? "")
       .toUpperCase()
@@ -232,10 +231,28 @@ export function EmployeeProfilePageClient() {
   const currentProfileStatus = String(
     pickProfileField(profileRecord, ["user_status", "status", "userStatus"]) ?? ""
   ).trim();
-  const transitioningToServingNotice =
+  // Serving Notice never applies to interns/consultants (they exit on their last working
+  // day) nor to invited employees, who have not started employment and so cannot serve out
+  // a notice period.
+  const userStatusOptions = useMemo(
+    () =>
+      isConsultantEmployee ||
+      isInternEmployee ||
+      isPreActiveEmployeeStatus(currentProfileStatus)
+        ? USER_STATUSES.filter((status) => status !== "SERVING_NOTICE")
+        : USER_STATUSES,
+    [isConsultantEmployee, isInternEmployee, currentProfileStatus]
+  );
+  // Exit dates are required when moving onto an exit status (Serving Notice or Inactive),
+  // unless the employee is already exiting or never joined the active workforce.
+  const transitioningToExit =
     Boolean(editForm) &&
-    isServingNoticeUserStatus(editForm?.user_status) &&
-    !isServingNoticeUserStatus(currentProfileStatus);
+    isExitUserStatus(editForm?.user_status) &&
+    !isExitUserStatus(currentProfileStatus) &&
+    !isPreActiveEmployeeStatus(currentProfileStatus);
+  const exitTargetLabel = isServingNoticeUserStatus(editForm?.user_status)
+    ? "Serving Notice Period"
+    : "Inactive";
 
   const resumeShareHref = useMemo(() => {
     const index = buildResumeShareLinkIndex(resumePayload?.rows ?? []);
@@ -447,13 +464,14 @@ export function EmployeeProfilePageClient() {
     void runAction(
       statusOnlyEdit ? "Update employee status" : "Update employee profile",
       async () => {
-        if (transitioningToServingNotice) {
-          const exitDateError = servingNoticeExitDateError(
+        if (transitioningToExit) {
+          const dateError = exitDateError(
             editForm.resignation_date,
             editForm.last_working_day,
-            profileUserType
+            profileUserType,
+            exitTargetLabel
           );
-          if (exitDateError) throw new Error(exitDateError);
+          if (dateError) throw new Error(dateError);
 
           const resignationDate = editForm.resignation_date.trim();
           const lastWorkingDay = editForm.last_working_day.trim();
@@ -465,7 +483,6 @@ export function EmployeeProfilePageClient() {
                 }
               : isInternEmployee
                 ? {
-                    resignation_date: lastWorkingDay,
                     last_working_day: lastWorkingDay,
                     exit_type: "VOLUNTARY" as const,
                   }
@@ -518,9 +535,6 @@ export function EmployeeProfilePageClient() {
             const normalizedEditForm = {
               ...editForm,
               primary_skills: primarySkills,
-              // Status already applied by offboarding; keep it on the payload so
-              // full-profile validation still receives required user_status.
-              user_status: "SERVING_NOTICE",
             };
             const payload = editFormToUpdatePayload(normalizedEditForm, {
               statusOnly: false,
@@ -681,7 +695,7 @@ export function EmployeeProfilePageClient() {
                         : "Update the employee account status. Other profile fields cannot be changed from this role."
                     }
                   >
-                    <div className={transitioningToServingNotice ? "max-w-xl" : "max-w-sm"}>
+                    <div className={transitioningToExit ? "max-w-xl" : "max-w-sm"}>
                       {adminFieldsLocked ? (
                         <ViewOnlyField
                           label="Status"
@@ -698,7 +712,7 @@ export function EmployeeProfilePageClient() {
                           disabled={saving}
                         />
                       )}
-                      {transitioningToServingNotice ? (
+                      {transitioningToExit ? (
                         <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
                           {isConsultantEmployee || isInternEmployee ? (
                             <DatePickerField
@@ -711,9 +725,8 @@ export function EmployeeProfilePageClient() {
                                     ? {
                                         ...prev,
                                         last_working_day: previousWeekdayOrSame(v),
-                                        ...(isInternEmployee
-                                          ? { resignation_date: previousWeekdayOrSame(v) }
-                                          : { resignation_date: "" }),
+                                        // Interns and consultants have no resignation date.
+                                        resignation_date: "",
                                       }
                                     : prev
                                 )
@@ -872,7 +885,7 @@ export function EmployeeProfilePageClient() {
                           disabled={saving}
                         />
                       )}
-                      {transitioningToServingNotice ? (
+                      {transitioningToExit ? (
                         <>
                           {isConsultantEmployee || isInternEmployee ? (
                             <DatePickerField
@@ -885,9 +898,8 @@ export function EmployeeProfilePageClient() {
                                     ? {
                                         ...prev,
                                         last_working_day: previousWeekdayOrSame(v),
-                                        ...(isInternEmployee
-                                          ? { resignation_date: previousWeekdayOrSame(v) }
-                                          : { resignation_date: "" }),
+                                        // Interns and consultants have no resignation date.
+                                        resignation_date: "",
                                       }
                                     : prev
                                 )
