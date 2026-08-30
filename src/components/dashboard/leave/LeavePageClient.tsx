@@ -15,7 +15,7 @@ import {
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
 import { Skeleton } from "@/components/ui/skeleton";
-import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { showErrorToast, showSuccessToast, showMissingFieldsToast } from "@/lib/toast";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -154,6 +154,7 @@ import {
 } from "@/utils/userRequest";
 import { formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
 import { useNonOptionalHolidayDates } from "@/hooks/leave/useNonOptionalHolidayDates";
+import { useSelfProfile } from "@/hooks/useSelfProfile";
 import { buildUserRequestBody } from "@/utils/leaveRequestPayload";
 import { activeAllocationsRequireClientApproval, isTalentPoolLeaveRouting } from "@/utils/leaveAllocations";
 import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSummary";
@@ -163,7 +164,6 @@ import { CONTENT_CARD_CLASS, FILTER_BAR_CLASS } from "@/components/dashboard/ui/
 import { cn } from "@/lib/utils";
 
 import { LeaveManagerSelector } from "@/components/dashboard/leave/LeaveManagerSelector";
-import { LeaveAdditionalRecipientsSelector } from "@/components/dashboard/leave/LeaveAdditionalRecipientsSelector";
 
 import {
   calendarDaysInclusive,
@@ -765,6 +765,8 @@ export function LeavePageClient() {
   const hasAvailableCompOffCredits =
     Number.isFinite(availableCompOffCredits) && availableCompOffCredits > 0;
 
+  const { data: selfProfile } = useSelfProfile(!isTeamLeaveRoute && leaveSubTab === "my");
+
   const leaveRequestTypeOptions = useMemo(() => {
     const base = USER_REQUEST_TYPE_SELECT_OPTIONS.filter((opt) => opt.value !== "WFH");
     const editingCompOff =
@@ -806,6 +808,16 @@ export function LeavePageClient() {
       });
     }
   }, [leaveSubTab]);
+  
+  useEffect(() => {
+    if (!editingLeaveRequestId && leaveSubTab === "my" && selfProfile?.reporting_manager) {
+      const reportingManager = String(selfProfile.reporting_manager).trim();
+      if (reportingManager && reportingManager.includes("@")) {
+        setSelectedLeaveManagerEmails([reportingManager.toLowerCase()]);
+      }
+    }
+  }, [editingLeaveRequestId, leaveSubTab, selfProfile?.reporting_manager]);
+
   const canAccessProfile = Boolean(user);
   useEffect(() => {
     if (!hasManagerAccess && !hasHrAccess && timelogSubTab === "team") {
@@ -2000,6 +2012,8 @@ export function LeavePageClient() {
                                           editingLeaveRequestId ? "update" : "submit"
                                         ),
                                         async () => {
+                                        const missingFields: string[] = [];
+                                        
                                         const fromDate = normalizeToApiDate(
                                           leaveRequestForm.request_from_date.trim()
                                         );
@@ -2007,32 +2021,33 @@ export function LeavePageClient() {
                                           leaveRequestForm.request_to_date.trim()
                                         );
                                         if (!fromDate || !toDate) {
-                                          throw new Error("From Date and To Date are required (dd/mm/yyyy).");
+                                          missingFields.push("From Date", "To Date");
+                                        } else if (!parseApiDate(fromDate) || !parseApiDate(toDate)) {
+                                          missingFields.push("Valid From Date", "Valid To Date");
+                                        } else if (compareApiDates(toDate, fromDate) < 0) {
+                                          missingFields.push("Valid date range (Start Date cannot be after End Date)");
                                         }
-                                        if (!parseApiDate(fromDate) || !parseApiDate(toDate)) {
-                                          throw new Error("Please provide valid dates (dd/mm/yyyy).");
-                                        }
-                                        if (compareApiDates(toDate, fromDate) < 0) {
-                                          throw new Error("Start Date cannot be after the End Date.");
-                                        }
+                                        
                                         const comments = leaveRequestForm.comments.trim();
                                         if (!comments) {
-                                          throw new Error("Comments are required.");
+                                          missingFields.push("Comments");
+                                        } else if (comments.length > 200) {
+                                          missingFields.push("Comments (200 characters or less)");
                                         }
-                                        if (comments.length > 200) {
-                                          throw new Error("Comments must be 200 characters or less.");
-                                        }
+                                        
                                         if (leaveRequestForm.is_half_day && fromDate !== toDate) {
-                                          throw new Error("Half-day request must be for one day.");
+                                          missingFields.push("Valid Half-day date (From and To Date must be the same)");
                                         }
+                                        
                                         const requestType = leaveRequestForm.request_type;
                                         const needsClientApproval =
                                           requiresClientApproval &&
                                           (normalizeUserRequestType(requestType) === "LEAVE" ||
                                            normalizeUserRequestType(requestType) === "OPTIONAL");
                                         if (needsClientApproval && !leaveRequestForm.client_approval) {
-                                          throw new Error("Client approval is required for client users.");
+                                          missingFields.push("Client approval confirmation");
                                         }
+                                        
                                         if (
                                           !routesLeaveWfhToHr &&
                                           (normalizeUserRequestType(requestType) === "LEAVE" ||
@@ -2040,8 +2055,9 @@ export function LeavePageClient() {
                                            normalizeUserRequestType(requestType) === "COMP_OFF") &&
                                           !selectedLeaveManagerEmails.length
                                         ) {
-                                          throw new Error("Select at least one primary manager.");
+                                          missingFields.push("At least one Primary Manager");
                                         }
+                                        
                                         if (
                                           !routesLeaveWfhToHr &&
                                           (normalizeUserRequestType(requestType) === "LEAVE" ||
@@ -2049,7 +2065,38 @@ export function LeavePageClient() {
                                            normalizeUserRequestType(requestType) === "COMP_OFF") &&
                                           !selectedAdditionalRecipientEmails.length
                                         ) {
-                                          throw new Error("Select at least one secondary manager.");
+                                          missingFields.push("At least one Secondary Manager");
+                                        }
+                                        
+                                        if (missingFields.length > 0) {
+                                          showMissingFieldsToast(missingFields, editingLeaveRequestId ? "updating" : "submitting");
+                                          // Scroll to first invalid field
+                                          const fieldIdMap: Record<string, string> = {
+                                            "From Date": "leave-from-date",
+                                            "To Date": "leave-to-date",
+                                            "Valid From Date": "leave-from-date",
+                                            "Valid To Date": "leave-to-date",
+                                            "Valid date range (Start Date cannot be after End Date)": "leave-from-date",
+                                            "Comments": "leave-comments",
+                                            "Comments (200 characters or less)": "leave-comments",
+                                            "Valid Half-day date (From and To Date must be the same)": "leave-from-date",
+                                            "Client approval confirmation": "client-approval",
+                                            "At least one Primary Manager": "leave-primary-managers",
+                                            "At least one Secondary Manager": "leave-secondary-managers",
+                                            "Leave Type": "leave-request-type",
+                                          };
+                                          const firstMissing = missingFields[0];
+                                          const elementId = fieldIdMap[firstMissing];
+                                          if (elementId) {
+                                            setTimeout(() => {
+                                              const el = document.getElementById(elementId);
+                                              if (el) {
+                                                el.scrollIntoView({ behavior: "smooth", block: "center" });
+                                                el.focus({ preventScroll: true });
+                                              }
+                                            }, 100);
+                                          }
+                                          throw new Error("Validation failed");
                                         }
                                         const isCompOffUsage =
                                           normalizeCompOffRequestType(requestType) === "COMP_OFF";

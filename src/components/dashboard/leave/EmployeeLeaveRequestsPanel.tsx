@@ -94,8 +94,8 @@ export function EmployeeLeaveRequestsPanel({
   );
   const [viewingRequest, setViewingRequest] = useState<Record<string, unknown> | null>(null);
   const isLeave = mode === "leave";
-  const showLeaveFields =
-    isLeave && normalizeUserRequestType(leaveRequestForm.request_type) === "LEAVE";
+  const normalizedType = normalizeUserRequestType(leaveRequestForm.request_type);
+  const showLeaveFields = isLeave && (normalizedType === "LEAVE" || normalizedType === "OPTIONAL");
 
   useEffect(() => {
     if (editingLeaveRequestId) {

@@ -38,11 +38,13 @@ export function LeaveAdditionalRecipientsSelector({
   onChange,
   excludedEmails = [],
   disabled = false,
+  id,
 }: {
   selectedEmails: string[];
   onChange: (emails: string[]) => void;
   excludedEmails?: string[];
   disabled?: boolean;
+  id?: string;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -197,6 +199,7 @@ export function LeaveAdditionalRecipientsSelector({
           aria-expanded={open}
           disabled={disabled}
           onClick={() => setOpen((v) => !v)}
+          id={id}
           className="flex h-auto min-h-10 w-full items-center gap-1.5 rounded-lg border border-input bg-transparent px-3 py-1.5 text-sm transition-colors hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-0 disabled:pointer-events-none disabled:opacity-50 disabled:bg-input/50 cursor-pointer"
         >
           <div className="flex flex-1 flex-wrap items-center gap-1">

@@ -130,6 +130,7 @@ export function OffboardingPanel() {
     refreshOffboardingData,
     listFetched,
     financialYearOptions,
+  resetListFilters,
   } = useOffboardingPanelQueries();
   const [listCache, setListCache] = useState<{
     loaded: boolean;
@@ -439,6 +440,7 @@ export function OffboardingPanel() {
       });
       setOffboardingForm(createEmptyOffboardingForm());
       setListPage(0);
+      resetListFilters();
       showSuccessToast("Employee offboarded successfully.");
       await refreshOffboardingData();
     } catch (error) {

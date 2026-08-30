@@ -105,6 +105,7 @@ export function LeaveRequestForm({
               disabled={actionLoading}
               aria-label="Request type"
               showChevron
+              id="leave-request-type"
             />
           </Field>
 
@@ -120,6 +121,7 @@ export function LeaveRequestForm({
                 request_to_date: values.is_half_day ? v : values.request_to_date,
               })
             }
+            id="leave-from-date"
           />
 
           <DatePicker
@@ -131,6 +133,7 @@ export function LeaveRequestForm({
               if (values.is_half_day) return;
               onChange({ ...values, request_to_date: v });
             }}
+            id="leave-to-date"
           />
         </div>
 
@@ -216,6 +219,7 @@ export function LeaveRequestForm({
                   );
                 }}
                 disabled={actionLoading}
+                id="leave-primary-managers"
               />
             </div>
             <div className="flex flex-col gap-1.5 min-w-0">
@@ -224,6 +228,7 @@ export function LeaveRequestForm({
                 onChange={onAdditionalEmailsChange}
                 excludedEmails={selectedManagerEmails}
                 disabled={actionLoading}
+                id="leave-secondary-managers"
               />
             </div>
           </div>
@@ -241,6 +246,7 @@ export function LeaveRequestForm({
             value={values.comments}
             onChange={(e) => onChange({ ...values, comments: e.target.value })}
             className="min-h-[100px] resize-y bg-background"
+            id="leave-comments"
           />
         </Field>
 

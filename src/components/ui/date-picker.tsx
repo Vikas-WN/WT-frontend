@@ -43,6 +43,7 @@ export function DatePicker({
   max,
   className,
   positionerClassName,
+  id,
 }: {
   label?: string
   value: string
@@ -54,6 +55,7 @@ export function DatePicker({
   className?: string
   /** Raise above modals (z-[200]) when the picker is used inside a dialog. */
   positionerClassName?: string
+  id?: string
 }) {
   const [open, setOpen] = useState(false)
   const [lockedSide, setLockedSide] = useState<PopoverSide | null>(null)
@@ -125,6 +127,7 @@ export function DatePicker({
       <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger
           disabled={disabled}
+          id={id}
           className={cn(
             FORM_CONTROL_CLASS,
             "flex cursor-pointer items-center gap-2 hover:bg-wt-surface-2/70",

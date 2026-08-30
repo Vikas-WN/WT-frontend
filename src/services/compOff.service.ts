@@ -217,8 +217,37 @@ export const compOffService = {
       if (code) {
         return (await resolveCompOffManagerEmail(code, catalog)).trim().toLowerCase();
       }
-      const first = catalog.options.find((p) => p.managerEmail?.trim());
-      return String(first?.managerEmail ?? "").trim().toLowerCase();
+      // First, try to find a project with a manager email in the catalog
+      const withManager = catalog.options.find((p) => p.managerEmail?.trim());
+      if (withManager?.managerEmail) {
+        return withManager.managerEmail.trim().toLowerCase();
+      }
+      // Fallback: try to find any manager email from assigned/earn projects
+      const allOptions = [...catalog.options, ...catalog.assignedRows, ...catalog.allocationRows];
+      for (const row of allOptions) {
+        const rowRecord = row as Record<string, unknown>;
+        const email = String(
+          rowRecord.manager_email ?? rowRecord.managerEmail ?? rowRecord.account_manager_email ?? rowRecord.accountManagerEmail ?? ""
+        ).trim().toLowerCase();
+        if (email && email.includes("@")) return email;
+      }
+      // Last resort: check the onboard list for account/delivery/project managers
+      try {
+        const onboardRes = await hrmsService.getOnboardList({ page: "0", size: "500" });
+        const onboardRows = toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes);
+        for (const row of onboardRows) {
+          const email = String(
+            row.account_manager_email ?? row.accountManagerEmail ??
+            row.delivery_manager_email ?? row.deliveryManagerEmail ??
+            row.project_manager_email ?? row.projectManagerEmail ??
+            row.manager_email ?? row.managerEmail ?? ""
+          ).trim().toLowerCase();
+          if (email && email.includes("@")) return email;
+        }
+      } catch {
+        /* ignore */
+      }
+      return "";
     } catch {
       return "";
     }

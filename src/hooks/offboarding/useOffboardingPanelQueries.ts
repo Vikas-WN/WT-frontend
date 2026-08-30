@@ -365,6 +365,15 @@ export function useOffboardingPanelQueries() {
     await queryClient.invalidateQueries({ queryKey: ["offboarding"] });
   }, [queryClient]);
 
+  const resetListFilters = useCallback(() => {
+    const window = defaultOffboardingLwdWindow();
+    setFilterFromDate(window.from);
+    setFilterToDate(window.to);
+    setFilterType("");
+    setSearch("");
+    setListPage(0);
+  }, []);
+
   const updateFyStartYear = useCallback((value: string) => {
     setFyStartYear((current) => (current === value ? current : value));
   }, []);
@@ -439,6 +448,7 @@ export function useOffboardingPanelQueries() {
     involuntaryPercent: attritionQ.data?.involuntaryPercent ?? null,
     attritionExitCount: attritionQ.data?.attritionExitCount ?? null,
     refreshOffboardingData,
+    resetListFilters,
     refetchList: listQ.refetch,
     listFetched: listQ.isFetched,
     financialYearOptions: FINANCIAL_YEAR_OPTIONS,

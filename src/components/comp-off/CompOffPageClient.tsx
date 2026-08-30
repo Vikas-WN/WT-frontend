@@ -34,6 +34,7 @@ import { WtLoadingOverlay } from "@/components/dashboard/ui/WtLoader";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
+import { showMissingFieldsToast } from "@/lib/toast";
 
 import { DatePicker } from "@/components/ui/date-picker";
 import { LeaveManagerSelector } from "@/components/dashboard/leave/LeaveManagerSelector";
@@ -855,15 +856,20 @@ export function CompOffPageClient({
     const workedDate = normalizeToApiDate(earnForm.worked_date.trim());
     const projectCode = earnForm.project_code.trim();
     const comments = earnForm.comments.trim();
-    if (!projectCode) throw new Error("Project is required.");
-    if (!workedDate) throw new Error("Worked date is required.");
-    if (compareApiDates(workedDate, todayYmd()) > 0) {
-      throw new Error("Worked date cannot be in the future.");
+    
+    const missingFields: string[] = [];
+    if (!projectCode) missingFields.push("Project");
+    if (!workedDate) missingFields.push("Worked Date");
+    else if (compareApiDates(workedDate, todayYmd()) > 0) missingFields.push("Valid Worked Date (cannot be in the future)");
+    if (!selectedManagerEmails.length) missingFields.push("At least one Primary Manager");
+    if (!selectedAdditionalManagerEmails.length) missingFields.push("At least one Secondary Manager");
+    if (!comments) missingFields.push("Comments");
+    else if (comments.length > 2000) missingFields.push("Comments (2000 characters or less)");
+    
+    if (missingFields.length > 0) {
+      showMissingFieldsToast(missingFields, "submitting");
+      throw new Error("Validation failed");
     }
-    if (!selectedManagerEmails.length) throw new Error("At least one primary manager must be selected.");
-    if (!selectedAdditionalManagerEmails.length) throw new Error("At least one secondary manager must be selected.");
-    if (!comments) throw new Error("Comments are required.");
-    if (comments.length > 2000) throw new Error("Comments must be 2000 characters or less.");
 
     const editingId = Number(editingRequestId);
     const isEditing = Number.isFinite(editingId) && editingId > 0;
@@ -957,15 +963,20 @@ export function CompOffPageClient({
     const fromDate = normalizeToApiDate(usageForm.request_from_date.trim());
     const toDate = normalizeToApiDate(usageForm.request_to_date.trim());
     const comments = usageForm.comments.trim();
-    if (!fromDate || !toDate) throw new Error("From date and to date are required.");
-    if (!parseApiDate(fromDate) || !parseApiDate(toDate)) {
-      throw new Error("Please provide valid dates (dd/mm/yyyy).");
+    
+    const missingFields: string[] = [];
+    if (!fromDate || !toDate) missingFields.push("From Date", "To Date");
+    else if (!parseApiDate(fromDate) || !parseApiDate(toDate)) missingFields.push("Valid From Date", "Valid To Date");
+    else if (compareApiDates(fromDate, toDate) > 0) missingFields.push("Valid date range (Start Date cannot be after End Date)");
+    if (calendarDaysInclusive(fromDate, toDate) < 1) missingFields.push("At least one calendar day");
+    if (comments.length > 200) missingFields.push("Comments (200 characters or less)");
+    
+    if (missingFields.length > 0) {
+      showMissingFieldsToast(missingFields, "submitting");
+      throw new Error("Validation failed");
     }
-    if (compareApiDates(fromDate, toDate) > 0) {
-      throw new Error("Start Date cannot be after the End Date.");
-    }
+    
     const days = calendarDaysInclusive(fromDate, toDate);
-    if (days < 1) throw new Error("Select at least one calendar day.");
     const sameDayEarnDates = sameDayCompOffEarnDatesInUsageRange(grants, fromDate, toDate);
     const available = await compOffService.resolveAvailableUnits(fromDate);
     if (
@@ -984,7 +995,6 @@ export function CompOffPageClient({
         `Insufficient comp-off balance. Available: ${available}, requested: ${days} day(s).`
       );
     }
-    if (comments.length > 200) throw new Error("Comments must be 200 characters or less.");
     const payload = {
       request_type: "COMP_OFF",
       request_from_date: fromDate,
