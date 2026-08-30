@@ -17,6 +17,11 @@ function FieldError({ message }: { message?: string }) {
   return <p className="mt-1 text-xs text-destructive">{message}</p>;
 }
 
+/** Anchor id so the validation summary can scroll straight to an unanswered question. */
+export function exitInterviewFieldAnchorId(key: string): string {
+  return `exit-survey-field-${key}`;
+}
+
 function ReadonlyControl({ field, value }: { field: FormField; value: string }) {
   if (field.widget === "readonly_date") {
     const display = formatApiDateDisplay(value);
@@ -168,9 +173,20 @@ export function ExitInterviewFormFields({
       {fields.map((field) => {
         const readonly = isReadonlyField(field);
         const displayValue = readonly ? autofill[field.key] ?? "" : undefined;
+        const hasError = Boolean(
+          errors[field.key] || (field.other_field && errors[field.other_field])
+        );
 
         return (
-          <div key={field.key} className="rounded-xl border border-wt-border bg-wt-surface-1 p-4">
+          <div
+            key={field.key}
+            id={exitInterviewFieldAnchorId(field.key)}
+            tabIndex={-1}
+            aria-invalid={hasError || undefined}
+            className={`scroll-mt-24 rounded-xl border bg-wt-surface-1 p-4 outline-none ${
+              hasError ? "border-destructive ring-1 ring-destructive/30" : "border-wt-border"
+            }`}
+          >
             <p className="text-sm font-medium text-wt-text">
               {field.label}
               {field.required && !readonly ? <span className="text-destructive"> *</span> : null}

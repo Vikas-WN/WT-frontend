@@ -2136,13 +2136,12 @@ export function LeavePageClient() {
                                               `Insufficient comp-off balance. Available: ${available}, requested: ${days} day(s).`
                                             );
                                           }
+                                          // Optional on the backend: when no project manager can be
+                                          // resolved it routes to the employee's own manager scope.
                                           const managerCompOffEmail =
-                                            await compOffService.resolveUsageManagerCompOffEmail();
-                                          if (!managerCompOffEmail) {
-                                            throw new Error(
-                                              "Could not resolve project manager for comp-off. Ensure you are allocated to a project with a manager."
-                                            );
-                                          }
+                                            (await compOffService.resolveUsageManagerCompOffEmail()) ||
+                                            selectedLeaveManagerEmails[0]?.trim().toLowerCase() ||
+                                            "";
                                           if (editingLeaveRequestId) {
                                             await compOffService.updateRequest({
                                               user_request_id: Number(editingLeaveRequestId),
@@ -2150,7 +2149,9 @@ export function LeavePageClient() {
                                               request_to_date: toDate,
                                               request_type: "COMP_OFF",
                                               comments,
-                                              manager_comp_off_email: managerCompOffEmail,
+                                              ...(managerCompOffEmail
+                                                ? { manager_comp_off_email: managerCompOffEmail }
+                                                : {}),
                                               primary_manager_emails: selectedLeaveManagerEmails,
                                               secondary_manager_emails: selectedAdditionalRecipientEmails,
                                               primaryManagerEmails: selectedLeaveManagerEmails,

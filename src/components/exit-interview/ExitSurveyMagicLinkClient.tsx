@@ -1,10 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FormFieldsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { ExitInterviewFormFields } from "@/components/exit-interview/ExitInterviewFormFields";
+import {
+  ExitInterviewValidationSummary,
+  collectExitInterviewMissingFields,
+  focusExitInterviewField,
+} from "@/components/exit-interview/ExitInterviewValidationSummary";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
 import { ApiError } from "@/api/error";
 import { exitInterviewService } from "@/services/exitInterview.service";
@@ -209,11 +214,20 @@ export function ExitSurveyMagicLinkClient({ token }: { token: string }) {
     });
   }, []);
 
+  const missingFields = useMemo(
+    () => collectExitInterviewMissingFields(context?.form.fields ?? [], fieldErrors),
+    [context, fieldErrors]
+  );
+
   const handleSubmit = async () => {
     if (!context || phase !== "ready") return;
     const errors = validateExitInterviewAnswers(context.form, answers);
     setFieldErrors(errors);
-    if (Object.keys(errors).length) return;
+    const missing = collectExitInterviewMissingFields(context.form.fields, errors);
+    if (missing.length) {
+      focusExitInterviewField(missing[0].key);
+      return;
+    }
 
     setSubmitError(null);
     setPhase("submitting");
@@ -280,12 +294,15 @@ export function ExitSurveyMagicLinkClient({ token }: { token: string }) {
         </div>
 
         <div className="mt-5 grid gap-3 rounded-xl border border-wt-border bg-wt-surface-1 p-4 text-sm sm:grid-cols-2">
-          <div>
-            <span className="text-wt-text-muted">Resignation date</span>
-            <p className="font-medium tabular-nums">
-              {formatApiDateDisplay(context.resignation_date) || "—"}
-            </p>
-          </div>
+          {/* LWD-only exits (intern / consultant / contractual) have no resignation date. */}
+          {formatApiDateDisplay(context.resignation_date) ? (
+            <div>
+              <span className="text-wt-text-muted">Resignation date</span>
+              <p className="font-medium tabular-nums">
+                {formatApiDateDisplay(context.resignation_date)}
+              </p>
+            </div>
+          ) : null}
           <div>
             <span className="text-wt-text-muted">Last working day</span>
             <p className="font-medium tabular-nums">
@@ -311,6 +328,11 @@ export function ExitSurveyMagicLinkClient({ token }: { token: string }) {
               disabled={submitting}
               reportingManagersAsText
             />
+            {missingFields.length ? (
+              <div className="mt-6">
+                <ExitInterviewValidationSummary missingFields={missingFields} />
+              </div>
+            ) : null}
             {submitError ? (
               <p role="alert" className="mt-6 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-red-200">
                 {submitError}

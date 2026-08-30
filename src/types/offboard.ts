@@ -4,6 +4,7 @@ export interface HrOffboardListItem {
   status: string;
   employee_name: string;
   email?: string;
+  user_type?: string;
   exit_type: string;
   reason: string | null;
   expected_behavior: string | null;

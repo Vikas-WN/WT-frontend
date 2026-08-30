@@ -116,7 +116,10 @@ export function formatUserTypeLabel(value: string): string {
   return v || "—";
 }
 
-/** Consultant / contractual exits have LWD only — no separate resignation or notice period. */
+/**
+ * Consultant / intern / contractual exits have a last working day only — no separate
+ * resignation date and no notice period.
+ */
 export function isLwdOnlyOffboarding(opts: {
   userType?: string | null;
   exitType?: string | null;
@@ -125,7 +128,7 @@ export function isLwdOnlyOffboarding(opts: {
   const exitType = String(opts.exitType ?? "")
     .trim()
     .toUpperCase();
-  return userType === "CONSULTANT" || exitType === "CONTRACTUAL";
+  return userType === "CONSULTANT" || userType === "INTERN" || exitType === "CONTRACTUAL";
 }
 
 /** Inclusive notice days from resignation through LWD, or null when not applicable. */
@@ -148,13 +151,8 @@ export function isOffboardingFormValid(
   if (!form.emp_id.trim()) return false;
   if (!form.reason.trim() || !form.critical_skill.trim()) return false;
   if (normalizedType === "INTERN") {
-    const lwd = form.last_working_day.trim();
-    return Boolean(
-      lwd &&
-        isValidApiDate(lwd) &&
-        form.resignation_date.trim() === lwd &&
-        isValidApiDate(form.resignation_date)
-    );
+    // Intern: LWD only — no resignation date, so exit type stays required.
+    return isValidApiDate(form.last_working_day) && Boolean(form.exit_type);
   }
   if (normalizedType === "CONSULTANT") {
     // Consultant: LWD only — resignation date / exit-type picker must not be required

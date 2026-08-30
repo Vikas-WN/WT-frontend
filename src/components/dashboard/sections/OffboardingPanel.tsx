@@ -215,9 +215,9 @@ export function OffboardingPanel() {
         };
       }
       if (selectedUserType === "INTERN") {
-        const lwd = prev.last_working_day.trim();
-        if (!lwd || prev.resignation_date.trim() === lwd) return prev;
-        return { ...prev, resignation_date: lwd };
+        // Interns exit on a last working day only — they have no resignation date.
+        if (!prev.resignation_date.trim()) return prev;
+        return { ...prev, resignation_date: "" };
       }
       if (prev.exit_type === CONSULTANT_EXIT_TYPE) {
         return { ...prev, exit_type: "" };
@@ -363,8 +363,8 @@ export function OffboardingPanel() {
   const offboardingNoticeLabel = useMemo(() => {
     const r = offboardingForm.resignation_date.trim();
     const l = offboardingForm.last_working_day.trim();
-    if (isInternOffboarding && l) {
-      return "Intern offboarding uses a single exit date for resignation and last working day.";
+    if (isInternOffboarding) {
+      return "Intern offboarding records a last working day only — interns have no resignation date or notice period.";
     }
     if (isConsultantOffboarding) {
       return "Consultant offboarding is recorded as a Contractual exit and is excluded from attrition metrics.";
@@ -405,7 +405,6 @@ export function OffboardingPanel() {
       };
       if (isIntern && prev.last_working_day.trim()) {
         next.last_working_day = prev.last_working_day;
-        next.resignation_date = prev.last_working_day;
       }
       return next;
     });
@@ -416,7 +415,6 @@ export function OffboardingPanel() {
     setOffboardingForm((prev) => ({
       ...prev,
       last_working_day: adjusted,
-      ...(isInternOffboarding ? { resignation_date: adjusted } : {}),
     }));
   }
 
@@ -430,7 +428,9 @@ export function OffboardingPanel() {
     setSubmitting(true);
     try {
       await hrmsService.offboardEmployee(empIdValue, {
-        ...(isConsultantOffboarding ? {} : { resignation_date: resignationDate }),
+        ...(isConsultantOffboarding || isInternOffboarding
+          ? {}
+          : { resignation_date: resignationDate }),
         exit_type: resolveExitTypeForSubmit(),
         last_working_day: lastWorkingDay || undefined,
         reason: offboardingForm.reason.trim() || null,
@@ -874,7 +874,10 @@ export function OffboardingPanel() {
                           {formatExitTypeLabel(row.exit_type)}
                         </TableCell>
                         <TableCell className="px-3 py-2 whitespace-nowrap tabular-nums">
-                          {isLwdOnlyOffboarding({ exitType: row.exit_type })
+                          {isLwdOnlyOffboarding({
+                            userType: row.user_type,
+                            exitType: row.exit_type,
+                          })
                             ? "—"
                             : formatApiDateDisplay(row.resignation_date) || "—"}
                         </TableCell>
@@ -883,7 +886,13 @@ export function OffboardingPanel() {
                         </TableCell>
                         <TableCell className="px-3 py-2 text-right whitespace-nowrap tabular-nums">
                           {(() => {
-                            if (isLwdOnlyOffboarding({ exitType: row.exit_type })) return "—";
+                            if (
+                              isLwdOnlyOffboarding({
+                                userType: row.user_type,
+                                exitType: row.exit_type,
+                              })
+                            )
+                              return "—";
                             const fromApi =
                               row.notice_period_days != null &&
                               Number.isFinite(Number(row.notice_period_days)) &&

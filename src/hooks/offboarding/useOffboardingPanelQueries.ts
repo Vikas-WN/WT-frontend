@@ -7,7 +7,6 @@ import { hrmsService } from "@/services/hrms.service";
 import type { HrOffboardListItem } from "@/types/offboard";
 import { pickRowField } from "@/utils/compOff";
 import { toPagedRows } from "@/utils/apiRows";
-import { formatApiDate } from "@/utils/apiDate";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   isEligibleOffboardCandidateStatus,
@@ -31,15 +30,13 @@ export const OFFBOARDING_LIST_PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 
 const EMPTY_OFFBOARD_LIST: HrOffboardListItem[] = [];
 
-const OFFBOARDING_LWD_WINDOW_DAYS = 60;
-
+/**
+ * No default last-working-day window: the API filters on LWD, so any preset range hides
+ * employees whose exit date falls outside it (notice periods run up to 90 days, and
+ * backdated exits are allowed). HR narrows the range explicitly via the date pickers.
+ */
 export function defaultOffboardingLwdWindow(): { from: string; to: string } {
-  const today = new Date();
-  const from = new Date(today);
-  from.setDate(from.getDate() - OFFBOARDING_LWD_WINDOW_DAYS);
-  const to = new Date(today);
-  to.setDate(to.getDate() + OFFBOARDING_LWD_WINDOW_DAYS);
-  return { from: formatApiDate(from), to: formatApiDate(to) };
+  return { from: "", to: "" };
 }
 
 const OFFBOARDING_STALE_MS = 5 * 60_000;
@@ -75,6 +72,7 @@ function parseOffboardListItem(row: Record<string, unknown>): HrOffboardListItem
     status: String(pickRowField(row, "status") ?? "").trim(),
     employee_name: String(pickRowField(row, "employee_name", "employeeName") ?? "").trim(),
     email: String(pickRowField(row, "email") ?? "").trim() || undefined,
+    user_type: String(pickRowField(row, "user_type", "userType") ?? "").trim() || undefined,
     exit_type: String(
       pickRowField(row, "exit_type", "exitType", "separation_type", "separationType") ?? ""
     ).trim(),
