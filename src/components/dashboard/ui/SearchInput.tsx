@@ -9,17 +9,20 @@ type SearchInputProps = {
   id?: string;
   placeholder?: string;
   className?: string;
-  disabled?: boolean;
   "aria-label"?: string;
 };
 
+/**
+ * Deliberately has no `disabled` prop. Search is debounced into a query key, so disabling
+ * while the list refetches blurs the focused input (browsers un-focus disabled elements)
+ * and the user loses the field after every keystroke.
+ */
 export function SearchInput({
   value,
   onChange,
   id = "management-list-search",
   placeholder = "Search",
   className,
-  disabled = false,
   "aria-label": ariaLabel = "Search",
 }: SearchInputProps) {
   return (
@@ -30,7 +33,6 @@ export function SearchInput({
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
       aria-label={ariaLabel}
-      disabled={disabled}
       className={cn("h-10 w-full", className)}
     />
   );

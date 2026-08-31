@@ -199,7 +199,7 @@ export function HolidayCalendarsPageClient() {
               options={yearSelectItems}
               digitsOnly
               className="w-32 min-w-32"
-              contentClassName="min-w-[9rem] w-max"
+              contentClassName="min-w-[min(9rem,calc(100vw-1rem))] w-max max-w-[min(var(--available-width,100vw),calc(100vw-1rem))]"
             />
           </div>
         }

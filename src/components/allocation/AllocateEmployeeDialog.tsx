@@ -37,12 +37,20 @@ import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { UI_COPY } from "@/constants/uiCopy";
 import { useAllocationEmployees } from "@/hooks/useAllocationEmployees";
+import { validateAllocationWithinProjectDates } from "@/utils/allocationProjectDates";
+import { isEligibleForProjectAllocation } from "@/utils/userStatus";
+import { roleNameError } from "@/utils/dashboard/validation";
 
 const CUSTOM_ROLE_VALUE = "__custom_role__";
 const ALLOCATE_STEPS = ["Employee", "Project", "Details"] as const;
 type AllocateStep = (typeof ALLOCATE_STEPS)[number];
 
-type ProjectOption = { code: string; name: string };
+type ProjectOption = {
+  code: string;
+  name: string;
+  start_date?: string | null;
+  end_date?: string | null;
+};
 
 export function AllocateEmployeeDialog({
   open,
@@ -84,6 +92,8 @@ export function AllocateEmployeeDialog({
 
   const resolvedRole =
     form.role === CUSTOM_ROLE_VALUE ? customRole.trim() : form.role.trim();
+  const customRoleError =
+    form.role === CUSTOM_ROLE_VALUE ? roleNameError(customRole) : null;
 
   const { data: rolePercentOptions = [] } = useAllocationPercentages(
     resolvedRole,
@@ -184,6 +194,10 @@ export function AllocateEmployeeDialog({
       showErrorToast("Please select or enter a project role.");
       return;
     }
+    if (customRoleError) {
+      showErrorToast(customRoleError);
+      return;
+    }
     if (!form.allocated_percent || Number(form.allocated_percent) <= 0 || Number(form.allocated_percent) > 100) {
       showErrorToast("Please select a valid allocation %.");
       return;
@@ -221,6 +235,12 @@ export function AllocateEmployeeDialog({
     const selectedEmployee = allocationEmployees.find(
       (row) => row.employeeEmail === employeeEmail.toLowerCase()
     );
+    if (selectedEmployee?.status && !isEligibleForProjectAllocation(selectedEmployee.status)) {
+      showErrorToast(
+        "This employee has not completed onboarding yet. Allocation is allowed only after onboarding is complete and the employee is Active."
+      );
+      return;
+    }
     const dojParsed = parseApiDate(selectedEmployee?.doj ?? "");
     const startParsedForDoj = parseApiDate(startDate);
     if (dojParsed && startParsedForDoj && startParsedForDoj < dojParsed) {
@@ -242,6 +262,21 @@ export function AllocateEmployeeDialog({
     if (startParsed && endParsed && !(startParsed < endParsed)) {
       showErrorToast("End date must be after the start date.");
       return;
+    }
+
+    const selectedProject = projects.find(
+      (project) => project.code.trim().toUpperCase() === projectCode.toUpperCase()
+    );
+    if (selectedProject) {
+      const projectDateError = validateAllocationWithinProjectDates(
+        startDate,
+        endDate,
+        selectedProject
+      );
+      if (projectDateError) {
+        showErrorToast(projectDateError);
+        return;
+      }
     }
 
     const nextPercent = Number(form.allocated_percent);
@@ -283,6 +318,9 @@ export function AllocateEmployeeDialog({
           return;
         }
         lockedInDate = lockedResult.date;
+      }
+      if (form.role === CUSTOM_ROLE_VALUE) {
+        await hrmsService.createAllocationRole({ name: role });
       }
       const payload = {
         employeeEmail,
@@ -455,6 +493,7 @@ export function AllocateEmployeeDialog({
               value={customRole}
               onChange={setCustomRole}
               placeholder="Enter role name"
+              error={customRoleError}
             />
           ) : null}
           <AllocatedPercentSelect

@@ -8,7 +8,7 @@ import type { ApiEnvelope } from "@/api/httpClient";
 
 import type { ApprovalStage } from "@/types/userRequest";
 
-import { applyApiDateQuery, toApiDateParam } from "@/utils/apiDate";
+import { applyApiDateQuery, requireApiDateParam } from "@/utils/apiDate";
 
 import { toPagedRows, extractFirstObjectArray } from "@/utils/apiRows";
 
@@ -26,12 +26,14 @@ import {
 
 import {
   canPrimaryManagerActOnLeave,
+  canPrimaryManagerRejectOnLeave,
   canSecondaryManagerApproveOnLeave,
   canSecondaryManagerRejectOnLeave,
   hasPrimaryLeaveManagers,
   hasSecondaryLeaveManagers,
   isAssignedPrimaryLeaveManager,
   isAssignedSecondaryLeaveManager,
+  isLeaveRequestClosedForManagerAction,
   pickManagerEmailList,
 } from "@/utils/leaveManagerDisplay";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
@@ -95,9 +97,10 @@ async function fetchUserRequestsFromRoot(params: {
   selfOnly?: boolean;
   empEmails?: string;
   hrTeamScope?: boolean;
+  orgScope?: boolean;
 }): Promise<Array<Record<string, unknown>>> {
-  const normalizedFrom = toApiDateParam(params.fromDate) ?? params.fromDate.trim();
-  const normalizedTo = toApiDateParam(params.toDate) ?? params.toDate.trim();
+  const normalizedFrom = requireApiDateParam(params.fromDate, "From date");
+  const normalizedTo = requireApiDateParam(params.toDate, "To date");
   const query: Record<string, string> = {
     fromDate: normalizedFrom,
     toDate: normalizedTo,
@@ -108,6 +111,7 @@ async function fetchUserRequestsFromRoot(params: {
   if (params.selfOnly) query.selfOnly = "true";
   if (params.empEmails?.trim()) query.empEmails = params.empEmails.trim();
   if (params.hrTeamScope) query.hrTeamScope = "true";
+  if (params.orgScope) query.orgScope = "true";
 
   try {
     const res = await apiClient.get<ApiEnvelope<unknown>>(endpoints.userRequest.root, {
@@ -134,6 +138,7 @@ export async function listScopedUserRequests(params: {
   empEmails?: string;
   size?: number;
   hrTeamScope?: boolean;
+  orgScope?: boolean;
 }): Promise<Array<Record<string, unknown>>> {
   return fetchUserRequestsFromRoot({
     fromDate: params.fromDate,
@@ -142,6 +147,7 @@ export async function listScopedUserRequests(params: {
     empEmails: params.empEmails,
     size: params.size,
     hrTeamScope: params.hrTeamScope,
+    orgScope: params.orgScope,
   });
 }
 
@@ -152,14 +158,17 @@ export async function fetchPaginatedScopedUserRequests(params: {
   empEmails?: string;
   page: number;
   size: number;
+  /** Team Requests: employees with no client project allocation. */
   hrTeamScope?: boolean;
+  /** All Employee Requests: project-allocated employees. */
+  orgScope?: boolean;
 }): Promise<{
   rows: Array<Record<string, unknown>>;
   totalPages: number;
   totalElements: number;
 }> {
-  const normalizedFrom = toApiDateParam(params.fromDate) ?? params.fromDate.trim();
-  const normalizedTo = toApiDateParam(params.toDate) ?? params.toDate.trim();
+  const normalizedFrom = requireApiDateParam(params.fromDate, "From date");
+  const normalizedTo = requireApiDateParam(params.toDate, "To date");
   const query: Record<string, string> = {
     fromDate: normalizedFrom,
     toDate: normalizedTo,
@@ -348,12 +357,17 @@ export function isPendingApprovalStage(value: unknown): boolean {
 
 
 export function requestManagerStatus(row: Record<string, unknown>): string {
-
-  return normalizeRequestStatus(
-
+  const managerStatus = normalizeRequestStatus(
     pickRowField(row, "manager_status", "managerStatus") ?? "PENDING"
-
   );
+  const finalStatus = requestFinalStatus(row);
+  if (
+    (finalStatus === "APPROVED" || finalStatus === "REJECTED") &&
+    managerStatus === "PENDING"
+  ) {
+    return finalStatus;
+  }
+  return managerStatus;
 
 }
 
@@ -367,9 +381,10 @@ export function requestHrStatus(row: Record<string, unknown>): string {
 
 
 
-export function requestFinalStatus(row: Record<string, unknown>): string {
+/** Canonical server status for a user request row (prefer `status` from list API). */
+export function requestRowFinalStatus(row: Record<string, unknown>): string {
   const raw = normalizeRequestStatus(
-    pickRowField(row, "user_request_status", "userRequestStatus", "status") ?? "PENDING"
+    pickRowField(row, "status", "user_request_status", "userRequestStatus") ?? "PENDING"
   );
   if (
     raw === "SUBMITTED" &&
@@ -378,6 +393,76 @@ export function requestFinalStatus(row: Record<string, unknown>): string {
     return "PENDING";
   }
   return raw;
+}
+
+export function requestFinalStatus(row: Record<string, unknown>): string {
+  return requestRowFinalStatus(row);
+}
+
+export function resolveUserRequestId(row: Record<string, unknown>): string {
+  return String(
+    pickRowField(row, "user_request_id", "userRequestId", "request_id", "requestId", "id") ??
+      ""
+  ).trim();
+}
+
+/** Employee self-service edit/revoke — must match backend update/delete gates. */
+export function isEmployeeEditableUserRequest(row: Record<string, unknown>): boolean {
+  const status = requestRowFinalStatus(row);
+  return status === "PENDING" || status === "SUBMITTED";
+}
+
+export async function updateOwnedUserRequest(
+  body: Record<string, unknown>
+): Promise<ApiEnvelope<unknown>> {
+  return apiClient.put<ApiEnvelope<unknown>>(endpoints.userRequest.root, {
+    contentType: "application/json",
+    body: JSON.stringify(body),
+  });
+}
+
+/**
+ * True when an action failed because the owner had already deleted the request.
+ *
+ * A manager's cached inbox can still show a request the employee deleted moments
+ * earlier; callers use this to drop the stale row instead of leaving dead buttons.
+ */
+export function isDeletedUserRequestError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return message.toLowerCase().includes("has been deleted");
+}
+
+/**
+ * True when an action failed because the request was no longer pending on the server.
+ *
+ * A cached list can keep showing Approve / Reject / Delete for a request another
+ * reviewer already decided. Callers use this to refresh from the server so the stale
+ * actions disappear instead of failing again on the next click.
+ */
+export function isAlreadyDecidedUserRequestError(error: unknown): boolean {
+  const message = (error instanceof Error ? error.message : String(error ?? "")).toLowerCase();
+  return (
+    message.includes("already been approved") ||
+    message.includes("already been rejected") ||
+    message.includes("already been cancelled") ||
+    message.includes("only pending request can be deleted") ||
+    message.includes("only pending earn requests can be cancelled") ||
+    message.includes("only pending earn requests can be updated")
+  );
+}
+
+export async function revokeOwnedUserRequest(userRequestId: number): Promise<ApiEnvelope<unknown>> {
+  const idNum = Number(userRequestId);
+  if (!Number.isFinite(idNum) || idNum <= 0) {
+    throw new Error("Invalid request id.");
+  }
+  return apiClient.delete<ApiEnvelope<unknown>>(endpoints.userRequest.root, {
+    contentType: "application/json",
+    body: JSON.stringify({
+      user_request_id: idNum,
+      userRequestId: idNum,
+    }),
+  });
 }
 
 
@@ -538,6 +623,11 @@ export function canManagerActOnRequest(
   // Custom WFH is HR-only; managers are notified but cannot decide.
   if (isWfhExceptionRequestType(requestType)) return false;
 
+  // Leave/WFH/optional: one manager decision closes the request for everyone else.
+  if (isLeaveOrWfhRequestType(requestType) && isLeaveRequestClosedForManagerAction(row)) {
+    return false;
+  }
+
   if (canPrimaryManagerActOnLeave(row, options.actorEmail)) return true;
   if (canSecondaryManagerApproveOnLeave(row, options.actorEmail)) return true;
   if (canSecondaryManagerRejectOnLeave(row, options.actorEmail)) return true;
@@ -570,12 +660,16 @@ export function canManagerRejectRequest(
 
 ): boolean {
 
-  if (canPrimaryManagerActOnLeave(row, options.actorEmail)) return true;
+  if (canPrimaryManagerRejectOnLeave(row, options.actorEmail)) return true;
   if (canSecondaryManagerRejectOnLeave(row, options.actorEmail)) return true;
 
   if (!canManagerActOnRequest(row, options)) return false;
 
   const requestType = pickRowField(row, "request_type", "requestType");
+
+  if (isLeaveOrWfhRequestType(requestType) && isLeaveRequestClosedForManagerAction(row)) {
+    return false;
+  }
 
   if (isLeaveOrWfhRequestType(requestType) && requestFinalStatus(row) === "APPROVED") {
 
@@ -860,15 +954,14 @@ export function applyLeaveTeamRequestDecisions(
     const decision = decisions.get(id);
     if (!decision) return row;
     const serverStatus = requestFinalStatus(row);
-    // A session reject must win over a stale APPROVED row (another manager approved first).
+    // Never let a session decision override a finalized server status.
+    if (serverStatus === "APPROVED" || serverStatus === "REJECTED") return row;
     if (decision.status === "REJECTED") {
-      if (serverStatus === "REJECTED") return row;
       return patchLeaveTeamRequestStatus(row, "REJECTED", {
         reason: decision.reason,
         actorEmail,
       });
     }
-    if (serverStatus === "APPROVED" || serverStatus === "REJECTED") return row;
     return patchLeaveTeamRequestStatus(row, decision.status, {
       reason: decision.reason,
       actorEmail,

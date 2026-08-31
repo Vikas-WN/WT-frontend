@@ -8,6 +8,7 @@ import {
   ONBOARD_DATE_FIELDS,
   applyApiDateFields,
   applyApiDateQuery,
+  requireApiDateParam,
   toApiDateParam,
 } from "@/utils/apiDate";
 import { timelogViewerRolesQueryValue } from "@/utils/timelog/viewerRoles";
@@ -324,7 +325,7 @@ export const hrmsService = {
 
   updateEmployeeUserType(
     empId: string,
-    payload: { user_type: string; transition_date?: string; band_id?: number }
+    payload: { user_type: string; transition_date?: string; band_id?: number; role?: string }
   ) {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.profile.employeeUserType(empId), {
       contentType: "application/json",
@@ -364,7 +365,7 @@ export const hrmsService = {
 
   /** GET /api/v1/timelog/get/{empEmail}/{logDate} — logDate is dd/mm/yyyy */
   getTimelogByEmployeeAndDate(empEmail: string, logDate: string) {
-    const normalized = toApiDateParam(logDate) ?? logDate.trim();
+    const normalized = requireApiDateParam(logDate, "Log date");
     return apiClient.get<ApiEnvelope<unknown>>(
       endpoints.timelog.legacyGetByDate(empEmail, normalized),
       { query: { page: "0", size: "200" } }
@@ -508,6 +509,13 @@ export const hrmsService = {
 
   getAllocationRoles(params: Record<string, string> = {}) {
     return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.allocation.roles, { query: params });
+  },
+
+  createAllocationRole(payload: { name: string }) {
+    return apiClient.post<ApiEnvelope<unknown>>(endpoints.allocation.roles, {
+      contentType: "application/json",
+      body: JSON.stringify({ name: payload.name.trim() }),
+    });
   },
 
   /** GET /allocation/percentages — ROLE_HR | ROLE_ADMIN */
@@ -1201,6 +1209,12 @@ export const hrmsService = {
     if (params.search?.trim()) query.search = params.search.trim();
     if (params.status?.length) query.status = params.status.join(",");
     return apiClient.get<unknown>(endpoints.masters.opportunities, { query });
+  },
+
+  getAllClientsWithOpportunities() {
+    return apiClient.get<unknown>(endpoints.masters.clients, {
+      query: { include_opportunities: "true" },
+    });
   },
 
   getClient(clientId: string | number, params: { includeProjects?: boolean } = {}) {

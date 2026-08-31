@@ -74,7 +74,7 @@ export function hasSecondaryLeaveManagers(row: Record<string, unknown>): boolean
  */
 export function requestSecondaryManagerStatus(row: Record<string, unknown>): string {
   if (!hasSecondaryLeaveManagers(row)) return "APPROVED";
-  return normalizeRequestStatus(
+  const secondaryStatus = normalizeRequestStatus(
     pickRowField(
       row,
       "secondary_status",
@@ -83,6 +83,14 @@ export function requestSecondaryManagerStatus(row: Record<string, unknown>): str
       "hrStatus"
     ) ?? "PENDING"
   );
+  const finalStatus = requestFinalStatus(row);
+  if (
+    (finalStatus === "APPROVED" || finalStatus === "REJECTED") &&
+    secondaryStatus === "PENDING"
+  ) {
+    return finalStatus;
+  }
+  return secondaryStatus;
 }
 
 export function isOwnUserRequest(
@@ -131,29 +139,43 @@ export function isAssignedLeaveManager(
   );
 }
 
-/** Primary may approve only while the request is still pending. */
+/** True when any assigned manager has already approved or rejected (one decision closes the request). */
+export function isLeaveRequestClosedForManagerAction(
+  row: Record<string, unknown>
+): boolean {
+  const finalStatus = requestFinalStatus(row);
+  if (finalStatus === "APPROVED" || finalStatus === "REJECTED") return true;
+
+  const primaryStage = requestManagerStatus(row);
+  if (primaryStage === "APPROVED" || primaryStage === "REJECTED") return true;
+
+  if (hasSecondaryLeaveManagers(row)) {
+    const secondaryStage = requestSecondaryManagerStatus(row);
+    if (secondaryStage === "APPROVED" || secondaryStage === "REJECTED") return true;
+  }
+
+  return false;
+}
+
+/** Primary may approve only while the request is still open for manager action. */
 export function canPrimaryManagerApproveOnLeave(
   row: Record<string, unknown>,
   actorEmail: string | null | undefined
 ): boolean {
   if (!isAssignedPrimaryLeaveManager(row, actorEmail)) return false;
   if (isOwnUserRequest(row, actorEmail)) return false;
-  if (requestFinalStatus(row) !== "PENDING") return false;
+  if (isLeaveRequestClosedForManagerAction(row)) return false;
   return isPendingApprovalStage(requestManagerStatus(row));
 }
 
-/**
- * Primary may reject while pending, or veto after another assigned manager already approved.
- */
+/** Primary may reject only while the request is still open for manager action. */
 export function canPrimaryManagerRejectOnLeave(
   row: Record<string, unknown>,
   actorEmail: string | null | undefined
 ): boolean {
   if (!isAssignedPrimaryLeaveManager(row, actorEmail)) return false;
   if (isOwnUserRequest(row, actorEmail)) return false;
-  const finalStatus = requestFinalStatus(row);
-  if (finalStatus === "APPROVED") return true;
-  if (finalStatus !== "PENDING") return false;
+  if (isLeaveRequestClosedForManagerAction(row)) return false;
   return isPendingApprovalStage(requestManagerStatus(row));
 }
 
@@ -168,18 +190,14 @@ export function canPrimaryManagerActOnLeave(
   );
 }
 
-/**
- * Secondary can reject while pending, or veto after another assigned manager already approved.
- */
+/** Secondary may reject only while the request is still open for manager action. */
 export function canSecondaryManagerRejectOnLeave(
   row: Record<string, unknown>,
   actorEmail: string | null | undefined
 ): boolean {
   if (!isAssignedSecondaryLeaveManager(row, actorEmail)) return false;
   if (isOwnUserRequest(row, actorEmail)) return false;
-  const finalStatus = requestFinalStatus(row);
-  if (finalStatus === "APPROVED") return true;
-  if (finalStatus !== "PENDING") return false;
+  if (isLeaveRequestClosedForManagerAction(row)) return false;
   return isPendingApprovalStage(requestSecondaryManagerStatus(row));
 }
 
@@ -193,7 +211,7 @@ export function canSecondaryManagerApproveOnLeave(
 ): boolean {
   if (!isAssignedSecondaryLeaveManager(row, actorEmail)) return false;
   if (isOwnUserRequest(row, actorEmail)) return false;
-  if (requestFinalStatus(row) !== "PENDING") return false;
+  if (isLeaveRequestClosedForManagerAction(row)) return false;
   return isPendingApprovalStage(requestSecondaryManagerStatus(row));
 }
 

@@ -5,10 +5,17 @@ import { formatApiDateDisplay } from "@/utils/apiDate";
 import { formatUserTypeLabel } from "@/utils/offboardingFormState";
 import { formatPrimaryPortalRoleLabel, formatRoleDisplayValue, isSessionRoleValue, formatRoleLabel } from "@/utils/roles";
 import {
-  defaultPhoneCountryIso,
   formatPhoneNumberForApi,
   splitPhoneNumber,
 } from "@/utils/phoneCountries";
+import { normalizeEmployeeStatusKey } from "@/utils/userStatus";
+
+const GENDER_LABELS: Record<string, string> = {
+  MALE: "Male",
+  FEMALE: "Female",
+  OTHER: "Other",
+  PREFER_NOT_TO_SAY: "Prefer not to say",
+};
 
 function formatWorkModeLabel(value: unknown): string {
   const normalized = String(value ?? "").trim().toUpperCase();
@@ -109,7 +116,7 @@ export function cleanEmployeeName(row: Record<string, unknown>): string {
   return raw.replace(/\s*\([^()@\s]+@[^()@\s]+\.[^()@\s]+\)\s*$/, "").trim() || raw || "Employee";
 }
 
-/** Employee role from profile API (`role` field, e.g. UI Developer). */
+/** Employee role from profile API (`role` field, e.g., UI Developer). */
 export function pickEmployeeRole(profile: Record<string, unknown>): string {
   const raw = String(pickProfileField(profile, ["role"]) ?? "").trim();
   if (!raw) return "";
@@ -124,7 +131,7 @@ export function hasAssignedBand(profile: Record<string, unknown>): boolean {
 
 /**
  * Designation for profile display. For band-dependent user types (non-consultant),
- * hide designation when no band is assigned so orphan role values are not shown.
+ * hide designation when no band is assigned, so orphan role values are not shown.
  */
 export function pickDesignationForDisplay(profile: Record<string, unknown>): string {
   if (!isConsultantProfile(profile) && !hasAssignedBand(profile)) {
@@ -233,7 +240,7 @@ export function formatSecondarySkills(profile: Record<string, unknown>): string 
 
 export function onboardRowToListRow(row: OnboardRowInput): Record<string, string> {
   const record = asOnboardRecord(row);
-  const isOnline = Boolean(record.is_online ?? record.isOnline);
+  const isOnline = rowIsOnline(record);
   return {
     emp_id: rowEmpId(record) || "—",
     name: cleanEmployeeName(record),
@@ -265,7 +272,20 @@ export function onboardRowToListRow(row: OnboardRowInput): Record<string, string
 }
 
 export function rowIsOnline(record: Record<string, unknown>): boolean {
-  return Boolean(record.is_online ?? record.isOnline);
+  const explicitOnline = Boolean(record.is_online ?? record.isOnline);
+  if (explicitOnline) return true;
+
+  const lastSeenRaw = String(
+    record.last_seen_at ?? record.lastSeenAt ?? ""
+  ).trim();
+  if (!lastSeenRaw) return false;
+
+  const lastSeen = new Date(lastSeenRaw).getTime();
+  if (isNaN(lastSeen)) return false;
+
+  const now = Date.now();
+  const fiveMinutes = 5 * 60 * 1000;
+  return now - lastSeen <= fiveMinutes;
 }
 
 /** True when DOB month/day matches today (year ignored). */
@@ -320,9 +340,12 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
     webknot_rating: item.webknot_rating != null ? Number(item.webknot_rating) : undefined,
   })).filter(s => !!s.skill);
 
-  const phoneParts = splitPhoneNumber(
-    String(pickProfileField(profile, ["phone_number", "phoneNumber"]) ?? "").trim()
-  );
+  const rawPhone = String(
+    pickProfileField(profile, ["phone_number", "phoneNumber"]) ?? ""
+  ).trim();
+  const phoneParts = rawPhone
+    ? splitPhoneNumber(rawPhone)
+    : { countryIso: "", nationalNumber: "" };
 
   return {
     name: String(pickProfileField(profile, ["name"]) ?? "").trim(),
@@ -339,9 +362,9 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
       if (!hasAssignedBand(profile)) return "";
       return stored;
     })(),
-    user_status: String(
-      pickProfileField(profile, ["user_status", "status", "userStatus"]) ?? ""
-    ).trim(),
+    user_status: normalizeEmployeeStatusKey(
+      pickProfileField(profile, ["user_status", "status", "userStatus"])
+    ),
     work_mode: String(pickProfileField(profile, ["work_mode", "workMode"]) ?? "").trim(),
     work_location_type: String(
       pickProfileField(profile, ["work_location_type", "workLocationType", "work_location"]) ?? ""
@@ -372,20 +395,21 @@ export function editFormToUpdatePayload(
   form: EmployeeProfileEditForm,
   options?: { statusOnly?: boolean; omitBand?: boolean }
 ): Record<string, unknown> {
+  const normalizedStatus =
+    normalizeEmployeeStatusKey(form.user_status) || form.user_status.trim();
   if (options?.statusOnly) {
-    return { user_status: form.user_status.trim() };
+    return { user_status: normalizedStatus };
   }
 
   const payload: Record<string, unknown> = {
     name: form.name.trim(),
     email: form.email.trim().toLowerCase(),
-    phone_number: formatPhoneNumberForApi(
-      form.phone_country ?? defaultPhoneCountryIso(),
-      form.phone_number
-    ),
+    phone_number: form.phone_country
+      ? formatPhoneNumberForApi(form.phone_country, form.phone_number)
+      : null,
     department: form.department.trim(),
     role: form.role.trim(),
-    user_status: form.user_status.trim(),
+    user_status: normalizedStatus,
     work_mode: form.work_mode.trim(),
     work_location_type: form.work_location_type.trim(),
     primary_skills: form.primary_skills.length ? form.primary_skills : null,
@@ -405,14 +429,24 @@ export function editFormToUpdatePayload(
   return payload;
 }
 
+export type UserTypeTransitionDisplayRow = {
+  previousUserType: string;
+  newUserType: string;
+  effectiveDate: string;
+};
+
 export type ProfileDisplayEntry = {
   label: string;
   value: unknown;
-  /** When set, render a clickable “resume” link instead of plain text. */
+  /** When set, render a clickable "resume" link instead of plain text. */
   resumeShareHref?: string | null;
   fullWidth?: boolean;
   /** When true, render value as a color-coded employee status badge. */
   asStatusBadge?: boolean;
+  /** When true, render values in the structured table format. */
+  asUserTypeHistoryTable?: boolean;
+  /** When true, render skills array as a table with Skill, Self Rating, Webknot Rating columns. */
+  asSkillsTable?: boolean;
 };
 
 export type ProfileDisplaySection = {
@@ -423,28 +457,54 @@ export type ProfileDisplaySection = {
 function profileEntry(
   label: string,
   value: unknown,
-  options?: { resumeShareHref?: string | null; fullWidth?: boolean; asStatusBadge?: boolean }
+  options?: {
+    resumeShareHref?: string | null;
+    fullWidth?: boolean;
+    asStatusBadge?: boolean;
+    asUserTypeHistoryTable?: boolean;
+    asSkillsTable?: boolean;
+  }
 ): ProfileDisplayEntry {
   return { label, value, ...options };
 }
 
-function formatUserTypeTransitionHistory(profile: Record<string, unknown>): string {
+function formatUserTypeTransitionHistory(profile: Record<string, unknown>): UserTypeTransitionDisplayRow[] {
   const raw = profile.user_type_transitions ?? profile.userTypeTransitions;
-  if (!Array.isArray(raw) || !raw.length) return "—";
+  if (!Array.isArray(raw) || !raw.length) return [];
 
-  const lines = raw
-    .map((item) => {
-      if (!item || typeof item !== "object") return "";
-      const row = item as Record<string, unknown>;
-      const fromType = formatUserTypeLabel(String(row.from_type ?? row.fromType ?? ""));
-      const toType = formatUserTypeLabel(String(row.to_type ?? row.toType ?? ""));
-      const date = formatDirectoryDate(row.transition_date ?? row.transitionDate);
-      if (!fromType || fromType === "—" || !toType || toType === "—") return "";
-      return `${fromType} → ${toType} (${date})`;
-    })
-    .filter(Boolean);
+  return raw.map((item) => {
+    if(!item || typeof item !== "object") return null;
 
-  return lines.length ? lines.join("; ") : "—";
+    const row = item as Record<string, unknown>;
+
+    const previousUserType = formatUserTypeLabel(
+        String(row.from_type ?? row.fromType ?? "")
+    );
+
+    const newUserType = formatUserTypeLabel(
+        String(row.to_type ?? row.toType ?? "")
+    );
+
+    const effectiveDate = formatDirectoryDate(
+        row.transition_date ?? row.transitionDate
+    );
+
+    if(
+        !previousUserType ||
+        previousUserType === "—" ||
+        !newUserType ||
+        newUserType === "—"
+    ){
+      return null;
+    }
+
+    return{
+      previousUserType,
+      newUserType,
+      effectiveDate
+    };
+  })
+      .filter((row): row is UserTypeTransitionDisplayRow => row !== null);
 }
 
 /** PAN is stored as a document path — surface on-file status on profiles. */
@@ -452,6 +512,15 @@ function formatPanCardStatus(profile: Record<string, unknown>): string {
   const onFile = profile.pan_card_on_file ?? profile.panCardOnFile;
   if (onFile === true || onFile === "true" || onFile === 1) return "Uploaded";
   const raw = pickProfileField(profile, ["pan_card", "panCard"]);
+  if (raw && String(raw).trim() && String(raw).trim() !== "—") return "Uploaded";
+  return "Not uploaded";
+}
+
+/** Aadhar Card is stored as a document path - surface on-file status on profiles. */
+function formatAadharCardStatus(profile: Record<string, unknown>): string {
+  const onFile = profile.aadhar_card_on_file ?? profile.aadharCardOnFile;
+  if (onFile === true || onFile === "true" || onFile === 1) return "Uploaded";
+  const raw = pickProfileField(profile, ["aadhar_card", "aadharCard"]);
   if (raw && String(raw).trim() && String(raw).trim() !== "—") return "Uploaded";
   return "Not uploaded";
 }
@@ -487,7 +556,10 @@ export function buildGroupedProfileSections(
       "User Type",
       formatUserTypeLabel(String(pickProfileField(profile, ["user_type", "userType"]) ?? ""))
     ),
-    profileEntry("User Type History", formatUserTypeTransitionHistory(profile), { fullWidth: true }),
+    profileEntry("User Type History", formatUserTypeTransitionHistory(profile), {
+      fullWidth: true,
+      asUserTypeHistoryTable: true,
+    }),
     profileEntry("Category", formatCategoryLabel(category)),
     profileEntry(
       "Work Mode",
@@ -499,6 +571,7 @@ export function buildGroupedProfileSections(
         pickProfileField(profile, ["work_location", "work_location_type", "workLocationType"])
       )
     ),
+    profileEntry("Reporting Manager", formatReportingManagerForProfile(profile)),
     ...(internProfile
       ? [
           profileEntry(
@@ -520,9 +593,14 @@ export function buildGroupedProfileSections(
             )
           ),
         ]),
-    profileEntry("Reporting Manager", formatReportingManagerForProfile(profile)),
-    profileEntry("Primary Skills", formatPrimarySkills(profile)),
-    profileEntry("Secondary Skills", formatSecondarySkills(profile)),
+    profileEntry("Primary Skills", pickProfileField(profile, ["primary_skills", "primarySkills"]), {
+      asSkillsTable: true,
+      fullWidth: true,
+    }),
+    profileEntry("Secondary Skills", pickProfileField(profile, ["secondary_skills", "secondarySkills"]), {
+      asSkillsTable: true,
+      fullWidth: true,
+    }),
     profileEntry(
       "Webknot Experience",
       pickProfileField(profile, ["webknot_experience", "webknotExperience"])
@@ -538,6 +616,12 @@ export function buildGroupedProfileSections(
     ),
   ];
 
+  function formatGenderLabel(value: unknown): string {
+    const normalized = String(value ?? "").trim().toUpperCase();
+    if (!normalized) return "—";
+    return GENDER_LABELS[normalized] ?? String(value).trim();
+  }
+
   const personalInformation: ProfileDisplayEntry[] = [
     profileEntry("Personal Email", pickProfileField(profile, ["personal_email", "personalEmail"])),
     profileEntry("Phone Number", pickProfileField(profile, ["phone_number", "phoneNumber"])),
@@ -545,7 +629,7 @@ export function buildGroupedProfileSections(
       "Date of Birth",
       formatDirectoryDate(pickProfileField(profile, ["date_of_birth", "dob", "dateOfBirth"]))
     ),
-    profileEntry("Gender", pickProfileField(profile, ["gender"])),
+    profileEntry("Gender", formatGenderLabel(pickProfileField(profile, ["gender"]))),
     profileEntry("Marital Status", pickProfileField(profile, ["marital_status", "maritalStatus"])),
     profileEntry("Nationality", pickProfileField(profile, ["nationality"])),
     profileEntry("Local Address", pickProfileField(profile, ["local_address", "localAddress"]), {
@@ -566,6 +650,7 @@ export function buildGroupedProfileSections(
     ),
     profileEntry("Blood Group", pickProfileField(profile, ["blood_group", "bloodGroup"])),
     profileEntry("PAN Card", formatPanCardStatus(profile)),
+    profileEntry("Aadhar Card", formatAadharCardStatus(profile)),
     profileEntry("Resume Link", resumeHref ? "resume" : null, {
       resumeShareHref: resumeHref,
       fullWidth: true,
@@ -603,6 +688,7 @@ const PROFILE_VIEW_PERSONAL_LABELS = new Set([
   "Local Address",
   "Permanent Address",
   "PAN Card",
+  "Aadhar Card",
 ]);
 
 const PROFILE_VIEW_LABEL_OVERRIDES: Record<string, string> = {
@@ -640,27 +726,9 @@ export function buildProfileViewSections(
   resumeShareHref?: string | null,
   options?: {
     includeDateOfBirth?: boolean;
-    currentAllocationSummary?: string | null;
   }
 ): ProfileDisplaySection[] {
   return buildGroupedProfileSections(profile, resumeShareHref)
-    .map((section) => {
-      if (
-        section.title === "Work Information" &&
-        options?.currentAllocationSummary !== undefined
-      ) {
-        return {
-          ...section,
-          entries: [
-            ...section.entries,
-            profileEntry("Current Allocation", options.currentAllocationSummary || "—", {
-              fullWidth: true,
-            }),
-          ],
-        };
-      }
-      return section;
-    })
     .map((section) => ({
       ...section,
       entries: filterProfileViewEntries(section.title, section.entries, options),

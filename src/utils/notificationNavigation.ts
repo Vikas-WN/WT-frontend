@@ -153,6 +153,8 @@ export function notificationCategoryLabel(
       return "Internship";
     case "ANNOUNCEMENT":
       return "Announcement";
+    case "BIRTHDAY_WISH":
+      return "Birthday";
     default:
       return "—";
   }

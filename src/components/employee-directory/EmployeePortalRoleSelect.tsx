@@ -238,7 +238,8 @@ export function EmployeePortalRoleSelect({
           aria-label="Role"
           variant="table-inline"
           className="w-full min-w-0"
-          contentClassName="min-w-[14rem] w-max"
+          align="end"
+          contentClassName="min-w-[min(14rem,calc(100vw-1rem))] w-max max-w-[min(var(--available-width,100vw),calc(100vw-1rem))]"
           // Role is required — clearing via Backspace/Delete must not fire onChange("").
           clearSelectionOnEmptyInput={false}
         />

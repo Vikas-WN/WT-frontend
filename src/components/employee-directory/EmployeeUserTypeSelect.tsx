@@ -25,6 +25,7 @@ type Props = {
   userType: unknown;
   bandId?: unknown;
   bandName?: unknown;
+  department?: unknown;
   canEdit: boolean;
   options: OnboardOptionItem[];
 };
@@ -33,6 +34,7 @@ export function EmployeeUserTypeSelect({
   empId,
   userType,
   bandName,
+  department,
   canEdit,
   options,
 }: Props) {
@@ -47,6 +49,7 @@ export function EmployeeUserTypeSelect({
 
   const currentType = normalizeDirectoryUserType(userType);
   const currentBandLabel = String(bandName ?? "").trim();
+  const currentDepartment = String(department ?? "").trim();
   const currentBandIsInternOnly = isInternOnlyBand(currentBandLabel);
   const needsFulltimeBand = currentBandIsInternOnly;
   const needsInternBand = !currentBandIsInternOnly;
@@ -65,6 +68,7 @@ export function EmployeeUserTypeSelect({
   const requireBandForPending =
     (pendingType === "FULLTIME" && needsFulltimeBand) ||
     (pendingType === "INTERN" && needsInternBand);
+  const requireDesignationForPending = requireBandForPending;
 
   const dialogBandOptions = useMemo(() => {
     if (pendingType === "INTERN") {
@@ -106,7 +110,8 @@ export function EmployeeUserTypeSelect({
   const persistUserType = async (
     nextType: string,
     transitionDate?: string,
-    nextBandId?: number
+    nextBandId?: number,
+    nextRole?: string
   ) => {
     const normalizedNext = normalizeDirectoryUserType(nextType);
     if (!empId.trim() || !normalizedNext || normalizedNext === currentType) return;
@@ -119,6 +124,7 @@ export function EmployeeUserTypeSelect({
         ...(nextBandId != null && Number.isFinite(nextBandId)
           ? { band_id: nextBandId }
           : {}),
+        ...(nextRole?.trim() ? { role: nextRole.trim() } : {}),
       });
       await queryClient.invalidateQueries({ queryKey: ["employee-directory", "onboard"] });
       await queryClient.invalidateQueries({ queryKey: ["employee-profile"] });
@@ -186,7 +192,22 @@ export function EmployeeUserTypeSelect({
       showErrorToast("Select band B8 (Intern) before converting to Intern.");
       return;
     }
-    void persistUserType(pendingType, payload.transitionDate, payload.bandId);
+    if (requireDesignationForPending && !payload.role?.trim()) {
+      showErrorToast("Select a designation applicable to the selected band.");
+      return;
+    }
+    if (requireDesignationForPending && !currentDepartment) {
+      showErrorToast(
+        "Employee department is required before changing band and designation. Set department on the profile first."
+      );
+      return;
+    }
+    void persistUserType(
+      pendingType,
+      payload.transitionDate,
+      payload.bandId,
+      payload.role
+    );
   };
 
   if (!canEdit) {
@@ -199,9 +220,9 @@ export function EmployeeUserTypeSelect({
     pendingType === "CONSULTANT"
       ? "Consultants have no band. The current Intern/Full-time designation will be cleared — set a consultant-valid designation on the employee profile after confirming."
       : pendingType === "INTERN"
-        ? "Interns must use band B8 (or B8 - Intern). Select it here to complete the conversion."
+        ? "Interns must use band B8 (or B8 - Intern). Select the Intern band and designation here to complete the conversion."
         : pendingType === "FULLTIME" && needsFulltimeBand
-          ? "This employee is on an intern band (B8). Select a valid full-time band to continue."
+          ? "This employee is on an intern band (B8). Select a full-time band and the designation that applies to that band."
           : undefined;
   const dateHelperText =
     pendingType === "FULLTIME"
@@ -226,7 +247,8 @@ export function EmployeeUserTypeSelect({
           aria-label="User Type"
           variant="table-inline"
           className="w-full min-w-0"
-          contentClassName="min-w-[14rem] w-max"
+          align="end"
+          contentClassName="min-w-[min(14rem,calc(100vw-1rem))] w-max max-w-[min(var(--available-width,100vw),calc(100vw-1rem))]"
           placeholder="Select user type"
           clearSelectionOnEmptyInput
         />
@@ -238,6 +260,8 @@ export function EmployeeUserTypeSelect({
         toType={pendingType ?? ""}
         saving={saving}
         requireBand={requireBandForPending}
+        requireDesignation={requireDesignationForPending}
+        department={currentDepartment}
         bandOptions={dialogBandOptions}
         bandsLoading={bandsLoading}
         bandFieldLabel={bandFieldLabel}

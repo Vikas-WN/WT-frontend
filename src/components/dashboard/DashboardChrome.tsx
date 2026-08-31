@@ -9,11 +9,9 @@ import { useAuth } from "@/context/AuthContext";
 import { hrmsService, type NotificationItem } from "@/services/hrms.service";
 import {
   formatNotificationTimestamp,
-  humanizeNotificationProjectRefs,
+  resolveNotificationDisplayCopy,
   notificationIsRead,
-  notificationMessage,
   notificationRowId,
-  notificationTitle,
   parseNotificationItems,
   dedupeLeaveRequestNotifications,
 } from "@/utils/notifications";
@@ -414,7 +412,11 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
                 aria-label="Breadcrumb"
               >
-                <span className="text-wt-text-muted">Employee</span>
+                {/*
+                  "Employee" is a nav group, not a page. Linking it sent users to the
+                  Onboarding child, which misrepresents the path, so it stays plain text.
+                */}
+                <span>Employee</span>
                 <span aria-hidden>/</span>
                 {isEmployeeProfileRoute ? (
                   <>
@@ -426,10 +428,14 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                       Directory
                     </Link>
                     <span aria-hidden>/</span>
-                    <span className="text-wt-text">Employee Profile</span>
+                    <span className="text-wt-text" aria-current="page">
+                      Employee Profile
+                    </span>
                   </>
                 ) : (
-                  <span className="text-wt-text">Directory</span>
+                  <span className="text-wt-text" aria-current="page">
+                    Directory
+                  </span>
                 )}
               </nav>
             ) : isLearningRoute ? (
@@ -469,7 +475,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                   </span>
                 ) : null}
               </summary>
-              <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-[380px] bg-white dark:bg-wt-surface-1 rounded-2xl shadow-xl shadow-slate-200/60 dark:shadow-none border border-slate-100 dark:border-wt-border-md p-2">
+              <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-[min(380px,calc(100vw-1rem))] bg-white dark:bg-wt-surface-1 rounded-2xl shadow-xl shadow-slate-200/60 dark:shadow-none border border-slate-100 dark:border-wt-border-md p-2">
                 <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 dark:border-wt-border/80 mb-1">
                   <h3 className="font-semibold text-slate-900 dark:text-wt-text text-base">Notifications</h3>
                   <button type="button" className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors disabled:opacity-40" onClick={() =>
@@ -496,11 +502,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                     notifications.map((row, idx) => {
                       const id = notificationRowId(row);
                       const isRead = notificationIsRead(row);
-                      const title = notificationTitle(row);
-                      const message = humanizeNotificationProjectRefs(
-                        notificationMessage(row),
-                        projectNameByCode
-                      );
+                      const { title, message } = resolveNotificationDisplayCopy(row, projectNameByCode);
                       const createdAt = formatNotificationTimestamp(row.created_at);
                       const categoryLabel = notificationCategoryLabel(row);
                       const roleLabel =

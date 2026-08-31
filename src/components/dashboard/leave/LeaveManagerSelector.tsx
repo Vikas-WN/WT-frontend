@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FieldLabel } from "@/components/ui/field";
 import { useEmployeeManagers } from "@/hooks/leave/useEmployeeManagers";
 import { filterEligibleLeaveManagers } from "@/utils/leaveManagerEligibility";
+import { resolveEmployeeNamesByEmail } from "@/utils/compOff/resolveEmployeeDisplayNames";
 import { ChevronsUpDown, X, Check, Search, Loader2 } from "lucide-react";
 
 function optionLabel(option: LeaveManagerOption): string {
@@ -31,6 +32,7 @@ export function LeaveManagerSelector({
   loading: externalLoading,
   label = "Primary managers",
   required = false,
+  id,
 }: {
   selectedEmails: string[];
   onChange: (emails: string[]) => void;
@@ -39,6 +41,7 @@ export function LeaveManagerSelector({
   loading?: boolean;
   label?: string;
   required?: boolean;
+  id?: string;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -92,14 +95,41 @@ export function LeaveManagerSelector({
     [selectedEmails]
   );
 
-  const optionByEmail = useMemo(() => {
-    const map = new Map<string, LeaveManagerOption>();
+  const [resolvedNames, setResolvedNames] = useState<Record<string, string>>({});
+
+  const namesByEmail = useMemo(() => {
+    const map = new Map<string, string>();
     for (const option of options) {
       const email = String(option.email ?? "").trim().toLowerCase();
-      if (email) map.set(email, option);
+      const name = option.name?.trim();
+      if (email && name) map.set(email, name);
+    }
+    for (const [email, name] of Object.entries(resolvedNames)) {
+      if (name) map.set(email.toLowerCase(), name);
     }
     return map;
-  }, [options]);
+  }, [options, resolvedNames]);
+
+  useEffect(() => {
+    const missing = selectedEmails
+      .map((email) => email.trim().toLowerCase())
+      .filter((email) => email && !namesByEmail.has(email));
+    if (!missing.length) return;
+    let cancelled = false;
+    void resolveEmployeeNamesByEmail(missing).then((names) => {
+      if (cancelled) return;
+      setResolvedNames((prev) => {
+        const next = { ...prev };
+        for (const [email, name] of Object.entries(names)) {
+          if (name && name.trim()) next[email.toLowerCase()] = name.trim();
+        }
+        return next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedEmails, namesByEmail]);
 
   const filteredOptions = useMemo(
     () => options.filter((option) => matchesQuery(option, query)),
@@ -134,11 +164,14 @@ export function LeaveManagerSelector({
     () =>
       selectedEmails
         .map((email) => {
-          const opt = optionByEmail.get(email.trim().toLowerCase());
-          return { email: email.trim(), label: opt?.name?.trim() || email };
+          const lower = email.trim().toLowerCase();
+          return {
+            email: email.trim(),
+            label: namesByEmail.get(lower) ?? email.trim(),
+          };
         })
         .filter(Boolean),
-    [selectedEmails, optionByEmail]
+    [selectedEmails, namesByEmail]
   );
 
   return (
@@ -174,6 +207,7 @@ export function LeaveManagerSelector({
             aria-expanded={open}
             disabled={disabled}
             onClick={() => setOpen((v) => !v)}
+            id={id}
             className="flex h-auto min-h-10 w-full items-center gap-1.5 rounded-lg border border-input bg-transparent px-3 py-1.5 text-sm transition-colors hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-0 disabled:pointer-events-none disabled:opacity-50 disabled:bg-input/50 cursor-pointer"
           >
             <div className="flex flex-1 flex-wrap items-center gap-1">
@@ -276,9 +310,51 @@ export function LeaveManagerSelector({
                     );
                   })
                 ) : (
-                  <p className="px-2 py-4 text-center text-sm text-muted-foreground">
-                    No managers match your search.
-                  </p>
+                  <div className="px-2 py-3">
+                    <p className="text-center text-sm text-muted-foreground mb-3">
+                      No managers match your search.
+                    </p>
+                    <div className="border-t border-border pt-3">
+                      <p className="text-xs text-muted-foreground text-center mb-2">
+                        Can't find your manager? Enter their email manually:
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                          type="email"
+                          placeholder="manager@company.com"
+                          disabled={disabled}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              const email = e.currentTarget.value.trim().toLowerCase();
+                              if (email && email.includes("@")) {
+                                toggleEmail(email, true);
+                                setQuery("");
+                              }
+                            }
+                          }}
+                          className="flex-1 h-9 px-3 text-sm rounded-md border border-input bg-background placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:opacity-50"
+                        />
+                        <button
+                          type="button"
+                          disabled={disabled}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                            const email = input?.value.trim().toLowerCase();
+                            if (email && email.includes("@")) {
+                              toggleEmail(email, true);
+                              input.value = "";
+                              setQuery("");
+                            }
+                          }}
+                          className="px-3 py-1.5 text-sm font-medium text-primary hover:text-primary/80 disabled:opacity-50 cursor-pointer"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

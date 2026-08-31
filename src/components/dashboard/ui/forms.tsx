@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Children, isValidElement, useId, useRef, type ReactElement, type ReactNode } from "react";
+import { Children, isValidElement, useId, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { CalendarIcon } from "lucide-react";
 import {
   SearchableSelectCombobox,
@@ -27,6 +27,7 @@ import { formatUILabel } from "@/utils/titleCase";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
 import {
   API_DATE_PLACEHOLDER,
+  apiDateFieldError,
   apiDateFieldValue,
   apiDateToInputValue,
   finalizeApiDateInput,
@@ -68,6 +69,7 @@ export function ApiDateField({
   min,
   max,
   className,
+  error,
 }: {
   label: string;
   value: string;
@@ -77,9 +79,14 @@ export function ApiDateField({
   min?: string;
   max?: string;
   className?: string;
+  error?: string | null;
 }) {
   const fieldId = useId();
+  const errorId = `${fieldId}-error`;
   const pickerRef = useRef<HTMLInputElement>(null);
+  const [touched, setTouched] = useState(false);
+  const fieldError = error ?? (touched ? apiDateFieldError(value, { required, fieldLabel: label }) : null);
+  const invalid = Boolean(fieldError);
 
   function openPicker() {
     if (disabled) return;
@@ -91,7 +98,7 @@ export function ApiDateField({
   }
 
   return (
-    <Field className={cn(FORM_FIELD_CLASS, className)}>
+    <Field className={cn(FORM_FIELD_CLASS, className)} data-invalid={invalid || undefined}>
       <FieldLabel label={label} required={required} htmlFor={fieldId} />
       <InputGroup className="h-11">
         <InputGroupInput
@@ -105,10 +112,15 @@ export function ApiDateField({
           disabled={disabled}
           required={required}
           aria-required={required || undefined}
+          aria-invalid={invalid || undefined}
+          aria-describedby={invalid ? errorId : undefined}
           pattern="\d{2}/\d{2}/\d{4}"
           title={`Use ${API_DATE_PLACEHOLDER}`}
           onChange={(e) => onChange(maskApiDateInput(e.target.value))}
-          onBlur={(e) => onChange(finalizeApiDateInput(e.target.value))}
+          onBlur={(e) => {
+            setTouched(true);
+            onChange(finalizeApiDateInput(e.target.value));
+          }}
         />
         <input
           ref={pickerRef}
@@ -137,6 +149,7 @@ export function ApiDateField({
           </InputGroupButton>
         </InputGroupAddon>
       </InputGroup>
+      {fieldError ? <FieldError id={errorId}>{fieldError}</FieldError> : null}
     </Field>
   );
 }
@@ -169,6 +182,7 @@ export function InputField({
   placeholder,
   disabled = false,
   description,
+  error,
   inputMode,
   pattern,
   autoComplete,
@@ -181,12 +195,14 @@ export function InputField({
   placeholder?: string;
   disabled?: boolean;
   description?: string;
+  error?: string | null;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   pattern?: string;
   autoComplete?: string;
 }) {
   const fieldId = useId();
   const descriptionId = description ? `${fieldId}-description` : undefined;
+  const errorId = error ? `${fieldId}-error` : undefined;
 
   if (type === "date") {
     return (
@@ -211,12 +227,14 @@ export function InputField({
         placeholder={placeholder}
         required={required}
         aria-required={required || undefined}
-        aria-describedby={descriptionId}
         disabled={disabled}
         inputMode={inputMode}
         pattern={pattern}
         autoComplete={autoComplete}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={errorId ?? descriptionId}
       />
+      {error ? <FieldError id={errorId}>{error}</FieldError> : null}
       {description ? (
         <FieldDescription id={descriptionId} className="!mt-1 text-wt-text-muted">
           {description}
@@ -541,6 +559,7 @@ export function DatePickerField({
   max,
   className,
   required = false,
+  error,
 }: {
   label: string;
   value: string;
@@ -550,6 +569,7 @@ export function DatePickerField({
   max?: string;
   className?: string;
   required?: boolean;
+  error?: string | null;
 }) {
   return (
     <ApiDateField
@@ -561,6 +581,7 @@ export function DatePickerField({
       max={max}
       className={className}
       required={required}
+      error={error}
     />
   );
 }
@@ -574,6 +595,7 @@ export function FileField({
   required = false,
   showDeleteButton = false,
   currentFileName,
+  currentPreviewSrc,
   onDelete,
 }: {
   label: string;
@@ -584,6 +606,8 @@ export function FileField({
   onPickFiles?: (files: File[]) => void;
   showDeleteButton?: boolean;
   currentFileName?: string;
+  /** Thumbnail of the already-stored file, so the field does not read as empty. */
+  currentPreviewSrc?: string;
   onDelete?: () => void;
 }) {
   const fieldId = useId();
@@ -594,6 +618,16 @@ export function FileField({
     <Field className={FORM_FIELD_CLASS}>
       <FieldLabel label={label} required={required} htmlFor={fieldId} />
       <div className="flex items-center gap-2">
+        {currentPreviewSrc ? (
+          // The native file input always reads "No file chosen", which makes a saved file
+          // look lost. The thumbnail shows what is currently on record.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={currentPreviewSrc}
+            alt={currentFileName ? `Current ${label}: ${currentFileName}` : `Current ${label}`}
+            className="border-wt-border size-10 shrink-0 rounded-full border object-cover"
+          />
+        ) : null}
         <Input
           id={fieldId}
           type="file"
@@ -622,7 +656,9 @@ export function FileField({
         ) : null}
       </div>
       {currentFileName ? (
-        <p className="text-xs text-wt-text-muted mt-1">Current: {currentFileName}</p>
+        <p className="text-xs text-wt-text-muted mt-1">
+          Current: {currentFileName} — kept unless you choose a new file.
+        </p>
       ) : null}
     </Field>
   );

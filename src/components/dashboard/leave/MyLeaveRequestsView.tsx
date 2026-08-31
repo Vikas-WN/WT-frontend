@@ -20,8 +20,10 @@ import { DatePicker } from "@/components/ui/date-picker";
 
 import {
   formatApprovalStageLabel,
+  isEmployeeEditableUserRequest,
   requestFinalStatus,
   requestRejectionReason,
+  resolveUserRequestId,
 } from "@/utils/userRequest";
 import {
   activeSortDirectionForColumn,
@@ -134,17 +136,10 @@ export function MyLeaveRequestsView({
               ))
             ) : pagination.pageItems.length ? (
               pagination.pageItems.map((row, idx) => {
-                const requestId = String(
-                  row.user_request_id ??
-                    row.userRequestId ??
-                    row.request_id ??
-                    row.requestId ??
-                    row.id ??
-                    ""
-                ).trim();
                 const rowRecord = row as Record<string, unknown>;
+                const requestId = resolveUserRequestId(rowRecord);
                 const finalStatus = requestFinalStatus(rowRecord);
-                const isPending = finalStatus === "PENDING";
+                const canEditOrRevoke = isEmployeeEditableUserRequest(rowRecord);
                 const rejectionReason =
                   finalStatus === "REJECTED"
                     ? requestRejectionReason(rowRecord)
@@ -196,7 +191,7 @@ export function MyLeaveRequestsView({
                       {String(row.comments ?? "—")}
                     </TableCell>
                     <TableCell className="px-3 py-2.5 text-right">
-                      {isPending ? (
+                      {canEditOrRevoke ? (
                         <div className="inline-flex items-center justify-end gap-0.5">
                           <Button
                             variant="ghost"

@@ -7,6 +7,7 @@ import {
   SESSION_IDLE_WARNING_MS,
   SESSION_INACTIVITY_MS,
   SESSION_MAX_MS,
+  SESSION_REFRESH_INTERVAL_MS,
   SESSION_STORAGE_LAST_ACTIVITY,
   SESSION_STORAGE_STARTED_AT,
   type SessionLogoutReason,
@@ -64,14 +65,27 @@ export function clearSessionTiming() {
 export function useSessionTimeout(
   enabled: boolean,
   onTimeout: (reason: SessionLogoutReason) => void,
-  onIdleWarning?: (minutesRemaining: number) => void
+  onIdleWarning?: (minutesRemaining: number) => void,
+  options?: {
+    inactivityMs?: number;
+    maxMs?: number;
+    activityPingMs?: number;
+    idleWarningMs?: number;
+    refreshIntervalMs?: number;
+  }
 ): { extendSession: () => void } {
   const pathname = usePathname();
   const onTimeoutRef = useRef(onTimeout);
   const onIdleWarningRef = useRef(onIdleWarning);
   const lastActivityRef = useRef(Date.now());
   const lastPingRef = useRef(Date.now());
+  const lastRefreshRef = useRef(Date.now());
   const idleWarningShownRef = useRef(false);
+  const inactivityMs = options?.inactivityMs ?? SESSION_INACTIVITY_MS;
+  const maxMs = options?.maxMs ?? SESSION_MAX_MS;
+  const activityPingMs = options?.activityPingMs ?? SESSION_ACTIVITY_PING_MS;
+  const idleWarningMs = Math.min(options?.idleWarningMs ?? SESSION_IDLE_WARNING_MS, inactivityMs);
+  const refreshIntervalMs = options?.refreshIntervalMs ?? SESSION_REFRESH_INTERVAL_MS;
 
   useEffect(() => {
     onTimeoutRef.current = onTimeout;
@@ -92,6 +106,7 @@ export function useSessionTimeout(
     const now = Date.now();
     lastActivityRef.current = readLastActivityMs();
     lastPingRef.current = now;
+    lastRefreshRef.current = now;
 
     const events: Array<keyof WindowEventMap> = [
       "mousedown",
@@ -120,40 +135,45 @@ export function useSessionTimeout(
       window.addEventListener(eventName, onActivity, { passive: true, capture: true });
     }
 
-    const intervalId = window.setInterval(() => {
+    const intervalId = window.setInterval(async () => {
       const now = Date.now();
       const sessionStart = readSessionStartMs();
       const idleFor = now - lastActivityRef.current;
 
-      if (now - sessionStart >= SESSION_MAX_MS) {
+      if (now - sessionStart >= maxMs) {
         idleWarningShownRef.current = false;
         onTimeoutRef.current("expired");
         return;
       }
-      if (idleFor >= SESSION_INACTIVITY_MS) {
+      if (idleFor >= inactivityMs) {
         idleWarningShownRef.current = false;
         onTimeoutRef.current("idle");
         return;
       }
 
-      const warningThreshold = SESSION_INACTIVITY_MS - SESSION_IDLE_WARNING_MS;
+      const warningThreshold = inactivityMs - idleWarningMs;
       if (
         idleFor >= warningThreshold &&
         !idleWarningShownRef.current &&
         onIdleWarningRef.current
       ) {
         idleWarningShownRef.current = true;
-        const minutesLeft = Math.max(1, Math.ceil((SESSION_INACTIVITY_MS - idleFor) / 60_000));
+        const minutesLeft = Math.max(1, Math.ceil((inactivityMs - idleFor) / 60_000));
         onIdleWarningRef.current(minutesLeft);
       }
 
-      if (idleFor < SESSION_INACTIVITY_MS && now - lastPingRef.current >= SESSION_ACTIVITY_PING_MS) {
+      if (idleFor < inactivityMs && now - lastPingRef.current >= activityPingMs) {
         lastPingRef.current = now;
         void recordSessionActivity().catch(() => undefined);
       }
 
-      // Access-token refresh is handled reactively by the HTTP client on 401
-      // (single-flight refresh + retry), so no proactive timer refresh here.
+      // Proactively refresh access token before it expires (default 25 min vs 30 min expiry).
+      // This avoids 401->refresh races when the access token expires during activity.
+      if (idleFor < inactivityMs && now - lastRefreshRef.current >= refreshIntervalMs) {
+        lastRefreshRef.current = now;
+        const { attemptTokenRefresh } = await import("@/lib/auth");
+        void attemptTokenRefresh().catch(() => undefined);
+      }
     }, 30_000);
 
     return () => {
@@ -162,7 +182,7 @@ export function useSessionTimeout(
       }
       window.clearInterval(intervalId);
     };
-  }, [enabled, bumpActivity]);
+  }, [activityPingMs, bumpActivity, enabled, idleWarningMs, inactivityMs, maxMs, refreshIntervalMs]);
 
   useEffect(() => {
     if (enabled) bumpActivity();

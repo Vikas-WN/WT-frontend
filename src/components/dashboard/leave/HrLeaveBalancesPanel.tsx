@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import { InputField, SelectField } from "@/components/dashboard/ui/forms";
 import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@/hooks/useClientPagination";
 import { showErrorToast } from "@/lib/toast";
 import { Pencil, Search, Wallet } from "lucide-react";
 import { useHrLeaveBalancesList, validateLeaveBalancePeriod } from "@/hooks/leave/useHrLeaveBalancesList";
@@ -65,7 +66,7 @@ export function HrLeaveBalancesPanel({
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [yearError, setYearError] = useState<string | null>(null);
   const [monthError, setMonthError] = useState<string | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<LeaveBalancesListItem | null>(null);
@@ -344,7 +345,7 @@ export function HrLeaveBalancesPanel({
               rangeStart={rangeStart}
               rangeEnd={rangeEnd}
               pageSize={pageSize}
-              pageSizeOptions={[25, 50, 100]}
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
               onPageChange={(p) => setPage(Math.max(0, p - 1))}
               onPageSizeChange={(size) => {
                 setPageSize(size);

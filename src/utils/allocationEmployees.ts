@@ -8,6 +8,7 @@ export type AllocationEmployeeOption = {
   role?: string;
   /** Date of joining when available from onboard/list payloads. */
   doj?: string;
+  status?: string;
 };
 
 /** Parse GET /allocation/employees → data.items */
@@ -84,6 +85,7 @@ export function parseActiveOnboardEmployees(
     const doj = String(
       row.doj ?? row.date_of_joining ?? row.dateOfJoining ?? row.joining_date ?? row.joiningDate ?? ""
     ).trim();
+    const status = String(row.status ?? row.user_status ?? row.userStatus ?? "").trim();
     out.push({
       employeeEmail: email,
       employeeName: name || email,
@@ -91,6 +93,7 @@ export function parseActiveOnboardEmployees(
       empId: String(row.empId ?? row.emp_id ?? "").trim() || undefined,
       ...(role ? { role } : {}),
       ...(doj ? { doj } : {}),
+      ...(status ? { status } : {}),
     });
   }
 

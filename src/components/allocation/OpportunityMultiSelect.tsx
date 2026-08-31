@@ -142,11 +142,19 @@ export function OpportunityMultiSelect({
               side="bottom"
               sideOffset={6}
               align="start"
+              collisionPadding={12}
+              collisionAvoidance={{
+                side: "flip",
+                align: "shift",
+                fallbackAxisSide: "end",
+              }}
               positionMethod={modalPanel ? "absolute" : "fixed"}
               className="isolate z-[200]"
             >
               <Popover.Popup
-                style={{ width: popupWidth }}
+                // Trigger width drives the popup, so clamp it to the viewport or a
+                // wide trigger near the right edge pushes the list off screen.
+                style={{ width: popupWidth, maxWidth: "calc(100vw - 1rem)" }}
                 className="overflow-hidden rounded-xl border border-wt-border bg-wt-surface-1 shadow-lg"
               >
                 <div className="flex items-center gap-2 border-b border-wt-border px-3 py-2">

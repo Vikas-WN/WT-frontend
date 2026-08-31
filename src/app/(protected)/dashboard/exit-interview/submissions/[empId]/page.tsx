@@ -5,7 +5,8 @@ import { ExitInterviewSubmissionDetailPageClient } from "@/components/exit-inter
 
 export default function ExitInterviewSubmissionDetailPage() {
   const params = useParams();
-  const lookupId = decodeURIComponent(String(params?.empId ?? "").trim());
+  // useParams already decodes the route segment; decoding again corrupts ids containing "%".
+  const lookupId = String(params?.empId ?? "").trim();
 
   return <ExitInterviewSubmissionDetailPageClient lookupId={lookupId} />;
 }

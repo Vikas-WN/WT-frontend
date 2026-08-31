@@ -17,7 +17,7 @@ import {
   formatInvitedEmployeeTableRows,
   lastSevenDaysInvitedEmployeesDateRange,
 } from "@/utils/dashboard/invitedEmployees";
-import { compareApiDates, formatApiDateDisplay } from "@/utils/apiDate";
+import { compareApiDates, formatApiDateDisplay, parseApiDate } from "@/utils/apiDate";
 import { createEmptyOnboardForm } from "@/utils/onboardFormState";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
@@ -43,6 +43,12 @@ function invitedDateRangeError(from: string, to: string): string | null {
   const toTrimmed = to.trim();
   if (!fromTrimmed || !toTrimmed) {
     return "From date and To date are required.";
+  }
+  if (!parseApiDate(fromTrimmed)) {
+    return "Please enter a valid from date in DD/MM/YYYY format.";
+  }
+  if (!parseApiDate(toTrimmed)) {
+    return "Please enter a valid to date in DD/MM/YYYY format.";
   }
   if (compareApiDates(fromTrimmed, toTrimmed) > 0) {
     return "From date must be on or before To date.";
@@ -405,7 +411,6 @@ export function EmployeePageClient() {
                     onChange={setInvitedNameSearch}
                     placeholder="Search by employee name"
                     aria-label="Search invited employees by name"
-                    disabled={invitedListLoading}
                   />
                 }
                 filters={

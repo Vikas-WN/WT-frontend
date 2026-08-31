@@ -3,7 +3,7 @@ import { ApiError } from "@/api/error";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
 import { hrmsService } from "@/services/hrms.service";
 import type { CompOffBalanceData, CompOffExpiryData, CompOffExpiryItem, CompOffGrant } from "@/types/compOff";
-import { applyApiDateFields, applyApiDateQuery, toApiDateParam } from "@/utils/apiDate";
+import { applyApiDateFields, applyApiDateQuery, requireApiDateParam, toApiDateParam } from "@/utils/apiDate";
 import {
   availableUnitsFromGrants,
   dedupeCompOffRequestRows,
@@ -58,25 +58,42 @@ export const compOffService = {
 
   createEarnRequest(body: Record<string, unknown>) {
     const payload = applyApiDateFields(body, ["workedDate", "worked_date"]);
-    const normalized: Record<string, unknown> = {
-      workedDate: payload.workedDate ?? payload.worked_date,
-      projectCode: payload.projectCode ?? payload.project_code,
-      workDescription: payload.workDescription ?? payload.work_description,
+    const workedDate =
+      toApiDateParam(String(payload.workedDate ?? payload.worked_date ?? "")) ?? "";
+    const projectCode = String(payload.projectCode ?? payload.project_code ?? "").trim();
+    const workDescription = String(
+      payload.workDescription ?? payload.work_description ?? ""
+    ).trim();
+    const normalizeEmails = (value: unknown): string[] => [
+      ...new Set(
+        (Array.isArray(value) ? value : [])
+          .map((email) => String(email).trim().toLowerCase())
+          .filter(Boolean)
+      ),
+    ];
+    const managerEmails = normalizeEmails(payload.manager_emails ?? payload.managerEmails);
+    const secondaryManagerEmails = normalizeEmails(
+      payload.secondary_manager_emails ?? payload.secondaryManagerEmails
+    );
+    const requestBody: Record<string, unknown> = {
+      worked_date: workedDate,
+      workedDate,
+      project_code: projectCode,
+      projectCode,
+      work_description: workDescription,
+      workDescription,
     };
-    const managers = payload.manager_emails ?? payload.managerEmails;
-    if (Array.isArray(managers) && managers.length) {
-      normalized.managerEmails = managers;
-      normalized.manager_emails = managers;
+    if (managerEmails.length) {
+      requestBody.manager_emails = managerEmails;
+      requestBody.managerEmails = managerEmails;
     }
-    const secondaryManagers =
-      payload.secondary_manager_emails ?? payload.secondaryManagerEmails;
-    if (Array.isArray(secondaryManagers) && secondaryManagers.length) {
-      normalized.secondaryManagerEmails = secondaryManagers;
-      normalized.secondary_manager_emails = secondaryManagers;
+    if (secondaryManagerEmails.length) {
+      requestBody.secondary_manager_emails = secondaryManagerEmails;
+      requestBody.secondaryManagerEmails = secondaryManagerEmails;
     }
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.compOff.earn, {
       contentType: "application/json",
-      body: JSON.stringify(normalized),
+      body: JSON.stringify(requestBody),
     });
   },
 
@@ -118,14 +135,19 @@ export const compOffService = {
       requestToDate: payload.requestToDate ?? payload.request_to_date,
       requestType: payload.requestType ?? payload.request_type ?? "COMP_OFF",
       comments: payload.comments ?? "",
-      managerCompOffEmail:
-        payload.managerCompOffEmail ?? payload.manager_comp_off_email ?? "",
       isHalfDay: false,
       primaryManagerEmails: payload.primary_manager_emails ?? payload.primaryManagerEmails ?? [],
       secondaryManagerEmails: payload.secondary_manager_emails ?? payload.secondaryManagerEmails ?? [],
       primary_manager_emails: payload.primary_manager_emails ?? payload.primaryManagerEmails ?? [],
       secondary_manager_emails: payload.secondary_manager_emails ?? payload.secondaryManagerEmails ?? [],
     };
+    // Omit when unresolved — the API rejects an empty string and routes by manager scope instead.
+    const managerCompOffEmail = String(
+      payload.managerCompOffEmail ?? payload.manager_comp_off_email ?? ""
+    ).trim();
+    if (managerCompOffEmail) {
+      normalized.managerCompOffEmail = managerCompOffEmail;
+    }
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.userRequest.root, {
       contentType: "application/json",
       body: JSON.stringify(normalized),
@@ -193,15 +215,77 @@ export const compOffService = {
     return [];
   },
 
+  /** Manager emails from GET /comp-off/earn/manager-options (managers on the caller's allocations). */
+  async resolveManagerEmailFromManagerOptions(projectCode?: string): Promise<string> {
+    try {
+      const res = await this.getManagerOptions();
+      const payload = (res as { data?: unknown }).data ?? res;
+      const items = toRows(
+        (payload as { items?: unknown })?.items ?? payload
+      ) as Array<Record<string, unknown>>;
+      const code = projectCode?.trim().toLowerCase();
+      const emailOf = (row: Record<string, unknown>) =>
+        String(row.email ?? "").trim().toLowerCase();
+      if (code) {
+        const forCode = items.find(
+          (row) =>
+            String(row.project_code ?? row.projectCode ?? "")
+              .trim()
+              .toLowerCase() === code && emailOf(row).includes("@")
+        );
+        if (forCode) return emailOf(forCode);
+      }
+      const first = items.find((row) => emailOf(row).includes("@"));
+      return first ? emailOf(first) : "";
+    } catch {
+      return "";
+    }
+  },
+
   async resolveUsageManagerCompOffEmail(projectCode?: string): Promise<string> {
     try {
       const catalog = await loadCompOffProjectCatalog();
       const code = projectCode?.trim();
       if (code) {
-        return (await resolveCompOffManagerEmail(code, catalog)).trim().toLowerCase();
+        const forCode = (await resolveCompOffManagerEmail(code, catalog)).trim().toLowerCase();
+        if (forCode) return forCode;
+        const fromOptions = await this.resolveManagerEmailFromManagerOptions(code);
+        if (fromOptions) return fromOptions;
       }
-      const first = catalog.options.find((p) => p.managerEmail?.trim());
-      return String(first?.managerEmail ?? "").trim().toLowerCase();
+      // First, try to find a project with a manager email in the catalog
+      const withManager = catalog.options.find((p) => p.managerEmail?.trim());
+      if (withManager?.managerEmail) {
+        return withManager.managerEmail.trim().toLowerCase();
+      }
+      // Managers of the caller's active allocations — the authoritative source.
+      const fromManagerOptions = await this.resolveManagerEmailFromManagerOptions();
+      if (fromManagerOptions) return fromManagerOptions;
+      // Fallback: try to find any manager email from assigned/earn projects
+      const allOptions = [...catalog.options, ...catalog.assignedRows, ...catalog.allocationRows];
+      for (const row of allOptions) {
+        const rowRecord = row as Record<string, unknown>;
+        const email = String(
+          rowRecord.manager_email ?? rowRecord.managerEmail ?? rowRecord.account_manager_email ?? rowRecord.accountManagerEmail ?? ""
+        ).trim().toLowerCase();
+        if (email && email.includes("@")) return email;
+      }
+      // Last resort: check the onboard list for account/delivery/project managers
+      try {
+        const onboardRes = await hrmsService.getOnboardList({ page: "0", size: "500" });
+        const onboardRows = toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes);
+        for (const row of onboardRows) {
+          const email = String(
+            row.account_manager_email ?? row.accountManagerEmail ??
+            row.delivery_manager_email ?? row.deliveryManagerEmail ??
+            row.project_manager_email ?? row.projectManagerEmail ??
+            row.manager_email ?? row.managerEmail ?? ""
+          ).trim().toLowerCase();
+          if (email && email.includes("@")) return email;
+        }
+      } catch {
+        /* ignore */
+      }
+      return "";
     } catch {
       return "";
     }
@@ -296,8 +380,8 @@ export const compOffService = {
     size?: number;
   }) {
     const { fromDate, toDate, requestType, empEmails, page = 0, size = 200 } = params;
-    const normalizedFrom = toApiDateParam(fromDate) ?? fromDate.trim();
-    const normalizedTo = toApiDateParam(toDate) ?? toDate.trim();
+    const normalizedFrom = requireApiDateParam(fromDate, "From date");
+    const normalizedTo = requireApiDateParam(toDate, "To date");
     return apiClient
       .get<ApiEnvelope<unknown>>(endpoints.userRequest.root, {
         query: applyApiDateQuery(

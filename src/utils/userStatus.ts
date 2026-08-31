@@ -77,12 +77,27 @@ export function isActiveUserStatus(status: unknown): boolean {
   return normalizeEmployeeStatusKey(status) === "ACTIVE";
 }
 
+/** Employees who completed onboarding and may be assigned to client projects. */
+export function isEligibleForProjectAllocation(status: unknown): boolean {
+  const key = normalizeEmployeeStatusKey(status);
+  return key === "ACTIVE" || key === "SERVING_NOTICE";
+}
+
 export function isOffboardedUserStatus(status: unknown): boolean {
   return normalizeEmployeeStatusKey(status) === "INACTIVE";
 }
 
 export function isServingNoticeUserStatus(status: unknown): boolean {
   return normalizeEmployeeStatusKey(status) === "SERVING_NOTICE";
+}
+
+/**
+ * Statuses that mean the employee is exiting. Both require a captured Last Working Day
+ * (and a Resignation Date for full-time employees) before the profile can be saved.
+ */
+export function isExitUserStatus(status: unknown): boolean {
+  const key = normalizeEmployeeStatusKey(status);
+  return key === "SERVING_NOTICE" || key === "INACTIVE";
 }
 
 /** Roles that skip employee-only self-service flows (onboarding, exit survey). */

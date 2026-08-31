@@ -26,6 +26,11 @@ import { AccountManagerSelect } from "@/components/allocation/AccountManagerSele
 import { normalizePickerEmail } from "@/utils/learning/onboardOptions";
 import { AttritionRetentionReports } from "@/components/reports/AttritionRetentionReports";
 import { BenchAgingReportTable } from "@/components/reports/BenchAgingReportTable";
+import { WorkforceReportCharts } from "@/components/reports/WorkforceReportCharts";
+import { UtilizationReportCharts } from "@/components/reports/UtilizationReportCharts";
+import { ComplianceReportCharts } from "@/components/reports/ComplianceReportCharts";
+import { BgvReportCharts } from "@/components/reports/BgvReportCharts";
+import { SkillReportCharts } from "@/components/reports/SkillReportCharts";
 import {
   countPeopleOnBench,
   mergeBenchAgingWithInvestment,
@@ -228,7 +233,7 @@ export function ReportsPageClient() {
   });
   const [utilizationFilters, setUtilizationFilters] = useState({
     page: "0",
-    size: "10",
+    size: "500",
     search: "",
     as_of: "",
   });
@@ -2379,7 +2384,7 @@ export function ReportsPageClient() {
   const loadWorkforceOverviewReports = useCallback(async () => {
     const params = {
       page: 0,
-      size: 10,
+      size: 500,
       search: undefined,
     };
     const [headcountRes, billingRes, expRes] = await Promise.all([
@@ -2487,14 +2492,23 @@ export function ReportsPageClient() {
     }]);
   }, [attritionFyStartYear]);
   const loadSkillInventoryReport = useCallback(async () => {
-    const res = await hrmsService.getSkillInventory({ page: 0, size: 10 });
+    const res = await hrmsService.getSkillInventory({ page: 0, size: 500 });
     const payload = ((res as { data?: unknown }).data ?? {}) as Record<string, unknown>;
     const rows = toRows(payload.data ?? payload).map((row) => {
       const primarySkillsRaw = row.primary_skills ?? row.primarySkills;
       const secondarySkillsRaw = row.secondary_skills ?? row.secondarySkills;
       const certsRaw = row.certifications ?? row.certs;
       const primarySkills = Array.isArray(primarySkillsRaw)
-        ? primarySkillsRaw.map((item) => String(item ?? "").trim()).filter(Boolean).join(", ")
+        ? primarySkillsRaw
+            .map((item) => {
+              if (item && typeof item === "object") {
+                const rec = item as Record<string, unknown>;
+                return String(rec.skill ?? rec.name ?? "").trim();
+              }
+              return String(item ?? "").trim();
+            })
+            .filter(Boolean)
+            .join(", ")
         : String(primarySkillsRaw ?? "—").trim() || "—";
       const secondarySkills = Array.isArray(secondarySkillsRaw)
         ? secondarySkillsRaw
@@ -2502,8 +2516,8 @@ export function ReportsPageClient() {
               if (item && typeof item === "object") {
                 const rec = item as Record<string, unknown>;
                 const skill = String(rec.skill ?? rec.name ?? "").trim();
-                const rating = rec.rating ?? rec.level;
-                return skill ? `${skill}${rating !== undefined ? ` (${String(rating)})` : ""}` : "";
+                const rating = rec.rating ?? rec.self_rating ?? rec.level;
+                return skill ? `${skill}${rating !== undefined && rating !== null ? ` (${String(rating)})` : ""}` : "";
               }
               return String(item ?? "").trim();
             })
@@ -2539,7 +2553,7 @@ export function ReportsPageClient() {
   const loadBgvDashboardReport = useCallback(async () => {
     const params = {
       page: 0,
-      size: 10,
+      size: 500,
       search: bgvReportSearch.trim() || undefined,
       overall_status:
         bgvReportStatusFilter !== "ALL" ? bgvReportStatusFilter.trim().toUpperCase() : undefined,
@@ -3248,6 +3262,11 @@ export function ReportsPageClient() {
               <div className="mt-6 space-y-4">
                             {activeSection === "reports-workforce" ? (
                               <div className="space-y-4">
+                                <WorkforceReportCharts
+                                  headcountRows={headcountBreakdown}
+                                  roleBillingRows={roleBillingRows}
+                                  experienceRows={experienceBandRows}
+                                />
                                 <DataTable
                                   title="Headcount Distribution"
                                   columns={["department", "designation", "billing_type", "total_headcount"]}
@@ -3289,6 +3308,7 @@ export function ReportsPageClient() {
                               </div>
                             ) : activeSection === "reports-section-2" ? (
                               <div className="space-y-4">
+                                <UtilizationReportCharts rows={utilizationByDepartmentRows} />
                                 <DataTable
                                   title="Overall Utilization Table"
                                   columns={[
@@ -3336,6 +3356,7 @@ export function ReportsPageClient() {
                               />
                             ) : activeSection === "reports-section-4" ? (
                               <div className="space-y-4">
+                                <SkillReportCharts rows={skillInventoryRows} />
                                 <DataTable
                                   title="Skill Inventory Report"
                                   columns={[
@@ -3360,6 +3381,7 @@ export function ReportsPageClient() {
                               />
                             ) : activeSection === "reports-section-6" ? (
                               <div className="space-y-4">
+                                <ComplianceReportCharts rows={contractDistributionRows} />
                                 <DataTable
                                   title="Contract Distribution"
                                   columns={["employment_type", "count", "workforce_percent"]}
@@ -3395,6 +3417,7 @@ export function ReportsPageClient() {
                                     onChange={(v) => setBgvReportReferenceFilter(v)}
                                   />
                                 </div>
+                                <BgvReportCharts rows={bgvDashboardRows} />
                                 <DataTable
                                   title="BGV Status Dashboard"
                                   columns={["employee", "role", "consent", "identity", "employment", "overall_status"]}

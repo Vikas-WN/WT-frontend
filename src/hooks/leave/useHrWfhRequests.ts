@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { listScopedUserRequests } from "@/utils/userRequest";
 import { enrichWfhRequestRows } from "@/utils/wfhRequestEnrichment";
+import { requireApiDateParam } from "@/utils/apiDate";
 
 export type HrWfhRequestFilters = {
   fromDate: string;
@@ -24,26 +25,32 @@ export function useHrWfhRequests() {
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<HrWfhRequestFilters>(() => defaultHrWfhRequestFilters());
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const fetched = await listScopedUserRequests({
-        fromDate: filters.fromDate,
-        toDate: filters.toDate,
-        requestType: "WFH",
-        size: 500,
-      });
-      const wfhOnly = fetched.filter(
-        (row) => String(row.request_type ?? row.requestType ?? "").trim().toUpperCase() === "WFH"
-      );
-      const enriched = await enrichWfhRequestRows(wfhOnly);
-      setRows(enriched);
-    } catch {
-      setRows([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters.fromDate, filters.toDate]);
+  const load = useCallback(
+    async (range?: Partial<HrWfhRequestFilters>) => {
+      const fromDate = requireApiDateParam(range?.fromDate ?? filters.fromDate, "From date");
+      const toDate = requireApiDateParam(range?.toDate ?? filters.toDate, "To date");
+      setLoading(true);
+      try {
+        const fetched = await listScopedUserRequests({
+          fromDate,
+          toDate,
+          requestType: "WFH",
+          size: 500,
+        });
+        const wfhOnly = fetched.filter(
+          (row) => String(row.request_type ?? row.requestType ?? "").trim().toUpperCase() === "WFH"
+        );
+        const enriched = await enrichWfhRequestRows(wfhOnly);
+        setRows(enriched);
+      } catch (error) {
+        setRows([]);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [filters.fromDate, filters.toDate]
+  );
 
   return { rows, loading, filters, setFilters, load };
 }

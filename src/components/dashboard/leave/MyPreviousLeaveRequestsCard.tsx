@@ -23,7 +23,7 @@ import { formatUserRequestTypeLabel } from "@/utils/actionToast";
 import { formatLeaveDateRange, formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
 import { useNonOptionalHolidayDates } from "@/hooks/leave/useNonOptionalHolidayDates";
 import { pickManagerEmailList } from "@/utils/leaveManagerDisplay";
-import { requestFinalStatus, requestRejectionReason } from "@/utils/userRequest";
+import { requestFinalStatus, requestRejectionReason, isEmployeeEditableUserRequest, resolveUserRequestId } from "@/utils/userRequest";
 import { Eye, Filter, Info, MoreVertical } from "lucide-react";
 import type { useClientPagination } from "@/hooks/useClientPagination";
 
@@ -144,16 +144,9 @@ export function MyPreviousLeaveRequestsCard({
               ) : pagination.pageItems.length ? (
                 pagination.pageItems.map((row, idx) => {
                   const rowRecord = row as RowRecord;
-                  const requestId = String(
-                    rowRecord.user_request_id ??
-                      rowRecord.userRequestId ??
-                      rowRecord.request_id ??
-                      rowRecord.requestId ??
-                      rowRecord.id ??
-                      ""
-                  ).trim();
+                  const requestId = resolveUserRequestId(rowRecord);
                   const finalStatus = requestFinalStatus(rowRecord);
-                  const isPending = finalStatus === "PENDING";
+                  const canEditOrRevoke = isEmployeeEditableUserRequest(rowRecord);
                   const rejectionReason =
                     finalStatus === "REJECTED" ? requestRejectionReason(rowRecord) : null;
                   const primaryManagers = pickManagerEmailList(rowRecord, "primary");
@@ -214,7 +207,7 @@ export function MyPreviousLeaveRequestsCard({
                           >
                             <Eye className="size-4" aria-hidden />
                           </Button>
-                          {isPending ? (
+                          {canEditOrRevoke ? (
                             <div className="relative" ref={openMenuId === requestId ? menuRef : undefined}>
                               <Button
                                 type="button"

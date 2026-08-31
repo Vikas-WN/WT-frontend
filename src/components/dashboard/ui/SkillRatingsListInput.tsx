@@ -2,14 +2,22 @@
 
 import { Plus, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { InputField, SelectField } from "@/components/dashboard/ui/forms";
+import {
+  AdaptiveSelectField,
+  InputField,
+  SelectField,
+  type SelectFieldOption,
+} from "@/components/dashboard/ui/forms";
 import { SkillRating } from "@/types/onboard";
 import { cn } from "@/lib/utils";
+import { useMemo, useState } from "react";
 
 export type SkillRatingsListInputProps = {
   label: string;
   value: SkillRating[];
   onChange: (value: SkillRating[]) => void;
+  skillOptions?: SelectFieldOption[];
+  allowCustomSkills?: boolean;
   showWebknotRating?: boolean;
   disabled?: boolean;
   required?: boolean;
@@ -36,12 +44,29 @@ export function SkillRatingsListInput({
   label,
   value,
   onChange,
+  skillOptions = [],
+  allowCustomSkills = false,
   showWebknotRating = false,
   disabled = false,
   required = false,
   className,
   hint,
 }: SkillRatingsListInputProps) {
+  const [customSkillRows, setCustomSkillRows] = useState<Set<number>>(() => new Set());
+  const normalizedSkillOptions = useMemo(
+    () =>
+      skillOptions.map((option) =>
+        typeof option === "string"
+          ? { value: option, label: option }
+          : { value: option.value, label: option.label }
+      ),
+    [skillOptions]
+  );
+  const predefinedSkillKeys = useMemo(
+    () => new Set(normalizedSkillOptions.map((option) => option.value.trim().toLowerCase())),
+    [normalizedSkillOptions]
+  );
+
   const handleAdd = () => {
     onChange([
       ...value,
@@ -52,6 +77,14 @@ export function SkillRatingsListInput({
   const handleRemove = (index: number) => {
     const copy = [...value];
     copy.splice(index, 1);
+    setCustomSkillRows((prev) => {
+      const next = new Set<number>();
+      prev.forEach((rowIndex) => {
+        if (rowIndex < index) next.add(rowIndex);
+        if (rowIndex > index) next.add(rowIndex - 1);
+      });
+      return next;
+    });
     onChange(copy);
   };
 
@@ -65,6 +98,12 @@ export function SkillRatingsListInput({
 
     if (field === "skill") {
       row.skill = newVal;
+      const isPredefined = predefinedSkillKeys.has(newVal.trim().toLowerCase());
+      setCustomSkillRows((prev) => {
+        const next = new Set(prev);
+        if (isPredefined) next.delete(index);
+        return next;
+      });
     } else if (field === "self_rating") {
       // Never store 0/NaN from an emptied combobox — that still displayed as "3"
       // via `|| 3` and then failed submit validation.
@@ -75,6 +114,19 @@ export function SkillRatingsListInput({
 
     copy[index] = row;
     onChange(copy);
+  };
+
+  const enableCustomSkill = (index: number) => {
+    setCustomSkillRows((prev) => new Set(prev).add(index));
+  };
+
+  const disableCustomSkill = (index: number) => {
+    setCustomSkillRows((prev) => {
+      const next = new Set(prev);
+      next.delete(index);
+      return next;
+    });
+    handleChange(index, "skill", "");
   };
 
   return (
@@ -123,15 +175,74 @@ export function SkillRatingsListInput({
               key={idx}
               className="flex min-w-0 items-start gap-2 rounded-xl border border-wt-border bg-wt-surface-2/80 p-2.5 transition-shadow hover:shadow-sm dark:bg-black/25"
             >
+              {(() => {
+                const isCustomSkill =
+                  customSkillRows.has(idx) ||
+                  (Boolean(item.skill.trim()) &&
+                    normalizedSkillOptions.length > 0 &&
+                    !predefinedSkillKeys.has(item.skill.trim().toLowerCase()));
+
+                return (
               <div className="min-w-0 flex-1 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <InputField
-                  label="Skill Name"
-                  placeholder="e.g. React, Python"
-                  value={item.skill}
-                  onChange={(v) => handleChange(idx, "skill", v)}
-                  disabled={disabled}
-                  required
-                />
+                <div className="sm:col-span-1">
+                  {normalizedSkillOptions.length > 0 && !isCustomSkill ? (
+                    <AdaptiveSelectField
+                      label="Skill Name"
+                      value={item.skill}
+                      options={normalizedSkillOptions}
+                      onChange={(v) => handleChange(idx, "skill", v)}
+                      disabled={disabled}
+                      required
+                      searchPlaceholder="Search available skills…"
+                      placeholder="Select Skill"
+                      // Skill names are long, so clamp to the viewport rather than the
+                      // portal host: inside a modal the reported width is the panel's and
+                      // the list still spills past the page edge.
+                      contentClassName="max-w-[min(20rem,calc(100vw-1rem))]"
+                    />
+                  ) : (
+                    <InputField
+                      label="Skill Name"
+                      placeholder="e.g. React, Python"
+                      value={item.skill}
+                      onChange={(v) => handleChange(idx, "skill", v)}
+                      disabled={disabled}
+                      required
+                      description={
+                        allowCustomSkills
+                          ? "Custom skill entry enabled because the skill is not in the predefined list."
+                          : undefined
+                      }
+                    />
+                  )}
+                  {allowCustomSkills && normalizedSkillOptions.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {isCustomSkill ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          className="h-7 rounded-md px-2 text-xs"
+                          onClick={() => disableCustomSkill(idx)}
+                          disabled={disabled}
+                        >
+                          Choose From List
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          className="h-7 rounded-md px-2 text-xs"
+                          onClick={() => enableCustomSkill(idx)}
+                          disabled={disabled}
+                        >
+                          Create New Skill
+                        </Button>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
                 <div className="flex min-w-0 gap-2">
                   <div className="min-w-0 flex-1">
                     <SelectField
@@ -164,6 +275,8 @@ export function SkillRatingsListInput({
                   ) : null}
                 </div>
               </div>
+                );
+              })()}
               <Button
                 variant="ghost"
                 type="button"

@@ -204,7 +204,7 @@ export function PersonalHolidayCalendarView() {
                 options={yearSelectItems}
                 digitsOnly
                 className="w-32 min-w-32"
-                contentClassName="min-w-[8rem] w-max z-[260]"
+                contentClassName="min-w-[min(8rem,calc(100vw-1rem))] w-max max-w-[min(var(--available-width,100vw),calc(100vw-1rem))] z-[260]"
               />
             </div>
           }

@@ -10,9 +10,11 @@ import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 
 export function useDashboardAction() {
   const [actionLoading, setActionLoading] = useState(false);
+  const [actionBusyLabel, setActionBusyLabel] = useState<string | null>(null);
 
   const runAction = useCallback(async (label: string, fn: () => Promise<unknown>) => {
     setActionLoading(true);
+    setActionBusyLabel(label);
     try {
       await fn();
       showSuccessToast(formatActionSuccessMessage(label));
@@ -22,9 +24,10 @@ export function useDashboardAction() {
       showErrorToast(formatActionErrorMessage(label, backendMessage));
       return false;
     } finally {
+      setActionBusyLabel(null);
       setActionLoading(false);
     }
   }, []);
 
-  return { actionLoading, runAction };
+  return { actionLoading, actionBusyLabel, runAction };
 }

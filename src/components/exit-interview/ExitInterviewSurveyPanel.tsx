@@ -2,11 +2,17 @@
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { FormFieldsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { ExitInterviewFormFields } from "@/components/exit-interview/ExitInterviewFormFields";
+import {
+  ExitInterviewValidationSummary,
+  collectExitInterviewMissingFields,
+  focusExitInterviewField,
+} from "@/components/exit-interview/ExitInterviewValidationSummary";
+import { showMissingFieldsToast } from "@/lib/toast";
 import { useExitInterviewFormDefinition } from "@/hooks/exit-interview/useExitInterviewFormDefinition";
 import { useExitInterviewProfile } from "@/hooks/exit-interview/useExitInterviewProfile";
 import { exitInterviewService } from "@/services/exitInterview.service";
@@ -69,6 +75,21 @@ export function ExitInterviewSurveyPanel({
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [initialized, setInitialized] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
+  const scrollPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  const saveScrollPos = () => {
+    if (formRef.current) {
+      scrollPosRef.current = { x: formRef.current.scrollLeft, y: formRef.current.scrollTop };
+    }
+  };
+
+  const restoreScrollPos = () => {
+    if (formRef.current) {
+      formRef.current.scrollLeft = scrollPosRef.current.x;
+      formRef.current.scrollTop = scrollPosRef.current.y;
+    }
+  };
 
   useEffect(() => {
     if (!formDefQ.data || initialized || !showForm) return;
@@ -100,12 +121,22 @@ export function ExitInterviewSurveyPanel({
     return null;
   }, [profileQ.isLoading, flags, enabledByStatus]);
 
+  const missingFields = useMemo(
+    () => collectExitInterviewMissingFields(fields, fieldErrors),
+    [fields, fieldErrors]
+  );
+
   const onChange = (key: string, value: unknown) => {
+    saveScrollPos();
     setAnswers((prev) => ({ ...prev, [key]: value }));
     setFieldErrors((prev) => {
       const next = { ...prev };
       delete next[key];
       return next;
+    });
+    // Restore scroll position after state update
+    requestAnimationFrame(() => {
+      restoreScrollPos();
     });
   };
 
@@ -113,7 +144,15 @@ export function ExitInterviewSurveyPanel({
     if (!formDefQ.data) return;
     const errors = validateExitInterviewAnswers(formDefQ.data, answers);
     setFieldErrors(errors);
-    if (Object.keys(errors).length) return;
+    const missing = collectExitInterviewMissingFields(fields, errors);
+    if (missing.length) {
+      showMissingFieldsToast(
+        missing.map((item) => item.label),
+        "submitting"
+      );
+      focusExitInterviewField(missing[0].key);
+      return;
+    }
 
     void runAction("Submit exit survey", async () => {
       const body = buildExitInterviewSubmitBody(formDefQ.data, answers);
@@ -160,12 +199,15 @@ export function ExitInterviewSurveyPanel({
         {!profileQ.isLoading && showForm && flags ? (
           <>
             <div className="mt-4 grid gap-3 rounded-xl border border-wt-border bg-wt-surface-1 p-4 text-sm sm:grid-cols-2">
-              <div>
-                <span className="text-wt-text-muted">Resignation date</span>
-                <p className="font-medium tabular-nums">
-                  {formatApiDateDisplay(flags.exit_interview_resignation_date) || "—"}
-                </p>
-              </div>
+              {/* LWD-only exits (consultant / intern / contractual) have no resignation date. */}
+              {formatApiDateDisplay(flags.exit_interview_resignation_date) ? (
+                <div>
+                  <span className="text-wt-text-muted">Resignation date</span>
+                  <p className="font-medium tabular-nums">
+                    {formatApiDateDisplay(flags.exit_interview_resignation_date)}
+                  </p>
+                </div>
+              ) : null}
               <div>
                 <span className="text-wt-text-muted">Last working day</span>
                 <p className="font-medium tabular-nums">
@@ -195,7 +237,7 @@ export function ExitInterviewSurveyPanel({
             ) : null}
 
             {formDefQ.data && fields.length ? (
-              <div className="mt-6">
+              <div className="mt-6" ref={formRef}>
                 <ExitInterviewFormFields
                   fields={fields}
                   autofill={autofill}
@@ -204,6 +246,11 @@ export function ExitInterviewSurveyPanel({
                   onChange={onChange}
                   disabled={actionLoading}
                 />
+                {missingFields.length ? (
+                  <div className="mt-6">
+                    <ExitInterviewValidationSummary missingFields={missingFields} />
+                  </div>
+                ) : null}
                 <div className="mt-6 flex justify-end">
                   <Button
                     variant="brand"

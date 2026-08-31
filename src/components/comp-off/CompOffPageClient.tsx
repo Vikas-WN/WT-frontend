@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Clock, Loader2, Inbox } from "lucide-react";
+import { IconPencil, IconTrash } from "@/components/dashboard/ui/icons";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
@@ -33,6 +34,7 @@ import { WtLoadingOverlay } from "@/components/dashboard/ui/WtLoader";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
+import { showMissingFieldsToast } from "@/lib/toast";
 
 import { DatePicker } from "@/components/ui/date-picker";
 import { LeaveManagerSelector } from "@/components/dashboard/leave/LeaveManagerSelector";
@@ -152,7 +154,7 @@ export function CompOffPageClient({
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuth();
-  const { actionLoading, runAction } = useDashboardAction();
+  const { actionLoading, actionBusyLabel, runAction } = useDashboardAction();
   const {
     hasHrAccess,
     hasManagerAccess,
@@ -164,7 +166,6 @@ export function CompOffPageClient({
   const { data: accountManagerEmails = new Set<string>() } = useAccountManagerEmails();
   const managerOnlyReview = hasManagerAccess && !hasHrAccess;
   const isHrOnly = hasHrAccess && !hasManagerAccess;
-  const canApplyCompOff = !hasHrAccess && !hasManagerAccess;
   const {
     teamEmails: managerTeamEmails,
     loading: managerPortfolioLoading,
@@ -450,10 +451,7 @@ export function CompOffPageClient({
         setRedirectingToProjects(true);
         const params = new URLSearchParams({
           tab: "project",
-          createProject: "1",
         });
-        const name = projectName.trim();
-        if (name) params.set("projectName", name);
         router.push(`${DASHBOARD_ROUTES.allocation}?${params.toString()}`);
         return;
       }
@@ -470,11 +468,6 @@ export function CompOffPageClient({
     const from = myRequestsFrom || defaultRequestRange().from;
     const to = myRequestsTo || defaultRequestRange().to;
     const cacheKey = `${from}:${to}:${earnOnly}`;
-    const cached = myRequestsCacheRef.current.get(cacheKey);
-    if (cached) {
-      setMyRequests(cached);
-      return;
-    }
     const earnRows = await compOffService.listEarnRequestRows({
       fromDate: from,
       toDate: to,
@@ -591,17 +584,19 @@ export function CompOffPageClient({
           }
         } catch (error) {
           if (isAlreadyActedOnRequestError(error)) {
-            patchTeamRequestStatus(requestId, status);
-            return;
-          }
-          const inferred = inferStatusFromAlreadyActedError(error);
-          if (inferred === "APPROVED" || inferred === "REJECTED") {
-            patchTeamRequestStatus(requestId, inferred);
-            return;
+            const inferred = inferStatusFromAlreadyActedError(error);
+            if (inferred === "APPROVED" || inferred === "REJECTED") {
+              patchTeamRequestStatus(requestId, inferred);
+            }
+            teamRequestsCacheRef.current.clear();
+            // Always surface the conflict — another manager may have already decided.
+            throw error;
           }
           throw error;
         }
         patchTeamRequestStatus(requestId, status);
+        // Drop stale team list so other managers / next refresh see REJECTED/APPROVED.
+        teamRequestsCacheRef.current.clear();
         if (status === "APPROVED" && flow === "COMP_OFF") {
           void loadBalanceAndGrants();
         }
@@ -612,18 +607,22 @@ export function CompOffPageClient({
     [hasManagerAccess, isHrOnly, patchTeamRequestStatus, loadBalanceAndGrants]
   );
 
-  const loadTeamRequests = useCallback(async (opts?: { raiseOnError?: boolean }) => {
+  const loadTeamRequests = useCallback(async (opts?: { raiseOnError?: boolean; force?: boolean }) => {
     const from = teamFilters.from.trim() || defaultRequestRange().from;
     const to = teamFilters.to.trim() || defaultRequestRange().to;
     const cacheKey = `${from}:${to}:${earnOnly}:${teamFilters.flow}:${managerOnlyReview}`;
-    const cached = teamRequestsCacheRef.current.get(cacheKey);
-    if (cached) {
-      setTeamRequests(applyTeamRequestDecisions(cached, teamDecisionsRef.current));
-      const emails = cached.map((row) => requestRowEmail(row)).filter(Boolean);
-      if (emails.length) {
-        resolveEmployeeNamesByEmail(emails).then((names) => setTeamEmployeeNames(names)).catch(() => {});
+    if (!opts?.force) {
+      const cached = teamRequestsCacheRef.current.get(cacheKey);
+      if (cached) {
+        setTeamRequests(applyTeamRequestDecisions(cached, teamDecisionsRef.current));
+        const emails = cached.map((row) => requestRowEmail(row)).filter(Boolean);
+        if (emails.length) {
+          resolveEmployeeNamesByEmail(emails).then((names) => setTeamEmployeeNames(names)).catch(() => {});
+        }
+        return;
       }
-      return;
+    } else {
+      teamRequestsCacheRef.current.delete(cacheKey);
     }
 
     try {
@@ -762,6 +761,17 @@ export function CompOffPageClient({
   ]);
 
   function openRejectDialog(requestId: string, flow: "COMP_OFF_EARN" | "COMP_OFF") {
+    const row = teamRequests.find((item) => requestRowId(item) === requestId);
+    if (row) {
+      const finalStatus = requestFinalStatus(row);
+      const managerStatus =
+        flow === "COMP_OFF_EARN" ? requestEarnManagerStatus(row) : requestManagerStatus(row);
+      if (finalStatus !== "PENDING" || managerStatus !== "PENDING") {
+        // Request already decided — hide reject and refresh from server.
+        void loadTeamRequests({ force: true });
+        return;
+      }
+    }
     setRejectReason("");
     setPendingReject({ requestId, flow });
   }
@@ -773,7 +783,7 @@ export function CompOffPageClient({
     await decideTeamRequest(pendingReject.requestId, pendingReject.flow, "REJECTED", reason);
     setPendingReject(null);
     setRejectReason("");
-    await loadTeamRequests();
+    await loadTeamRequests({ force: true });
   }
 
   const canReviewTeam = managerOnlyReview || hasHrAccess;
@@ -846,18 +856,28 @@ export function CompOffPageClient({
     const workedDate = normalizeToApiDate(earnForm.worked_date.trim());
     const projectCode = earnForm.project_code.trim();
     const comments = earnForm.comments.trim();
-    if (!projectCode) throw new Error("Project is required.");
-    if (!workedDate) throw new Error("Worked date is required.");
-    if (compareApiDates(workedDate, todayYmd()) > 0) {
-      throw new Error("Worked date cannot be in the future.");
+    
+    const missingFields: string[] = [];
+    if (!projectCode) missingFields.push("Project");
+    if (!workedDate) missingFields.push("Worked Date");
+    else if (compareApiDates(workedDate, todayYmd()) > 0) missingFields.push("Valid Worked Date (cannot be in the future)");
+    if (!selectedManagerEmails.length) missingFields.push("At least one Primary Manager");
+    if (!selectedAdditionalManagerEmails.length) missingFields.push("At least one Secondary Manager");
+    if (!comments) missingFields.push("Comments");
+    else if (comments.length > 2000) missingFields.push("Comments (2000 characters or less)");
+    
+    if (missingFields.length > 0) {
+      showMissingFieldsToast(missingFields, "submitting");
+      throw new Error("Validation failed");
     }
-    if (!selectedManagerEmails.length) throw new Error("At least one primary manager must be selected.");
-    if (!selectedAdditionalManagerEmails.length) throw new Error("At least one secondary manager must be selected.");
-    if (!comments) throw new Error("Comments are required.");
-    if (comments.length > 2000) throw new Error("Comments must be 2000 characters or less.");
-    if (editingRequestId) {
-      throw new Error("Editing earn requests is not supported. Revoke and submit a new earn request.");
+
+    const editingId = Number(editingRequestId);
+    const isEditing = Number.isFinite(editingId) && editingId > 0;
+    if (isEditing) {
+      // Earn has no update API — revoke the pending row, then create with the new details.
+      await compOffService.cancelEarnRequest(editingId);
     }
+
     await compOffService.createEarnRequest({
       worked_date: workedDate,
       workedDate,
@@ -870,11 +890,68 @@ export function CompOffPageClient({
       secondary_manager_emails: selectedAdditionalManagerEmails,
       secondaryManagerEmails: selectedAdditionalManagerEmails,
     });
+    myRequestsCacheRef.current.clear();
     setEarnForm({ worked_date: "", project_code: "", manager_comp_off_email: "", comments: "" });
     setSelectedManagerEmails([]);
     setSelectedAdditionalManagerEmails([]);
     setEditingRequestId("");
-    await Promise.all([loadMyRequests(), loadBalanceAndGrants()]);
+    void loadMyRequests().catch(() => undefined);
+    void loadBalanceAndGrants();
+  }
+
+  function startEditEarnRequest(row: Record<string, unknown>) {
+    if (!isPendingRequestStatus(requestRowStatus(row))) {
+      return;
+    }
+    const requestId = requestRowId(row);
+    if (!requestId) return;
+    const workedDate = normalizeToApiDate(
+      String(
+        pickRowField(row, "worked_date", "workedDate", "request_from_date", "requestFromDate") ?? ""
+      )
+    );
+    const projectCode = String(pickRowField(row, "project_code", "projectCode") ?? "").trim();
+    const comments = String(
+      pickRowField(row, "work_description", "workDescription", "comments", "comment") ?? ""
+    ).trim();
+    const primary = pickManagerEmailList(row, "primary");
+    const secondary = pickManagerEmailList(row, "secondary");
+    setEditingRequestId(requestId);
+    setEarnForm({
+      worked_date: workedDate || "",
+      project_code: projectCode,
+      manager_comp_off_email: primary[0] ?? "",
+      comments,
+    });
+    setSelectedManagerEmails(primary);
+    setSelectedAdditionalManagerEmails(secondary);
+    setCompOffSubTab("apply");
+  }
+
+  function clearEarnEdit() {
+    setEditingRequestId("");
+    setEarnForm({ worked_date: "", project_code: "", manager_comp_off_email: "", comments: "" });
+    setSelectedManagerEmails([]);
+    setSelectedAdditionalManagerEmails([]);
+  }
+
+  async function revokeEarnRequest(requestId: string) {
+    const idNum = Number(requestId);
+    if (!Number.isFinite(idNum) || idNum <= 0) {
+      throw new Error("Could not resolve request id for revoke.");
+    }
+    try {
+      await compOffService.cancelEarnRequest(idNum);
+    } catch (error) {
+      myRequestsCacheRef.current.clear();
+      await loadMyRequests();
+      throw error;
+    }
+    myRequestsCacheRef.current.clear();
+    if (editingRequestId === requestId) {
+      clearEarnEdit();
+    }
+    await loadMyRequests();
   }
 
   async function submitUsage() {
@@ -886,15 +963,20 @@ export function CompOffPageClient({
     const fromDate = normalizeToApiDate(usageForm.request_from_date.trim());
     const toDate = normalizeToApiDate(usageForm.request_to_date.trim());
     const comments = usageForm.comments.trim();
-    if (!fromDate || !toDate) throw new Error("From date and to date are required.");
-    if (!parseApiDate(fromDate) || !parseApiDate(toDate)) {
-      throw new Error("Please provide valid dates (dd/mm/yyyy).");
+    
+    const missingFields: string[] = [];
+    if (!fromDate || !toDate) missingFields.push("From Date", "To Date");
+    else if (!parseApiDate(fromDate) || !parseApiDate(toDate)) missingFields.push("Valid From Date", "Valid To Date");
+    else if (compareApiDates(fromDate, toDate) > 0) missingFields.push("Valid date range (Start Date cannot be after End Date)");
+    if (calendarDaysInclusive(fromDate, toDate) < 1) missingFields.push("At least one calendar day");
+    if (comments.length > 200) missingFields.push("Comments (200 characters or less)");
+    
+    if (missingFields.length > 0) {
+      showMissingFieldsToast(missingFields, "submitting");
+      throw new Error("Validation failed");
     }
-    if (compareApiDates(fromDate, toDate) > 0) {
-      throw new Error("Start Date cannot be later than End Date.");
-    }
+    
     const days = calendarDaysInclusive(fromDate, toDate);
-    if (days < 1) throw new Error("Select at least one calendar day.");
     const sameDayEarnDates = sameDayCompOffEarnDatesInUsageRange(grants, fromDate, toDate);
     const available = await compOffService.resolveAvailableUnits(fromDate);
     if (
@@ -913,7 +995,6 @@ export function CompOffPageClient({
         `Insufficient comp-off balance. Available: ${available}, requested: ${days} day(s).`
       );
     }
-    if (comments.length > 200) throw new Error("Comments must be 200 characters or less.");
     const payload = {
       request_type: "COMP_OFF",
       request_from_date: fromDate,
@@ -983,7 +1064,9 @@ export function CompOffPageClient({
 
                 {/* Earn Credit form */}
                 <div className="bg-muted/40 rounded-xl p-6 space-y-4 shadow-sm">
-                  <h3 className="font-semibold tracking-tight text-foreground">Earn Credit</h3>
+                  <h3 className="font-semibold tracking-tight text-foreground">
+                    {editingRequestId ? "Edit Earn Credit" : "Earn Credit"}
+                  </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <ProjectSelectField
                       label="Project"
@@ -1051,12 +1134,46 @@ export function CompOffPageClient({
                     value={earnForm.comments}
                     onChange={(v) => setEarnForm((p) => ({ ...p, comments: v }))}
                   />
-                  <Button variant="brand" type="button" className="px-3 py-2" disabled={actionLoading || !earnForm.project_code.trim() || !earnForm.worked_date.trim() || !selectedManagerEmails.length || !selectedAdditionalManagerEmails.length || !earnForm.comments.trim()} onClick={() =>
-                      runAction(compOffEarnActionLabel(editingRequestId ? "update" : "submit"), submitEarn)
-                    }
-                  >
-                    {editingRequestId ? "Save Earn Request" : "Submit Earn Request"}
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="brand"
+                      type="button"
+                      className="px-3 py-2"
+                      disabled={
+                        actionLoading ||
+                        !earnForm.project_code.trim() ||
+                        !earnForm.worked_date.trim() ||
+                        !selectedManagerEmails.length ||
+                        !selectedAdditionalManagerEmails.length ||
+                        !earnForm.comments.trim()
+                      }
+                      onClick={() =>
+                        runAction(
+                          compOffEarnActionLabel(editingRequestId ? "update" : "submit"),
+                          submitEarn
+                        )
+                      }
+                    >
+                      {actionLoading
+                        ? editingRequestId
+                          ? "Saving…"
+                          : "Submitting…"
+                        : editingRequestId
+                          ? "Save Earn Request"
+                          : "Submit Earn Request"}
+                    </Button>
+                    {editingRequestId ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="px-3 py-2"
+                        disabled={actionLoading}
+                        onClick={clearEarnEdit}
+                      >
+                        Cancel edit
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
 
                 {!earnOnly ? (
@@ -1105,6 +1222,7 @@ export function CompOffPageClient({
                       <TableHead className="font-semibold px-3">Project</TableHead>
                       <TableHead className="font-semibold px-3">Comp Off Days</TableHead>
                       <TableHead className="font-semibold px-3">Status</TableHead>
+                      <TableHead className="font-semibold px-3 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1112,7 +1230,13 @@ export function CompOffPageClient({
                       viewPagination.pageItems.map((row, idx) => {
                         const id = requestRowId(row);
                         const status = requestRowStatus(row);
+                        const finalStatus = requestFinalStatus(row);
                         const flow = normalizeCompOffRequestType(row.request_type ?? row.requestType);
+                        const canEditOrRevoke =
+                          flow === "COMP_OFF_EARN" &&
+                          isPendingRequestStatus(finalStatus) &&
+                          isPendingRequestStatus(requestEarnManagerStatus(row)) &&
+                          Boolean(id);
                         const dateDisplay =
                           flow === "COMP_OFF_EARN"
                             ? String(
@@ -1151,12 +1275,46 @@ export function CompOffPageClient({
                             <TableCell className="px-3 py-2.5 whitespace-nowrap">
                               <RequestStatusBadge status={status} />
                             </TableCell>
+                            <TableCell className="px-3 py-2.5 text-right">
+                              {canEditOrRevoke ? (
+                                <div className="inline-flex items-center justify-end gap-0.5">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    type="button"
+                                    disabled={actionLoading}
+                                    onClick={() => startEditEarnRequest(row)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                    title="Edit"
+                                  >
+                                    <IconPencil className="size-4" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    disabled={actionLoading}
+                                    onClick={() =>
+                                      runAction(compOffEarnActionLabel("revoke"), () =>
+                                        revokeEarnRequest(id)
+                                      )
+                                    }
+                                    className="text-muted-foreground hover:text-destructive"
+                                    title="Revoke"
+                                  >
+                                    <IconTrash className="size-4" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground/50">—</span>
+                              )}
+                            </TableCell>
                           </TableRow>
                         );
                       })
                     ) : (
                       <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={5} className="h-[200px] text-center align-middle">
+                        <TableCell colSpan={6} className="h-[200px] text-center align-middle">
                           <div className="flex flex-col items-center gap-2">
                             <Inbox className="size-8 text-muted-foreground/40" />
                             <span className="text-sm text-muted-foreground">
@@ -1224,7 +1382,7 @@ export function CompOffPageClient({
               <RefreshIconButton
                 onClick={() =>
                   runAction(compOffTeamReviewActionLabel("COMP_OFF", "fetch"), () =>
-                    loadTeamRequests({ raiseOnError: true })
+                    loadTeamRequests({ raiseOnError: true, force: true })
                   )
                 }
                 disabled={actionLoading}
@@ -1301,11 +1459,13 @@ export function CompOffPageClient({
                       flow === "COMP_OFF_EARN" &&
                       (hasManagerAccess || isAssignedEarnManager) &&
                       !isHrOnly &&
+                      finalStatus === "PENDING" &&
                       managerStatus === "PENDING" &&
                       managerRoutedOk;
                     const canManagerActUsage =
                       flow === "COMP_OFF" &&
                       hasManagerAccess &&
+                      finalStatus === "PENDING" &&
                       managerStatus === "PENDING" &&
                       managerRoutedOk;
                     const canHrActUsage =
@@ -1385,7 +1545,7 @@ export function CompOffPageClient({
                                         compOffTeamReviewActionLabel(flow, "approve"),
                                         async () => {
                                           await decideTeamRequest(id, flow, "APPROVED");
-                                          await loadTeamRequests();
+                                          await loadTeamRequests({ force: true });
                                         }
                                       )
                                     }
@@ -1485,6 +1645,11 @@ export function CompOffPageClient({
       <>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>{pageBody}</OnboardingGate>
         {rejectDialog}
+        {actionLoading ? (
+          <WtLoadingOverlay
+            label={actionBusyLabel ? `${actionBusyLabel}…` : "Processing request…"}
+          />
+        ) : null}
         {redirectingToProjects ? <WtLoadingOverlay label="Opening Projects…" /> : null}
       </>
     );
@@ -1496,6 +1661,11 @@ export function CompOffPageClient({
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>{pageBody}</OnboardingGate>
       </DashboardPageShell>
       {rejectDialog}
+      {actionLoading ? (
+        <WtLoadingOverlay
+          label={actionBusyLabel ? `${actionBusyLabel}…` : "Processing request…"}
+        />
+      ) : null}
       {redirectingToProjects ? <WtLoadingOverlay label="Opening Projects…" /> : null}
     </>
   );

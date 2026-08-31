@@ -23,7 +23,7 @@ import { useHrWfhRequests } from "@/hooks/leave/useHrWfhRequests";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import { formatUserRequestTypeLabel } from "@/utils/actionToast";
 import { formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
-import { formatApiDateDisplay } from "@/utils/apiDate";
+import { formatApiDateDisplay, parseApiDate } from "@/utils/apiDate";
 import { pickManagerEmailList } from "@/utils/leaveManagerDisplay";
 import { requestFinalStatus } from "@/utils/userRequest";
 import {
@@ -73,8 +73,9 @@ export function HrWfhRequestsPanel({
   const [sortId, setSortId] = useState(LEAVE_REQUEST_SORT_OPTIONS[0].id);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!parseApiDate(filters.fromDate) || !parseApiDate(filters.toDate)) return;
+    void load().catch(() => undefined);
+  }, [load, filters.fromDate, filters.toDate]);
 
   const filteredRows = useMemo(
     () => rows.filter((row) => wfhRequestMatchesSearch(row, search)),
@@ -128,7 +129,10 @@ export function HrWfhRequestsPanel({
           variant="brand"
           type="button"
           className="h-10 shrink-0 px-3 py-2"
-          onClick={() => runAction("Refresh WFH requests", () => load())}
+          onClick={() => {
+            if (!parseApiDate(filters.fromDate) || !parseApiDate(filters.toDate)) return;
+            void runAction("Refresh WFH requests", () => load());
+          }}
           disabled={actionLoading || loading}
         >
           Fetch Requests

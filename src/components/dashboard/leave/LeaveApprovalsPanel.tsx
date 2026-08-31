@@ -35,10 +35,13 @@ import {
   canSecondaryManagerApproveOnLeave,
   canSecondaryManagerRejectOnLeave,
   hasSecondaryLeaveManagers,
+  isLeaveRequestClosedForManagerAction,
   requestSecondaryManagerStatus,
 } from "@/utils/leaveManagerDisplay";
 import {
   applyLeaveTeamRequestDecisions,
+  isAlreadyDecidedUserRequestError,
+  isDeletedUserRequestError,
   patchLeaveTeamRequestStatus,
   requestFinalStatus,
   requestManagerStatus,
@@ -162,6 +165,45 @@ export function LeaveApprovalsPanel({
     await inboxQ.refetch();
   }
 
+  /** Drop a row the backend reports as deleted, so its actions disappear at once. */
+  function dropDeletedRow(requestId: string) {
+    decisionsRef.current.delete(requestId);
+    queryClient.setQueryData(
+      primaryManagerInboxQueryKey(actorEmail.trim()),
+      (prev: Array<Record<string, unknown>> | undefined) =>
+        prev ? prev.filter((row) => requestIdFromRow(row) !== requestId) : prev
+    );
+    setDecisionsVersion((version) => version + 1);
+  }
+
+  async function submitDecision(
+    requestId: string,
+    status: UserRequestStatusValue,
+    reason?: string
+  ) {
+    try {
+      await updateUserRequestStatus(Number(requestId), status, {
+        ...(reason ? { reason } : {}),
+        requireReasonOnReject: status === "REJECTED",
+      });
+    } catch (error) {
+      // The employee deleted it while it sat in this cached list — stop offering actions.
+      if (isDeletedUserRequestError(error)) {
+        dropDeletedRow(requestId);
+        void refreshInbox();
+      } else if (isAlreadyDecidedUserRequestError(error)) {
+        // Another reviewer decided it first. Pull the server state so this row stops
+        // offering actions that can only fail.
+        decisionsRef.current.delete(requestId);
+        setDecisionsVersion((version) => version + 1);
+        void refreshInbox();
+      }
+      throw error;
+    }
+    applyLocalDecision(requestId, status, reason);
+    void refreshInbox();
+  }
+
   function openRejectDialog(requestId: string, requestType: unknown) {
     setRejectReason("");
     setPendingReject({ requestId, requestType });
@@ -179,13 +221,8 @@ export function LeaveApprovalsPanel({
       throw new Error("Reason is required when rejecting a request.");
     }
     const requestId = pendingReject.requestId;
-    await updateUserRequestStatus(Number(requestId), "REJECTED", {
-      reason,
-      requireReasonOnReject: true,
-    });
-    applyLocalDecision(requestId, "REJECTED", reason);
+    await submitDecision(requestId, "REJECTED", reason);
     closeRejectDialog();
-    void refreshInbox();
   }
 
   return (
@@ -257,9 +294,18 @@ export function LeaveApprovalsPanel({
                         rowRecord.is_half_day ?? rowRecord.isHalfDay ?? false
                       );
                       const isUpdating = statusUpdatingId === requestId;
-                      const rowStatus = requestFinalStatus(rowRecord);
+                      const rawFinalStatus = requestFinalStatus(rowRecord);
                       const primaryStage = requestManagerStatus(rowRecord);
                       const secondaryStage = requestSecondaryManagerStatus(rowRecord);
+                      const leaveClosed = isLeaveRequestClosedForManagerAction(rowRecord);
+                      const rowStatus =
+                        rawFinalStatus === "PENDING" && leaveClosed
+                          ? primaryStage === "APPROVED" || secondaryStage === "APPROVED"
+                            ? "APPROVED"
+                            : primaryStage === "REJECTED" || secondaryStage === "REJECTED"
+                              ? "REJECTED"
+                              : rawFinalStatus
+                          : rawFinalStatus;
                       const canApprove =
                         canPrimaryManagerApproveOnLeave(rowRecord, actorEmail) ||
                         canSecondaryManagerApproveOnLeave(rowRecord, actorEmail);
@@ -337,11 +383,7 @@ export function LeaveApprovalsPanel({
                                     async () => {
                                       setStatusUpdatingId(requestId);
                                       try {
-                                        await updateUserRequestStatus(Number(requestId), "APPROVED", {
-                                          requireReasonOnReject: false,
-                                        });
-                                        applyLocalDecision(requestId, "APPROVED");
-                                        void refreshInbox();
+                                        await submitDecision(requestId, "APPROVED");
                                       } finally {
                                         setStatusUpdatingId(null);
                                       }

@@ -7,7 +7,7 @@ import {
   ALLOCATION_EMPLOYEES_SIZE,
 } from "@/constants/allocationApi";
 import { toPagedRows } from "@/utils/apiRows";
-import { isActiveOnboardRow } from "@/utils/learning/onboardOptions";
+import { isEligibleForProjectAllocation } from "@/utils/userStatus";
 import {
   parseActiveOnboardEmployees,
   type AllocationEmployeeOption,
@@ -19,16 +19,16 @@ async function fetchActiveOnboardEmployees(): Promise<AllocationEmployeeOption[]
     size: ALLOCATION_EMPLOYEES_SIZE,
     onboardingStatus: "ACTIVE",
   });
-  let rows = toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes).filter(
-    isActiveOnboardRow
+  let rows = toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes).filter((row) =>
+    isEligibleForProjectAllocation(row.status)
   );
   if (!rows.length) {
     const fallback = await hrmsService.getOnboardList({
       page: ALLOCATION_EMPLOYEES_PAGE,
       size: ALLOCATION_EMPLOYEES_SIZE,
     });
-    rows = toPagedRows((fallback as { data?: unknown }).data ?? fallback).filter(
-      isActiveOnboardRow
+    rows = toPagedRows((fallback as { data?: unknown }).data ?? fallback).filter((row) =>
+      isEligibleForProjectAllocation(row.status)
     );
   }
   return parseActiveOnboardEmployees(rows);

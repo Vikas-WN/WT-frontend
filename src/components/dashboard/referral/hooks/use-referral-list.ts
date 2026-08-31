@@ -6,59 +6,57 @@ import { apiClient } from "@/api/httpClient";
 import { REFERRAL_QUERY_KEYS } from "@/components/dashboard/referral/referral-page-client.constants";
 
 export interface ReferralListItem {
-  id: number;
+  id: string;
   candidate_name: string;
   candidate_email: string;
-  resume_url: string | null;
+  candidate_phone?: string;
   job_title: string;
   job_id: string;
+  resume_url?: string;
   status: string;
-  created_at: string; // isoformat from backend
+  ats_score?: number | null;
+  ats_score_ready?: boolean;
+  created_at: string;
+  updated_at?: string;
 }
 
-interface ReferralListResponse {
+export interface ReferralListResponse {
   items: ReferralListItem[];
   total: number;
+  page: number;
+  size: number;
 }
 
-function mapReferral(raw: Record<string, unknown>): ReferralListItem {
-  return {
-    id: Number(raw.id ?? 0),
-    candidate_name: String(raw.candidate_name ?? ""),
-    candidate_email: String(raw.candidate_email ?? ""),
-    resume_url: raw.resume_url ? String(raw.resume_url) : null,
-    job_title: String(raw.job_title ?? ""),
-    job_id: String(raw.job_id ?? ""),
-    status: String(raw.status ?? "SUBMITTED"),
-    created_at: String(raw.created_at ?? ""),
-  };
-}
-
-type UseReferralListResult = {
-  items: ReferralListItem[];
-  total: number;
-  isLoading: boolean;
-  isRefetching: boolean;
-  error: string | null;
-};
-
-export function useReferralList(referrerEmail: string): UseReferralListResult {
-  const { data, isLoading, isRefetching, error } = useQuery({
-    queryKey: REFERRAL_QUERY_KEYS.list(referrerEmail),
+export function useReferralList(email: string) {
+  const { data, isLoading, isRefetching, error, refetch } = useQuery({
+    queryKey: REFERRAL_QUERY_KEYS.list(email),
+    enabled: Boolean(email),
     queryFn: async () => {
-      const res = await apiClient.get<Record<string, unknown>>(
-        endpoints.referral.root,
-        { query: { referrer_email: referrerEmail } },
-      );
-      const payload = (res as unknown as { data: Record<string, unknown> }).data as Record<string, unknown> ?? {};
-      const raw = (payload.items as Record<string, unknown>[]) ?? [];
+      const res = await apiClient.get<Record<string, unknown>>(endpoints.referral.root, {
+        query: { referrer_email: email },
+      });
+      const payload = (res as unknown as { data: Record<string, unknown> }).data ?? {};
+      const items = (payload.items as Record<string, unknown>[]) ?? [];
       const total = (payload.total as number) ?? 0;
+
       return {
-        items: raw.map(mapReferral),
+        items: items.map((item) => ({
+          id: String(item.id ?? ""),
+          candidate_name: String(item.candidate_name ?? ""),
+          candidate_email: String(item.candidate_email ?? ""),
+          candidate_phone: item.candidate_phone ? String(item.candidate_phone) : undefined,
+          job_title: String(item.job_title ?? ""),
+          job_id: String(item.job_id ?? ""),
+          resume_url: item.resume_url ? String(item.resume_url) : undefined,
+          status: String(item.status ?? ""),
+          ats_score: item.ats_score !== undefined && item.ats_score !== null ? Number(item.ats_score) : null,
+          ats_score_ready: Boolean(item.ats_score_ready),
+          created_at: String(item.created_at ?? ""),
+          updated_at: item.updated_at ? String(item.updated_at) : undefined,
+        })),
         total,
       };
     },
-    enabled: Boolean(referrerEmail),
     staleTime: 30_000,
   });
 
@@ -68,5 +66,6 @@ export function useReferralList(referrerEmail: string): UseReferralListResult {
     isLoading,
     isRefetching,
     error: error ? (error instanceof Error ? error.message : "Failed to load referrals") : null,
+    refetch,
   };
 }

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { FieldLabel } from "@/components/ui/field";
 import { useEmployeeManagers } from "@/hooks/leave/useEmployeeManagers";
 import type { LeaveManagerOption } from "@/services/hrms.service";
+import { resolveEmployeeNamesByEmail } from "@/utils/compOff/resolveEmployeeDisplayNames";
 import { ChevronsUpDown, X, Check, Search, Loader2 } from "lucide-react";
 
 function optionLabel(option: LeaveManagerOption): string {
@@ -37,11 +38,13 @@ export function LeaveAdditionalRecipientsSelector({
   onChange,
   excludedEmails = [],
   disabled = false,
+  id,
 }: {
   selectedEmails: string[];
   onChange: (emails: string[]) => void;
   excludedEmails?: string[];
   disabled?: boolean;
+  id?: string;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -82,6 +85,21 @@ export function LeaveAdditionalRecipientsSelector({
     [excludedEmails]
   );
 
+  const [resolvedNames, setResolvedNames] = useState<Record<string, string>>({});
+
+  const namesByEmail = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const option of options) {
+      const email = String(option.email ?? "").trim().toLowerCase();
+      const name = option.name?.trim();
+      if (email && name) map.set(email, name);
+    }
+    for (const [email, name] of Object.entries(resolvedNames)) {
+      if (name) map.set(email.toLowerCase(), name);
+    }
+    return map;
+  }, [options, resolvedNames]);
+
   const selectedOptions = useMemo(() => {
     const byEmail = new Map(
       options.map((option) => [String(option.email).trim().toLowerCase(), option] as const)
@@ -89,10 +107,35 @@ export function LeaveAdditionalRecipientsSelector({
     return selectedEmails
       .map((email) => {
         const opt = byEmail.get(email.trim().toLowerCase());
-        return { email: email.trim(), label: opt?.name?.trim() || email.trim() };
+        const lower = email.trim().toLowerCase();
+        return {
+          email: email.trim(),
+          label: opt?.name?.trim() || namesByEmail.get(lower) || email.trim(),
+        };
       })
       .filter((option) => Boolean(option.email));
-  }, [options, selectedEmails]);
+  }, [options, selectedEmails, namesByEmail]);
+
+  useEffect(() => {
+    const missing = selectedEmails
+      .map((email) => email.trim().toLowerCase())
+      .filter((email) => email && !namesByEmail.has(email));
+    if (!missing.length) return;
+    let cancelled = false;
+    void resolveEmployeeNamesByEmail(missing).then((names) => {
+      if (cancelled) return;
+      setResolvedNames((prev) => {
+        const next = { ...prev };
+        for (const [email, name] of Object.entries(names)) {
+          if (name && name.trim()) next[email.toLowerCase()] = name.trim();
+        }
+        return next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedEmails, namesByEmail]);
 
   const filteredOptions = useMemo(
     () =>
@@ -156,6 +199,7 @@ export function LeaveAdditionalRecipientsSelector({
           aria-expanded={open}
           disabled={disabled}
           onClick={() => setOpen((v) => !v)}
+          id={id}
           className="flex h-auto min-h-10 w-full items-center gap-1.5 rounded-lg border border-input bg-transparent px-3 py-1.5 text-sm transition-colors hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-0 disabled:pointer-events-none disabled:opacity-50 disabled:bg-input/50 cursor-pointer"
         >
           <div className="flex flex-1 flex-wrap items-center gap-1">

@@ -2,7 +2,7 @@
 
 import {
   TableBody,
-  TableCell,
+  TableCell, TableHeader,
   TableRow,
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
@@ -15,8 +15,97 @@ import {
 import {
   formatProfileDisplayValue,
   type ProfileDisplayEntry,
+  type UserTypeTransitionDisplayRow,
 } from "@/utils/employeeDirectory";
 import { cn } from "@/lib/utils";
+function UserTypeHistoryTable({ rows } : { rows: UserTypeTransitionDisplayRow[] }) {
+  if (!rows.length){
+    return<>—</>
+  }
+
+  return(
+      <div className="overflow-x-auto rounded-xl border border-wt-border">
+        <WtTable>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableCell className="bg-wt-surface-2/60 px-3 py-2 text-xs font-semibold text-wt-text-muted">
+                Previous User Type
+              </TableCell>
+              <TableCell className="bg-wt-surface-2/60 px-3 py-2 text-xs font-semibold text-wt-text-muted">
+                New User Type
+              </TableCell>
+              <TableCell className="bg-wt-surface-2/60 px-3 py-2 text-xs font-semibold text-wt-text-muted">
+                Effective Date
+              </TableCell>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row, index) => (
+                <TableRow
+                key={`${row.previousUserType}-${row.newUserType}-${row.effectiveDate}-${index}`}
+                className="hover:bg-transparent"
+                >
+                  <TableCell className="px-3 py-2 text-sm text-wt-text">
+                    {row.previousUserType}
+                  </TableCell>
+                  <TableCell className="px-3 py-2 text-sm text-wt-text">
+                    {row.newUserType}
+                  </TableCell>
+                  <TableCell className="px-3 py-3 text-sm text-wt-text">
+                    {row.effectiveDate}
+                  </TableCell>
+                </TableRow>
+            ))}
+          </TableBody>
+        </WtTable>
+      </div>
+  )
+}
+function SkillsTable({ skills }: { skills: unknown }) {
+  if (!Array.isArray(skills) || !skills.length) {
+    return <span className="text-wt-text-faint">—</span>;
+  }
+  return (
+    <div className="overflow-x-auto rounded-xl border border-wt-border">
+      <WtTable>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableCell className="bg-wt-surface-2/60 px-3 py-2 text-xs font-semibold text-wt-text-muted">
+              Skill
+            </TableCell>
+            <TableCell className="bg-wt-surface-2/60 px-3 py-2 text-xs font-semibold text-wt-text-muted">
+              Self Rating
+            </TableCell>
+            <TableCell className="bg-wt-surface-2/60 px-3 py-2 text-xs font-semibold text-wt-text-muted">
+              Webknot Rating
+            </TableCell>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {skills.map((item, index) => {
+            if (!item || typeof item !== "object") return null;
+            const rec = item as Record<string, unknown>;
+            const skill = String(rec.skill ?? rec.name ?? "").trim();
+            if (!skill) return null;
+            const selfRating = rec.self_rating ?? rec.selfRating ?? rec.rating ?? rec.level;
+            const webknotRating = rec.webknot_rating ?? rec.webknotRating;
+            return (
+              <TableRow key={`${skill}-${index}`} className="hover:bg-transparent">
+                <TableCell className="px-3 py-2 text-sm text-wt-text">{skill}</TableCell>
+                <TableCell className="px-3 py-2 text-sm text-wt-text text-center">
+                  {selfRating !== undefined && selfRating !== null && String(selfRating).trim() !== "" ? `${selfRating}/5` : "—"}
+                </TableCell>
+                <TableCell className="px-3 py-2 text-sm text-wt-text text-center">
+                  {webknotRating !== undefined && webknotRating !== null && String(webknotRating).trim() !== "" ? `${webknotRating}/5` : "—"}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </WtTable>
+    </div>
+  );
+}
 
 function ProfileFieldValue({ entry }: { entry: ProfileDisplayEntry }) {
   if (entry.resumeShareHref !== undefined) {
@@ -25,6 +114,21 @@ function ProfileFieldValue({ entry }: { entry: ProfileDisplayEntry }) {
   if (entry.asStatusBadge) {
     return <EmployeeStatusBadge status={String(entry.value ?? "")} />;
   }
+
+  if (entry.asUserTypeHistoryTable) {
+    return (
+      <UserTypeHistoryTable
+        rows={Array.isArray(entry.value)
+          ? (entry.value as UserTypeTransitionDisplayRow[])
+          : []}
+      />
+    );
+  }
+
+  if (entry.asSkillsTable) {
+    return <SkillsTable skills={entry.value} />;
+  }
+
   return <>{formatProfileDisplayValue(entry.value)}</>;
 }
 
