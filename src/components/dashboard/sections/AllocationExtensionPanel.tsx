@@ -699,8 +699,6 @@ export function AllocationExtensionPanel() {
               ]}
             />
           ) : null}
-
-          {listPagination}
         </div>
 
         {visibleRows.length ? (
