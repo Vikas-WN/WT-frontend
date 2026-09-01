@@ -141,8 +141,8 @@ export function SelfOnboardingPanel({
         throw new Error("Years of experience is required.");
       }
       const yoeValue = Number(yoeRaw);
-      if (!Number.isFinite(yoeValue) || yoeValue < 0) {
-        throw new Error("Years of experience must be a valid number.");
+      if (!Number.isFinite(yoeValue) || yoeValue < 0 || yoeValue > 50) {
+        throw new Error("Years of experience must be between 0 and 50");
       }
       if (!Number.isInteger(Number(yoeRaw))) {
         throw new Error("Years of experience must be a whole number.");
@@ -318,6 +318,7 @@ export function SelfOnboardingPanel({
         <InputField
           label="Years of Experience (excluding internship)"
           required
+          type="number"
           value={form.yoe}
           onChange={(v) => setForm((p) => ({ ...p, yoe: v }))}
         />

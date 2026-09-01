@@ -59,7 +59,6 @@ export const CARD_TOOLBAR_INNER_COMPACT_CLASS =
 export const CARD_CONTENT_STACK_COMPACT_CLASS = "space-y-4";
 export const CARD_FORM_GRID_CLASS = "grid gap-5 sm:grid-cols-2";
 export const CARD_FORM_ACTIONS_CLASS = "flex flex-wrap gap-3 pt-6";
-
 export const FORM_FIELD_CLASS = "flex flex-col gap-2";
 export const FIELD_LABEL_CLASS = "text-sm font-medium leading-none text-wt-text";
 /** Shared height/padding for text inputs and selects in forms. */

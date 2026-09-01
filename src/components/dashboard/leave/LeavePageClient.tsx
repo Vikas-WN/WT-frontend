@@ -2058,7 +2058,7 @@ export function LeavePageClient() {
                                               }
                                             }, 100);
                                           }
-                                          throw new Error("Validation failed");
+                                          return;
                                         }
                                         const isCompOffUsage =
                                           normalizeCompOffRequestType(requestType) === "COMP_OFF";

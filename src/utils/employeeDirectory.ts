@@ -254,7 +254,11 @@ export function onboardRowToListRow(row: OnboardRowInput): Record<string, string
       ? "—"
       : String(record.band ?? record.band_name ?? record.bandName ?? "").trim() || "—",
     date_of_joining: formatDirectoryDate(
-      record.date_of_joining ?? record.doj ?? record.joining_date ?? record.joiningDate
+      record.date_of_joining 
+      ?? record.doj 
+      ?? record.joining_date 
+      ?? record.joiningDate 
+      ?? record.dateOfJoining
     ),
     date_of_birth: formatDirectoryDate(record.date_of_birth ?? record.dob),
     status: normalizeStatusLabel(record.user_status ?? record.userStatus ?? record.status),
@@ -589,7 +593,7 @@ export function buildGroupedProfileSections(
           profileEntry(
             "Date of Joining",
             formatDirectoryDate(
-              pickProfileField(profile, ["date_of_joining", "doj", "joining_date", "joiningDate"])
+              pickProfileField(profile, ["date_of_joining", "doj", "joining_date", "joiningDate", "dateOfJoining"])
             )
           ),
         ]),
