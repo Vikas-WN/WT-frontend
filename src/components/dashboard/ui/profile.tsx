@@ -2,17 +2,6 @@
 
 import { normalizeApiBaseUrl } from "@/api/httpClient";
 import { useState } from "react";
-
-const LOCAL_BACKEND_FALLBACK = "http://localhost:8080";
-
-function resolveProfileAssetBaseUrl(): string {
-  return normalizeApiBaseUrl(
-    process.env.NEXT_PUBLIC_API_BASE_URL ??
-      process.env.API_BASE_URL ??
-      LOCAL_BACKEND_FALLBACK
-  );
-}
-
 import { formatUILabel } from "@/utils/titleCase";
 import { formatUiStatusLabel, normalizeStatusKey } from "@/utils/statusLabel";
 import { formatEmployeeStatusLabel, normalizeEmployeeStatusKey } from "@/utils/userStatus";
