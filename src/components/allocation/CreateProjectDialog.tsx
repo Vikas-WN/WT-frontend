@@ -246,7 +246,7 @@ export function CreateProjectDialog({
     const clientIsSelectable = (clientsQ.data ?? []).some(
       (client) => String(client.id) === clientIdRaw
     );
-    if (!clientIsSelectable) {
+    if (!clientIsSelectable && !isEditing) {
       showErrorToast("Select a client from the list.");
       return;
     }

@@ -408,6 +408,9 @@ export function LeavePageClient() {
   const [profileAssignedProjects, setProfileAssignedProjects] = useState<
     Array<Record<string, unknown>>
   >([]);
+  const [myActiveAllocations, setMyActiveAllocations] = useState<
+    Array<Record<string, unknown>>
+  >([]);  
   const [profileAssignedProjectsLoading, setProfileAssignedProjectsLoading] = useState(false);
   const [timelogs, setTimelogs] = useState<Array<Record<string, unknown>>>([]);
   const [managerEmailsForHr, setManagerEmailsForHr] = useState<string[]>([]);
@@ -781,8 +784,8 @@ export function LeavePageClient() {
   }, [hasAvailableCompOffCredits, leaveRequestForm.request_type]);
 
   const myAllocationRowsForLeave = useMemo(
-    () => profileAssignedProjects,
-    [profileAssignedProjects]
+    () => myActiveAllocations,
+    [myActiveAllocations]
   );
 
   const requiresClientApproval = useMemo(
@@ -891,11 +894,16 @@ export function LeavePageClient() {
             toPagedRows(assignedRes.data ?? assignedRes)
           );
           const myAllocations = toPagedRows(myAllocationsRes.data ?? myAllocationsRes);
+          
+
+          setMyActiveAllocations(myAllocations);
+
           setProfileAssignedProjects(
             mergeProjectAndAllocationData(normalizedProjects, myAllocations)
           );
         } catch {
           setProfileAssignedProjects([]);
+          setMyActiveAllocations([]);
         } finally {
           setProfileAssignedProjectsLoading(false);
         }
@@ -908,7 +916,11 @@ export function LeavePageClient() {
     setActionLoading(true);
     setActionBusyLabel(label);
     try {
-      await fn();
+      const result = await fn();
+      if(result == false){
+        return;
+      }
+
       showSuccessToast(formatActionSuccessMessage(label));
     } catch (error) {
       const backendMessage =
@@ -2058,7 +2070,7 @@ export function LeavePageClient() {
                                               }
                                             }, 100);
                                           }
-                                          return;
+                                          return false;
                                         }
                                         const isCompOffUsage =
                                           normalizeCompOffRequestType(requestType) === "COMP_OFF";
