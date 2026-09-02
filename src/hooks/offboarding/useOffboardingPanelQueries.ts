@@ -199,10 +199,15 @@ function extractOnboardListPage(payload: unknown): {
   };
 }
 
-/** Fetch every page for one onboard status so the offboarding picker is not capped at 500. */
-async function fetchAllOnboardRowsForStatus(
-  onboardingStatus: "ACTIVE" | "INVITED"
-): Promise<Array<Record<string, unknown>>> {
+/**
+ * Fetch every page of the onboard list so the offboarding picker is not capped at 500.
+ *
+ * No `onboardingStatus` filter: the backend matches that param exactly against
+ * `users.status`, so "INVITED" silently excludes employees mid-onboarding
+ * (`status = "ONBOARDING"`, shown as "Pending" in the UI). We pull every row and
+ * let `buildOffboardCandidates` apply offboarding eligibility instead.
+ */
+async function fetchAllOnboardRows(): Promise<Array<Record<string, unknown>>> {
   const pageSize = 500;
   const all: Array<Record<string, unknown>> = [];
   let page = 0;
@@ -212,7 +217,6 @@ async function fetchAllOnboardRowsForStatus(
     const res = await hrmsService.getOnboardList({
       page: String(page),
       size: String(pageSize),
-      onboardingStatus,
     });
     const { rows, total: pageTotal } = extractOnboardListPage(res);
     total = pageTotal;
@@ -225,11 +229,7 @@ async function fetchAllOnboardRowsForStatus(
 }
 
 async function fetchEligibleOffboardOnboardRows(): Promise<Array<Record<string, unknown>>> {
-  const [activeRows, invitedRows] = await Promise.all([
-    fetchAllOnboardRowsForStatus("ACTIVE"),
-    fetchAllOnboardRowsForStatus("INVITED"),
-  ]);
-  return [...activeRows, ...invitedRows];
+  return fetchAllOnboardRows();
 }
 
 export function useOffboardingPanelQueries() {

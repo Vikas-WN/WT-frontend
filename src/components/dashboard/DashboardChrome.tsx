@@ -412,12 +412,6 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
                 aria-label="Breadcrumb"
               >
-                {/*
-                  "Employee" is a nav group, not a page. Linking it sent users to the
-                  Onboarding child, which misrepresents the path, so it stays plain text.
-                */}
-                <span>Employee</span>
-                <span aria-hidden>/</span>
                 {isEmployeeProfileRoute ? (
                   <>
                     <Link
@@ -434,7 +428,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                   </>
                 ) : (
                   <span className="text-wt-text" aria-current="page">
-                    Directory
+                    Employee Directory
                   </span>
                 )}
               </nav>

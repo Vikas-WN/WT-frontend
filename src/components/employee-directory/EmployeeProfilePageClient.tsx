@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { AccessRestricted } from "@/components/auth/AccessRestricted";
 import { HARDCODED_DEPARTMENT_OPTIONS } from "@/constants/dashboard";
@@ -67,6 +68,8 @@ import { FormSection, FormSubsection } from "@/components/dashboard/ui/FormSecti
 import { EmployeeProfileHeaderCard } from "@/components/employee-directory/EmployeeProfileHeaderCard";
 import { EmployeeProfileView } from "@/components/employee-directory/EmployeeProfileView";
 import { EmployeePortalRoleSelect } from "@/components/employee-directory/EmployeePortalRoleSelect";
+import { DesignationCombobox } from "@/components/employee-onboarding/DesignationCombobox";
+import type { Designation } from "@/types/masters";
 import { IconPencil } from "@/components/employee-directory/employeeDirectoryIcons";
 import { buildProfileRowsFromEmployeeAllocations, selectProfileAllocationRows } from "@/utils/dashboard/projects";
 import { isSystemProjectAllocationRow } from "@/utils/allocationList";
@@ -156,11 +159,14 @@ export function EmployeeProfilePageClient() {
     enabled: queriesEnabled && canFetchEmployeeResumeApi(roles),
   });
   const updateMutation = useUpdateEmployeeProfile(empId);
+  const queryClient = useQueryClient();
 
   const statusOnlyEdit = canEditProfileStatusOnly && !canEditProfile;
 
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<EmployeeProfileEditForm | null>(null);
+  /** Designations added via the inline "add new" flow this edit session — accepted by save before the options query refetches. */
+  const [createdDesignations, setCreatedDesignations] = useState<string[]>([]);
   const [bandRows, setBandRows] = useState<Array<Record<string, unknown>>>([]);
   const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
   const [allocationRows, setAllocationRows] = useState<Array<Record<string, unknown>>>([]);
@@ -393,6 +399,16 @@ export function EmployeeProfilePageClient() {
     consultantDesignationBandIds
   );
 
+  /** A designation is acceptable if it's in the loaded options or was just created inline this session. */
+  const isKnownDesignation = (value: string) => {
+    const v = value.trim();
+    if (!v) return false;
+    return (
+      designationOptions.some((option) => option.value === v) ||
+      createdDesignations.includes(v)
+    );
+  };
+
   useEffect(() => {
     if (!isEditing || !editForm || isConsultantEmployee) return;
     const dept = editForm.department.trim();
@@ -419,12 +435,16 @@ export function EmployeeProfilePageClient() {
     setEditForm((prev) => {
       if (!prev || !prev.role) return prev;
       const validRoles = new Set(designationOptions.map((option) => option.value).filter(Boolean));
-      if (designationOptions.length > 0 && !validRoles.has(prev.role)) {
+      if (
+        designationOptions.length > 0 &&
+        !validRoles.has(prev.role) &&
+        !createdDesignations.includes(prev.role)
+      ) {
         return { ...prev, role: "" };
       }
       return prev;
     });
-  }, [designationOptions, designationLoading, isEditing]);
+  }, [designationOptions, designationLoading, isEditing, createdDesignations]);
 
   const departmentSelectOptions = useMemo(() => {
     const deps = [...departmentOptions];
@@ -445,6 +465,7 @@ export function EmployeeProfilePageClient() {
     const next = profileToEditForm(profileRecord);
     // Band is not applicable for consultants — keep the edit form empty for that field.
     if (isConsultantEmployee) next.band_id = "";
+    setCreatedDesignations([]);
     setEditForm(next);
     setIsEditing(true);
   };
@@ -452,6 +473,7 @@ export function EmployeeProfilePageClient() {
   const cancelEditor = () => {
     setIsEditing(false);
     setEditForm(null);
+    setCreatedDesignations([]);
   };
 
   const saveProfile = () => {
@@ -503,7 +525,7 @@ export function EmployeeProfilePageClient() {
             if (!phoneCountry) throw new Error("Please select a country code.");
             const phoneError = validatePhoneNumber(phoneCountry, editForm.phone_number);
             if (phoneError) throw new Error(phoneError);
-            if (designationLoading) {
+            if (designationLoading && !createdDesignations.includes(editForm.role.trim())) {
               throw new Error("Designations are still loading. Please wait a moment.");
             }
             if (!editForm.role.trim()) {
@@ -511,7 +533,7 @@ export function EmployeeProfilePageClient() {
             }
             const designationError = designationLengthError(editForm.role);
             if (designationError) throw new Error(designationError);
-            if (!designationOptions.some((option) => option.value === editForm.role.trim())) {
+            if (!isKnownDesignation(editForm.role)) {
               throw new Error(
                 isConsultantEmployee
                   ? "Selected designation is not valid for the chosen department."
@@ -563,7 +585,7 @@ export function EmployeeProfilePageClient() {
             editForm.phone_number
           );
           if (phoneError) throw new Error(phoneError);
-          if (designationLoading) {
+          if (designationLoading && !createdDesignations.includes(editForm.role.trim())) {
             throw new Error("Designations are still loading. Please wait a moment.");
           }
           if (!editForm.role.trim()) {
@@ -571,7 +593,7 @@ export function EmployeeProfilePageClient() {
           }
           const designationError = designationLengthError(editForm.role);
           if (designationError) throw new Error(designationError);
-          if (!designationOptions.some((option) => option.value === editForm.role.trim())) {
+          if (!isKnownDesignation(editForm.role)) {
             throw new Error(
               isConsultantEmployee
                 ? "Selected designation is not valid for the chosen department."
@@ -708,7 +730,13 @@ export function EmployeeProfilePageClient() {
                           required
                           value={editForm.user_status}
                           options={userStatusOptions}
-                          onChange={(v) => setEditForm({ ...editForm, user_status: v })}
+                          clearSelectionOnEmptyInput={false}
+                          onChange={(v) =>
+                            setEditForm({
+                              ...editForm,
+                              user_status: v || editForm.user_status,
+                            })
+                          }
                           disabled={saving}
                         />
                       )}
@@ -881,7 +909,13 @@ export function EmployeeProfilePageClient() {
                           required
                           value={editForm.user_status}
                           options={userStatusOptions}
-                          onChange={(v) => setEditForm({ ...editForm, user_status: v })}
+                          clearSelectionOnEmptyInput={false}
+                          onChange={(v) =>
+                            setEditForm({
+                              ...editForm,
+                              user_status: v || editForm.user_status,
+                            })
+                          }
                           disabled={saving}
                         />
                       )}
@@ -1024,7 +1058,7 @@ export function EmployeeProfilePageClient() {
                           value={editForm.role}
                           hint={selfAdminLockHint}
                         />
-                      ) : (
+                      ) : isConsultantEmployee ? (
                         <AdaptiveSelectField
                           label="Designation"
                           required
@@ -1034,21 +1068,13 @@ export function EmployeeProfilePageClient() {
                           placeholder={
                             !editForm.department.trim()
                               ? "Select Department First"
-                              : isConsultantEmployee
-                                ? designationLoading
-                                  ? "Loading Designations…"
-                                  : designationOptions.length
-                                    ? "Select Designation"
-                                    : consultantDesignationBandIds?.length
-                                      ? "No Designations For This Department"
-                                      : "No Bands Available"
-                                : designationBandId <= 0
-                                  ? "Select Department And Band First"
-                                  : designationLoading
-                                    ? "Loading Designations…"
-                                    : designationOptions.length
-                                      ? "Select Designation"
-                                      : "No Designations For This Band"
+                              : designationLoading
+                                ? "Loading Designations…"
+                                : designationOptions.length
+                                  ? "Select Designation"
+                                  : consultantDesignationBandIds?.length
+                                    ? "No Designations For This Department"
+                                    : "No Bands Available"
                           }
                           searchPlaceholder="Search Designations…"
                           options={designationOptions}
@@ -1059,10 +1085,33 @@ export function EmployeeProfilePageClient() {
                             saving ||
                             !editForm.department.trim() ||
                             designationLoading ||
-                            !designationOptions.length ||
-                            (!isConsultantEmployee && designationBandId <= 0)
+                            !designationOptions.length
                           }
                           error={designationLengthError(editForm.role)}
+                        />
+                      ) : (
+                        <DesignationCombobox
+                          bandId={designationBandId}
+                          department={departmentForDesignations}
+                          value={editForm.role}
+                          required
+                          disabled={saving}
+                          canCreate={canEditProfile}
+                          onChange={(role) =>
+                            setEditForm((prev) => (prev ? { ...prev, role } : prev))
+                          }
+                          onError={(message) => showErrorToast(message)}
+                          onCreated={(designation: Designation) => {
+                            const name = designation.name.trim();
+                            if (name) {
+                              setCreatedDesignations((prev) =>
+                                prev.includes(name) ? prev : [...prev, name]
+                              );
+                            }
+                            void queryClient.invalidateQueries({
+                              queryKey: ["masters", "designations"],
+                            });
+                          }}
                         />
                       )}
                     </div>

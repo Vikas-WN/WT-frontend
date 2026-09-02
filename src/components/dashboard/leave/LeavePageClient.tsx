@@ -1087,9 +1087,12 @@ export function LeavePageClient() {
             Math.random()
         );
 
-      // Team Requests is the unallocated / talent-pool side of the split. The backend
-      // applies that filter for HR and managers alike, scoping managers to the requests
-      // they are assigned to, so both personas use the same query here.
+      // For HR, "Team Requests" is the unallocated / talent-pool side of the split
+      // (hrTeamScope). For a manager/DM without HR access it is their *entire*
+      // assigned inbox — a request routed to them must show here whether or not the
+      // employee is allocated to a client project — so no scope flag is sent and the
+      // backend returns the full manager scope.
+      const teamUsesHrScope = hasHrAccess;
       const teamTypes =
         normalizedType === "ALL"
           ? (["LEAVE", "OPTIONAL", "WFH", "COMP_OFF", "WFH_EXCEPTION"] as const)
@@ -1102,7 +1105,7 @@ export function LeavePageClient() {
             requestType: type,
             page: 0,
             size: Math.max(size, 200),
-            hrTeamScope: true,
+            hrTeamScope: teamUsesHrScope,
           })
         )
       );
@@ -1360,12 +1363,33 @@ export function LeavePageClient() {
     options?: { reason?: string; requireReasonOnReject?: boolean; requestType?: unknown }
   ) {
     const isEarn = isCompOffEarnRequestType(options?.requestType);
+
+    // The request was already decided on the server (another reviewer, or this
+    // manager acting from a stale list). Re-pull the team list so the row shows
+    // its real status and the Approve/Reject buttons disappear, then re-surface
+    // the error so the toast still appears.
+    const refreshOnStaleDecision = async (error: unknown): Promise<never> => {
+      if (isAlreadyDecidedUserRequestError(error)) {
+        invalidateTeamCache();
+        invalidateLeaveBalance();
+        await loadEmployeeRequestsForApprover(
+          leaveSubTab === "org" ? "org" : "team",
+          0,
+          200,
+          true
+        );
+      }
+      throw error;
+    };
+
     if (isEarn) {
-      await compOffService.updateEarnRequestStatus(
-        Number(requestId),
-        status === "REJECTED" ? "REJECTED" : "APPROVED",
-        options?.reason
-      );
+      await compOffService
+        .updateEarnRequestStatus(
+          Number(requestId),
+          status === "REJECTED" ? "REJECTED" : "APPROVED",
+          options?.reason
+        )
+        .catch((error): Promise<never> => refreshOnStaleDecision(error));
       const reason = options?.reason?.trim();
       applyLocalTeamRequestStatus(requestId, status, reason);
       setEmployeeRequests((prev) =>
@@ -1385,7 +1409,11 @@ export function LeavePageClient() {
       return;
     }
 
-    const res = await updateUserRequestStatus(Number(requestId), status, options);
+    const res = await updateUserRequestStatus(
+      Number(requestId),
+      status,
+      options
+    ).catch((error): Promise<never> => refreshOnStaleDecision(error));
     const updated = extractStatusUpdateData(res);
     const reason = options?.reason?.trim();
     applyLocalTeamRequestStatus(requestId, status, reason);
@@ -1595,6 +1623,52 @@ export function LeavePageClient() {
     teamLeavePagination.page,
     teamLeavePagination.pageSize,
     teamLeavePagination.setPage,
+  ]);
+
+  // Notification deep-links land on "Team Requests", but a request from a
+  // project-allocated employee only appears under "All Employee Requests" (org).
+  // If the highlighted request isn't in the loaded rows for the current approver
+  // tab, switch to the other one (once) so the manager still reaches it.
+  const deepLinkScopeTriedRef = useRef<{ id: string; tabs: Set<string> }>({
+    id: "",
+    tabs: new Set(),
+  });
+  useEffect(() => {
+    if (!highlightRequestId) return;
+    if (leaveSubTab !== "team" && leaveSubTab !== "org") return;
+    if (teamRequestsLoading) return;
+
+    if (deepLinkScopeTriedRef.current.id !== highlightRequestId) {
+      deepLinkScopeTriedRef.current = { id: highlightRequestId, tabs: new Set() };
+    }
+    deepLinkScopeTriedRef.current.tabs.add(leaveSubTab);
+
+    const found = sortedEmployeeRequests.some((row) => {
+      const id = String(
+        row.user_request_id ??
+          row.userRequestId ??
+          row.request_id ??
+          row.requestId ??
+          row.id ??
+          ""
+      ).trim();
+      return id === highlightRequestId;
+    });
+    if (found) return;
+
+    const otherTab = leaveSubTab === "team" ? "org" : "team";
+    const canViewOther =
+      otherTab === "org" ? canViewOrgLeaveRequests : canViewTeamLeave;
+    if (canViewOther && !deepLinkScopeTriedRef.current.tabs.has(otherTab)) {
+      setLeaveSubTab(otherTab);
+    }
+  }, [
+    highlightRequestId,
+    leaveSubTab,
+    teamRequestsLoading,
+    sortedEmployeeRequests,
+    canViewOrgLeaveRequests,
+    canViewTeamLeave,
   ]);
 
   const currentScope = leaveSubTab === "org" ? "org" : "team";
@@ -2110,8 +2184,9 @@ export function LeavePageClient() {
                                               `Insufficient comp-off balance. Available: ${available}, requested: ${days} day(s).`
                                             );
                                           }
-                                          // Optional on the backend: when no project manager can be
-                                          // resolved it routes to the employee's own manager scope.
+                                          // Optional on the backend: when none is sent it routes via
+                                          // the requestor's project manager, then falls back to their
+                                          // reporting manager / the default approver.
                                           const managerCompOffEmail =
                                             (await compOffService.resolveUsageManagerCompOffEmail()) ||
                                             selectedLeaveManagerEmails[0]?.trim().toLowerCase() ||
@@ -2331,7 +2406,8 @@ export function LeavePageClient() {
                                   label="Request Type"
                                   value={employeeRequestFilters.requestType}
                                   options={[...USER_REQUEST_FILTER_TYPE_OPTIONS]}
-                                  onChange={(v) => setEmployeeRequestFilters((p) => ({ ...p, requestType: v }))}
+                                  clearSelectionOnEmptyInput={false}
+                                  onChange={(v) => setEmployeeRequestFilters((p) => ({ ...p, requestType: v || "ALL" }))}
                                   className="min-w-0"
                                 />
                               </div>
@@ -2460,6 +2536,11 @@ export function LeavePageClient() {
                                             : rawFinalStatus
                                         : rawFinalStatus;
                                     const managerStatus = requestManagerStatus(rowRecord);
+                                    // This manager's stage is already decided — hide the
+                                    // actions even if the overall row still reads PENDING
+                                    // (stale list / multi-stage approval race).
+                                    const alreadyDecidedByMe =
+                                      managerStatus === "APPROVED" || managerStatus === "REJECTED";
                                     const managerReason = String(
                                       pickRowField(
                                         row as Record<string, unknown>,
@@ -2514,6 +2595,7 @@ export function LeavePageClient() {
                                     const showManagerApprove =
                                       !hrCanActOnRow &&
                                       !leaveClosedForManagers &&
+                                      !alreadyDecidedByMe &&
                                       status === "PENDING" &&
                                       (earnManagerAct ||
                                         assignedPrimaryApprove ||
@@ -2522,6 +2604,7 @@ export function LeavePageClient() {
                                     const showManagerReject =
                                       !hrCanActOnRow &&
                                       !leaveClosedForManagers &&
+                                      !alreadyDecidedByMe &&
                                       status === "PENDING" &&
                                       (earnManagerAct ||
                                         assignedPrimaryReject ||

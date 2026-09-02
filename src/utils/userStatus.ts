@@ -140,10 +140,14 @@ export function shouldShowExitSurveyForStatus(
   return employeeSelfServe && isServingNoticeUserStatus(status);
 }
 
-/** Active or invited employees eligible for HR offboarding. */
+/**
+ * Employees eligible for HR offboarding: active, or not-yet-active (invited /
+ * mid-onboarding). "ONBOARDING" normalizes to "INVITED"; "PENDING" is a legacy
+ * directory alias for the same pre-active state.
+ */
 export function isEligibleOffboardCandidateStatus(status: unknown): boolean {
   const key = normalizeEmployeeStatusKey(status);
-  return key === "ACTIVE" || key === "INVITED";
+  return key === "ACTIVE" || key === "INVITED" || key === "PENDING";
 }
 
 /** @deprecated Use isServingNoticeUserStatus */

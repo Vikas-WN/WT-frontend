@@ -266,6 +266,16 @@ export function ProfilePageLeanClient() {
   const renderEditPanel = () => {
     return (
     <div className="rounded-3xl border border-wt-border bg-wt-surface-1 p-6 shadow-[var(--wt-shadow-md)] wt-soft-in dark:shadow-none md:p-10">
+      <Button
+        variant="outline"
+        size="sm"
+        type="button"
+        className="mb-4"
+        onClick={() => setIsEditingOwnProfile(false)}
+        disabled={actionLoading}
+      >
+        ← Back
+      </Button>
       <h3 className="text-lg font-semibold tracking-tight text-wt-text">Edit Profile</h3>
       <p className="mb-5 mt-1 text-sm text-wt-text-muted">
         Keep your skills and personal details current. Date of birth locks after you confirm your age.
