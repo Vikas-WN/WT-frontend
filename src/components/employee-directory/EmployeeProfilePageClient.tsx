@@ -338,7 +338,10 @@ export function EmployeeProfilePageClient() {
       try {
         const res = await hrmsService.getEmployeeAllocations({
           userEmail: email.trim(),
-          scope: "current_and_future",
+          // "all" so an active allocation whose end date has passed still shows in
+          // the profile (rendered with an "Offboarded" status badge) instead of the
+          // Project Details section going blank.
+          scope: "all",
         });
         if (cancelled) return;
         const rows = selectProfileAllocationRows(

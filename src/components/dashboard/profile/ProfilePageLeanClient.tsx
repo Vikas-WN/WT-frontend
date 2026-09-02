@@ -318,8 +318,15 @@ export function ProfilePageLeanClient() {
         <InputField
           label="Years of Experience (excluding internship)"
           required
+          inputMode="numeric"
           value={selfProfileForm.yoe}
-          onChange={(v) => setSelfProfileForm((p) => ({ ...p, yoe: v }))}
+          onChange={(v) =>
+            setSelfProfileForm((p) => ({
+              ...p,
+              // Digits only, capped at 2 chars — no one has >99 years of experience.
+              yoe: v.replace(/\D/g, "").slice(0, 2),
+            }))
+          }
         />
         <DateOfBirthConfirmField
           value={selfProfileForm.date_of_birth}
@@ -459,6 +466,9 @@ export function ProfilePageLeanClient() {
               }
               if (!Number.isInteger(Number(selfProfileForm.yoe))) {
                 throw new Error("Years of experience must be a whole number.");
+              }
+              if (yoeValue > 60) {
+                throw new Error("Years of experience must be 60 or less.");
               }
               const profilePayload: Record<string, unknown> = {
                 phone_number: formattedPhoneNumber,

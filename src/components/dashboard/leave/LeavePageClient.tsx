@@ -147,6 +147,7 @@ import {
   requestManagerStatus,
   resolveUserRequestId,
   isAlreadyDecidedUserRequestError,
+  isDeletedUserRequestError,
   revokeOwnedUserRequest,
   hrTeamActionBlockedHint,
   updateOwnedUserRequest,
@@ -1364,12 +1365,15 @@ export function LeavePageClient() {
   ) {
     const isEarn = isCompOffEarnRequestType(options?.requestType);
 
-    // The request was already decided on the server (another reviewer, or this
-    // manager acting from a stale list). Re-pull the team list so the row shows
-    // its real status and the Approve/Reject buttons disappear, then re-surface
-    // the error so the toast still appears.
+    // The request is no longer actionable on the server — another reviewer already
+    // decided it, or the employee deleted it — while this manager's list is stale.
+    // Re-pull the list so the row updates (or drops) and its Approve/Reject buttons
+    // disappear, then re-surface the error so the toast still appears.
     const refreshOnStaleDecision = async (error: unknown): Promise<never> => {
-      if (isAlreadyDecidedUserRequestError(error)) {
+      if (
+        isAlreadyDecidedUserRequestError(error) ||
+        isDeletedUserRequestError(error)
+      ) {
         invalidateTeamCache();
         invalidateLeaveBalance();
         await loadEmployeeRequestsForApprover(

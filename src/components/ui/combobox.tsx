@@ -95,9 +95,13 @@ function ComboboxContent({
   container,
   collisionPadding = 8,
   collisionAvoidance = {
+    // Anchored, scrollable listbox — flip top/bottom and shift into view, but do
+    // not fall back to a perpendicular (left/right) side of the anchor, which
+    // pushes right-aligned dropdowns past the viewport edge. Height is clamped to
+    // --available-height below so a tight fit scrolls instead of overflowing.
     side: "flip",
     align: "shift",
-    fallbackAxisSide: "end",
+    fallbackAxisSide: "none",
   },
   positionMethod = "fixed",
   ...props

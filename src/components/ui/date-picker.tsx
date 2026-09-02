@@ -105,9 +105,14 @@ export function DatePicker({
             positionMethod="fixed"
             collisionPadding={12}
             collisionAvoidance={{
+              // Behave like a dropdown, not a free-floating popup: flip top/bottom
+              // and shift into view, but never fall back to a left/right side of the
+              // field — that pushes the calendar past the viewport edge for fields
+              // in the right column. When vertical space is tight the calendar
+              // scrolls internally (see max-h below) instead.
               side: "flip",
               align: "shift",
-              fallbackAxisSide: "end",
+              fallbackAxisSide: "none",
             }}
             className={cn("z-[250]", positionerClassName)}
           >
