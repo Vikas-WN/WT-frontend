@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { useReferralJobs } from "@/components/dashboard/referral/hooks/use-referral-jobs";
 import { useReferralList } from "@/components/dashboard/referral/hooks/use-referral-list";
 import { useReferralSubmit } from "@/components/dashboard/referral/hooks/use-referral-submit";
@@ -80,8 +81,13 @@ export function ReferralPageClient() {
       setStep(1);
       setDrawerOpen(false);
       setTab("my");
-    } catch {
-      showErrorToast("Failed to submit referral");
+    } catch (err) {
+      showErrorToast(
+        toUserFriendlyApiErrorMessage(
+          err,
+          "Failed to submit referral. Please check the candidate details and try again."
+        )
+      );
     }
   }, [selectedJob, candidateName, candidateEmail, candidatePhone, resume, user, submitMutation]);
 

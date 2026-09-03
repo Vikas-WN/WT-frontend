@@ -165,6 +165,8 @@ export function EmployeeProfilePageClient() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<EmployeeProfileEditForm | null>(null);
+  /** True once the user has pressed Save — drives inline "required" messages on Band / Designation. */
+  const [saveAttempted, setSaveAttempted] = useState(false);
   /** Designations added via the inline "add new" flow this edit session — accepted by save before the options query refetches. */
   const [createdDesignations, setCreatedDesignations] = useState<string[]>([]);
   const [bandRows, setBandRows] = useState<Array<Record<string, unknown>>>([]);
@@ -485,16 +487,19 @@ export function EmployeeProfilePageClient() {
     setCreatedDesignations([]);
     setEditForm(next);
     setIsEditing(true);
+    setSaveAttempted(false);
   };
 
   const cancelEditor = () => {
     setIsEditing(false);
     setEditForm(null);
     setCreatedDesignations([]);
+    setSaveAttempted(false);
   };
 
   const saveProfile = () => {
     if (!editForm || !empId) return;
+    setSaveAttempted(true);
     const lengthError = designationLengthError(editForm.role);
     if (!statusOnlyEdit && lengthError) {
       showErrorToast(lengthError);
@@ -542,11 +547,18 @@ export function EmployeeProfilePageClient() {
             if (!phoneCountry) throw new Error("Please select a country code.");
             const phoneError = validatePhoneNumber(phoneCountry, editForm.phone_number);
             if (phoneError) throw new Error(phoneError);
-            if (designationLoading && !createdDesignations.includes(editForm.role.trim())) {
-              throw new Error("Designations are still loading. Please wait a moment.");
+            const missingRequiredFields: string[] = [];
+            if (!isConsultantEmployee && !editForm.band_id.trim()) {
+              missingRequiredFields.push("Band is required.");
             }
             if (!editForm.role.trim()) {
-              throw new Error("Designation is required.");
+              missingRequiredFields.push("Designation is required.");
+            }
+            if (missingRequiredFields.length) {
+              throw new Error(missingRequiredFields.join(" "));
+            }
+            if (designationLoading && !createdDesignations.includes(editForm.role.trim())) {
+              throw new Error("Designations are still loading. Please wait a moment.");
             }
             const designationError = designationLengthError(editForm.role);
             if (designationError) throw new Error(designationError);
@@ -602,11 +614,18 @@ export function EmployeeProfilePageClient() {
             editForm.phone_number
           );
           if (phoneError) throw new Error(phoneError);
-          if (designationLoading && !createdDesignations.includes(editForm.role.trim())) {
-            throw new Error("Designations are still loading. Please wait a moment.");
+          const missingRequiredFields: string[] = [];
+          if (!isConsultantEmployee && !editForm.band_id.trim()) {
+            missingRequiredFields.push("Band is required.");
           }
           if (!editForm.role.trim()) {
-            throw new Error("Designation is required.");
+            missingRequiredFields.push("Designation is required.");
+          }
+          if (missingRequiredFields.length) {
+            throw new Error(missingRequiredFields.join(" "));
+          }
+          if (designationLoading && !createdDesignations.includes(editForm.role.trim())) {
+            throw new Error("Designations are still loading. Please wait a moment.");
           }
           const designationError = designationLengthError(editForm.role);
           if (designationError) throw new Error(designationError);
@@ -1066,6 +1085,11 @@ export function EmployeeProfilePageClient() {
                             disabled={
                               saving || !editForm.department.trim() || !bandSelectOptionsList.length
                             }
+                            error={
+                              saveAttempted && !bandSelectValue.trim()
+                                ? "Band is required."
+                                : undefined
+                            }
                           />
                         )
                       ) : null}
@@ -1104,7 +1128,12 @@ export function EmployeeProfilePageClient() {
                             designationLoading ||
                             !designationOptions.length
                           }
-                          error={designationLengthError(editForm.role)}
+                          error={
+                            designationLengthError(editForm.role) ||
+                            (saveAttempted && !editForm.role.trim()
+                              ? "Designation is required."
+                              : undefined)
+                          }
                         />
                       ) : (
                         <DesignationCombobox
@@ -1114,6 +1143,11 @@ export function EmployeeProfilePageClient() {
                           required
                           disabled={saving}
                           canCreate={canEditProfile}
+                          error={
+                            saveAttempted && !editForm.role.trim()
+                              ? "Designation is required."
+                              : undefined
+                          }
                           onChange={(role) =>
                             setEditForm((prev) => (prev ? { ...prev, role } : prev))
                           }

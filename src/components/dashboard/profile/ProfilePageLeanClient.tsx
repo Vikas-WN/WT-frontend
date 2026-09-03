@@ -43,6 +43,8 @@ import {
 } from "@/components/dashboard/ui/profile";
 import { pickProfileField } from "@/utils/employeeDirectory";
 import { isNonTechProfile } from "@/utils/roles";
+import { useOnboardOptions } from "@/hooks/useOnboardOptions";
+import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { ProfileEmployeeTrainingsSection } from "@/components/dashboard/profile/ProfileEmployeeTrainingsSection";
 import { ProfileAssignedProjectsSection } from "@/components/dashboard/profile/ProfileAssignedProjectsSection";
@@ -79,6 +81,23 @@ export function ProfilePageLeanClient() {
   } = useDashboardAccess();
 
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Same predefined skill list HR sees — keeps the Primary/Secondary Skills fields a
+  // searchable dropdown (with "add custom") for the employee too, not a free-text box.
+  // (React Compiler auto-memoizes; no manual useMemo needed.)
+  const { data: onboardOptions } = useOnboardOptions();
+  const toSkillSelectOptions = (
+    items: { value: string; label: string }[] | undefined,
+    fallback: { value: string; label: string }[],
+  ) => (items?.length ? items : fallback).map((o) => ({ value: o.value, label: o.label }));
+  const primarySkillOptions = toSkillSelectOptions(
+    onboardOptions?.primary_skills,
+    FALLBACK_ONBOARD_OPTIONS.primary_skills,
+  );
+  const secondarySkillOptions = toSkillSelectOptions(
+    onboardOptions?.secondary_skills,
+    FALLBACK_ONBOARD_OPTIONS.secondary_skills,
+  );
 
   const [profileAssignedProjects, setProfileAssignedProjects] = useState<
     Array<Record<string, unknown>>
@@ -303,21 +322,26 @@ export function ProfilePageLeanClient() {
         <SkillRatingsListInput
           label="Primary Skills"
           required
-          hint="At least one skill with a self rating"
+          hint="Choose from the predefined list or add a new skill, then set a self rating"
           value={selfProfileForm.primary_skills}
           onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, primary_skills: v }))}
+          skillOptions={primarySkillOptions}
+          allowCustomSkills
           className="sm:col-span-2"
         />
         <SkillRatingsListInput
           label="Secondary Skills"
           required
-          hint="At least one skill with a self rating"
+          hint="Choose from the predefined list or add a new skill, then set a self rating"
           value={selfProfileForm.secondary_skills}
           onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, secondary_skills: v }))}
+          skillOptions={secondarySkillOptions}
+          allowCustomSkills
           className="sm:col-span-2"
         />
         <InputField
           label="Years of Experience (excluding internship)"
+          description="Whole years only. Add the exact duration (years and months) in Experience Summary."
           required
           inputMode="numeric"
           value={selfProfileForm.yoe}

@@ -16,7 +16,7 @@ export function normalizeEmployeeStatusKey(status: unknown): string {
     .toUpperCase()
     .replace(/[\s-]+/g, "_");
 
-  if (compact === "ONBOARDING") return "INVITED";
+  if (compact === "ONBOARDING" || compact === "PENDING") return "INVITED";
   if (compact === "OFFBOARDED") return "INACTIVE";
   if (
     compact === "IN_NOTICE" ||
@@ -110,8 +110,8 @@ const STAFF_PORTAL_ROLES = new Set([
   "ROLE_FINANCE",
 ]);
 
-function hasStaffPortalRole(roles: string[]): boolean {
-  return roles.some((role) => STAFF_PORTAL_ROLES.has(normalizeRoleName(role)));
+export function hasStaffPortalRole(roles: string[] | undefined | null): boolean {
+  return (roles ?? []).some((role) => STAFF_PORTAL_ROLES.has(normalizeRoleName(role)));
 }
 
 function normalizeRoleName(role: string): string {
@@ -125,6 +125,20 @@ export function shouldRequireSelfOnboarding(status: unknown): boolean {
   const statusKey = normalizeEmployeeStatusKey(status);
   if (statusKey === "INACTIVE" || statusKey === "SERVING_NOTICE") return false;
   return statusKey !== "ACTIVE";
+}
+
+/**
+ * Role-aware gate for the self-onboarding redirect. Staff-portal users
+ * (HR / Admin / Manager / DM / AM / Finance) are never pushed into the
+ * employee self-onboarding flow, regardless of the status on their record —
+ * otherwise a missing/legacy status value traps them on /dashboard/profile.
+ */
+export function shouldRequireSelfOnboardingForUser(
+  status: unknown,
+  roles: string[] | undefined | null
+): boolean {
+  if (hasStaffPortalRole(roles)) return false;
+  return shouldRequireSelfOnboarding(status);
 }
 
 /** Exit survey form — employee self-serve while serving notice only. */

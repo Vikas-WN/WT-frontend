@@ -37,8 +37,17 @@ export function resolveProfilePhotoSrc(profile: Record<string, unknown> | null |
     return raw;
   }
   const base = resolveProfileAssetBaseUrl();
-  if (raw.startsWith("local://uploads/")) {
-    const filename = raw.slice("local://uploads/".length);
+  // Stored photo references appear in several historic shapes:
+  //   local://uploads/<name>, local://uploads/profile_photos/<name>,
+  //   uploads/profile_photos/<name>, /uploads/<name>, or a bare <name>.
+  // The photo endpoint keys on the trailing filename, so collapse any of these
+  // to their basename before building the URL.
+  const withoutScheme = raw.startsWith("local://") ? raw.slice("local://".length) : raw;
+  const looksLikeStoredUpload =
+    raw.startsWith("local://") || /^\/?uploads\//.test(withoutScheme);
+  if (looksLikeStoredUpload) {
+    const filename = withoutScheme.split("/").filter(Boolean).pop() ?? "";
+    if (!filename) return null;
     return `${base}/api/v1/profile/photo/${encodeURIComponent(filename)}`;
   }
   return raw.startsWith("/") ? `${base}${raw}` : `${base}/${raw}`;

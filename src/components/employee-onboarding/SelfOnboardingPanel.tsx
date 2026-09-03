@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { MAX_ONBOARD_FILE_BYTES, MAX_ONBOARD_TOTAL_BYTES } from "@/constants/dashboard";
 import {
+  AdaptiveSelectField,
   InputField,
   SelectField,
   FileField,
@@ -18,7 +19,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { isValidPersonName } from "@/utils/dashboard/validation";
-import { digitsOnly } from "@/utils/phoneCountries";
+import {
+  digitsOnly,
+  PHONE_COUNTRY_OPTIONS,
+  formatPhoneNumberForApi,
+  validatePhoneNumber,
+} from "@/utils/phoneCountries";
 import { validatePersonalEmail } from "@/utils/personalEmail";
 import { validateResumeShareLink } from "@/utils/employeeResume";
 import {
@@ -123,6 +129,13 @@ export function SelfOnboardingPanel({
       if (!legalName || !isValidPersonName(legalName)) {
         throw new Error("Enter your full name as per ID (letters and spaces, 2–120 characters).");
       }
+
+      const phoneCountry = form.phone_country.trim();
+      if (!phoneCountry) throw new Error("Please select a country code.");
+      const phoneError = validatePhoneNumber(phoneCountry, form.phone_number);
+      if (phoneError) throw new Error(phoneError);
+      const apiPhoneNumber = formatPhoneNumberForApi(phoneCountry, form.phone_number);
+      if (!apiPhoneNumber) throw new Error("Enter a valid phone number.");
 
       const dateOfBirth = toApiDateParam(form.date_of_birth);
       if (!dateOfBirth) {
@@ -241,6 +254,7 @@ export function SelfOnboardingPanel({
         email,
         personal_email: personalEmail,
         name: legalName,
+        phone_number: apiPhoneNumber,
         date_of_birth: dateOfBirth,
         date_of_birth_confirmed: true,
         resume_share_link: resumeShareLink,
@@ -309,6 +323,23 @@ export function SelfOnboardingPanel({
           value={form.full_name}
           onChange={(v) => setForm((p) => ({ ...p, full_name: v }))}
         />
+        <AdaptiveSelectField
+          label="Country Code"
+          required
+          value={form.phone_country}
+          placeholder="Select Country Code"
+          searchPlaceholder="Search Country Code…"
+          options={PHONE_COUNTRY_OPTIONS}
+          onChange={(v) => setForm((p) => ({ ...p, phone_country: v }))}
+        />
+        <InputField
+          label="Phone Number"
+          type="tel"
+          inputMode="numeric"
+          required
+          value={form.phone_number}
+          onChange={(v) => setForm((p) => ({ ...p, phone_number: digitsOnly(v) }))}
+        />
         <DateOfBirthConfirmField
           value={form.date_of_birth}
           confirmed={dobConfirmed}
@@ -317,6 +348,7 @@ export function SelfOnboardingPanel({
         />
         <InputField
           label="Years of Experience (excluding internship)"
+          description="Whole years only. Add the exact duration (years and months) in Experience summary."
           required
           type="number"
           value={form.yoe}
@@ -380,8 +412,15 @@ export function SelfOnboardingPanel({
         />
         <InputField
           label="Emergency contact number"
+          type="tel"
+          inputMode="numeric"
           value={form.emergency_contact_number}
           onChange={(v) => setForm((p) => ({ ...p, emergency_contact_number: v }))}
+          error={
+            /[^0-9]/.test(form.emergency_contact_number)
+              ? "Alphabets and other characters are not allowed."
+              : null
+          }
         />
       </div>
       <div className="grid sm:grid-cols-2 gap-3 mt-3">

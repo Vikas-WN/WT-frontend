@@ -123,6 +123,13 @@ export function ListPagination({
               >
                 <SelectValue />
               </SelectTrigger>
+              <SelectContent>
+                {pageSizeSelectOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
         ) : null}

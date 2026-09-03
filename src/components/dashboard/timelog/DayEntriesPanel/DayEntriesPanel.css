@@ -35,10 +35,14 @@
 .day-entries-body {
   flex: 1;
   overflow-y: auto;
+  /* Reserve the scrollbar gutter so the panel does not jump/flicker when the
+     scrollbar appears on hover/focus of the Add entry button and cards. */
+  scrollbar-gutter: stable;
   padding: 1rem 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  min-width: 0;
 }
 
 .day-entries-error {
@@ -64,6 +68,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  min-width: 0;
 }
 
 .day-entries-card-header {
@@ -71,16 +76,23 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.5rem;
+  min-width: 0;
+}
+
+.day-entries-card-header > div {
+  min-width: 0;
 }
 
 .day-entries-card-project {
   font-weight: 500;
   font-size: 0.875rem;
+  overflow-wrap: anywhere;
 }
 
 .day-entries-card-task {
   font-size: 0.8125rem;
   color: var(--wt-text-muted, #888);
+  overflow-wrap: anywhere;
 }
 
 .day-entries-card-hours {
@@ -92,6 +104,10 @@
 .day-entries-card-desc {
   font-size: 0.75rem;
   color: var(--wt-text-muted, #888);
+  /* Keep long words / URLs inside the card instead of overflowing the panel. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 
 .day-entries-card-status {

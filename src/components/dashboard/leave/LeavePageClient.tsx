@@ -2392,8 +2392,10 @@ export function LeavePageClient() {
                           )}
                         </div>
                           ) : null}
-                          {leaveSubTab === "org" && hasHrAccess ? (
+                          {leaveSubTab === "wfh" && hasHrAccess ? (
                             <div className="mb-8">
+                              {/* HR custom-WFH approval queue belongs with the WFH tab —
+                                  it is not part of the "All Employee Requests" leave view. */}
                               <HrWfhExceptionPanel
                                 actionLoading={actionLoading}
                                 runAction={runAction}

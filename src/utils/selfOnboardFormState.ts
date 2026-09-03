@@ -3,6 +3,8 @@ import { SkillRating } from "@/types/onboard";
 export type SelfOnboardFormState = {
   personal_email: string;
   full_name: string;
+  phone_country: string;
+  phone_number: string;
   date_of_birth: string;
   yoe: string;
   experience: string;
@@ -25,6 +27,8 @@ export function createEmptySelfOnboardForm(): SelfOnboardFormState {
   return {
     personal_email: "",
     full_name: "",
+    phone_country: "",
+    phone_number: "",
     date_of_birth: "",
     yoe: "",
     experience: "",

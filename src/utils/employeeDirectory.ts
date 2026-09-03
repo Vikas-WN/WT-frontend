@@ -567,6 +567,18 @@ function formatAadharCardStatus(profile: Record<string, unknown>): string {
   return "Not uploaded";
 }
 
+/**
+ * True when the free-text experience summary carries real content — not empty,
+ * not "—", and not an all-zero "0Y 0M" / "0 years" placeholder.
+ */
+function isMeaningfulExperienceSummary(value: unknown): boolean {
+  const text = String(value ?? "").trim();
+  if (!text || text === "—") return false;
+  const digits = text.match(/\d+/g);
+  if (digits && digits.length > 0 && digits.every((d) => Number(d) === 0)) return false;
+  return true;
+}
+
 /** Grouped profile fields for the HR employee directory profile view. */
 export function buildGroupedProfileSections(
   profile: Record<string, unknown>,
@@ -651,11 +663,19 @@ export function buildGroupedProfileSections(
       "Years of Experience (excluding internship)",
       formatYoeDisplay(pickProfileField(profile, ["yoe", "years_of_experience", "yearsOfExperience", "total_experience", "totalExperience"]))
     ),
-    profileEntry(
-      "Experience Summary (excluding internship)",
-      pickProfileField(profile, ["experience", "experience_summary", "experienceSummary"]),
-      { fullWidth: true }
-    ),
+    // Hide the Experience Summary row entirely when there is no prior experience
+    // (empty, "—", or an all-zero "0Y 0M" / "0 years" summary).
+    ...(isMeaningfulExperienceSummary(
+      pickProfileField(profile, ["experience", "experience_summary", "experienceSummary"])
+    )
+      ? [
+          profileEntry(
+            "Experience Summary (excluding internship)",
+            pickProfileField(profile, ["experience", "experience_summary", "experienceSummary"]),
+            { fullWidth: true }
+          ),
+        ]
+      : []),
   ];
 
   function formatGenderLabel(value: unknown): string {
