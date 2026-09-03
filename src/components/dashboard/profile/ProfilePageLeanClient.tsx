@@ -42,6 +42,7 @@ import {
   resolveProfilePhotoSrc,
 } from "@/components/dashboard/ui/profile";
 import { pickProfileField } from "@/utils/employeeDirectory";
+import { isNonTechProfile } from "@/utils/roles";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { ProfileEmployeeTrainingsSection } from "@/components/dashboard/profile/ProfileEmployeeTrainingsSection";
 import { ProfileAssignedProjectsSection } from "@/components/dashboard/profile/ProfileAssignedProjectsSection";
@@ -390,10 +391,18 @@ export function ProfilePageLeanClient() {
             runAction("Update my profile", async () => {
               const primarySkills = selfProfileForm.primary_skills.filter((item) => String(item.skill ?? "").trim());
               const secondarySkills = selfProfileForm.secondary_skills.filter((item) => String(item.skill ?? "").trim());
-              if (!primarySkills.length) {
+              // Skills are only mandatory for technical roles; HR / Finance / other
+              // non-tech employees can save their profile without them.
+              const skillsRequired = !isNonTechProfile(
+                readProfileField(employeeProfile, "department"),
+                pickDesignationForDisplay(employeeProfile ?? {}),
+                readProfileField(employeeProfile, "role", "designation"),
+                readProfileField(employeeProfile, "user_type", "userType"),
+              );
+              if (skillsRequired && !primarySkills.length) {
                 throw new Error("At least one primary skill is required.");
               }
-              if (!secondarySkills.length) {
+              if (skillsRequired && !secondarySkills.length) {
                 throw new Error("At least one secondary skill is required.");
               }
               const dobLocked = Boolean(
@@ -472,8 +481,12 @@ export function ProfilePageLeanClient() {
               }
               const profilePayload: Record<string, unknown> = {
                 phone_number: formattedPhoneNumber,
-                primary_skills: primarySkills,
-                secondary_skills: secondarySkills,
+                // Non-tech employees with no skills: omit the arrays entirely so the
+                // backend's "at least one skill" check (which only runs when a skills
+                // list is present) is skipped.
+                ...(skillsRequired || primarySkills.length || secondarySkills.length
+                  ? { primary_skills: primarySkills, secondary_skills: secondarySkills }
+                  : {}),
                 experience:
                   yoeValue > 0 ? `${yoeValue} years` : null,
                 yoe: yoeValue,
