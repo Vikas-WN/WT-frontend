@@ -72,7 +72,7 @@ export function ReferralPageClient() {
         referrer_email: user.email ?? "",
         resume,
       });
-      showSuccessToast("Referral submitted — ATS scoring runs in the background");
+      showSuccessToast("Referral submitted");
       setResume(null);
       setSelectedJob(null);
       setCandidateName("");
@@ -112,18 +112,12 @@ export function ReferralPageClient() {
         <TabsList
           aria-label="Referral views"
           variant="default"
-          className="mb-5 grid h-auto w-full grid-cols-2 gap-1 bg-slate-100 p-1 dark:bg-slate-800/70 ring-0 shadow-none sm:inline-flex sm:w-auto sm:grid-cols-none"
+          className="mb-5 grid w-full grid-cols-2 sm:inline-flex sm:w-fit sm:grid-cols-none"
         >
-          <TabsTrigger
-            value="refer"
-            className="data-active:bg-white data-active:text-slate-900 data-active:shadow-sm data-active:ring-0 dark:data-active:bg-slate-700 dark:data-active:text-slate-100 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-all duration-200 text-xs sm:text-sm px-2 sm:px-3"
-          >
+          <TabsTrigger value="refer" className="text-xs sm:text-sm">
             Refer a Candidate
           </TabsTrigger>
-          <TabsTrigger
-            value="my"
-            className="data-active:bg-white data-active:text-slate-900 data-active:shadow-sm data-active:ring-0 dark:data-active:bg-slate-700 dark:data-active:text-slate-100 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-all duration-200 text-xs sm:text-sm px-2 sm:px-3"
-          >
+          <TabsTrigger value="my" className="text-xs sm:text-sm">
             My Referrals
           </TabsTrigger>
         </TabsList>

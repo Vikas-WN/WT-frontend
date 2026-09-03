@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, FileDown, Loader2, Search } from "lucide-react";
-import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowUpRight, FileDown, Loader2, Search } from "lucide-react";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { Button } from "@/components/ui/button";
 import { GuideFigure } from "@/components/guide/GuideFigure";
@@ -15,26 +14,32 @@ import {
   GUIDE_CHAPTERS,
   handbookMeta,
   resolvePrimaryHandbook,
+  type GuideAudience,
+  type GuideChapter,
   type GuideHandbookKind,
 } from "@/content/guide/guideContent";
 import { exportGuidePdf } from "@/utils/guide/exportGuidePdf";
 import { cn } from "@/lib/utils";
 
 const HANDBOOK_FILTER_LABELS: Record<GuideHandbookKind, string> = {
-  employee: "Employee handbook",
-  hr: "HR handbook",
-  manager: "Manager handbook",
+  employee: "Employee",
+  hr: "HR",
+  manager: "Manager",
 };
+
+const AUDIENCE_GROUP_ORDER: GuideAudience[] = ["shared", "hr", "manager"];
+
+function groupHeading(audience: GuideAudience, handbook: GuideHandbookKind): string {
+  if (audience === "shared") return handbook === "employee" ? "Basics" : "For everyone";
+  if (audience === "hr") return "HR workflows";
+  return "Manager workflows";
+}
 
 export function GuidePageClient() {
   const { hasHrAccess, hasManagerAccess, hasDmAccess } = useDashboardAccess();
+
   const primaryHandbook = useMemo(
-    () =>
-      resolvePrimaryHandbook({
-        hasHrAccess,
-        hasManagerAccess,
-        hasDmAccess,
-      }),
+    () => resolvePrimaryHandbook({ hasHrAccess, hasManagerAccess, hasDmAccess }),
     [hasHrAccess, hasManagerAccess, hasDmAccess]
   );
 
@@ -43,22 +48,21 @@ export function GuidePageClient() {
     [hasHrAccess, hasManagerAccess, hasDmAccess]
   );
 
-  const [handbookView, setHandbookView] = useState<GuideHandbookKind>(primaryHandbook);
+  // Nullable override so we never need an effect to "reset" the view when the
+  // resolved primary handbook arrives after role data loads.
+  const [handbookOverride, setHandbookOverride] = useState<GuideHandbookKind | null>(null);
+  const handbookView =
+    handbookOverride && handbookFilters.includes(handbookOverride)
+      ? handbookOverride
+      : primaryHandbook;
+
   const [query, setQuery] = useState("");
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  useEffect(() => {
-    setHandbookView(primaryHandbook);
-  }, [primaryHandbook]);
-
   const roleVisible = useMemo(
     () =>
-      filterChaptersForRoles(GUIDE_CHAPTERS, {
-        hasHrAccess,
-        hasManagerAccess,
-        hasDmAccess,
-      }),
+      filterChaptersForRoles(GUIDE_CHAPTERS, { hasHrAccess, hasManagerAccess, hasDmAccess }),
     [hasHrAccess, hasManagerAccess, hasDmAccess]
   );
 
@@ -85,15 +89,44 @@ export function GuidePageClient() {
     });
   }, [query, handbookChapters, handbookView]);
 
+  const groupedChapters = useMemo(() => {
+    return AUDIENCE_GROUP_ORDER.map((audience) => ({
+      audience,
+      chapters: filteredChapters.filter((c) => c.audience === audience),
+    })).filter((group) => group.chapters.length > 0);
+  }, [filteredChapters]);
+
+  // Active chapter for the contents rail. Derived so an empty / changed result
+  // set never needs a state-sync effect.
+  const activeChapter =
+    (activeChapterId && filteredChapters.some((c) => c.id === activeChapterId)
+      ? activeChapterId
+      : filteredChapters[0]?.id) ?? null;
+
+  // Scroll spy: highlight the chapter nearest the top of the reading column.
+  const contentRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    if (!filteredChapters.length) {
-      setActiveChapterId(null);
-      return;
-    }
-    if (!activeChapterId || !filteredChapters.some((c) => c.id === activeChapterId)) {
-      setActiveChapterId(filteredChapters[0].id);
-    }
-  }, [filteredChapters, activeChapterId]);
+    const root = contentRef.current;
+    if (!root) return;
+    const sections = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-guide-chapter]")
+    );
+    if (!sections.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) {
+          setActiveChapterId(visible[0].target.getAttribute("data-guide-chapter"));
+        }
+      },
+      { rootMargin: "-88px 0px -70% 0px", threshold: 0 }
+    );
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, [filteredChapters]);
 
   async function handleDownloadPdf() {
     const chapters = filterChaptersForHandbook(roleVisible, handbookView);
@@ -106,158 +139,217 @@ export function GuidePageClient() {
     }
   }
 
+  const totalCount = filteredChapters.length;
+
   return (
-    <DashboardPageShell>
-      <div className="relative z-[1] mx-auto max-w-6xl">
-        <header className="mb-6 space-y-3">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--wt-brand)]">
-                WebTrak handbook
-              </p>
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-wt-text sm:text-3xl">
-                {meta.pageTitle}
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-wt-text-muted">{meta.subtitle}</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="brand"
-                size="sm"
-                className="gap-1.5"
-                disabled={exporting || !handbookChapters.length}
-                onClick={() => void handleDownloadPdf()}
-              >
-                {exporting ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <FileDown className="size-4" />
-                )}
-                {meta.downloadLabel}
-              </Button>
-            </div>
+    <main className="wt-page-enter mx-auto w-full max-w-[1200px] px-5 pb-16 pt-8 sm:px-8 sm:pt-10">
+      <header className="border-b border-wt-border pb-8">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--wt-brand)]">
+              WebTrak Handbook
+            </p>
+            <h1 className="mt-2 text-[1.75rem] font-semibold leading-tight tracking-tight text-wt-text sm:text-[2rem]">
+              {meta.pageTitle}
+            </h1>
+            <p className="mt-3 text-[15px] leading-relaxed text-wt-text-muted">
+              {meta.subtitle}
+            </p>
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5 self-start sm:self-auto"
+            disabled={exporting || !handbookChapters.length}
+            onClick={() => void handleDownloadPdf()}
+          >
+            {exporting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <FileDown className="size-4" />
+            )}
+            {meta.downloadLabel}
+          </Button>
+        </div>
 
-          {handbookFilters.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {handbookFilters.map((filter) => (
-                <button
-                  key={filter}
-                  type="button"
-                  onClick={() => setHandbookView(filter)}
-                  className={cn(
-                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                    handbookView === filter
-                      ? "border-[var(--wt-brand)] bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]"
-                      : "border-wt-border bg-wt-surface-1 text-wt-text-muted hover:text-wt-text"
-                  )}
-                >
-                  {HANDBOOK_FILTER_LABELS[filter]}
-                </button>
-              ))}
-            </div>
-          ) : null}
-
-          <div className="relative max-w-md">
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative w-full sm:max-w-sm">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-wt-text-muted" />
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search this handbook…"
-              className="h-10 w-full rounded-lg border border-wt-border bg-wt-surface-1 pl-9 pr-3 text-sm outline-none focus:border-[var(--wt-brand)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--wt-brand)_20%,transparent)]"
+              placeholder="Search the handbook…"
+              aria-label="Search the handbook"
+              className="h-10 w-full rounded-lg border border-wt-border bg-wt-surface-1 pl-9 pr-3 text-sm text-wt-text outline-none transition-colors placeholder:text-wt-text-muted focus:border-[var(--wt-brand)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--wt-brand)_20%,transparent)]"
             />
           </div>
-        </header>
 
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-          <nav
-            aria-label="Guide contents"
-            className="shrink-0 lg:sticky lg:top-6 lg:w-56"
-          >
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">
-              Contents
-            </p>
-            <ul className="max-h-[min(70vh,560px)] space-y-0.5 overflow-y-auto rounded-xl border border-wt-border bg-wt-surface-1 p-2">
-              {filteredChapters.map((chapter) => (
-                <li key={chapter.id}>
-                  <a
-                    href={`#guide-${chapter.id}`}
-                    onClick={() => setActiveChapterId(chapter.id)}
-                    className={cn(
-                      "block rounded-lg px-2.5 py-2 text-left text-xs leading-snug transition-colors",
-                      activeChapterId === chapter.id
-                        ? "bg-[var(--wt-brand-soft)] font-medium text-[var(--wt-brand)]"
-                        : "text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
-                    )}
-                  >
-                    <span className="block">{chapter.title}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <div className="min-w-0 flex-1 space-y-8">
-            {filteredChapters.length === 0 ? (
-              <p className="rounded-xl border border-wt-border bg-wt-surface-1 p-6 text-sm text-wt-text-muted">
-                No chapters match your search.
-              </p>
-            ) : (
-              filteredChapters.map((chapter) => (
-                <article
-                  key={chapter.id}
-                  id={`guide-${chapter.id}`}
-                  className="scroll-mt-24 rounded-2xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm sm:p-6"
+          {handbookFilters.length > 0 ? (
+            <div className="inline-flex rounded-lg border border-wt-border bg-wt-surface-1 p-0.5">
+              {handbookFilters.map((filter) => (
+                <button
+                  key={filter}
+                  type="button"
+                  onClick={() => setHandbookOverride(filter)}
+                  className={cn(
+                    "rounded-[7px] px-3 py-1.5 text-xs font-medium transition-colors",
+                    handbookView === filter
+                      ? "bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]"
+                      : "text-wt-text-muted hover:text-wt-text"
+                  )}
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <span className="inline-flex rounded-full border border-wt-border bg-wt-surface-2 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-wt-text-muted">
-                        {guideAudienceLabel(chapter.audience, handbookView)}
-                      </span>
-                      <h2 className="mt-2 text-xl font-semibold text-wt-text">{chapter.title}</h2>
-                      <p className="mt-1 text-sm text-wt-text-muted">{chapter.summary}</p>
-                    </div>
-                    {chapter.relatedHref ? (
-                      <Link
-                        href={chapter.relatedHref}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-[var(--wt-brand)] hover:underline"
-                      >
-                        Open in WebTrak
-                        <ExternalLink className="size-3.5" />
-                      </Link>
-                    ) : null}
-                  </div>
+                  {HANDBOOK_FILTER_LABELS[filter]} handbook
+                </button>
+              ))}
+            </div>
+          ) : null}
 
-                  {chapter.figureId ? <GuideFigure figureId={chapter.figureId} /> : null}
+          <span className="text-xs text-wt-text-muted sm:ml-auto">
+            {totalCount} {totalCount === 1 ? "article" : "articles"}
+          </span>
+        </div>
+      </header>
 
-                  <ol className="mt-4 space-y-4">
-                    {chapter.steps.map((step, index) => (
-                      <li key={step.title} className="flex gap-3">
-                        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--wt-brand-soft)] text-xs font-semibold tabular-nums text-[var(--wt-brand)]">
-                          {index + 1}
-                        </span>
-                        <div className="min-w-0">
-                          <h3 className="text-sm font-semibold text-wt-text">{step.title}</h3>
-                          <p className="mt-1 text-sm leading-relaxed text-wt-text-muted">
-                            {step.body}
-                          </p>
-                          {step.tip ? (
-                            <p className="mt-2 rounded-lg border border-amber-200/80 bg-amber-50/80 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
-                              Tip: {step.tip}
-                            </p>
-                          ) : null}
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                </article>
-              ))
-            )}
-          </div>
+      <div className="mt-10 flex flex-col gap-10 lg:flex-row lg:gap-16">
+        <nav
+          aria-label="Handbook contents"
+          className="lg:sticky lg:top-6 lg:h-[calc(100dvh-7rem)] lg:w-60 lg:shrink-0 lg:overflow-y-auto lg:pb-10"
+        >
+          {groupedChapters.length === 0 ? (
+            <p className="text-xs text-wt-text-muted">No matches.</p>
+          ) : (
+            <div className="space-y-6">
+              {groupedChapters.map((group) => (
+                <div key={group.audience}>
+                  <p className="mb-2 px-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-wt-text-muted">
+                    {groupHeading(group.audience, handbookView)}
+                  </p>
+                  <ul className="space-y-0.5">
+                    {group.chapters.map((chapter) => {
+                      const active = activeChapter === chapter.id;
+                      return (
+                        <li key={chapter.id}>
+                          <a
+                            href={`#guide-${chapter.id}`}
+                            onClick={() => setActiveChapterId(chapter.id)}
+                            aria-current={active ? "true" : undefined}
+                            className={cn(
+                              "block border-l-2 py-1.5 pl-3 pr-2 text-[13px] leading-snug transition-colors",
+                              active
+                                ? "border-[var(--wt-brand)] font-medium text-wt-text"
+                                : "border-transparent text-wt-text-muted hover:border-wt-border hover:text-wt-text"
+                            )}
+                          >
+                            {chapter.title}
+                          </a>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </nav>
+
+        <div ref={contentRef} className="min-w-0 flex-1 lg:max-w-[46rem]">
+          {filteredChapters.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-wt-border bg-wt-surface-1 px-6 py-14 text-center">
+              <p className="text-sm font-medium text-wt-text">No articles match “{query}”.</p>
+              <p className="mt-1 text-sm text-wt-text-muted">
+                Try a different term, or clear the search to browse everything.
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="mt-4"
+                onClick={() => setQuery("")}
+              >
+                Clear search
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {filteredChapters.map((chapter) => (
+                <GuideChapterCard
+                  key={chapter.id}
+                  chapter={chapter}
+                  handbookView={handbookView}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
-    </DashboardPageShell>
+    </main>
+  );
+}
+
+function GuideChapterCard({
+  chapter,
+  handbookView,
+}: {
+  chapter: GuideChapter;
+  handbookView: GuideHandbookKind;
+}) {
+  return (
+    <article
+      id={`guide-${chapter.id}`}
+      data-guide-chapter={chapter.id}
+      className="scroll-mt-24 rounded-xl border border-wt-border bg-wt-surface-1 p-6 sm:p-8"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center rounded-full border border-wt-border bg-wt-surface-2 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-wt-text-muted">
+          {guideAudienceLabel(chapter.audience, handbookView)}
+        </span>
+        {chapter.relatedHref ? (
+          <Link
+            href={chapter.relatedHref}
+            className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-[var(--wt-brand)] hover:underline"
+          >
+            Open in WebTrak
+            <ArrowUpRight className="size-3.5" />
+          </Link>
+        ) : null}
+      </div>
+
+      <h2 className="mt-3 text-lg font-semibold tracking-tight text-wt-text sm:text-xl">
+        {chapter.title}
+      </h2>
+      <p className="mt-1.5 text-[15px] leading-relaxed text-wt-text-muted">
+        {chapter.summary}
+      </p>
+
+      {chapter.figureId ? (
+        <div className="mt-5">
+          <GuideFigure figureId={chapter.figureId} />
+        </div>
+      ) : null}
+
+      <ol className="mt-6 space-y-5">
+        {chapter.steps.map((step, index) => (
+          <li key={step.title} className="flex gap-3.5">
+            <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--wt-brand-soft)] text-[11px] font-semibold tabular-nums text-[var(--wt-brand)]">
+              {index + 1}
+            </span>
+            <div className="min-w-0">
+              <h3 className="text-[14px] font-semibold text-wt-text">{step.title}</h3>
+              <p className="mt-1 text-[14px] leading-relaxed text-wt-text-muted">
+                {step.body}
+              </p>
+              {step.tip ? (
+                <p className="mt-2.5 border-l-2 border-[color-mix(in_srgb,var(--wt-brand)_45%,transparent)] bg-wt-surface-2 py-1.5 pl-3 pr-3 text-[13px] leading-relaxed text-wt-text-muted">
+                  <span className="font-semibold text-[var(--wt-brand)]">Tip</span>{" "}
+                  {step.tip}
+                </p>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </article>
   );
 }

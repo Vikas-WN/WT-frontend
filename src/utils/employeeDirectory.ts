@@ -165,6 +165,22 @@ export function formatYoeDisplay(value: unknown): string {
   if (value === null || value === undefined) return "—";
   const text = String(value).trim();
   if (!text) return "—";
+
+  // API "years + months" form, e.g. "3Y 6M" / "3Y 0M" / "0Y 8M".
+  const yearMonth = /^(\d+)\s*y\s*(\d+)\s*m$/i.exec(text.replace(/\s+/g, " "));
+  if (yearMonth) {
+    const years = Number(yearMonth[1]);
+    const months = Number(yearMonth[2]);
+    const parts: string[] = [];
+    if (years > 0 || months === 0) {
+      parts.push(`${years} year${years === 1 ? "" : "s"}`);
+    }
+    if (months > 0) {
+      parts.push(`${months} month${months === 1 ? "" : "s"}`);
+    }
+    return parts.join(" ");
+  }
+
   if (/year/i.test(text)) return text;
   const num = Number(text);
   if (!Number.isNaN(num) && Number.isFinite(num)) {
@@ -661,7 +677,9 @@ export function buildGroupedProfileSections(
     ),
     profileEntry(
       "Years of Experience (excluding internship)",
-      formatYoeDisplay(pickProfileField(profile, ["yoe", "years_of_experience", "yearsOfExperience", "total_experience", "totalExperience"]))
+      // Prefer the API's year+month total ("3Y 6M") so the profile shows months,
+      // not just the whole-year `yoe` integer captured at onboarding.
+      formatYoeDisplay(pickProfileField(profile, ["total_experience", "totalExperience", "yoe", "years_of_experience", "yearsOfExperience"]))
     ),
     // Hide the Experience Summary row entirely when there is no prior experience
     // (empty, "—", or an all-zero "0Y 0M" / "0 years" summary).

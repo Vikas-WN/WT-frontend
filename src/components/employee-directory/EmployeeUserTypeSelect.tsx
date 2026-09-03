@@ -13,6 +13,7 @@ import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { formatUserTypeLabel } from "@/utils/offboardingFormState";
 import type { OnboardOptionItem } from "@/types/onboard-options";
 import { requiresUserTypeTransitionDialog, normalizeDirectoryUserType } from "@/utils/userTypeTransition";
+import { parseApiDate } from "@/utils/apiDate";
 import {
   bandDisplayLabel,
   bandSelectOptions,
@@ -131,10 +132,17 @@ export function EmployeeUserTypeSelect({
       // Offboarding candidates cache user_type independently — must refresh or
       // Full-Time fields stay visible after FULLTIME → CONSULTANT transitions.
       await queryClient.invalidateQueries({ queryKey: ["offboarding"] });
+      const pickedDate = transitionDate ? parseApiDate(transitionDate) : null;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const isScheduled = pickedDate != null && pickedDate.getTime() > today.getTime();
       showSuccessToast(
-        normalizedNext === "CONSULTANT"
-          ? "User type updated. Designation was cleared — set a consultant designation on the profile."
-          : "User type updated successfully."
+        isScheduled
+          ? `Transition to ${formatUserTypeLabel(normalizedNext)} scheduled for ${transitionDate}. ` +
+              "The user type, band and designation stay unchanged until that date, then update automatically."
+          : normalizedNext === "CONSULTANT"
+            ? "User type updated. Designation was cleared — set a consultant designation on the profile."
+            : "User type updated successfully."
       );
       setDialogOpen(false);
       setPendingType(null);
