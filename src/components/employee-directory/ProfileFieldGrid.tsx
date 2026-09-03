@@ -129,6 +129,16 @@ function ProfileFieldValue({ entry }: { entry: ProfileDisplayEntry }) {
     return <SkillsTable skills={entry.value} />;
   }
 
+  if (entry.asScrollableText) {
+    const text = formatProfileDisplayValue(entry.value);
+    if (text === "—") return <span className="text-wt-text-faint">—</span>;
+    return (
+      <div className="max-h-28 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-wt-border bg-wt-surface-2/40 px-3 py-2 text-sm font-normal leading-relaxed text-wt-text">
+        {text}
+      </div>
+    );
+  }
+
   return <>{formatProfileDisplayValue(entry.value)}</>;
 }
 

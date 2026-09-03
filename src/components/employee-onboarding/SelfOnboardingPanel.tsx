@@ -388,12 +388,16 @@ export function SelfOnboardingPanel({
         <TextAreaField
           label="Local address"
           className="sm:col-span-2"
+          rows={3}
+          textareaClassName="max-h-36 overflow-y-auto"
           value={form.local_address}
           onChange={(v) => setForm((p) => ({ ...p, local_address: v }))}
         />
         <TextAreaField
           label="Permanent address"
           className="sm:col-span-2"
+          rows={3}
+          textareaClassName="max-h-36 overflow-y-auto"
           value={form.permanent_address}
           onChange={(v) => setForm((p) => ({ ...p, permanent_address: v }))}
         />

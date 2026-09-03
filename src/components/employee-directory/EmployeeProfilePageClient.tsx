@@ -61,7 +61,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { AdaptiveSelectField, DatePickerField, InputField } from "@/components/dashboard/ui/forms";
+import { AdaptiveSelectField, DatePickerField, InputField, TextAreaField } from "@/components/dashboard/ui/forms";
 import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
 import { FormActionBar } from "@/components/dashboard/ui/FormActionBar";
 import { FormSection, FormSubsection } from "@/components/dashboard/ui/FormSection";
@@ -185,6 +185,20 @@ export function EmployeeProfilePageClient() {
   const primarySkillLookup = useMemo(
     () => new Map(primarySkillOptions.map((option) => [option.value.toLowerCase(), option.value])),
     [primarySkillOptions]
+  );
+
+  const personalChoiceOptions = (items: { value: string; label: string }[] | undefined, fallback: { value: string; label: string }[]) => [
+    { value: "", label: "Not specified" },
+    ...(items?.length ? items : fallback).map((o) => ({ value: o.value, label: o.label })),
+  ];
+  const genderOptions = personalChoiceOptions(onboardOptions?.genders, FALLBACK_ONBOARD_OPTIONS.genders);
+  const maritalStatusOptions = personalChoiceOptions(
+    onboardOptions?.marital_statuses,
+    FALLBACK_ONBOARD_OPTIONS.marital_statuses
+  );
+  const bloodGroupOptions = personalChoiceOptions(
+    onboardOptions?.blood_groups,
+    FALLBACK_ONBOARD_OPTIONS.blood_groups
   );
   const normalizePrimarySkills = (skills: EmployeeProfileEditForm["primary_skills"]) => {
     const normalizedSkills: EmployeeProfileEditForm["primary_skills"] = [];
@@ -1146,6 +1160,80 @@ export function EmployeeProfilePageClient() {
                           disabled={saving}
                           showWebknotRating
                           className="sm:col-span-3"
+                        />
+                      </div>
+                    </FormSubsection>
+
+                    <FormSubsection title="Personal details">
+                      <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
+                        <TextAreaField
+                          label="Current address"
+                          className="sm:col-span-3"
+                          rows={2}
+                          textareaClassName="max-h-36 overflow-auto"
+                          value={editForm.local_address}
+                          onChange={(v) =>
+                            setEditForm((prev) => (prev ? { ...prev, local_address: v } : prev))
+                          }
+                        />
+                        <TextAreaField
+                          label="Permanent address"
+                          className="sm:col-span-3"
+                          rows={2}
+                          textareaClassName="max-h-36 overflow-auto"
+                          value={editForm.permanent_address}
+                          onChange={(v) =>
+                            setEditForm((prev) => (prev ? { ...prev, permanent_address: v } : prev))
+                          }
+                        />
+                        <AdaptiveSelectField
+                          label="Gender"
+                          value={editForm.gender}
+                          options={genderOptions}
+                          disabled={saving}
+                          onChange={(v) =>
+                            setEditForm((prev) => (prev ? { ...prev, gender: v } : prev))
+                          }
+                        />
+                        <AdaptiveSelectField
+                          label="Marital status"
+                          value={editForm.marital_status}
+                          options={maritalStatusOptions}
+                          disabled={saving}
+                          onChange={(v) =>
+                            setEditForm((prev) => (prev ? { ...prev, marital_status: v } : prev))
+                          }
+                        />
+                        <AdaptiveSelectField
+                          label="Blood group"
+                          value={editForm.blood_group}
+                          options={bloodGroupOptions}
+                          disabled={saving}
+                          onChange={(v) =>
+                            setEditForm((prev) => (prev ? { ...prev, blood_group: v } : prev))
+                          }
+                        />
+                        <InputField
+                          label="Emergency contact name"
+                          value={editForm.emergency_contact_name}
+                          disabled={saving}
+                          onChange={(v) =>
+                            setEditForm((prev) =>
+                              prev ? { ...prev, emergency_contact_name: v } : prev
+                            )
+                          }
+                        />
+                        <InputField
+                          label="Emergency contact number"
+                          value={editForm.emergency_contact_number}
+                          disabled={saving}
+                          onChange={(v) =>
+                            setEditForm((prev) =>
+                              prev
+                                ? { ...prev, emergency_contact_number: digitsOnly(v) }
+                                : prev
+                            )
+                          }
                         />
                       </div>
                     </FormSubsection>
