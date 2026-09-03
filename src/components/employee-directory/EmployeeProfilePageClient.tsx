@@ -1153,6 +1153,7 @@ export function EmployeeProfilePageClient() {
                 )}
 
                 <FormActionBar
+                  sticky={false}
                   hint={
                     adminFieldsLocked
                       ? "HR-controlled fields on your own profile are view-only. Contact details and skills can still be updated."
