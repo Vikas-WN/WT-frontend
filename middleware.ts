@@ -29,7 +29,22 @@ export function middleware(request: NextRequest) {
 
   if (!hasToken) {
     const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
+    // Remember where the user was headed (e.g. a deep link from a notification
+    // email) so they land there after signing in instead of the default dashboard.
+    const intended = pathname + request.nextUrl.search;
+    if (pathname.startsWith("/dashboard") || pathname.startsWith("/onboarding")) {
+      loginUrl.searchParams.set("redirect", intended);
+    }
+    const response = NextResponse.redirect(loginUrl);
+    if (loginUrl.searchParams.has("redirect")) {
+      // Cookie survives the Google OAuth round-trip (the query param does not).
+      response.cookies.set("postLoginRedirect", intended, {
+        path: "/",
+        maxAge: 600,
+        sameSite: "lax",
+      });
+    }
+    return response;
   }
 
   return NextResponse.next();

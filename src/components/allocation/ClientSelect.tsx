@@ -47,6 +47,7 @@ export function ClientSelect({
       <FieldLabel label="Client" required={required} />
       <SearchableSelectCombobox
         value={value}
+        clearSelectionOnEmptyInput={false}
         onChange={(next) => {
           onChange(next);
           const client = clients.find((row) => String(row.id) === next);

@@ -42,6 +42,9 @@ import {
   resolveProfilePhotoSrc,
 } from "@/components/dashboard/ui/profile";
 import { pickProfileField } from "@/utils/employeeDirectory";
+import { isNonTechProfile } from "@/utils/roles";
+import { useOnboardOptions } from "@/hooks/useOnboardOptions";
+import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { ProfileEmployeeTrainingsSection } from "@/components/dashboard/profile/ProfileEmployeeTrainingsSection";
 import { ProfileAssignedProjectsSection } from "@/components/dashboard/profile/ProfileAssignedProjectsSection";
@@ -78,6 +81,23 @@ export function ProfilePageLeanClient() {
   } = useDashboardAccess();
 
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Same predefined skill list HR sees — keeps the Primary/Secondary Skills fields a
+  // searchable dropdown (with "add custom") for the employee too, not a free-text box.
+  // (React Compiler auto-memoizes; no manual useMemo needed.)
+  const { data: onboardOptions } = useOnboardOptions();
+  const toSkillSelectOptions = (
+    items: { value: string; label: string }[] | undefined,
+    fallback: { value: string; label: string }[],
+  ) => (items?.length ? items : fallback).map((o) => ({ value: o.value, label: o.label }));
+  const primarySkillOptions = toSkillSelectOptions(
+    onboardOptions?.primary_skills,
+    FALLBACK_ONBOARD_OPTIONS.primary_skills,
+  );
+  const secondarySkillOptions = toSkillSelectOptions(
+    onboardOptions?.secondary_skills,
+    FALLBACK_ONBOARD_OPTIONS.secondary_skills,
+  );
 
   const [profileAssignedProjects, setProfileAssignedProjects] = useState<
     Array<Record<string, unknown>>
@@ -266,6 +286,16 @@ export function ProfilePageLeanClient() {
   const renderEditPanel = () => {
     return (
     <div className="rounded-3xl border border-wt-border bg-wt-surface-1 p-6 shadow-[var(--wt-shadow-md)] wt-soft-in dark:shadow-none md:p-10">
+      <Button
+        variant="outline"
+        size="sm"
+        type="button"
+        className="mb-4"
+        onClick={() => setIsEditingOwnProfile(false)}
+        disabled={actionLoading}
+      >
+        ← Back
+      </Button>
       <h3 className="text-lg font-semibold tracking-tight text-wt-text">Edit Profile</h3>
       <p className="mb-5 mt-1 text-sm text-wt-text-muted">
         Keep your skills and personal details current. Date of birth locks after you confirm your age.
@@ -292,24 +322,36 @@ export function ProfilePageLeanClient() {
         <SkillRatingsListInput
           label="Primary Skills"
           required
-          hint="At least one skill with a self rating"
+          hint="Choose from the predefined list or add a new skill, then set a self rating"
           value={selfProfileForm.primary_skills}
           onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, primary_skills: v }))}
+          skillOptions={primarySkillOptions}
+          allowCustomSkills
           className="sm:col-span-2"
         />
         <SkillRatingsListInput
           label="Secondary Skills"
           required
-          hint="At least one skill with a self rating"
+          hint="Choose from the predefined list or add a new skill, then set a self rating"
           value={selfProfileForm.secondary_skills}
           onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, secondary_skills: v }))}
+          skillOptions={secondarySkillOptions}
+          allowCustomSkills
           className="sm:col-span-2"
         />
         <InputField
           label="Years of Experience (excluding internship)"
+          description="Whole years only. Add the exact duration (years and months) in Experience Summary."
           required
+          inputMode="numeric"
           value={selfProfileForm.yoe}
-          onChange={(v) => setSelfProfileForm((p) => ({ ...p, yoe: v }))}
+          onChange={(v) =>
+            setSelfProfileForm((p) => ({
+              ...p,
+              // Digits only, capped at 2 chars — no one has >99 years of experience.
+              yoe: v.replace(/\D/g, "").slice(0, 2),
+            }))
+          }
         />
         <DateOfBirthConfirmField
           value={selfProfileForm.date_of_birth}
@@ -373,10 +415,18 @@ export function ProfilePageLeanClient() {
             runAction("Update my profile", async () => {
               const primarySkills = selfProfileForm.primary_skills.filter((item) => String(item.skill ?? "").trim());
               const secondarySkills = selfProfileForm.secondary_skills.filter((item) => String(item.skill ?? "").trim());
-              if (!primarySkills.length) {
+              // Skills are only mandatory for technical roles; HR / Finance / other
+              // non-tech employees can save their profile without them.
+              const skillsRequired = !isNonTechProfile(
+                readProfileField(employeeProfile, "department"),
+                pickDesignationForDisplay(employeeProfile ?? {}),
+                readProfileField(employeeProfile, "role", "designation"),
+                readProfileField(employeeProfile, "user_type", "userType"),
+              );
+              if (skillsRequired && !primarySkills.length) {
                 throw new Error("At least one primary skill is required.");
               }
-              if (!secondarySkills.length) {
+              if (skillsRequired && !secondarySkills.length) {
                 throw new Error("At least one secondary skill is required.");
               }
               const dobLocked = Boolean(
@@ -450,10 +500,17 @@ export function ProfilePageLeanClient() {
               if (!Number.isInteger(Number(selfProfileForm.yoe))) {
                 throw new Error("Years of experience must be a whole number.");
               }
+              if (yoeValue > 60) {
+                throw new Error("Years of experience must be 60 or less.");
+              }
               const profilePayload: Record<string, unknown> = {
                 phone_number: formattedPhoneNumber,
-                primary_skills: primarySkills,
-                secondary_skills: secondarySkills,
+                // Non-tech employees with no skills: omit the arrays entirely so the
+                // backend's "at least one skill" check (which only runs when a skills
+                // list is present) is skipped.
+                ...(skillsRequired || primarySkills.length || secondarySkills.length
+                  ? { primary_skills: primarySkills, secondary_skills: secondarySkills }
+                  : {}),
                 experience:
                   yoeValue > 0 ? `${yoeValue} years` : null,
                 yoe: yoeValue,

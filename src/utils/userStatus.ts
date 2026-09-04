@@ -16,7 +16,7 @@ export function normalizeEmployeeStatusKey(status: unknown): string {
     .toUpperCase()
     .replace(/[\s-]+/g, "_");
 
-  if (compact === "ONBOARDING") return "INVITED";
+  if (compact === "ONBOARDING" || compact === "PENDING") return "INVITED";
   if (compact === "OFFBOARDED") return "INACTIVE";
   if (
     compact === "IN_NOTICE" ||
@@ -110,8 +110,8 @@ const STAFF_PORTAL_ROLES = new Set([
   "ROLE_FINANCE",
 ]);
 
-function hasStaffPortalRole(roles: string[]): boolean {
-  return roles.some((role) => STAFF_PORTAL_ROLES.has(normalizeRoleName(role)));
+export function hasStaffPortalRole(roles: string[] | undefined | null): boolean {
+  return (roles ?? []).some((role) => STAFF_PORTAL_ROLES.has(normalizeRoleName(role)));
 }
 
 function normalizeRoleName(role: string): string {
@@ -127,6 +127,20 @@ export function shouldRequireSelfOnboarding(status: unknown): boolean {
   return statusKey !== "ACTIVE";
 }
 
+/**
+ * Role-aware gate for the self-onboarding redirect. Staff-portal users
+ * (HR / Admin / Manager / DM / AM / Finance) are never pushed into the
+ * employee self-onboarding flow, regardless of the status on their record —
+ * otherwise a missing/legacy status value traps them on /dashboard/profile.
+ */
+export function shouldRequireSelfOnboardingForUser(
+  status: unknown,
+  roles: string[] | undefined | null
+): boolean {
+  if (hasStaffPortalRole(roles)) return false;
+  return shouldRequireSelfOnboarding(status);
+}
+
 /** Exit survey form — employee self-serve while serving notice only. */
 export function shouldShowExitSurveyForStatus(
   status: unknown,
@@ -140,10 +154,14 @@ export function shouldShowExitSurveyForStatus(
   return employeeSelfServe && isServingNoticeUserStatus(status);
 }
 
-/** Active or invited employees eligible for HR offboarding. */
+/**
+ * Employees eligible for HR offboarding: active, or not-yet-active (invited /
+ * mid-onboarding). "ONBOARDING" normalizes to "INVITED"; "PENDING" is a legacy
+ * directory alias for the same pre-active state.
+ */
 export function isEligibleOffboardCandidateStatus(status: unknown): boolean {
   const key = normalizeEmployeeStatusKey(status);
-  return key === "ACTIVE" || key === "INVITED";
+  return key === "ACTIVE" || key === "INVITED" || key === "PENDING";
 }
 
 /** @deprecated Use isServingNoticeUserStatus */

@@ -1,6 +1,6 @@
 /** Session security policy — keep in sync with backend SESSION_* settings. */
 export const SESSION_INACTIVITY_MS =
-  Number(process.env.NEXT_PUBLIC_SESSION_INACTIVITY_MINUTES ?? 30) * 60 * 1000;
+  Number(process.env.NEXT_PUBLIC_SESSION_INACTIVITY_MINUTES ?? 240) * 60 * 1000;
 
 export const SESSION_MAX_MS =
   Number(process.env.NEXT_PUBLIC_SESSION_MAX_HOURS ?? 8) * 60 * 60 * 1000;
@@ -19,7 +19,7 @@ export const SESSION_IDLE_WARNING_MS = 5 * 60 * 1000;
 export type SessionLogoutReason = "idle" | "expired" | "server" | "inactive";
 
 export const sessionLogoutMessages: Record<SessionLogoutReason, string> = {
-  idle: "You were logged out after 30 minutes of inactivity.",
+  idle: "You were logged out after 4 hours of inactivity.",
   expired: "Your session has expired after 8 hours. Please sign in again.",
   server: "Your session has ended. Please sign in again.",
   inactive: "Your account is inactive. Please contact HR.",

@@ -16,6 +16,15 @@ function loginRedirect(request: NextRequest, error?: string) {
   return NextResponse.redirect(url);
 }
 
+/** Same-origin absolute app path only — blocks open-redirect / protocol-relative tricks. */
+function safeInternalPath(value: string | undefined | null): string | null {
+  if (!value) return null;
+  if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
+    return null;
+  }
+  return /^\/(dashboard|onboarding)(\/|$|\?)/.test(value) ? value : null;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const oauthError = searchParams.get("error");
@@ -83,7 +92,9 @@ export async function GET(request: NextRequest) {
   };
   const data = payload.data;
 
-  const response = NextResponse.redirect(new URL("/dashboard", appBaseUrl));
+  const destination =
+    safeInternalPath(request.cookies.get("postLoginRedirect")?.value) ?? "/dashboard";
+  const response = NextResponse.redirect(new URL(destination, appBaseUrl));
   setAuthCookies(response, data);
   response.cookies.set("oauthState", "", {
     httpOnly: true,
@@ -92,5 +103,6 @@ export async function GET(request: NextRequest) {
     maxAge: 0,
     path: "/",
   });
+  response.cookies.set("postLoginRedirect", "", { path: "/", maxAge: 0, sameSite: "lax" });
   return response;
 }

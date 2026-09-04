@@ -165,6 +165,22 @@ export function formatYoeDisplay(value: unknown): string {
   if (value === null || value === undefined) return "—";
   const text = String(value).trim();
   if (!text) return "—";
+
+  // API "years + months" form, e.g. "3Y 6M" / "3Y 0M" / "0Y 8M".
+  const yearMonth = /^(\d+)\s*y\s*(\d+)\s*m$/i.exec(text.replace(/\s+/g, " "));
+  if (yearMonth) {
+    const years = Number(yearMonth[1]);
+    const months = Number(yearMonth[2]);
+    const parts: string[] = [];
+    if (years > 0 || months === 0) {
+      parts.push(`${years} year${years === 1 ? "" : "s"}`);
+    }
+    if (months > 0) {
+      parts.push(`${months} month${months === 1 ? "" : "s"}`);
+    }
+    return parts.join(" ");
+  }
+
   if (/year/i.test(text)) return text;
   const num = Number(text);
   if (!Number.isNaN(num) && Number.isFinite(num)) {
@@ -254,7 +270,11 @@ export function onboardRowToListRow(row: OnboardRowInput): Record<string, string
       ? "—"
       : String(record.band ?? record.band_name ?? record.bandName ?? "").trim() || "—",
     date_of_joining: formatDirectoryDate(
-      record.date_of_joining ?? record.doj ?? record.joining_date ?? record.joiningDate
+      record.date_of_joining 
+      ?? record.doj 
+      ?? record.joining_date 
+      ?? record.joiningDate 
+      ?? record.dateOfJoining
     ),
     date_of_birth: formatDirectoryDate(record.date_of_birth ?? record.dob),
     status: normalizeStatusLabel(record.user_status ?? record.userStatus ?? record.status),
@@ -316,6 +336,14 @@ export type EmployeeProfileEditForm = {
   band_id: string;
   primary_skills: SkillRating[];
   secondary_skills: SkillRating[];
+  /** Optional personal details (HR/Admin directory edit). */
+  local_address: string;
+  permanent_address: string;
+  gender: string;
+  marital_status: string;
+  blood_group: string;
+  emergency_contact_name: string;
+  emergency_contact_number: string;
   /** Required when transitioning status to Serving Notice Period. */
   resignation_date: string;
   last_working_day: string;
@@ -374,6 +402,25 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
     ).trim(),
     primary_skills: primarySkills,
     secondary_skills: secondarySkills,
+    local_address: String(
+      pickProfileField(profile, ["local_address", "localAddress"]) ?? ""
+    ),
+    permanent_address: String(
+      pickProfileField(profile, ["permanent_address", "permanentAddress"]) ?? ""
+    ),
+    gender: String(pickProfileField(profile, ["gender"]) ?? "").trim(),
+    marital_status: String(
+      pickProfileField(profile, ["marital_status", "maritalStatus"]) ?? ""
+    ).trim(),
+    blood_group: String(
+      pickProfileField(profile, ["blood_group", "bloodGroup"]) ?? ""
+    ).trim(),
+    emergency_contact_name: String(
+      pickProfileField(profile, ["emergency_contact_name", "emergencyContactName"]) ?? ""
+    ),
+    emergency_contact_number: String(
+      pickProfileField(profile, ["emergency_contact_number", "emergencyContactNumber"]) ?? ""
+    ),
     resignation_date: String(
       pickProfileField(profile, [
         "exit_interview_resignation_date",
@@ -414,6 +461,14 @@ export function editFormToUpdatePayload(
     work_location_type: form.work_location_type.trim(),
     primary_skills: form.primary_skills.length ? form.primary_skills : null,
     secondary_skills: form.secondary_skills.length ? form.secondary_skills : [],
+    // Optional personal details — empty string clears the stored value.
+    local_address: form.local_address.trim(),
+    permanent_address: form.permanent_address.trim(),
+    gender: form.gender.trim(),
+    marital_status: form.marital_status.trim(),
+    blood_group: form.blood_group.trim(),
+    emergency_contact_name: form.emergency_contact_name.trim(),
+    emergency_contact_number: form.emergency_contact_number.trim(),
   };
 
   // Consultants do not use band — never send band_id (API rejects it).
@@ -447,6 +502,8 @@ export type ProfileDisplayEntry = {
   asUserTypeHistoryTable?: boolean;
   /** When true, render skills array as a table with Skill, Self Rating, Webknot Rating columns. */
   asSkillsTable?: boolean;
+  /** When true, render value in a read-only, internally-scrolling box (long free text like addresses). */
+  asScrollableText?: boolean;
 };
 
 export type ProfileDisplaySection = {
@@ -463,6 +520,7 @@ function profileEntry(
     asStatusBadge?: boolean;
     asUserTypeHistoryTable?: boolean;
     asSkillsTable?: boolean;
+    asScrollableText?: boolean;
   }
 ): ProfileDisplayEntry {
   return { label, value, ...options };
@@ -523,6 +581,18 @@ function formatAadharCardStatus(profile: Record<string, unknown>): string {
   const raw = pickProfileField(profile, ["aadhar_card", "aadharCard"]);
   if (raw && String(raw).trim() && String(raw).trim() !== "—") return "Uploaded";
   return "Not uploaded";
+}
+
+/**
+ * True when the free-text experience summary carries real content — not empty,
+ * not "—", and not an all-zero "0Y 0M" / "0 years" placeholder.
+ */
+function isMeaningfulExperienceSummary(value: unknown): boolean {
+  const text = String(value ?? "").trim();
+  if (!text || text === "—") return false;
+  const digits = text.match(/\d+/g);
+  if (digits && digits.length > 0 && digits.every((d) => Number(d) === 0)) return false;
+  return true;
 }
 
 /** Grouped profile fields for the HR employee directory profile view. */
@@ -589,7 +659,7 @@ export function buildGroupedProfileSections(
           profileEntry(
             "Date of Joining",
             formatDirectoryDate(
-              pickProfileField(profile, ["date_of_joining", "doj", "joining_date", "joiningDate"])
+              pickProfileField(profile, ["date_of_joining", "doj", "joining_date", "joiningDate", "dateOfJoining"])
             )
           ),
         ]),
@@ -607,13 +677,23 @@ export function buildGroupedProfileSections(
     ),
     profileEntry(
       "Years of Experience (excluding internship)",
-      formatYoeDisplay(pickProfileField(profile, ["yoe", "years_of_experience", "yearsOfExperience", "total_experience", "totalExperience"]))
+      // Prefer the API's year+month total ("3Y 6M") so the profile shows months,
+      // not just the whole-year `yoe` integer captured at onboarding.
+      formatYoeDisplay(pickProfileField(profile, ["total_experience", "totalExperience", "yoe", "years_of_experience", "yearsOfExperience"]))
     ),
-    profileEntry(
-      "Experience Summary (excluding internship)",
-      pickProfileField(profile, ["experience", "experience_summary", "experienceSummary"]),
-      { fullWidth: true }
-    ),
+    // Hide the Experience Summary row entirely when there is no prior experience
+    // (empty, "—", or an all-zero "0Y 0M" / "0 years" summary).
+    ...(isMeaningfulExperienceSummary(
+      pickProfileField(profile, ["experience", "experience_summary", "experienceSummary"])
+    )
+      ? [
+          profileEntry(
+            "Experience Summary (excluding internship)",
+            pickProfileField(profile, ["experience", "experience_summary", "experienceSummary"]),
+            { fullWidth: true }
+          ),
+        ]
+      : []),
   ];
 
   function formatGenderLabel(value: unknown): string {
@@ -634,11 +714,12 @@ export function buildGroupedProfileSections(
     profileEntry("Nationality", pickProfileField(profile, ["nationality"])),
     profileEntry("Local Address", pickProfileField(profile, ["local_address", "localAddress"]), {
       fullWidth: true,
+      asScrollableText: true,
     }),
     profileEntry(
       "Permanent Address",
       pickProfileField(profile, ["permanent_address", "permanentAddress"]),
-      { fullWidth: true }
+      { fullWidth: true, asScrollableText: true }
     ),
     profileEntry(
       "Emergency Contact",

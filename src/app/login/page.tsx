@@ -113,9 +113,28 @@ function LoginShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Same-origin app path only — blocks open-redirect / protocol-relative values. */
+function safeInternalPath(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
+    return null;
+  }
+  return /^\/(dashboard|onboarding)(\/|$|\?)/.test(value) ? value : null;
+}
+
+function readPostLoginRedirectCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|;\s*)postLoginRedirect=([^;]+)/);
+  return match ? safeInternalPath(decodeURIComponent(match[1] ?? "")) : null;
+}
+
 function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const postLoginTarget =
+    safeInternalPath(searchParams.get("redirect")) ??
+    readPostLoginRedirectCookie() ??
+    "/dashboard";
   const { status } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [sessionLogoutReason, setSessionLogoutReason] = useState<SessionLogoutReason | null>(null);
@@ -147,9 +166,9 @@ function LoginPageInner() {
   useEffect(() => {
     if (status === "authenticated" && !didRedirect.current) {
       didRedirect.current = true;
-      window.location.replace("/dashboard");
+      window.location.replace(postLoginTarget);
     }
-  }, [status]);
+  }, [status, postLoginTarget]);
 
   useEffect(() => {
     if (status !== "unauthenticated" || didPostLoginRefresh.current) return;
@@ -159,13 +178,13 @@ function LoginPageInner() {
         const fresh = await fetchMe();
         if (fresh && !didRedirect.current) {
           didRedirect.current = true;
-          window.location.replace("/dashboard");
+          window.location.replace(postLoginTarget);
         }
       } catch {
         /* Backend may be down; stay on login. */
       }
     })();
-  }, [status]);
+  }, [status, postLoginTarget]);
 
   function handleGoogleSignIn() {
     setGoogleLoading(true);

@@ -17,7 +17,7 @@ import {
 import Link from "next/link";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
@@ -76,12 +76,6 @@ const LIST_COLUMNS: Array<{ key: string; label: string }> = [
   { key: "user_type", label: "User Type" },
   { key: "work_mode", label: "Mode" },
   { key: "status", label: "Status" },
-];
-
-const PRESENCE_FILTER_OPTIONS = [
-  { value: "", label: "All presence" },
-  { value: "online", label: "Online now" },
-  { value: "offline", label: "Offline" },
 ];
 
 const DIRECTORY_STATS = [
@@ -163,7 +157,7 @@ export function EmployeeDirectoryPageClient() {
   const [userTypeFilter, setUserTypeFilter] = useState("");
   const [primarySkillFilter, setPrimarySkillFilter] = useState("");
   const [secondarySkillFilter, setSecondarySkillFilter] = useState("");
-  const [presenceFilter, setPresenceFilter] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("");
   const [sortId, setSortId] = useState("doj_desc");
   const [deleteTarget, setDeleteTarget] = useState<{
     empId: string;
@@ -190,15 +184,6 @@ export function EmployeeDirectoryPageClient() {
   const { data: rows = [], isLoading, isError, error, refetch } = useEmployeeDirectoryList({
     enabled: queriesEnabled,
   });
-
-  // Keep Online Now accurate shortly after someone logs out.
-  useEffect(() => {
-    if (!queriesEnabled || presenceFilter !== "online") return;
-    const id = window.setInterval(() => {
-      void refetch();
-    }, 30_000);
-    return () => window.clearInterval(id);
-  }, [queriesEnabled, presenceFilter, refetch]);
 
   const primarySkillOptions = useMemo(() => {
     const fromOptions = onboardOptionsQ.data?.primary_skills || [];
@@ -248,6 +233,24 @@ export function EmployeeDirectoryPageClient() {
     );
   }, [onboardOptionsQ.data, rows]);
 
+  const departmentOptions = useMemo(() => {
+    const merged = new Map<string, string>();
+    for (const item of onboardOptionsQ.data?.departments ?? []) {
+      const label = (item.label || item.value || "").trim();
+      if (label) merged.set(label.toLowerCase(), label);
+    }
+    for (const row of rows) {
+      const record = row as unknown as Record<string, unknown>;
+      const dept = String(record.department ?? "").trim();
+      if (dept && !merged.has(dept.toLowerCase())) merged.set(dept.toLowerCase(), dept);
+    }
+    return [{ value: "", label: "All Departments" }].concat(
+      Array.from(merged.values())
+        .sort((a, b) => a.localeCompare(b))
+        .map((label) => ({ value: label, label }))
+    );
+  }, [onboardOptionsQ.data, rows]);
+
   const tableRows = useMemo(() => {
     const needle = debouncedSearch.trim().toLowerCase();
     const filtered = rows
@@ -263,8 +266,13 @@ export function EmployeeDirectoryPageClient() {
         if (userTypeFilter && normalizeUserType(record.user_type ?? record.userType) !== userTypeFilter) {
           return false;
         }
-        if (presenceFilter === "online" && !rowIsOnline(record)) return false;
-        if (presenceFilter === "offline" && rowIsOnline(record)) return false;
+        if (
+          departmentFilter &&
+          String(record.department ?? "").trim().toLowerCase() !==
+            departmentFilter.trim().toLowerCase()
+        ) {
+          return false;
+        }
         if (primarySkillFilter) {
           if (!rowHasSkill(record.primary_skills ?? record.primarySkills, primarySkillFilter)) {
             return false;
@@ -314,7 +322,7 @@ export function EmployeeDirectoryPageClient() {
     userTypeFilter,
     primarySkillFilter,
     secondarySkillFilter,
-    presenceFilter,
+    departmentFilter,
     sortId,
   ]);
 
@@ -344,7 +352,7 @@ export function EmployeeDirectoryPageClient() {
       userTypeFilter,
       primarySkillFilter,
       secondarySkillFilter,
-      presenceFilter,
+      departmentFilter,
       sortId,
     ],
   });
@@ -465,12 +473,13 @@ export function EmployeeDirectoryPageClient() {
                 </div>
                 <div className="flex flex-wrap items-end gap-2.5">
                   <SelectField
-                    label="Presence"
-                    className="w-[10.5rem] shrink-0 gap-1.5"
-                    value={presenceFilter}
-                    onChange={setPresenceFilter}
-                    options={PRESENCE_FILTER_OPTIONS}
-                    placeholder="All presence"
+                    label="Department"
+                    className="w-[11.5rem] shrink-0 gap-1.5"
+                    value={departmentFilter}
+                    onChange={setDepartmentFilter}
+                    options={departmentOptions}
+                    placeholder="All Departments"
+                    contentClassName="max-w-[min(20rem,calc(100vw-1rem))]"
                   />
                   <SelectField
                     label="User Type"
@@ -525,7 +534,7 @@ export function EmployeeDirectoryPageClient() {
               emptyDescription={
                 debouncedSearch.trim() ||
                 userTypeFilter ||
-                presenceFilter ||
+                departmentFilter ||
                 primarySkillFilter ||
                 secondarySkillFilter
                   ? "Try adjusting your search or filters."

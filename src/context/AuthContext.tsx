@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return rawUser;
   }, [rawUser, activePersona]);
   const sessionInactivityMs = useMemo(
-    () => Math.max(1, Number(user?.session_inactivity_minutes ?? 30)) * 60 * 1000,
+    () => Math.max(1, Number(user?.session_inactivity_minutes ?? 240)) * 60 * 1000,
     [user?.session_inactivity_minutes]
   );
   const sessionMaxMs = useMemo(

@@ -59,7 +59,7 @@ export function clearSessionTiming() {
 }
 
 /**
- * Logs the user out after 30 minutes of inactivity or 8 hours absolute session age.
+ * Logs the user out after 4 hours of inactivity or 8 hours absolute session age.
  * Activity: mouse, keyboard, scroll, touch, focus, and client-side navigation.
  */
 export function useSessionTimeout(

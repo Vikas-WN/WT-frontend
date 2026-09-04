@@ -183,9 +183,13 @@ export function SearchableSelectCombobox({
         align={align}
         collisionPadding={8}
         collisionAvoidance={{
+          // Anchored, scrollable listbox — behave like a dropdown: flip top/bottom
+          // and shift into view, but never fall back to a left/right side of the
+          // field (that pushes right-column dropdowns past the viewport edge). When
+          // vertical space is tight the list scrolls internally instead.
           side: "flip",
           align: "shift",
-          fallbackAxisSide: "end",
+          fallbackAxisSide: "none",
         }}
         // Inside modals: portal into the body host and use absolute positioning so
         // clipping-ancestors bound height above Cancel/Next. Outside: fixed to body.

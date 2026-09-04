@@ -319,6 +319,11 @@ export function AllocationExtensionPanel() {
       return;
     }
 
+    if (!reason) {
+      showErrorToast("Reason is required.");
+      return;
+    }
+
     const bodyPreview = buildCreateAllocationExtensionBody({
       userEmail: userEmails[0]!,
       projectCode,
@@ -699,8 +704,6 @@ export function AllocationExtensionPanel() {
               ]}
             />
           ) : null}
-
-          {listPagination}
         </div>
 
         {visibleRows.length ? (

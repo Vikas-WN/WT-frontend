@@ -246,7 +246,7 @@ export function CreateProjectDialog({
     const clientIsSelectable = (clientsQ.data ?? []).some(
       (client) => String(client.id) === clientIdRaw
     );
-    if (!clientIsSelectable) {
+    if (!clientIsSelectable && !isEditing) {
       showErrorToast("Select a client from the list.");
       return;
     }
@@ -343,10 +343,16 @@ export function CreateProjectDialog({
     try {
       if (isEditing) {
         const code = editingProjectCode.trim();
+        // Only send the client when it was actually changed. Re-sending the loaded
+        // id on an unrelated edit (e.g. just the end date) forces client
+        // re-validation and fails when the existing client isn't in the active
+        // picker list. Omitting it leaves the project's current client untouched.
+        const initialClientId = String(initialForm?.client_id ?? "").trim();
+        const clientChanged = Boolean(clientIdRaw) && clientIdRaw !== initialClientId;
         await hrmsService.updateProject(code, {
           project_name: name,
           project_type: form.project_type,
-          client_id: clientIdRaw,
+          ...(clientChanged ? { client_id: clientIdRaw } : {}),
           start_date: startDate,
           end_date: endDate,
         });

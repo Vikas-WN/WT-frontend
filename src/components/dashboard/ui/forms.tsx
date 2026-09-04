@@ -127,7 +127,7 @@ export function ApiDateField({
           type="date"
           tabIndex={-1}
           aria-hidden
-          className="sr-only"
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
           value={apiDateToInputValue(value)}
           min={min ? apiDateToInputValue(min) : undefined}
           max={max ? apiDateToInputValue(max) : undefined}

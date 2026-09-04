@@ -2,16 +2,18 @@
 
 import { normalizeApiBaseUrl } from "@/api/httpClient";
 import { useState } from "react";
+import { formatUILabel } from "@/utils/titleCase";
+import { formatUiStatusLabel, normalizeStatusKey } from "@/utils/statusLabel";
+import { formatEmployeeStatusLabel, normalizeEmployeeStatusKey } from "@/utils/userStatus";
 
 const LOCAL_BACKEND_FALLBACK = "http://localhost:8080";
 
 function resolveProfileAssetBaseUrl(): string {
+  // Browser requests must use the Next.js BFF so authenticated image downloads
+  // receive the session cookies. Server rendering uses the configured backend.
   if (typeof window !== "undefined") return window.location.origin;
   return normalizeApiBaseUrl(process.env.API_BASE_URL ?? LOCAL_BACKEND_FALLBACK);
 }
-import { formatUILabel } from "@/utils/titleCase";
-import { formatUiStatusLabel, normalizeStatusKey } from "@/utils/statusLabel";
-import { formatEmployeeStatusLabel, normalizeEmployeeStatusKey } from "@/utils/userStatus";
 
 export function resolveProfilePhotoSrc(profile: Record<string, unknown> | null | undefined): string | null {
   if (!profile) return null;
@@ -35,8 +37,17 @@ export function resolveProfilePhotoSrc(profile: Record<string, unknown> | null |
     return raw;
   }
   const base = resolveProfileAssetBaseUrl();
-  if (raw.startsWith("local://uploads/")) {
-    const filename = raw.slice("local://uploads/".length);
+  // Stored photo references appear in several historic shapes:
+  //   local://uploads/<name>, local://uploads/profile_photos/<name>,
+  //   uploads/profile_photos/<name>, /uploads/<name>, or a bare <name>.
+  // The photo endpoint keys on the trailing filename, so collapse any of these
+  // to their basename before building the URL.
+  const withoutScheme = raw.startsWith("local://") ? raw.slice("local://".length) : raw;
+  const looksLikeStoredUpload =
+    raw.startsWith("local://") || /^\/?uploads\//.test(withoutScheme);
+  if (looksLikeStoredUpload) {
+    const filename = withoutScheme.split("/").filter(Boolean).pop() ?? "";
+    if (!filename) return null;
     return `${base}/api/v1/profile/photo/${encodeURIComponent(filename)}`;
   }
   return raw.startsWith("/") ? `${base}${raw}` : `${base}/${raw}`;

@@ -23,8 +23,11 @@ export function SessionLogoutDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
+      // Opaque, top-most cover: once the session has ended the app content behind
+      // must be fully hidden and non-interactive until the user signs in again.
+      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-wt-bg p-4"
       role="presentation"
+      onClick={(event) => event.stopPropagation()}
     >
       <div
         role="alertdialog"

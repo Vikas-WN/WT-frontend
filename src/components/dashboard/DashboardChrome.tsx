@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -32,7 +31,7 @@ import { formatRoleLabel } from "@/utils/roles";
 import { cleanEmployeeName } from "@/utils/employeeDirectory";
 import { shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
 import { selfProfileQueryKey } from "@/hooks/useSelfProfile";
-import { dashboardHref, DASHBOARD_ROUTES, isDashboardNavChildActive } from "@/constants/routes";
+import { dashboardHref, isDashboardNavChildActive } from "@/constants/routes";
 import { learningSubNav } from "@/constants/learningNav";
 import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
 
@@ -117,11 +116,6 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const hasDmAccess = userRoles.includes("ROLE_DM");
   const hasAccountManagerAccess = userRoles.includes("ROLE_AM");
   const canAccessProfile = Boolean(user) && !shouldSkipSelfProfileFetch(userRoles);
-  const isEmployeeDirectoryRoute = pathname.startsWith("/dashboard/employee-directory");
-  const isEmployeeOnboardingRoute =
-    pathname === DASHBOARD_ROUTES.employee ||
-    pathname.startsWith(`${DASHBOARD_ROUTES.employee}/`);
-  const isEmployeeProfileRoute = Boolean(pathname.match(/^\/dashboard\/employee-directory\/[^/]+$/));
   const isHrPortalUser =
     (userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN")) &&
     !userRoles.includes("ROLE_EMPLOYEE");
@@ -407,38 +401,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
             <h2 className="truncate text-xl font-semibold tracking-tight text-wt-text sm:text-[1.35rem]">
               {pageTitle}
             </h2>
-            {isEmployeeDirectoryRoute && !isLearningRoute && !isEmployeeOnboardingRoute ? (
-              <nav
-                className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-wt-text-muted"
-                aria-label="Breadcrumb"
-              >
-                {/*
-                  "Employee" is a nav group, not a page. Linking it sent users to the
-                  Onboarding child, which misrepresents the path, so it stays plain text.
-                */}
-                <span>Employee</span>
-                <span aria-hidden>/</span>
-                {isEmployeeProfileRoute ? (
-                  <>
-                    <Link
-                      prefetch={false}
-                      href={DASHBOARD_ROUTES["employee-directory"]}
-                      className="hover:text-wt-text transition"
-                    >
-                      Directory
-                    </Link>
-                    <span aria-hidden>/</span>
-                    <span className="text-wt-text" aria-current="page">
-                      Employee Profile
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-wt-text" aria-current="page">
-                    Directory
-                  </span>
-                )}
-              </nav>
-            ) : isLearningRoute ? (
+            {isLearningRoute ? (
               <p className="text-xs text-wt-text-muted">{learningSectionTitle}</p>
             ) : null}
             </div>

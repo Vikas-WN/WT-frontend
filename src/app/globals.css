@@ -427,7 +427,7 @@ body::-webkit-scrollbar {
 /* Horizontal + vertical scroll (e.g. wide tables), scrollbar hidden */
 .wt-scroll-both {
   overflow: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior: auto;
 }
 
 /* Horizontal scroll with visible scrollbar for wide data tables */
