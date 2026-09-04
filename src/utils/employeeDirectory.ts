@@ -23,6 +23,8 @@ function formatWorkModeLabel(value: unknown): string {
   if (normalized === "HYBRID") return "Hybrid";
   if (normalized === "REMOTE") return "Remote";
   if (normalized === "ONSITE" || normalized === "ON_SITE") return "Onsite";
+  // Acronyms stay fully upper-cased regardless of how they are stored.
+  if (normalized === "WFO" || normalized === "WFH") return normalized;
   return String(value ?? "").trim() || "—";
 }
 
@@ -279,7 +281,7 @@ export function onboardRowToListRow(row: OnboardRowInput): Record<string, string
     date_of_birth: formatDirectoryDate(record.date_of_birth ?? record.dob),
     status: normalizeStatusLabel(record.user_status ?? record.userStatus ?? record.status),
     user_type: formatUserTypeLabel(String(record.user_type ?? record.userType ?? "")),
-    work_mode: String(record.work_mode ?? record.workMode ?? "").trim() || "—",
+    work_mode: formatWorkModeLabel(record.work_mode ?? record.workMode),
     work_location: String(
       record.work_location ?? record.work_location_type ?? record.workLocationType ?? ""
     ).trim() || "—",
@@ -488,6 +490,9 @@ export type UserTypeTransitionDisplayRow = {
   previousUserType: string;
   newUserType: string;
   effectiveDate: string;
+  /** False for a future-dated transition the daily job has not applied yet. */
+  isScheduled: boolean;
+  status: "Scheduled" | "Applied";
 };
 
 export type ProfileDisplayEntry = {
@@ -530,7 +535,7 @@ function formatUserTypeTransitionHistory(profile: Record<string, unknown>): User
   const raw = profile.user_type_transitions ?? profile.userTypeTransitions;
   if (!Array.isArray(raw) || !raw.length) return [];
 
-  return raw.map((item) => {
+  const rows = raw.map((item) => {
     if(!item || typeof item !== "object") return null;
 
     const row = item as Record<string, unknown>;
@@ -556,13 +561,27 @@ function formatUserTypeTransitionHistory(profile: Record<string, unknown>): User
       return null;
     }
 
+    // `applied` is false only for a future-dated transition the daily job has
+    // not run yet. Missing (older payloads) → treat as an applied history row.
+    const appliedRaw = row.applied ?? row.isApplied;
+    const isScheduled = appliedRaw === false;
+
     return{
       previousUserType,
       newUserType,
-      effectiveDate
-    };
+      effectiveDate,
+      isScheduled,
+      status: isScheduled ? "Scheduled" : "Applied",
+    } satisfies UserTypeTransitionDisplayRow;
   })
       .filter((row): row is UserTypeTransitionDisplayRow => row !== null);
+
+  // Scheduled (pending) transitions first so HR sees an upcoming change up top;
+  // applied rows keep the backend's newest-first order.
+  return [
+    ...rows.filter((row) => row.isScheduled),
+    ...rows.filter((row) => !row.isScheduled),
+  ];
 }
 
 /** PAN is stored as a document path — surface on-file status on profiles. */

@@ -37,13 +37,19 @@ function UserTypeHistoryTable({ rows } : { rows: UserTypeTransitionDisplayRow[] 
               <TableCell className="bg-wt-surface-2/60 px-3 py-2 text-xs font-semibold text-wt-text-muted">
                 Effective Date
               </TableCell>
+              <TableCell className="bg-wt-surface-2/60 px-3 py-2 text-xs font-semibold text-wt-text-muted">
+                Status
+              </TableCell>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((row, index) => (
                 <TableRow
                 key={`${row.previousUserType}-${row.newUserType}-${row.effectiveDate}-${index}`}
-                className="hover:bg-transparent"
+                className={cn(
+                  "hover:bg-transparent",
+                  row.isScheduled && "bg-wt-brand-soft/40"
+                )}
                 >
                   <TableCell className="px-3 py-2 text-sm text-wt-text">
                     {row.previousUserType}
@@ -52,7 +58,19 @@ function UserTypeHistoryTable({ rows } : { rows: UserTypeTransitionDisplayRow[] 
                     {row.newUserType}
                   </TableCell>
                   <TableCell className="px-3 py-3 text-sm text-wt-text">
-                    {row.effectiveDate}
+                    {row.isScheduled ? `Scheduled for ${row.effectiveDate}` : row.effectiveDate}
+                  </TableCell>
+                  <TableCell className="px-3 py-2 text-sm">
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                        row.isScheduled
+                          ? "bg-wt-brand-soft text-wt-brand"
+                          : "bg-wt-surface-2 text-wt-text-muted"
+                      )}
+                    >
+                      {row.status}
+                    </span>
                   </TableCell>
                 </TableRow>
             ))}

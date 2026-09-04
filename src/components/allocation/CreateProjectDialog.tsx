@@ -237,6 +237,15 @@ export function CreateProjectDialog({
       showErrorToast("Client is required.");
       return;
     }
+    const clientNameRaw = form.client_name.trim();
+    // The client picker can carry either a numeric masters id or an external UUID
+    // reference. The API's `client_id` only accepts the numeric id, so for a UUID
+    // send the client name instead and let the backend resolve it by name.
+    const clientRef: { client_id?: string; client_name?: string } = /^\d+$/.test(clientIdRaw)
+      ? { client_id: clientIdRaw }
+      : clientNameRaw
+        ? { client_name: clientNameRaw }
+        : { client_id: clientIdRaw };
     // Guard against saving an id the picker cannot display, which would let a blank-looking
     // mandatory field through.
     if (clientsQ.isLoading) {
@@ -352,7 +361,7 @@ export function CreateProjectDialog({
         await hrmsService.updateProject(code, {
           project_name: name,
           project_type: form.project_type,
-          ...(clientChanged ? { client_id: clientIdRaw } : {}),
+          ...(clientChanged ? clientRef : {}),
           start_date: startDate,
           end_date: endDate,
         });
@@ -397,7 +406,7 @@ export function CreateProjectDialog({
         project_code: projectCode,
         project_name: name,
         project_type: DEFAULT_CREATE_PROJECT_TYPE,
-        client_id: clientIdRaw,
+        ...clientRef,
         account_manager_email: accountManagerEmail,
         start_date: startDate,
         end_date: endDate,

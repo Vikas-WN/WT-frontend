@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type InputHTMLAttributes } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type InputHTMLAttributes,
+  type KeyboardEvent,
+} from "react";
 import {
   Combobox,
   ComboboxContent,
@@ -152,6 +159,23 @@ export function SearchableSelectCombobox({
     [onChange]
   );
 
+  // While typing a search, if the filter narrows to exactly one option, Enter
+  // commits it — no need to arrow-down first.
+  const handleInputKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key !== "Enter" || event.defaultPrevented) return;
+      const query = filterText.trim().toLowerCase();
+      if (!isFiltering || !query) return;
+      const matches = items.filter((opt) => opt.label.toLowerCase().includes(query));
+      if (matches.length === 1) {
+        event.preventDefault();
+        event.stopPropagation();
+        handleValueChange(matches[0]);
+      }
+    },
+    [filterText, isFiltering, items, handleValueChange]
+  );
+
   return (
     <div className={cn("w-full", className)}>
       <Combobox
@@ -173,6 +197,7 @@ export function SearchableSelectCombobox({
         aria-busy={loading || undefined}
         aria-label={ariaLabel}
         inputMode={inputMode}
+        onKeyDown={handleInputKeyDown}
         showTrigger={showChevron}
         showClear={clearSelectionOnEmptyInput && Boolean(selected) && !isDisabled}
         className={cn("w-full", inputClassName)}

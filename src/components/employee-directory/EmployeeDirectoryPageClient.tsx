@@ -567,14 +567,14 @@ export function EmployeeDirectoryPageClient() {
                                 className={cn(
                                   WT_TABLE_HEAD_COMPACT_CLASS,
                                   "bg-wt-surface-2/70 whitespace-nowrap",
-                                  col.key === "name" && "min-w-[12rem]",
-                                  col.key === "email" && "min-w-[13rem]",
-                                  col.key === "phone_number" && "min-w-[8rem]",
-                                  col.key === "portal_role" && "min-w-[9rem]",
-                                  col.key === "band" && "min-w-[4.25rem]",
-                                  col.key === "user_type" && "min-w-[9.5rem]",
-                                  col.key === "work_mode" && "min-w-[4.5rem]",
-                                  col.key === "status" && "min-w-[7rem]"
+                                  col.key === "name" && "min-w-[11rem]",
+                                  col.key === "email" && "min-w-[11.5rem]",
+                                  col.key === "phone_number" && "min-w-[7.5rem]",
+                                  col.key === "portal_role" && "min-w-[8.5rem]",
+                                  col.key === "band" && "min-w-[3.75rem]",
+                                  col.key === "user_type" && "min-w-[8.5rem]",
+                                  col.key === "work_mode" && "min-w-[4rem]",
+                                  col.key === "status" && "min-w-[6.5rem]"
                                 )}
                               >
                                 <TableSortHeader
@@ -602,10 +602,10 @@ export function EmployeeDirectoryPageClient() {
                             <TableHead
                               className={cn(
                                 WT_TABLE_HEAD_COMPACT_CLASS,
-                                "bg-wt-surface-2/70 whitespace-nowrap text-right"
+                                "w-[2.75rem] bg-wt-surface-2/70 whitespace-nowrap text-right"
                               )}
                             >
-                              <span className="px-1.5">Actions</span>
+                              <span className="sr-only">Actions</span>
                             </TableHead>
                           ) : null}
                         </TableRow>
@@ -741,24 +741,10 @@ export function EmployeeDirectoryPageClient() {
                                 <TableCell
                                   className={cn(
                                     WT_TABLE_CELL_COMPACT_CLASS,
-                                    "py-2.5 whitespace-nowrap text-right"
+                                    "w-[2.75rem] py-2.5 whitespace-nowrap text-right"
                                   )}
                                 >
-                                  {display.email.trim().toLowerCase() === actorEmail ? (
-                                    <span
-                                      className="text-xs text-wt-text-muted"
-                                      title="You cannot delete your own account"
-                                    >
-                                      —
-                                    </span>
-                                  ) : !empId ? (
-                                    <span
-                                      className="text-xs text-wt-text-muted"
-                                      title="Employee ID required to delete"
-                                    >
-                                      —
-                                    </span>
-                                  ) : (
+                                  {display.email.trim().toLowerCase() === actorEmail ? null : !empId ? null : (
                                     <Button
                                       type="button"
                                       variant="ghost"
