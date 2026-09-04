@@ -6,6 +6,8 @@ export type SelfProfileFormState = {
   primary_skills: SkillRating[];
   secondary_skills: SkillRating[];
   yoe: string;
+  /** Free-text total experience, e.g. "2 years 6 months" — where months go. */
+  experience_summary: string;
   date_of_birth: string;
   // Personal details — employee-managed from their own profile (HR/Admin see them view-only).
   local_address: string;
@@ -24,6 +26,7 @@ export function createEmptySelfProfileForm(): SelfProfileFormState {
     primary_skills: [],
     secondary_skills: [],
     yoe: "",
+    experience_summary: "",
     date_of_birth: "",
     local_address: "",
     permanent_address: "",

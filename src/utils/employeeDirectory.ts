@@ -722,7 +722,16 @@ export function buildGroupedProfileSections(
           profileEntry(
             "Date of Joining",
             formatDirectoryDate(
-              pickProfileField(profile, ["date_of_joining", "doj", "joining_date", "joiningDate", "dateOfJoining"])
+              pickProfileField(profile, [
+                "date_of_joining",
+                "doj",
+                "joining_date",
+                "joiningDate",
+                "dateOfJoining",
+              ]) ??
+                // Ex-interns converted to Full-time / Consultant before the DOJ
+                // backfill: their internship start is the best available join date.
+                pickProfileField(profile, ["doi", "date_of_internship", "dateOfInternship"])
             )
           ),
         ]),

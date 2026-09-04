@@ -263,6 +263,11 @@ export function ProfilePageLeanClient() {
       primary_skills: primarySkills,
       secondary_skills: secondarySkills,
       yoe: String(profile.yoe ?? "").trim(),
+      experience_summary: pickStr([
+        "experience",
+        "experience_summary",
+        "experienceSummary",
+      ]),
       date_of_birth: profileDob,
       local_address: pickStr([
         "local_address",
@@ -375,7 +380,7 @@ export function ProfilePageLeanClient() {
         />
         <InputField
           label="Years of Experience (excluding internship)"
-          description="Whole years only. Add the exact duration (years and months) in Experience Summary."
+          description="Whole years only. Record months below in Experience Summary."
           required
           inputMode="numeric"
           value={selfProfileForm.yoe}
@@ -385,6 +390,14 @@ export function ProfilePageLeanClient() {
               // Digits only, capped at 2 chars — no one has >99 years of experience.
               yoe: v.replace(/\D/g, "").slice(0, 2),
             }))
+          }
+        />
+        <InputField
+          label="Experience Summary"
+          description="Your exact total experience including months, e.g. “2 years 6 months”."
+          value={selfProfileForm.experience_summary}
+          onChange={(v) =>
+            setSelfProfileForm((p) => ({ ...p, experience_summary: v.slice(0, 120) }))
           }
         />
         <DateOfBirthConfirmField
@@ -620,8 +633,11 @@ export function ProfilePageLeanClient() {
                 ...(skillsRequired || primarySkills.length || secondarySkills.length
                   ? { primary_skills: primarySkills, secondary_skills: secondarySkills }
                   : {}),
+                // Prefer the employee's own free-text summary (with months); fall
+                // back to a whole-year string derived from YoE.
                 experience:
-                  yoeValue > 0 ? `${yoeValue} years` : null,
+                  selfProfileForm.experience_summary.trim() ||
+                  (yoeValue > 0 ? `${yoeValue} years` : null),
                 yoe: yoeValue,
               };
               const dobResult = validateRequiredApiDate(

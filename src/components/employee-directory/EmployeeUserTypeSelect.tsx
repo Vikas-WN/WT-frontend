@@ -13,7 +13,6 @@ import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { formatUserTypeLabel } from "@/utils/offboardingFormState";
 import type { OnboardOptionItem } from "@/types/onboard-options";
 import { requiresUserTypeTransitionDialog, normalizeDirectoryUserType } from "@/utils/userTypeTransition";
-import { parseApiDate } from "@/utils/apiDate";
 import {
   bandDisplayLabel,
   bandSelectOptions,
@@ -119,7 +118,7 @@ export function EmployeeUserTypeSelect({
 
     setSaving(true);
     try {
-      await hrmsService.updateEmployeeUserType(empId, {
+      const res = await hrmsService.updateEmployeeUserType(empId, {
         user_type: normalizedNext,
         transition_date: transitionDate,
         ...(nextBandId != null && Number.isFinite(nextBandId)
@@ -132,17 +131,17 @@ export function EmployeeUserTypeSelect({
       // Offboarding candidates cache user_type independently — must refresh or
       // Full-Time fields stay visible after FULLTIME → CONSULTANT transitions.
       await queryClient.invalidateQueries({ queryKey: ["offboarding"] });
-      const pickedDate = transitionDate ? parseApiDate(transitionDate) : null;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const isScheduled = pickedDate != null && pickedDate.getTime() > today.getTime();
+      // Trust the server's message: it states whether the change was scheduled
+      // (future-dated) or applied now, based on the server clock — never the
+      // browser's, which can disagree about "today" across timezones.
+      const serverMessage = String(
+        (res as { message?: unknown })?.message ?? ""
+      ).trim();
       showSuccessToast(
-        isScheduled
-          ? `Transition to ${formatUserTypeLabel(normalizedNext)} scheduled for ${transitionDate}. ` +
-              "The user type, band and designation stay unchanged until that date, then update automatically."
-          : normalizedNext === "CONSULTANT"
+        serverMessage ||
+          (normalizedNext === "CONSULTANT"
             ? "User type updated. Designation was cleared — set a consultant designation on the profile."
-            : "User type updated successfully."
+            : "User type updated successfully.")
       );
       setDialogOpen(false);
       setPendingType(null);
