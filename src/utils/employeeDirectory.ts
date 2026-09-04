@@ -336,9 +336,11 @@ export type EmployeeProfileEditForm = {
   work_mode: string;
   work_location_type: string;
   band_id: string;
+  /** Date of Joining — HR/Admin editable. dd/mm/yyyy. */
+  doj: string;
   primary_skills: SkillRating[];
   secondary_skills: SkillRating[];
-  /** Optional personal details (HR/Admin directory edit). */
+  /** Personal details — displayed read-only in the HR edit view (employee-managed). */
   local_address: string;
   permanent_address: string;
   gender: string;
@@ -402,6 +404,15 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
     band_id: String(
       pickProfileField(profile, ["band_id", "bandId"]) ?? ""
     ).trim(),
+    doj: String(
+      pickProfileField(profile, [
+        "doj",
+        "date_of_joining",
+        "dateOfJoining",
+        "joining_date",
+        "joiningDate",
+      ]) ?? ""
+    ).trim(),
     primary_skills: primarySkills,
     secondary_skills: secondarySkills,
     local_address: String(
@@ -463,15 +474,16 @@ export function editFormToUpdatePayload(
     work_location_type: form.work_location_type.trim(),
     primary_skills: form.primary_skills.length ? form.primary_skills : null,
     secondary_skills: form.secondary_skills.length ? form.secondary_skills : [],
-    // Optional personal details — empty string clears the stored value.
-    local_address: form.local_address.trim(),
-    permanent_address: form.permanent_address.trim(),
-    gender: form.gender.trim(),
-    marital_status: form.marital_status.trim(),
-    blood_group: form.blood_group.trim(),
-    emergency_contact_name: form.emergency_contact_name.trim(),
-    emergency_contact_number: form.emergency_contact_number.trim(),
   };
+
+  // Date of Joining — only send when set (never blank out an existing DOJ).
+  const doj = form.doj.trim();
+  if (doj) {
+    payload.doj = doj;
+  }
+
+  // Personal details (addresses, gender, marital status, blood group, emergency
+  // contact) are employee-managed and intentionally NOT sent on an HR update.
 
   // Consultants do not use band — never send band_id (API rejects it).
   if (!options?.omitBand) {
@@ -629,6 +641,19 @@ export function buildGroupedProfileSections(
   const internProfile = isInternProfile(profile);
   const consultantProfile = isConsultantProfile(profile);
 
+  const experienceSummaryRaw = pickProfileField(profile, [
+    "experience",
+    "experience_summary",
+    "experienceSummary",
+  ]);
+  const experienceTotalRaw = pickProfileField(profile, [
+    "total_experience",
+    "totalExperience",
+    "yoe",
+    "years_of_experience",
+    "yearsOfExperience",
+  ]);
+
   const information: ProfileDisplayEntry[] = [
     profileEntry("Name", cleanEmployeeName(profile) || pickProfileField(profile, ["name"])),
     profileEntry("Employee ID", pickProfileField(profile, ["emp_id", "empId", "employee_id"])),
@@ -698,17 +723,18 @@ export function buildGroupedProfileSections(
       "Years of Experience (excluding internship)",
       // Prefer the API's year+month total ("3Y 6M") so the profile shows months,
       // not just the whole-year `yoe` integer captured at onboarding.
-      formatYoeDisplay(pickProfileField(profile, ["total_experience", "totalExperience", "yoe", "years_of_experience", "yearsOfExperience"]))
+      formatYoeDisplay(experienceTotalRaw)
     ),
-    // Hide the Experience Summary row entirely when there is no prior experience
-    // (empty, "—", or an all-zero "0Y 0M" / "0 years" summary).
-    ...(isMeaningfulExperienceSummary(
-      pickProfileField(profile, ["experience", "experience_summary", "experienceSummary"])
-    )
+    // Show the Experience Summary whenever the employee actually has experience —
+    // a written summary OR a non-zero total ("3Y 0M", "4Y 6M", …). Only hide it
+    // when both are empty / all-zero ("0Y 0M").
+    ...(isMeaningfulExperienceSummary(experienceSummaryRaw) ||
+    isMeaningfulExperienceSummary(experienceTotalRaw)
       ? [
           profileEntry(
             "Experience Summary (excluding internship)",
-            pickProfileField(profile, ["experience", "experience_summary", "experienceSummary"]),
+            String(experienceSummaryRaw ?? "").trim() ||
+              formatYoeDisplay(experienceTotalRaw),
             { fullWidth: true }
           ),
         ]

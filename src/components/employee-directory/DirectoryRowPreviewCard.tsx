@@ -1,6 +1,6 @@
 "use client";
 
-import type { KeyboardEvent, ReactNode } from "react";
+import { useState, type KeyboardEvent, type ReactNode } from "react";
 import { PreviewCard } from "@base-ui/react/preview-card";
 import { Copy } from "lucide-react";
 import {
@@ -103,8 +103,10 @@ export function DirectoryRowPreviewCard({
   rowAriaLabel,
   children,
 }: DirectoryRowPreviewCardProps) {
+  const [imageFailed, setImageFailed] = useState(false);
   const photoSrc = resolveProfilePhotoSrc(profile);
   const initials = avatarInitials(name);
+  const showPhoto = Boolean(photoSrc) && !imageFailed;
 
   return (
     <PreviewCard.Root>
@@ -143,22 +145,23 @@ export function DirectoryRowPreviewCard({
             )}
           >
             <div className="flex items-center gap-3">
-              {photoSrc ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={photoSrc}
-                  alt=""
-                  className="size-12 shrink-0 rounded-full border border-wt-border object-cover"
-                />
-              ) : (
-                <span
-                  aria-hidden
-                  className="flex size-12 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
-                  style={avatarGradientStyle(name)}
-                >
-                  {initials}
-                </span>
-              )}
+              <span
+                aria-hidden
+                className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-wt-border text-sm font-semibold text-white"
+                style={showPhoto ? undefined : avatarGradientStyle(name)}
+              >
+                {showPhoto ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={photoSrc as string}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    onError={() => setImageFailed(true)}
+                  />
+                ) : (
+                  initials
+                )}
+              </span>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-wt-text">{name}</p>
                 <p className="truncate text-xs text-wt-text-muted">

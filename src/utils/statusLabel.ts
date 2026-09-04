@@ -39,6 +39,10 @@ const STATUS_LABELS: Record<string, string> = {
   WITHDRAWN: "Withdrawn",
   PRESENT: "Present",
   ABSENT: "Absent",
+  // Acronyms that must stay fully upper-cased, not Title-Cased ("Wfo").
+  WFO: "WFO",
+  WFH: "WFH",
+  WFH_EXCEPTION: "WFH (Custom)",
 };
 
 /** Normalize any status-like value to a compact UPPER_SNAKE key. */

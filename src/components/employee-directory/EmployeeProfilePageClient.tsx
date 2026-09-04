@@ -61,7 +61,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
-import { AdaptiveSelectField, DatePickerField, InputField, TextAreaField } from "@/components/dashboard/ui/forms";
+import { AdaptiveSelectField, DatePickerField, InputField } from "@/components/dashboard/ui/forms";
 import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
 import { FormActionBar } from "@/components/dashboard/ui/FormActionBar";
 import { FormSection, FormSubsection } from "@/components/dashboard/ui/FormSection";
@@ -83,7 +83,10 @@ import {
 import { normalizeDirectoryUserType } from "@/utils/userTypeTransition";
 const WORK_MODES = ["WFO", "WFH", "HYBRID"];
 const WORK_LOCATIONS = ["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"];
-const USER_STATUSES = ["ACTIVE", "INACTIVE", "PENDING", "ONBOARDING", "INVITED", "SERVING_NOTICE"];
+// Canonical statuses only. "Pending" / "Onboarding" are legacy display aliases for
+// "Invited" (the not-yet-onboarded state) — offering them as separate choices made
+// HR pick "Pending" and see it saved back as "Invited".
+const USER_STATUSES = ["ACTIVE", "INACTIVE", "INVITED", "SERVING_NOTICE"];
 
 /** Validate exit dates when HR moves an employee onto an exit status from the profile editor. */
 function exitDateError(
@@ -189,19 +192,8 @@ export function EmployeeProfilePageClient() {
     [primarySkillOptions]
   );
 
-  const personalChoiceOptions = (items: { value: string; label: string }[] | undefined, fallback: { value: string; label: string }[]) => [
-    { value: "", label: "Not specified" },
-    ...(items?.length ? items : fallback).map((o) => ({ value: o.value, label: o.label })),
-  ];
-  const genderOptions = personalChoiceOptions(onboardOptions?.genders, FALLBACK_ONBOARD_OPTIONS.genders);
-  const maritalStatusOptions = personalChoiceOptions(
-    onboardOptions?.marital_statuses,
-    FALLBACK_ONBOARD_OPTIONS.marital_statuses
-  );
-  const bloodGroupOptions = personalChoiceOptions(
-    onboardOptions?.blood_groups,
-    FALLBACK_ONBOARD_OPTIONS.blood_groups
-  );
+  // Personal-detail choice lists (gender / marital status / blood group) are no
+  // longer edited here — that section is employee-managed and shown read-only.
   const normalizePrimarySkills = (skills: EmployeeProfileEditForm["primary_skills"]) => {
     const normalizedSkills: EmployeeProfileEditForm["primary_skills"] = [];
     const seenSkills = new Set<string>();
@@ -1053,6 +1045,20 @@ export function EmployeeProfilePageClient() {
                           disabled={saving}
                         />
                       )}
+                      {adminFieldsLocked ? (
+                        <ViewOnlyField
+                          label="Date of Joining"
+                          value={editForm.doj}
+                          hint={selfAdminLockHint}
+                        />
+                      ) : (
+                        <DatePickerField
+                          label="Date of Joining"
+                          value={editForm.doj}
+                          onChange={(v) => setEditForm({ ...editForm, doj: v })}
+                          disabled={saving}
+                        />
+                      )}
                       {!isConsultantEmployee ? (
                         adminFieldsLocked ? (
                           <ViewOnlyField
@@ -1199,75 +1205,27 @@ export function EmployeeProfilePageClient() {
                     </FormSubsection>
 
                     <FormSubsection title="Personal details">
+                      <p className="mb-4 text-xs text-wt-text-muted">
+                        Personal details are managed by the employee from their own
+                        profile — HR/Admin can view them here only.
+                      </p>
                       <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
-                        <TextAreaField
-                          label="Current address"
-                          className="sm:col-span-3"
-                          rows={2}
-                          textareaClassName="max-h-36 overflow-auto"
-                          value={editForm.local_address}
-                          onChange={(v) =>
-                            setEditForm((prev) => (prev ? { ...prev, local_address: v } : prev))
-                          }
-                        />
-                        <TextAreaField
-                          label="Permanent address"
-                          className="sm:col-span-3"
-                          rows={2}
-                          textareaClassName="max-h-36 overflow-auto"
-                          value={editForm.permanent_address}
-                          onChange={(v) =>
-                            setEditForm((prev) => (prev ? { ...prev, permanent_address: v } : prev))
-                          }
-                        />
-                        <AdaptiveSelectField
-                          label="Gender"
-                          value={editForm.gender}
-                          options={genderOptions}
-                          disabled={saving}
-                          onChange={(v) =>
-                            setEditForm((prev) => (prev ? { ...prev, gender: v } : prev))
-                          }
-                        />
-                        <AdaptiveSelectField
-                          label="Marital status"
-                          value={editForm.marital_status}
-                          options={maritalStatusOptions}
-                          disabled={saving}
-                          onChange={(v) =>
-                            setEditForm((prev) => (prev ? { ...prev, marital_status: v } : prev))
-                          }
-                        />
-                        <AdaptiveSelectField
-                          label="Blood group"
-                          value={editForm.blood_group}
-                          options={bloodGroupOptions}
-                          disabled={saving}
-                          onChange={(v) =>
-                            setEditForm((prev) => (prev ? { ...prev, blood_group: v } : prev))
-                          }
-                        />
-                        <InputField
+                        <div className="sm:col-span-3">
+                          <ViewOnlyField label="Current address" value={editForm.local_address} />
+                        </div>
+                        <div className="sm:col-span-3">
+                          <ViewOnlyField label="Permanent address" value={editForm.permanent_address} />
+                        </div>
+                        <ViewOnlyField label="Gender" value={editForm.gender} />
+                        <ViewOnlyField label="Marital status" value={editForm.marital_status} />
+                        <ViewOnlyField label="Blood group" value={editForm.blood_group} />
+                        <ViewOnlyField
                           label="Emergency contact name"
                           value={editForm.emergency_contact_name}
-                          disabled={saving}
-                          onChange={(v) =>
-                            setEditForm((prev) =>
-                              prev ? { ...prev, emergency_contact_name: v } : prev
-                            )
-                          }
                         />
-                        <InputField
+                        <ViewOnlyField
                           label="Emergency contact number"
                           value={editForm.emergency_contact_number}
-                          disabled={saving}
-                          onChange={(v) =>
-                            setEditForm((prev) =>
-                              prev
-                                ? { ...prev, emergency_contact_number: digitsOnly(v) }
-                                : prev
-                            )
-                          }
                         />
                       </div>
                     </FormSubsection>

@@ -46,7 +46,7 @@ import {
   rowIsOnline,
 } from "@/utils/employeeDirectory";
 import { directoryUserTypeFilterOptions, FALLBACK_ONBOARD_OPTIONS, resolveDirectoryUserTypes } from "@/utils/onboardFormOptions";
-import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
+import { DirectoryStatusSelect } from "@/components/employee-directory/DirectoryStatusSelect";
 import { DirectoryEmployeeNameCell } from "@/components/employee-directory/DirectoryEmployeeNameCell";
 import { DirectoryRowPreviewCard } from "@/components/employee-directory/DirectoryRowPreviewCard";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
@@ -616,7 +616,25 @@ export function EmployeeDirectoryPageClient() {
                                   }
                                 >
                                   {col.key === "status" ? (
-                                    <EmployeeStatusBadge status={display.status} />
+                                    <DirectoryStatusSelect
+                                      empId={empId}
+                                      status={String(
+                                        record.status ??
+                                          record.user_status ??
+                                          record.userStatus ??
+                                          display.status ??
+                                          ""
+                                      )}
+                                      canEdit={
+                                        canEditDirectory &&
+                                        String(record.email ?? display.email ?? "")
+                                          .trim()
+                                          .toLowerCase() !==
+                                          String(authUser?.email ?? "")
+                                            .trim()
+                                            .toLowerCase()
+                                      }
+                                    />
                                   ) : col.key === "name" ? (
                                     <DirectoryEmployeeNameCell
                                       name={display.name}

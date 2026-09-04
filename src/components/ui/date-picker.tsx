@@ -103,7 +103,7 @@ export function DatePicker({
             align="start"
             sideOffset={4}
             positionMethod="fixed"
-            collisionPadding={12}
+            collisionPadding={16}
             collisionAvoidance={{
               // Behave like a dropdown, not a free-floating popup: flip top/bottom
               // and shift into view, but never fall back to a left/right side of the
@@ -119,14 +119,16 @@ export function DatePicker({
             <PopoverContent
               className={cn(
                 "border-wt-border bg-wt-surface-1 p-0 shadow-lg",
-                // Never exceed the space the positioner reports, so a narrow viewport
-                // scrolls the calendar instead of clipping it.
-                "max-h-[min(var(--available-height,100dvh),24rem)] overflow-y-auto overscroll-contain",
+                // Never exceed the space the positioner reports, so a short viewport
+                // scrolls the calendar instead of clipping it. collisionPadding on
+                // the positioner keeps the popup off the screen edges.
+                "max-h-[min(var(--available-height,100dvh),22rem)] overflow-y-auto overscroll-contain",
                 "max-w-[min(var(--available-width,100vw),100vw)]"
               )}
             >
               <Calendar
                 mode="single"
+                compact
                 selected={selected ?? undefined}
                 onSelect={handleSelect}
                 disabled={[

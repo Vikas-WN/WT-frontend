@@ -34,6 +34,7 @@ import { SelfOnboardingPanel } from "@/components/employee-onboarding/SelfOnboar
 import {
   InputField,
   SelectField,
+  TextAreaField,
   FileField,
 } from "@/components/dashboard/ui/forms";
 import { validateRequiredApiDate } from "@/utils/apiDate";
@@ -98,6 +99,19 @@ export function ProfilePageLeanClient() {
     onboardOptions?.secondary_skills,
     FALLBACK_ONBOARD_OPTIONS.secondary_skills,
   );
+  // Personal-detail dropdowns mirror the ones the employee saw at onboarding.
+  const genderOptions =
+    onboardOptions?.genders?.length
+      ? onboardOptions.genders
+      : FALLBACK_ONBOARD_OPTIONS.genders;
+  const maritalStatusOptions =
+    onboardOptions?.marital_statuses?.length
+      ? onboardOptions.marital_statuses
+      : FALLBACK_ONBOARD_OPTIONS.marital_statuses;
+  const bloodGroupOptions =
+    onboardOptions?.blood_groups?.length
+      ? onboardOptions.blood_groups
+      : FALLBACK_ONBOARD_OPTIONS.blood_groups;
 
   const [profileAssignedProjects, setProfileAssignedProjects] = useState<
     Array<Record<string, unknown>>
@@ -241,6 +255,8 @@ export function ProfilePageLeanClient() {
     const dobLocked = Boolean(
       profile.date_of_birth_locked ?? profile.dateOfBirthLocked ?? profileDob
     );
+    const pickStr = (keys: string[]) =>
+      String(pickProfileField(profile, keys) ?? "").trim();
     setSelfProfileForm({
       phone_country: phoneParts.countryIso,
       phone_number: phoneParts.nationalNumber,
@@ -248,6 +264,24 @@ export function ProfilePageLeanClient() {
       secondary_skills: secondarySkills,
       yoe: String(profile.yoe ?? "").trim(),
       date_of_birth: profileDob,
+      local_address: pickStr([
+        "local_address",
+        "localAddress",
+        "current_address",
+        "currentAddress",
+      ]),
+      permanent_address: pickStr(["permanent_address", "permanentAddress"]),
+      gender: pickStr(["gender"]).toUpperCase(),
+      marital_status: pickStr(["marital_status", "maritalStatus"]).toUpperCase(),
+      blood_group: pickStr(["blood_group", "bloodGroup"]).toUpperCase(),
+      emergency_contact_name: pickStr([
+        "emergency_contact_name",
+        "emergencyContactName",
+      ]),
+      emergency_contact_number: pickStr([
+        "emergency_contact_number",
+        "emergencyContactNumber",
+      ]),
     });
     setDobConfirmed(dobLocked);
     setSelfProfileEmploymentFiles({
@@ -360,6 +394,81 @@ export function ProfilePageLeanClient() {
           onChange={(v) => setSelfProfileForm((p) => ({ ...p, date_of_birth: v }))}
           onConfirmChange={setDobConfirmed}
         />
+      </div>
+
+      <div className="mt-6 border-t border-wt-border pt-5">
+        <h4 className="text-sm font-semibold tracking-tight text-wt-text">
+          Personal details
+        </h4>
+        <p className="mb-4 mt-1 text-xs text-wt-text-muted">
+          Only you can edit these. HR and Admin can view them but not change them.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <SelectField
+            label="Gender"
+            placeholder="Select"
+            value={selfProfileForm.gender}
+            options={genderOptions}
+            onChange={(v) => setSelfProfileForm((p) => ({ ...p, gender: v }))}
+          />
+          <SelectField
+            label="Marital status"
+            placeholder="Select"
+            value={selfProfileForm.marital_status}
+            options={maritalStatusOptions}
+            onChange={(v) =>
+              setSelfProfileForm((p) => ({ ...p, marital_status: v }))
+            }
+          />
+          <SelectField
+            label="Blood group"
+            placeholder="Select"
+            value={selfProfileForm.blood_group}
+            options={bloodGroupOptions}
+            onChange={(v) =>
+              setSelfProfileForm((p) => ({ ...p, blood_group: v }))
+            }
+          />
+          <InputField
+            label="Emergency contact name"
+            value={selfProfileForm.emergency_contact_name}
+            onChange={(v) =>
+              setSelfProfileForm((p) => ({ ...p, emergency_contact_name: v }))
+            }
+          />
+          <InputField
+            label="Emergency contact number"
+            type="tel"
+            inputMode="numeric"
+            value={selfProfileForm.emergency_contact_number}
+            onChange={(v) =>
+              setSelfProfileForm((p) => ({
+                ...p,
+                emergency_contact_number: v.replace(/[^\d+\-\s()]/g, ""),
+              }))
+            }
+          />
+          <TextAreaField
+            label="Current address"
+            className="sm:col-span-2"
+            rows={3}
+            textareaClassName="max-h-36 overflow-y-auto"
+            value={selfProfileForm.local_address}
+            onChange={(v) =>
+              setSelfProfileForm((p) => ({ ...p, local_address: v }))
+            }
+          />
+          <TextAreaField
+            label="Permanent address"
+            className="sm:col-span-2"
+            rows={3}
+            textareaClassName="max-h-36 overflow-y-auto"
+            value={selfProfileForm.permanent_address}
+            onChange={(v) =>
+              setSelfProfileForm((p) => ({ ...p, permanent_address: v }))
+            }
+          />
+        </div>
       </div>
       {priorEmploymentDocsForProfile ? (
         <div className="mt-4 rounded-xl border border-wt-border bg-wt-surface-2 p-4">
@@ -526,6 +635,17 @@ export function ProfilePageLeanClient() {
               if (!dobLocked) {
                 profilePayload.date_of_birth_confirmed = true;
               }
+              // Personal details — always send (empty string clears the field).
+              profilePayload.local_address = selfProfileForm.local_address.trim();
+              profilePayload.permanent_address =
+                selfProfileForm.permanent_address.trim();
+              profilePayload.gender = selfProfileForm.gender || null;
+              profilePayload.marital_status = selfProfileForm.marital_status || null;
+              profilePayload.blood_group = selfProfileForm.blood_group || null;
+              profilePayload.emergency_contact_name =
+                selfProfileForm.emergency_contact_name.trim();
+              profilePayload.emergency_contact_number =
+                selfProfileForm.emergency_contact_number.trim();
               fd.append("body", JSON.stringify(profilePayload));
               if (selfProfilePic) fd.append("profilePic", selfProfilePic);
               if (selfProfileEmploymentFiles.reliving_letter) {
