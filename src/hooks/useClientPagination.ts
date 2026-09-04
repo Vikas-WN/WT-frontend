@@ -23,9 +23,14 @@ export function useClientPagination<T>(items: readonly T[], options?: Options) {
   const resetSignature =
     options?.resetKeys?.map((key) => String(key)).join("\u0000") ?? "";
 
+  // Reset to the first page only when the *view* changes (search / filters / sort,
+  // via resetKeys, or page size). Do NOT key off items.length — removing a row
+  // (e.g. deleting an employee) would otherwise bounce the user back to page 1.
+  // A page that no longer exists after the list shrinks is handled by the
+  // safePage clamp below, which snaps to the new last page instead.
   useEffect(() => {
     setPage(0);
-  }, [items.length, pageSize, resetSignature]);
+  }, [pageSize, resetSignature]);
 
   const totalItems = items.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize) || 1);

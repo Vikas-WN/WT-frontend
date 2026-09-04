@@ -1051,7 +1051,7 @@ export const hrmsService = {
     });
   },
 
-  /** PATCH /employee-profile/{empId}/balances — admin edit of primary/secondary/carry-forward (ROLE_ADMIN). */
+  /** PATCH /employee-profile/{empId}/balances — HR/Admin edit of primary/secondary/carry-forward (values may be negative). */
   updateLeaveBalance(
     empId: string,
     payload: { primary?: number; secondary?: number; carry_forward?: number; year?: number; month?: number }

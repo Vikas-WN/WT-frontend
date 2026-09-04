@@ -41,9 +41,9 @@ export function EditLeaveBalanceDialog({
   }, [open, employee]);
 
   function handleFieldChange(key: string, value: string) {
-    // Balances can't go negative — strip any minus sign as it's typed rather than
-    // waiting until submit to reject it.
-    setValues((prev) => ({ ...prev, [key]: value.replace(/-/g, "") }));
+    // A negative balance is allowed — an over-drawn (LOP) balance, or an HR
+    // correction, can legitimately be below zero.
+    setValues((prev) => ({ ...prev, [key]: value }));
   }
 
   async function handleSubmit() {
@@ -51,8 +51,8 @@ export function EditLeaveBalanceDialog({
     const parsed: Record<string, number> = {};
     for (const field of BALANCE_FIELDS) {
       const num = Number(values[field.key]);
-      if (!Number.isFinite(num) || num < 0) {
-        showErrorToast(`Enter a valid, non-negative ${field.label.toLowerCase()} balance.`);
+      if (!Number.isFinite(num)) {
+        showErrorToast(`Enter a valid ${field.label.toLowerCase()} balance.`);
         return;
       }
       parsed[field.key] = num;

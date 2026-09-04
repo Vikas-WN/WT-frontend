@@ -78,7 +78,12 @@ export function directoryUserTypeFilterOptions(
   options?: OnboardOptionsResponse | null
 ): OnboardOptionItem[] {
   const types = options ? resolveDirectoryUserTypes(options) : FALLBACK_DIRECTORY_USER_TYPES;
-  return [{ value: "", label: "All User Types" }, ...types];
+  // HR is a portal role, not a workforce user type — it is not a meaningful
+  // filter here even though the master list may still carry it.
+  const filterable = types.filter(
+    (type) => String(type.value ?? "").trim().toUpperCase() !== "HR"
+  );
+  return [{ value: "", label: "All User Types" }, ...filterable];
 }
 
 /** GET /masters/onboard-options — `{ message, data: { ... } }` or bare options object. */

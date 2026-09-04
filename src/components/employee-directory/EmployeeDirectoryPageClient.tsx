@@ -48,6 +48,7 @@ import {
 import { directoryUserTypeFilterOptions, FALLBACK_ONBOARD_OPTIONS, resolveDirectoryUserTypes } from "@/utils/onboardFormOptions";
 import { EmployeeStatusBadge } from "@/components/employee-directory/EmployeeStatusBadge";
 import { DirectoryEmployeeNameCell } from "@/components/employee-directory/DirectoryEmployeeNameCell";
+import { DirectoryRowPreviewCard } from "@/components/employee-directory/DirectoryRowPreviewCard";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
@@ -69,8 +70,7 @@ const EMPLOYEE_DIRECTORY_PAGE_SIZE = 10;
 
 const LIST_COLUMNS: Array<{ key: string; label: string }> = [
   { key: "name", label: "Employee" },
-  { key: "email", label: "Work Email" },
-  { key: "phone_number", label: "Phone" },
+  { key: "role", label: "Designation" },
   { key: "portal_role", label: "Role" },
   { key: "band", label: "Band" },
   { key: "user_type", label: "User Type" },
@@ -100,52 +100,6 @@ function normalizeUserType(value: unknown): string {
 function hasCopyableValue(value: string | undefined): boolean {
   const text = String(value ?? "").trim();
   return Boolean(text) && text !== "—";
-}
-
-function CopyIcon() {
-  return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-    </svg>
-  );
-}
-
-function CopyValueButton({
-  value,
-  label,
-  onCopy,
-}: {
-  value: string;
-  label: string;
-  onCopy: (value: string, successMessage: string) => void;
-}) {
-  if (!hasCopyableValue(value)) return null;
-
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon-sm"
-      className="inline-flex size-7 shrink-0 rounded p-0 text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text"
-      aria-label={`Copy ${label}`}
-      onClick={(e) => {
-        e.stopPropagation();
-        onCopy(value, `${label} Copied Successfully`);
-      }}
-    >
-      <CopyIcon />
-    </Button>
-  );
 }
 
 export function EmployeeDirectoryPageClient() {
@@ -546,7 +500,7 @@ export function EmployeeDirectoryPageClient() {
               <>
                 <div className="wt-detail-scroll-section min-h-0 overflow-hidden rounded-2xl border border-wt-border/80">
                   <ScrollableTable scrollChain maxHeightClass="max-h-[min(68vh,640px)]">
-                    <WtTable className="w-full min-w-[980px] text-sm">
+                    <WtTable className="w-full min-w-[820px] text-sm">
                       <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
                         <TableRow className="hover:bg-transparent">
                           {LIST_COLUMNS.map((col) => {
@@ -568,8 +522,7 @@ export function EmployeeDirectoryPageClient() {
                                   WT_TABLE_HEAD_COMPACT_CLASS,
                                   "bg-wt-surface-2/70 whitespace-nowrap",
                                   col.key === "name" && "min-w-[11rem]",
-                                  col.key === "email" && "min-w-[11.5rem]",
-                                  col.key === "phone_number" && "min-w-[7.5rem]",
+                                  col.key === "role" && "min-w-[10rem]",
                                   col.key === "portal_role" && "min-w-[8.5rem]",
                                   col.key === "band" && "min-w-[3.75rem]",
                                   col.key === "user_type" && "min-w-[8.5rem]",
@@ -622,19 +575,25 @@ export function EmployeeDirectoryPageClient() {
                             router.push(employeeDirectoryProfilePath(empId));
                           };
                           return (
-                            <TableRow
+                            <DirectoryRowPreviewCard
                               key={directoryKey}
-                              className="cursor-pointer border-wt-border/70 transition-colors hover:bg-[color-mix(in_srgb,var(--wt-brand)_6%,transparent)] dark:hover:bg-wt-surface-2"
-                              onClick={openProfile}
-                              onKeyDown={(e) => {
+                              name={display.name}
+                              designation={display.role}
+                              band={display.band}
+                              department={display.department}
+                              email={display.email}
+                              phone={display.phone_number}
+                              profile={record}
+                              onCopy={(value, message) => void handleCopyField(value, message)}
+                              rowClassName="cursor-pointer border-wt-border/70 transition-colors hover:bg-[color-mix(in_srgb,var(--wt-brand)_6%,transparent)] dark:hover:bg-wt-surface-2"
+                              onRowClick={openProfile}
+                              onRowKeyDown={(e) => {
                                 if (e.key === "Enter" || e.key === " ") {
                                   e.preventDefault();
                                   openProfile();
                                 }
                               }}
-                              tabIndex={0}
-                              role="link"
-                              aria-label={`View profile for ${display.name}`}
+                              rowAriaLabel={`View profile for ${display.name}`}
                             >
                               {LIST_COLUMNS.map((col) => (
                                 <TableCell
@@ -666,32 +625,6 @@ export function EmployeeDirectoryPageClient() {
                                       isOnline={rowIsOnline(record)}
                                       isBirthday={rowIsBirthdayToday(record)}
                                     />
-                                  ) : col.key === "email" ? (
-                                    <div className="flex w-full min-w-0 items-center gap-1">
-                                      <span className="block min-w-0 flex-1 truncate text-sm text-wt-text">
-                                        {display.email}
-                                      </span>
-                                      <CopyValueButton
-                                        value={display.email}
-                                        label="Work Email"
-                                        onCopy={(value, message) =>
-                                          void handleCopyField(value, message)
-                                        }
-                                      />
-                                    </div>
-                                  ) : col.key === "phone_number" ? (
-                                    <div className="flex w-full min-w-0 items-center gap-1">
-                                      <span className="block min-w-0 flex-1 truncate text-sm text-wt-text">
-                                        {display.phone_number}
-                                      </span>
-                                      <CopyValueButton
-                                        value={display.phone_number}
-                                        label="Phone Number"
-                                        onCopy={(value, message) =>
-                                          void handleCopyField(value, message)
-                                        }
-                                      />
-                                    </div>
                                   ) : col.key === "portal_role" ? (
                                     <EmployeePortalRoleSelect
                                       email={String(record.email ?? display.email ?? "")}
@@ -768,7 +701,7 @@ export function EmployeeDirectoryPageClient() {
                                   )}
                                 </TableCell>
                               ) : null}
-                            </TableRow>
+                            </DirectoryRowPreviewCard>
                           );
                         })}
                       </TableBody>
