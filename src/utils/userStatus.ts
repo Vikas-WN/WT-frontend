@@ -137,7 +137,16 @@ export function shouldRequireSelfOnboardingForUser(
   status: unknown,
   roles: string[] | undefined | null
 ): boolean {
-  if (hasStaffPortalRole(roles)) return false;
+  const list = roles ?? [];
+  // A real employee (ROLE_EMPLOYEE) whose record is explicitly INVITED / ONBOARDING
+  // has not completed onboarding and must be routed into it — even if the account
+  // also carries a staff role. Only the blanket "unknown / legacy status" case
+  // below defers to the staff-portal exemption.
+  const isEmployee = list.some(
+    (role) => normalizeRoleName(role) === "ROLE_EMPLOYEE"
+  );
+  if (isEmployee && isPreActiveEmployeeStatus(status)) return true;
+  if (hasStaffPortalRole(list)) return false;
   return shouldRequireSelfOnboarding(status);
 }
 

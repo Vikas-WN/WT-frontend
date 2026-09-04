@@ -472,9 +472,18 @@ export function editFormToUpdatePayload(
     user_status: normalizedStatus,
     work_mode: form.work_mode.trim(),
     work_location_type: form.work_location_type.trim(),
-    primary_skills: form.primary_skills.length ? form.primary_skills : null,
-    secondary_skills: form.secondary_skills.length ? form.secondary_skills : [],
   };
+
+  // Only send skills when the form actually carries some. Sending empty arrays
+  // makes the backend run its "at least one skill" check, which wrongly blocks
+  // saving unrelated changes for Non-Tech employees (HR, Finance, …) who are not
+  // required to have skills. Omitting them leaves the stored skills untouched.
+  if (form.primary_skills.length) {
+    payload.primary_skills = form.primary_skills;
+  }
+  if (form.secondary_skills.length) {
+    payload.secondary_skills = form.secondary_skills;
+  }
 
   // Date of Joining — only send when set (never blank out an existing DOJ).
   const doj = form.doj.trim();
@@ -607,9 +616,19 @@ function formatPanCardStatus(profile: Record<string, unknown>): string {
 
 /** Aadhar Card is stored as a document path - surface on-file status on profiles. */
 function formatAadharCardStatus(profile: Record<string, unknown>): string {
-  const onFile = profile.aadhar_card_on_file ?? profile.aadharCardOnFile;
+  const onFile =
+    profile.aadhaar_on_file ??
+    profile.aadhaarOnFile ??
+    profile.aadhar_card_on_file ??
+    profile.aadharCardOnFile;
   if (onFile === true || onFile === "true" || onFile === 1) return "Uploaded";
-  const raw = pickProfileField(profile, ["aadhar_card", "aadharCard"]);
+  const raw = pickProfileField(profile, [
+    "aadhaar",
+    "aadhar_card",
+    "aadharCard",
+    "aadhaar_card",
+    "aadhaarCard",
+  ]);
   if (raw && String(raw).trim() && String(raw).trim() !== "—") return "Uploaded";
   return "Not uploaded";
 }

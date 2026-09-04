@@ -100,7 +100,11 @@ function SelectContent({
           data-slot="select-content"
           data-align-trigger={alignItemWithTrigger}
           className={cn(
-            "wt-combobox-scroll relative isolate z-[200] max-h-[min(15rem,var(--available-height,100dvh))] w-[min(var(--anchor-width),var(--available-width,100vw))] max-w-[var(--available-width,calc(100vw-1rem))] min-w-0 origin-(--transform-origin) overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl border border-wt-border bg-wt-surface-1 p-1 text-wt-text shadow-md duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            // A distinctly elevated surface: wt-surface-1 is nearly identical to
+            // the pitch-black page in dark mode, which made this popup read as a
+            // set of floating badges with no panel. surface-2 + a real border and
+            // shadow give it a visible card edge on any background.
+            "wt-combobox-scroll relative isolate z-[200] max-h-[min(15rem,var(--available-height,100dvh))] w-[min(var(--anchor-width),var(--available-width,100vw))] max-w-[var(--available-width,calc(100vw-1rem))] min-w-0 origin-(--transform-origin) overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl border border-wt-border-md bg-wt-surface-2 p-1 text-wt-text shadow-lg shadow-black/10 duration-100 dark:bg-wt-surface-2 dark:shadow-[0_16px_48px_-12px_rgba(0,0,0,0.85),0_0_0_1px_rgba(255,255,255,0.08)] data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
             className
           )}
           {...props}
@@ -136,7 +140,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex w-full cursor-default items-center gap-2 rounded-md py-2 pr-8 pl-2.5 text-sm text-wt-text outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:bg-wt-surface-2 data-highlighted:text-wt-text data-selected:font-medium [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        "relative flex w-full cursor-default items-center gap-2 rounded-md py-2 pr-8 pl-2.5 text-sm text-wt-text outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:bg-wt-surface-3 data-highlighted:text-wt-text data-selected:font-medium [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className
       )}
       {...props}

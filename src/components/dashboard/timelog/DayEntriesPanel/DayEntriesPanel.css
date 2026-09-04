@@ -35,6 +35,8 @@
 .day-entries-body {
   flex: 1;
   overflow-y: auto;
+  /* Never let a card or a long word push content sideways out of the panel. */
+  overflow-x: hidden;
   /* Reserve the scrollbar gutter so the panel does not jump/flicker when the
      scrollbar appears on hover/focus of the Add entry button and cards. */
   scrollbar-gutter: stable;
@@ -69,6 +71,9 @@
   flex-direction: column;
   gap: 0.25rem;
   min-width: 0;
+  max-width: 100%;
+  /* Clip anything that still tries to escape to the rounded card edge. */
+  overflow: hidden;
 }
 
 .day-entries-card-header {
@@ -86,13 +91,17 @@
 .day-entries-card-project {
   font-weight: 500;
   font-size: 0.875rem;
+  min-width: 0;
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .day-entries-card-task {
   font-size: 0.8125rem;
   color: var(--wt-text-muted, #888);
+  min-width: 0;
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .day-entries-card-hours {
@@ -105,9 +114,16 @@
   font-size: 0.75rem;
   color: var(--wt-text-muted, #888);
   /* Keep long words / URLs inside the card instead of overflowing the panel. */
+  min-width: 0;
+  max-width: 100%;
   overflow-wrap: anywhere;
   word-break: break-word;
   white-space: pre-wrap;
+  /* A very long description scrolls inside its own box rather than stretching
+     the card down the whole panel. */
+  max-height: 10rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .day-entries-card-status {

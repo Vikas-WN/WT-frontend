@@ -233,19 +233,26 @@ export function CreateProjectDialog({
       return;
     }
     const clientIdRaw = form.client_id.trim();
-    if (!clientIdRaw) {
+    const initialClientName = String(initialForm?.client_name ?? "").trim();
+    // On edit, a project already linked to a client by name only (no numeric
+    // masters id) opens with an empty client_id — that is not "no client", so
+    // don't block the save; the client ref is simply omitted below (unchanged).
+    if (!clientIdRaw && !(isEditing && initialClientName)) {
       showErrorToast("Client is required.");
       return;
     }
-    const clientNameRaw = form.client_name.trim();
     // The client picker can carry either a numeric masters id or an external UUID
-    // reference. The API's `client_id` only accepts the numeric id, so for a UUID
-    // send the client name instead and let the backend resolve it by name.
-    const clientRef: { client_id?: string; client_name?: string } = /^\d+$/.test(clientIdRaw)
+    // reference. The API's `client_id` only accepts the numeric id (a UUID is
+    // rejected with "Select a valid client from the list."), so for a non-numeric
+    // id send the client name instead and let the backend resolve it by name.
+    // Fall back to the name the edit form was opened with so a UUID is never sent.
+    const clientNameRaw = form.client_name.trim() || initialClientName;
+    const isNumericClientId = /^\d+$/.test(clientIdRaw);
+    const clientRef: { client_id?: string; client_name?: string } = isNumericClientId
       ? { client_id: clientIdRaw }
       : clientNameRaw
         ? { client_name: clientNameRaw }
-        : { client_id: clientIdRaw };
+        : {};
     // Guard against saving an id the picker cannot display, which would let a blank-looking
     // mandatory field through.
     if (clientsQ.isLoading) {
@@ -356,8 +363,18 @@ export function CreateProjectDialog({
         // id on an unrelated edit (e.g. just the end date) forces client
         // re-validation and fails when the existing client isn't in the active
         // picker list. Omitting it leaves the project's current client untouched.
+        // Compare by name too: the loaded record carries the numeric masters id
+        // while the picker may hand back the client's external UUID for the same
+        // client — an id-only check would treat that as a change and re-send it.
         const initialClientId = String(initialForm?.client_id ?? "").trim();
-        const clientChanged = Boolean(clientIdRaw) && clientIdRaw !== initialClientId;
+        const selectedClientName = (clientRef.client_name ?? "").trim().toLowerCase();
+        const sameClientByName =
+          Boolean(selectedClientName) &&
+          selectedClientName === initialClientName.toLowerCase();
+        const clientChanged =
+          Boolean(clientIdRaw) &&
+          clientIdRaw !== initialClientId &&
+          !sameClientByName;
         await hrmsService.updateProject(code, {
           project_name: name,
           project_type: form.project_type,

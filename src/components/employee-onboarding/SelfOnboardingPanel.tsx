@@ -58,6 +58,8 @@ export function SelfOnboardingPanel({
   workEmail,
   initialPersonalEmail = "",
   initialResumeShareLink = "",
+  initialDateOfBirth = "",
+  dateOfBirthLocked = false,
   actionLoading,
   runAction,
   onSuccess,
@@ -65,6 +67,10 @@ export function SelfOnboardingPanel({
   workEmail: string;
   initialPersonalEmail?: string;
   initialResumeShareLink?: string;
+  /** Pre-fill DOB from the profile so a resumed onboarding doesn't ask again. */
+  initialDateOfBirth?: string;
+  /** True once DOB is confirmed & saved — field is read-only and not re-sent. */
+  dateOfBirthLocked?: boolean;
   actionLoading: boolean;
   runAction: (label: string, fn: () => Promise<void>) => void;
   onSuccess: () => Promise<void>;
@@ -72,7 +78,8 @@ export function SelfOnboardingPanel({
   const [formKey, setFormKey] = useState(0);
   const [form, setForm] = useState(() => loadSavedOnboardForm() ?? createEmptySelfOnboardForm());
   const [files, setFiles] = useState<OnboardFiles>(EMPTY_FILES);
-  const [dobConfirmed, setDobConfirmed] = useState(false);
+  // A locked DOB is, by definition, already confirmed.
+  const [dobConfirmed, setDobConfirmed] = useState(() => dateOfBirthLocked);
   const onboardOptionsQ = useOnboardOptions();
   const options = onboardOptionsQ.data ?? FALLBACK_ONBOARD_OPTIONS;
 
@@ -83,8 +90,9 @@ export function SelfOnboardingPanel({
       ...prev,
       personal_email: initialPersonalEmail.trim() || prev.personal_email,
       resume_share_link: initialResumeShareLink.trim() || prev.resume_share_link,
+      date_of_birth: initialDateOfBirth.trim() || prev.date_of_birth,
     }));
-  }, [initialPersonalEmail, initialResumeShareLink]);
+  }, [initialPersonalEmail, initialResumeShareLink, initialDateOfBirth]);
 
   useEffect(() => {
     saveOnboardFormDraft(form);
@@ -145,7 +153,10 @@ export function SelfOnboardingPanel({
             : "Date of birth is required. Use DD/MM/YYYY."
         );
       }
-      if (!isDobReadyToSave(form.date_of_birth, dobConfirmed, false)) {
+      if (
+        !dateOfBirthLocked &&
+        !isDobReadyToSave(form.date_of_birth, dobConfirmed, false)
+      ) {
         throw new Error("Confirm your calculated age to lock your date of birth before submitting.");
       }
 
@@ -255,9 +266,12 @@ export function SelfOnboardingPanel({
         personal_email: personalEmail,
         name: legalName,
         phone_number: apiPhoneNumber,
-        date_of_birth: dateOfBirth,
-        date_of_birth_confirmed: true,
         resume_share_link: resumeShareLink,
+        // Once DOB is locked, never re-send it — the backend rejects any value
+        // (even the identical one after a format round-trip) as an edit attempt.
+        ...(dateOfBirthLocked
+          ? {}
+          : { date_of_birth: dateOfBirth, date_of_birth_confirmed: true }),
       };
 
       if (yoeValue !== null)       userData.yoe = yoeValue;
@@ -343,6 +357,7 @@ export function SelfOnboardingPanel({
         <DateOfBirthConfirmField
           value={form.date_of_birth}
           confirmed={dobConfirmed}
+          locked={dateOfBirthLocked}
           onChange={(v) => setForm((p) => ({ ...p, date_of_birth: v }))}
           onConfirmChange={setDobConfirmed}
         />

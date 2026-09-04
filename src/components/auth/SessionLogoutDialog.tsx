@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
   sessionLogoutMessages,
@@ -16,12 +18,24 @@ export function SessionLogoutDialog({
   reason: SessionLogoutReason;
   onConfirm: () => void;
 }) {
-  if (!open) return null;
+  // Lock the page behind the cover so it cannot be scrolled or interacted with.
+  useEffect(() => {
+    if (!open || typeof document === "undefined") return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
+
+  if (!open || typeof document === "undefined") return null;
 
   const title = sessionLogoutTitles[reason];
   const message = sessionLogoutMessages[reason];
 
-  return (
+  // Render at the document root so a transformed ancestor (the dashboard's
+  // animated <main>) can never turn this fixed cover into a partial overlay.
+  return createPortal(
     <div
       // Opaque, top-most cover: once the session has ended the app content behind
       // must be fully hidden and non-interactive until the user signs in again.
@@ -58,7 +72,8 @@ export function SessionLogoutDialog({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

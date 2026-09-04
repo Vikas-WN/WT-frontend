@@ -17,7 +17,12 @@ function PendingOnboardingGuard({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (status !== "authenticated" || !user) return;
-    if (!shouldRequireSelfOnboardingForUser(user.status, allRoles)) return;
+    // `allRoles` is fetched asynchronously after auth resolves; during that gap
+    // it is empty, which would wrongly redirect a staff user (HR/Admin/Manager)
+    // whose record has a non-ACTIVE status. The session `user.roles` is available
+    // synchronously, so consider both.
+    const knownRoles = [...(user.roles ?? []), ...allRoles];
+    if (!shouldRequireSelfOnboardingForUser(user.status, knownRoles)) return;
     const profilePath = DASHBOARD_ROUTES.profile;
     const settingsPath = DASHBOARD_ROUTES.settings;
     if (pathname === profilePath || pathname.startsWith(`${profilePath}/`)) return;

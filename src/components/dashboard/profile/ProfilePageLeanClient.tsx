@@ -720,6 +720,17 @@ export function ProfilePageLeanClient() {
                   employeeProfile?.resumeShareLink ??
                   "",
               ).trim()}
+              initialDateOfBirth={String(
+                pickProfileField(employeeProfile ?? {}, [
+                  "date_of_birth",
+                  "dob",
+                  "dateOfBirth",
+                ]) ?? "",
+              ).trim()}
+              dateOfBirthLocked={Boolean(
+                employeeProfile?.date_of_birth_locked ??
+                  employeeProfile?.dateOfBirthLocked,
+              )}
               actionLoading={actionLoading}
               runAction={(label, fn) => {
                 void runAction(label, fn);

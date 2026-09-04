@@ -74,6 +74,18 @@ export function buildProfileRowsFromMyAllocationsDetail(
       o.project_code ?? o.projectCode ?? my?.project_code ?? my?.projectCode ?? nestedProject?.project_code ?? nestedProject?.projectCode ?? nestedProject?.code ?? ""
     ).trim();
     if (!projectCode) continue;
+
+    // A project the user only *manages* (no personal allocation) still comes back
+    // in current_projects, but with my_allocation = null. Surface the manager
+    // relationship instead of a blank row, and fall back to the nested project
+    // record for whatever window/billing detail is available.
+    const capacity = String(o.capacity ?? o.Capacity ?? "").trim().toLowerCase();
+    const isManagerOnly = !my && (capacity === "project_manager" || capacity === "both");
+    const roleValue =
+      my?.role ??
+      o.role ??
+      (isManagerOnly ? "Project Manager" : "—");
+
     rows.push({
       project_code: projectCode,
       project_name:
@@ -85,14 +97,29 @@ export function buildProfileRowsFromMyAllocationsDetail(
         nestedProject?.projectName ??
         nestedProject?.name ??
         projectCode,
-      role: my?.role ?? o.role ?? "—",
+      role: roleValue,
       allocated_hours:
         my?.allocated_hours ?? my?.allocatedHours ?? my?.allocated_percent ?? my?.allocatedPercent,
       allocated_percent: my?.allocated_percent ?? my?.allocatedPercent,
-      billing_status: my?.billing_status ?? my?.billingStatus ?? "—",
-      start_date: my?.start_date ?? my?.startDate ?? "—",
-      end_date: my?.end_date ?? my?.endDate ?? "—",
-      is_manager: "No",
+      billing_status:
+        my?.billing_status ??
+        my?.billingStatus ??
+        nestedProject?.billing_status ??
+        nestedProject?.billingStatus ??
+        "—",
+      start_date:
+        my?.start_date ??
+        my?.startDate ??
+        nestedProject?.start_date ??
+        nestedProject?.startDate ??
+        "—",
+      end_date:
+        my?.end_date ??
+        my?.endDate ??
+        nestedProject?.end_date ??
+        nestedProject?.endDate ??
+        "—",
+      is_manager: isManagerOnly || isManagerRoleLabel(roleValue) ? "Yes" : "No",
     });
   }
   return withoutTalentPoolRows(normalizeAssignedProjects(rows));
