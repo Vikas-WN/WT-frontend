@@ -1589,6 +1589,36 @@ export function LeavePageClient() {
     resetKeys: [myLeaveSortId, myLeaveSearch, leaveSubTab],
   });
 
+  // Deep-link / highlight: jump to the page that contains the target request in
+  // the employee's own "My Leave" / "WFH" history. Without this, a notification
+  // (e.g. Leave Approved/Rejected) can point at a row that only exists on a later
+  // page of the client-side pagination, so it never becomes visible.
+  useEffect(() => {
+    if (!highlightRequestId) return;
+    const index = activeSelfServeRequests.findIndex((row) => {
+      const id = String(
+        row.user_request_id ??
+          row.userRequestId ??
+          row.request_id ??
+          row.requestId ??
+          row.id ??
+          ""
+      ).trim();
+      return id === highlightRequestId;
+    });
+    if (index < 0) return;
+    const targetPage = Math.floor(index / Math.max(myLeavePagination.pageSize, 1));
+    if (targetPage !== myLeavePagination.page) {
+      myLeavePagination.setPage(targetPage);
+    }
+  }, [
+    highlightRequestId,
+    activeSelfServeRequests,
+    myLeavePagination.page,
+    myLeavePagination.pageSize,
+    myLeavePagination.setPage,
+  ]);
+
   // Team/org tables load a merged full list (inbox + portfolio); paginate client-side
   // so "Rows" (10/25/50/100) actually limits what's rendered.
   const teamLeavePagination = useClientPagination(sortedEmployeeRequests, {
@@ -1974,6 +2004,7 @@ export function LeavePageClient() {
                                     onSortChange={setMyLeaveSortId}
                                     sortOptions={LEAVE_REQUEST_SORT_OPTIONS}
                                     pagination={myLeavePagination}
+                                    highlightRequestId={highlightRequestId}
                                     actionLoading={actionLoading}
                                     onRefresh={() => runAction("Refresh my requests", loadMyLeaveRequests)}
                                     fromDate={myRequestsFromDate}
@@ -2188,12 +2219,20 @@ export function LeavePageClient() {
                                               `Insufficient comp-off balance. Available: ${available}, requested: ${days} day(s).`
                                             );
                                           }
-                                          // Optional on the backend: when none is sent it routes via
-                                          // the requestor's project manager, then falls back to their
-                                          // reporting manager / the default approver.
+                                          // The Primary Managers field above is required for Comp Off
+                                          // Usage and IS the assigned manager for this request. This
+                                          // used to call resolveUsageManagerCompOffEmail() first, which
+                                          // auto-picks a manager from the comp-off project catalog —
+                                          // often an unrelated project's manager — and the backend
+                                          // honors manager_comp_off_email before primary_manager_emails,
+                                          // so that auto-resolved email silently overrode the manager
+                                          // the employee actually selected. That's why the assigned
+                                          // manager never got notified / never saw the request in Team
+                                          // Requests. Prefer the explicit selection; only fall back to
+                                          // the catalog resolution if, somehow, none was selected.
                                           const managerCompOffEmail =
-                                            (await compOffService.resolveUsageManagerCompOffEmail()) ||
                                             selectedLeaveManagerEmails[0]?.trim().toLowerCase() ||
+                                            (await compOffService.resolveUsageManagerCompOffEmail()) ||
                                             "";
                                           if (editingLeaveRequestId) {
                                             await compOffService.updateRequest({
@@ -2326,6 +2365,7 @@ export function LeavePageClient() {
                                     onSortChange={setMyLeaveSortId}
                                     sortOptions={LEAVE_REQUEST_SORT_OPTIONS}
                                     pagination={myLeavePagination}
+                                    highlightRequestId={highlightRequestId}
                                     actionLoading={actionLoading}
                                     onRefresh={() => runAction("Refresh my requests", loadMyLeaveRequests)}
                                     fromDate={myRequestsFromDate}

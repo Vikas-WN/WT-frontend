@@ -56,6 +56,7 @@ export function MyLeaveRequestsView({
   onFromDateChange,
   onToDateChange,
   showRequestType = false,
+  highlightRequestId = "",
 }: {
   rows: Array<Record<string, unknown>>;
   loading: boolean;
@@ -73,6 +74,8 @@ export function MyLeaveRequestsView({
   onFromDateChange?: (v: string) => void;
   onToDateChange?: (v: string) => void;
   showRequestType?: boolean;
+  /** Notification deep-link target: highlight and anchor scroll to this request. */
+  highlightRequestId?: string;
 }) {
   return (
     <div className="space-y-0">
@@ -144,8 +147,19 @@ export function MyLeaveRequestsView({
                   finalStatus === "REJECTED"
                     ? requestRejectionReason(rowRecord)
                     : null;
+                const isHighlighted = Boolean(
+                  highlightRequestId && requestId === highlightRequestId
+                );
                 return (
-                    <TableRow key={`${requestId || "req"}-${idx}`}>
+                    <TableRow
+                      key={`${requestId || "req"}-${idx}`}
+                      data-leave-request-id={requestId || undefined}
+                      className={
+                        isHighlighted
+                          ? "bg-[var(--wt-brand-soft)]/40 ring-1 ring-inset ring-[var(--wt-brand)]/30"
+                          : undefined
+                      }
+                    >
                     <TableCell className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">
                       {String(
                         row.request_from_date ?? row.requestFromDate ?? "—"

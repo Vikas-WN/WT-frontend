@@ -7,6 +7,8 @@ export type SelfOnboardFormState = {
   phone_number: string;
   date_of_birth: string;
   yoe: string;
+  /** Whole months (0-11) to go with `yoe`, e.g. "2 years 6 months". */
+  yoe_months: string;
   experience: string;
   primary_skills: SkillRating[];
   secondary_skills: SkillRating[];
@@ -31,6 +33,7 @@ export function createEmptySelfOnboardForm(): SelfOnboardFormState {
     phone_number: "",
     date_of_birth: "",
     yoe: "",
+    yoe_months: "",
     experience: "",
     primary_skills: [],
     secondary_skills: [],

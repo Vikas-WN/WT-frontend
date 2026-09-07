@@ -6,6 +6,8 @@ export type SelfProfileFormState = {
   primary_skills: SkillRating[];
   secondary_skills: SkillRating[];
   yoe: string;
+  /** Whole months (0-11) to go with `yoe`, e.g. "2 years 6 months". */
+  yoe_months: string;
   /** Free-text total experience, e.g. "2 years 6 months" — where months go. */
   experience_summary: string;
   date_of_birth: string;
@@ -26,6 +28,7 @@ export function createEmptySelfProfileForm(): SelfProfileFormState {
     primary_skills: [],
     secondary_skills: [],
     yoe: "",
+    yoe_months: "",
     experience_summary: "",
     date_of_birth: "",
     local_address: "",

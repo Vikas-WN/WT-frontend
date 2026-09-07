@@ -100,10 +100,10 @@ export function SelfOnboardingPanel({
 
   const priorEmploymentDocsRequired = useMemo(() => {
     const raw = String(form.yoe ?? "").trim().replace(",", ".");
-    if (!raw) return false;
-    const n = Number(raw);
-    return Number.isFinite(n) && n > 0;
-  }, [form.yoe]);
+    const months = Number(String(form.yoe_months ?? "").trim() || 0);
+    const n = raw ? Number(raw) : 0;
+    return (Number.isFinite(n) && n > 0) || (Number.isFinite(months) && months > 0);
+  }, [form.yoe, form.yoe_months]);
 
   const primarySkillOptions = useMemo(
     () => options.primary_skills.map((item) => ({ value: item.value, label: item.label })),
@@ -170,6 +170,15 @@ export function SelfOnboardingPanel({
       }
       if (!Number.isInteger(Number(yoeRaw))) {
         throw new Error("Years of experience must be a whole number.");
+      }
+      const yoeMonthsRaw = form.yoe_months.trim();
+      const yoeMonthsValue = yoeMonthsRaw ? Number(yoeMonthsRaw) : 0;
+      if (
+        !Number.isInteger(yoeMonthsValue) ||
+        yoeMonthsValue < 0 ||
+        yoeMonthsValue > 11
+      ) {
+        throw new Error("Experience months must be a whole number between 0 and 11.");
       }
 
       const experience = form.experience.trim();
@@ -275,6 +284,7 @@ export function SelfOnboardingPanel({
       };
 
       if (yoeValue !== null)       userData.yoe = yoeValue;
+      userData.yoe_months = yoeMonthsValue;
       if (experience) userData.experience = experience;
       
       userData.primary_skills = withNumericRatings(primarySkills);
@@ -363,11 +373,23 @@ export function SelfOnboardingPanel({
         />
         <InputField
           label="Years of Experience (excluding internship)"
-          description="Whole years only. Add the exact duration (years and months) in Experience summary."
+          description="Years and months, e.g. 2 years 6 months."
           required
           type="number"
           value={form.yoe}
           onChange={(v) => setForm((p) => ({ ...p, yoe: v }))}
+        />
+        <InputField
+          label="Months"
+          description="Additional whole months (0-11) alongside the years above."
+          type="number"
+          value={form.yoe_months}
+          onChange={(v) =>
+            setForm((p) => ({
+              ...p,
+              yoe_months: v.replace(/\D/g, "").slice(0, 2),
+            }))
+          }
         />
         {priorEmploymentDocsRequired ? (
           <InputField

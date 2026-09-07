@@ -119,7 +119,8 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const isHrPortalUser =
     (userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN")) &&
     !userRoles.includes("ROLE_EMPLOYEE");
-  const { isOffboarded, isServingNotice, requiresExitSurvey, profile } = useDashboardAccess();
+  const { isOffboarded, isServingNotice, requiresExitSurvey, requiresSelfOnboarding, profile } =
+    useDashboardAccess();
 
   const navChildActiveOptions = useMemo(
     () => ({ hasHrAccess, hasManagerAccess, hasDmAccess }),
@@ -137,8 +138,15 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       hasHrAccess,
       hasAccountManagerAccess,
       showExitSurveyNav: requiresExitSurvey,
+      requiresSelfOnboarding,
     });
-  }, [userRoles, hasHrAccess, hasAccountManagerAccess, requiresExitSurvey]);
+  }, [
+    userRoles,
+    hasHrAccess,
+    hasAccountManagerAccess,
+    requiresExitSurvey,
+    requiresSelfOnboarding,
+  ]);
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);

@@ -192,10 +192,10 @@ export function ProfilePageLeanClient() {
     const raw = String(selfProfileForm.yoe ?? "")
       .trim()
       .replace(",", ".");
-    if (!raw) return false;
-    const n = Number.parseFloat(raw);
-    return Number.isFinite(n) && n > 0;
-  }, [selfProfileForm.yoe]);
+    const n = raw ? Number.parseFloat(raw) : 0;
+    const months = Number(String(selfProfileForm.yoe_months ?? "").trim() || 0);
+    return (Number.isFinite(n) && n > 0) || (Number.isFinite(months) && months > 0);
+  }, [selfProfileForm.yoe, selfProfileForm.yoe_months]);
 
   async function runAction(label: string, fn: () => Promise<void>) {
     setActionLoading(true);
@@ -263,6 +263,7 @@ export function ProfilePageLeanClient() {
       primary_skills: primarySkills,
       secondary_skills: secondarySkills,
       yoe: String(profile.yoe ?? "").trim(),
+      yoe_months: String(profile.yoe_months ?? profile.yoeMonths ?? "").trim(),
       experience_summary: pickStr([
         "experience",
         "experience_summary",
@@ -380,7 +381,7 @@ export function ProfilePageLeanClient() {
         />
         <InputField
           label="Years of Experience (excluding internship)"
-          description="Whole years only. Record months below in Experience Summary."
+          description="Years and months, e.g. 2 years 6 months."
           required
           inputMode="numeric"
           value={selfProfileForm.yoe}
@@ -389,6 +390,18 @@ export function ProfilePageLeanClient() {
               ...p,
               // Digits only, capped at 2 chars — no one has >99 years of experience.
               yoe: v.replace(/\D/g, "").slice(0, 2),
+            }))
+          }
+        />
+        <InputField
+          label="Months"
+          description="Additional whole months (0-11) alongside the years above."
+          inputMode="numeric"
+          value={selfProfileForm.yoe_months}
+          onChange={(v) =>
+            setSelfProfileForm((p) => ({
+              ...p,
+              yoe_months: v.replace(/\D/g, "").slice(0, 2),
             }))
           }
         />
@@ -625,6 +638,17 @@ export function ProfilePageLeanClient() {
               if (yoeValue > 60) {
                 throw new Error("Years of experience must be 60 or less.");
               }
+              const yoeMonthsRaw = String(selfProfileForm.yoe_months ?? "").trim();
+              const yoeMonthsValue = yoeMonthsRaw ? Number(yoeMonthsRaw) : 0;
+              if (
+                !Number.isInteger(yoeMonthsValue) ||
+                yoeMonthsValue < 0 ||
+                yoeMonthsValue > 11
+              ) {
+                throw new Error(
+                  "Experience months must be a whole number between 0 and 11.",
+                );
+              }
               const profilePayload: Record<string, unknown> = {
                 phone_number: formattedPhoneNumber,
                 // Non-tech employees with no skills: omit the arrays entirely so the
@@ -634,11 +658,14 @@ export function ProfilePageLeanClient() {
                   ? { primary_skills: primarySkills, secondary_skills: secondarySkills }
                   : {}),
                 // Prefer the employee's own free-text summary (with months); fall
-                // back to a whole-year string derived from YoE.
+                // back to a years+months string derived from YoE.
                 experience:
                   selfProfileForm.experience_summary.trim() ||
-                  (yoeValue > 0 ? `${yoeValue} years` : null),
+                  (yoeValue > 0 || yoeMonthsValue > 0
+                    ? `${yoeValue} years${yoeMonthsValue > 0 ? ` ${yoeMonthsValue} months` : ""}`
+                    : null),
                 yoe: yoeValue,
+                yoe_months: yoeMonthsValue,
               };
               const dobResult = validateRequiredApiDate(
                 selfProfileForm.date_of_birth,

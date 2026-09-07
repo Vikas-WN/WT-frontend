@@ -174,18 +174,29 @@ export function EmployeeUserTypeSelect({
       return;
     }
 
-    setDraftType(normalizedNext);
-
     if (
       requiresUserTypeTransitionDialog(currentType, normalizedNext, {
         currentBandIsInternOnly,
       })
     ) {
+      // Do NOT set the draft here. A transition confirmed through this dialog
+      // can be scheduled for a future date, in which case the employee's user
+      // type must keep displaying its current, unchanged value until that
+      // date actually arrives (the backend only applies it on the scheduled
+      // day). Setting the draft at selection time made the cell flip to the
+      // picked type immediately — before a date was even chosen, let alone
+      // "Confirm Transition" clicked — so a future-dated transition looked
+      // like it had already taken effect. Leave the cell on `currentType`
+      // (via the null draft) until persistUserType below actually completes;
+      // if the backend applied it immediately, the refetched data will show
+      // the new type once it lands — if it scheduled it, currentType stays
+      // correctly unchanged.
       setPendingType(normalizedNext);
       setDialogOpen(true);
       return;
     }
 
+    setDraftType(normalizedNext);
     void persistUserType(normalizedNext);
   };
 
