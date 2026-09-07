@@ -145,7 +145,8 @@ export function AllocateEmployeeDialog({
   );
   const allocationTypeOptions = staffing
     ? [{ value: "STAFFING", label: "Staffing" }]
-    : ALLOCATION_TYPE_SELECT_OPTIONS;
+    : // STAFFING is only valid on STAFFING projects — never offer it for In-House / other types.
+      ALLOCATION_TYPE_SELECT_OPTIONS.filter((option) => option.value !== "STAFFING");
   const showLockedInDate = !staffing && form.allocation_type === "LOCKED";
 
   function validateEmployeeStep(): boolean {

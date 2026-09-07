@@ -127,7 +127,7 @@ export function ApiDateField({
           type="date"
           tabIndex={-1}
           aria-hidden
-          className="sr-only"
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
           value={apiDateToInputValue(value)}
           min={min ? apiDateToInputValue(min) : undefined}
           max={max ? apiDateToInputValue(max) : undefined}
@@ -613,20 +613,35 @@ export function FileField({
   const fieldId = useId();
   const isMulti = Boolean(multiple);
   const hasFile = Boolean(currentFileName);
+  // Track the src that failed to load so a new src automatically clears the state
+  // (no effect needed).
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const previewFailed = failedSrc != null && failedSrc === currentPreviewSrc;
 
   return (
     <Field className={FORM_FIELD_CLASS}>
       <FieldLabel label={label} required={required} htmlFor={fieldId} />
       <div className="flex items-center gap-2">
-        {currentPreviewSrc ? (
+        {currentPreviewSrc && !previewFailed ? (
           // The native file input always reads "No file chosen", which makes a saved file
           // look lost. The thumbnail shows what is currently on record.
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={currentPreviewSrc}
             alt={currentFileName ? `Current ${label}: ${currentFileName}` : `Current ${label}`}
+            onError={() => setFailedSrc(currentPreviewSrc ?? null)}
             className="border-wt-border size-10 shrink-0 rounded-full border object-cover"
           />
+        ) : currentPreviewSrc && previewFailed ? (
+          // The stored file could not be loaded (missing on the server / expired
+          // link). Show a neutral placeholder instead of a broken-image icon; the
+          // "Current: …" note below still tells the user a file is on record.
+          <span
+            aria-hidden
+            className="border-wt-border bg-wt-surface-2 text-wt-text-muted flex size-10 shrink-0 items-center justify-center rounded-full border text-xs"
+          >
+            IMG
+          </span>
         ) : null}
         <Input
           id={fieldId}

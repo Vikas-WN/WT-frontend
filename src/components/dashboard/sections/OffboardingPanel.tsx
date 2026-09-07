@@ -73,7 +73,7 @@ import { extractSkillNames } from "@/utils/employeeDirectory";
 const USER_TYPE_FILTER_OPTIONS = ["", "FULLTIME", "INTERN", "CONSULTANT"] as const;
 
 const INNER_SCROLL_CLASS =
-  "wt-scroll-both max-h-[min(70vh,560px)] overflow-auto overscroll-behavior-auto rounded-xl border border-wt-border";
+  "max-h-[min(70vh,560px)] overflow-auto overscroll-y-auto rounded-xl border border-wt-border";
 
 function formatPercent(value: unknown): string {
   const n = Number(value);
@@ -743,7 +743,7 @@ export function OffboardingPanel() {
                 Dismiss
               </Button>
             </div>
-            <ul className="max-h-48 space-y-2 overflow-y-auto text-sm">
+            <ul className="max-h-48 space-y-2 overflow-y-auto overscroll-y-auto text-sm">
               {bulkResendResults.map((result) => (
                 <li
                   key={`${result.emp_id}-${result.status}`}
@@ -775,7 +775,15 @@ export function OffboardingPanel() {
                   <WtLoader size="md" label="Loading offboarding list" />
                 </div>
               ) : null}
-              <div className={INNER_SCROLL_CLASS}>
+              <div className="
+                max-h-[min(70vh,560px)]
+                overflow-x-auto
+                overflow-y-auto
+                overscroll-y-auto
+                rounded-xl
+                border
+                border-wt-border
+              ">
                 <WtTable className="min-w-full border-separate border-spacing-0">
                   <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
                     <TableRow className="hover:bg-transparent">

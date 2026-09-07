@@ -202,6 +202,12 @@
   --color-wt-border-md: var(--wt-border-md);
   --font-sans: var(--font-sans);
   --font-heading: var(--font-sans);
+
+  /* App-wide easing default for Tailwind's transition-* utilities — one
+     decelerating curve so hover/focus/colour states glide instead of snapping.
+     Duration is deliberately left at Tailwind's default; components keep their
+     own explicit durations/easings where set. */
+  --default-transition-timing-function: var(--wt-ease);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -427,7 +433,7 @@ body::-webkit-scrollbar {
 /* Horizontal + vertical scroll (e.g. wide tables), scrollbar hidden */
 .wt-scroll-both {
   overflow: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior: auto;
 }
 
 /* Horizontal scroll with visible scrollbar for wide data tables */
@@ -701,8 +707,9 @@ video {
   border-radius: var(--radius-md);
   cursor: pointer;
   transition:
-    background-color 0.2s ease,
-    box-shadow 0.2s ease;
+    background-color var(--wt-duration-fast) var(--wt-ease),
+    box-shadow var(--wt-duration-fast) var(--wt-ease),
+    transform var(--wt-duration-fast) var(--wt-ease);
   position: relative;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
@@ -745,9 +752,10 @@ video {
   border-radius: var(--radius-md);
   cursor: pointer;
   transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+    background-color var(--wt-duration-fast) var(--wt-ease),
+    border-color var(--wt-duration-fast) var(--wt-ease),
+    box-shadow var(--wt-duration-fast) var(--wt-ease),
+    transform var(--wt-duration-fast) var(--wt-ease);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
@@ -784,8 +792,9 @@ video {
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition:
-    background-color 0.2s ease,
-    box-shadow 0.2s ease;
+    background-color var(--wt-duration-fast) var(--wt-ease),
+    box-shadow var(--wt-duration-fast) var(--wt-ease),
+    transform var(--wt-duration-fast) var(--wt-ease);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
@@ -818,9 +827,10 @@ video {
   background: rgba(53, 80, 149, 0.08);
   cursor: pointer;
   transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease;
+    background var(--wt-duration-fast) var(--wt-ease),
+    border-color var(--wt-duration-fast) var(--wt-ease),
+    color var(--wt-duration-fast) var(--wt-ease),
+    transform var(--wt-duration-fast) var(--wt-ease);
 }
 
 .btn-action-icon:hover:not(:disabled) {
@@ -853,9 +863,10 @@ video {
   border-radius: var(--radius-md);
   cursor: pointer;
   transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease;
+    background var(--wt-duration-fast) var(--wt-ease),
+    border-color var(--wt-duration-fast) var(--wt-ease),
+    color var(--wt-duration-fast) var(--wt-ease),
+    transform var(--wt-duration-fast) var(--wt-ease);
 }
 
 .btn-ghost:hover:not(:disabled) {
@@ -878,8 +889,9 @@ video {
   border-radius: var(--radius-sm);
   font-size: 0.9375rem;
   transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+    border-color var(--wt-duration-fast) var(--wt-ease),
+    box-shadow var(--wt-duration-fast) var(--wt-ease),
+    background-color var(--wt-duration-fast) var(--wt-ease);
   outline: none;
   box-sizing: border-box;
 }
@@ -1254,12 +1266,20 @@ select.input-field {
   }
 }
 
+.animate-expand,
+.animate-collapse {
+  overflow: hidden;
+  /* Scoped here (not on :root) so only these accordion sections get height:auto
+     keyframe interpolation — keeps the blast radius small. */
+  interpolate-size: allow-keyframes;
+}
+
 .animate-expand {
-  animation: expand 0.25s ease-in-out forwards;
+  animation: expand var(--wt-duration) var(--wt-ease-out) forwards;
 }
 
 .animate-collapse {
-  animation: collapse 0.25s ease-in-out forwards;
+  animation: collapse var(--wt-duration) var(--wt-ease-out) forwards;
 }
 
 /* Pulse dot */
@@ -1812,10 +1832,10 @@ select.input-field {
   color: var(--wt-text-muted) !important;
   opacity: 0;
   transition:
-    opacity 0.2s ease,
-    background-color 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s ease;
+    opacity var(--wt-duration-fast) var(--wt-ease),
+    background-color var(--wt-duration-fast) var(--wt-ease),
+    color var(--wt-duration-fast) var(--wt-ease),
+    transform var(--wt-duration-fast) var(--wt-ease);
 }
 
 [data-sonner-toast]:hover .wt-toast__close,

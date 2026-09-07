@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { MAX_ONBOARD_FILE_BYTES, MAX_ONBOARD_TOTAL_BYTES } from "@/constants/dashboard";
 import {
+  AdaptiveSelectField,
   InputField,
   SelectField,
   FileField,
@@ -18,7 +19,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { isValidPersonName } from "@/utils/dashboard/validation";
-import { digitsOnly } from "@/utils/phoneCountries";
+import {
+  digitsOnly,
+  PHONE_COUNTRY_OPTIONS,
+  formatPhoneNumberForApi,
+  validatePhoneNumber,
+} from "@/utils/phoneCountries";
 import { validatePersonalEmail } from "@/utils/personalEmail";
 import { validateResumeShareLink } from "@/utils/employeeResume";
 import {
@@ -52,6 +58,8 @@ export function SelfOnboardingPanel({
   workEmail,
   initialPersonalEmail = "",
   initialResumeShareLink = "",
+  initialDateOfBirth = "",
+  dateOfBirthLocked = false,
   actionLoading,
   runAction,
   onSuccess,
@@ -59,6 +67,10 @@ export function SelfOnboardingPanel({
   workEmail: string;
   initialPersonalEmail?: string;
   initialResumeShareLink?: string;
+  /** Pre-fill DOB from the profile so a resumed onboarding doesn't ask again. */
+  initialDateOfBirth?: string;
+  /** True once DOB is confirmed & saved — field is read-only and not re-sent. */
+  dateOfBirthLocked?: boolean;
   actionLoading: boolean;
   runAction: (label: string, fn: () => Promise<void>) => void;
   onSuccess: () => Promise<void>;
@@ -66,7 +78,8 @@ export function SelfOnboardingPanel({
   const [formKey, setFormKey] = useState(0);
   const [form, setForm] = useState(() => loadSavedOnboardForm() ?? createEmptySelfOnboardForm());
   const [files, setFiles] = useState<OnboardFiles>(EMPTY_FILES);
-  const [dobConfirmed, setDobConfirmed] = useState(false);
+  // A locked DOB is, by definition, already confirmed.
+  const [dobConfirmed, setDobConfirmed] = useState(() => dateOfBirthLocked);
   const onboardOptionsQ = useOnboardOptions();
   const options = onboardOptionsQ.data ?? FALLBACK_ONBOARD_OPTIONS;
 
@@ -77,8 +90,9 @@ export function SelfOnboardingPanel({
       ...prev,
       personal_email: initialPersonalEmail.trim() || prev.personal_email,
       resume_share_link: initialResumeShareLink.trim() || prev.resume_share_link,
+      date_of_birth: initialDateOfBirth.trim() || prev.date_of_birth,
     }));
-  }, [initialPersonalEmail, initialResumeShareLink]);
+  }, [initialPersonalEmail, initialResumeShareLink, initialDateOfBirth]);
 
   useEffect(() => {
     saveOnboardFormDraft(form);
@@ -86,10 +100,10 @@ export function SelfOnboardingPanel({
 
   const priorEmploymentDocsRequired = useMemo(() => {
     const raw = String(form.yoe ?? "").trim().replace(",", ".");
-    if (!raw) return false;
-    const n = Number(raw);
-    return Number.isFinite(n) && n > 0;
-  }, [form.yoe]);
+    const months = Number(String(form.yoe_months ?? "").trim() || 0);
+    const n = raw ? Number(raw) : 0;
+    return (Number.isFinite(n) && n > 0) || (Number.isFinite(months) && months > 0);
+  }, [form.yoe, form.yoe_months]);
 
   const primarySkillOptions = useMemo(
     () => options.primary_skills.map((item) => ({ value: item.value, label: item.label })),
@@ -124,6 +138,13 @@ export function SelfOnboardingPanel({
         throw new Error("Enter your full name as per ID (letters and spaces, 2–120 characters).");
       }
 
+      const phoneCountry = form.phone_country.trim();
+      if (!phoneCountry) throw new Error("Please select a country code.");
+      const phoneError = validatePhoneNumber(phoneCountry, form.phone_number);
+      if (phoneError) throw new Error(phoneError);
+      const apiPhoneNumber = formatPhoneNumberForApi(phoneCountry, form.phone_number);
+      if (!apiPhoneNumber) throw new Error("Enter a valid phone number.");
+
       const dateOfBirth = toApiDateParam(form.date_of_birth);
       if (!dateOfBirth) {
         throw new Error(
@@ -132,7 +153,10 @@ export function SelfOnboardingPanel({
             : "Date of birth is required. Use DD/MM/YYYY."
         );
       }
-      if (!isDobReadyToSave(form.date_of_birth, dobConfirmed, false)) {
+      if (
+        !dateOfBirthLocked &&
+        !isDobReadyToSave(form.date_of_birth, dobConfirmed, false)
+      ) {
         throw new Error("Confirm your calculated age to lock your date of birth before submitting.");
       }
 
@@ -141,11 +165,20 @@ export function SelfOnboardingPanel({
         throw new Error("Years of experience is required.");
       }
       const yoeValue = Number(yoeRaw);
-      if (!Number.isFinite(yoeValue) || yoeValue < 0) {
-        throw new Error("Years of experience must be a valid number.");
+      if (!Number.isFinite(yoeValue) || yoeValue < 0 || yoeValue > 50) {
+        throw new Error("Years of experience must be between 0 and 50");
       }
       if (!Number.isInteger(Number(yoeRaw))) {
         throw new Error("Years of experience must be a whole number.");
+      }
+      const yoeMonthsRaw = form.yoe_months.trim();
+      const yoeMonthsValue = yoeMonthsRaw ? Number(yoeMonthsRaw) : 0;
+      if (
+        !Number.isInteger(yoeMonthsValue) ||
+        yoeMonthsValue < 0 ||
+        yoeMonthsValue > 11
+      ) {
+        throw new Error("Experience months must be a whole number between 0 and 11.");
       }
 
       const experience = form.experience.trim();
@@ -241,12 +274,17 @@ export function SelfOnboardingPanel({
         email,
         personal_email: personalEmail,
         name: legalName,
-        date_of_birth: dateOfBirth,
-        date_of_birth_confirmed: true,
+        phone_number: apiPhoneNumber,
         resume_share_link: resumeShareLink,
+        // Once DOB is locked, never re-send it — the backend rejects any value
+        // (even the identical one after a format round-trip) as an edit attempt.
+        ...(dateOfBirthLocked
+          ? {}
+          : { date_of_birth: dateOfBirth, date_of_birth_confirmed: true }),
       };
 
       if (yoeValue !== null)       userData.yoe = yoeValue;
+      userData.yoe_months = yoeMonthsValue;
       if (experience) userData.experience = experience;
       
       userData.primary_skills = withNumericRatings(primarySkills);
@@ -309,17 +347,49 @@ export function SelfOnboardingPanel({
           value={form.full_name}
           onChange={(v) => setForm((p) => ({ ...p, full_name: v }))}
         />
+        <AdaptiveSelectField
+          label="Country Code"
+          required
+          value={form.phone_country}
+          placeholder="Select Country Code"
+          searchPlaceholder="Search Country Code…"
+          options={PHONE_COUNTRY_OPTIONS}
+          onChange={(v) => setForm((p) => ({ ...p, phone_country: v }))}
+        />
+        <InputField
+          label="Phone Number"
+          type="tel"
+          inputMode="numeric"
+          required
+          value={form.phone_number}
+          onChange={(v) => setForm((p) => ({ ...p, phone_number: digitsOnly(v) }))}
+        />
         <DateOfBirthConfirmField
           value={form.date_of_birth}
           confirmed={dobConfirmed}
+          locked={dateOfBirthLocked}
           onChange={(v) => setForm((p) => ({ ...p, date_of_birth: v }))}
           onConfirmChange={setDobConfirmed}
         />
         <InputField
           label="Years of Experience (excluding internship)"
+          description="Years and months, e.g. 2 years 6 months."
           required
+          type="number"
           value={form.yoe}
           onChange={(v) => setForm((p) => ({ ...p, yoe: v }))}
+        />
+        <InputField
+          label="Months"
+          description="Additional whole months (0-11) alongside the years above."
+          type="number"
+          value={form.yoe_months}
+          onChange={(v) =>
+            setForm((p) => ({
+              ...p,
+              yoe_months: v.replace(/\D/g, "").slice(0, 2),
+            }))
+          }
         />
         {priorEmploymentDocsRequired ? (
           <InputField
@@ -379,20 +449,31 @@ export function SelfOnboardingPanel({
         />
         <InputField
           label="Emergency contact number"
+          type="tel"
+          inputMode="numeric"
           value={form.emergency_contact_number}
           onChange={(v) => setForm((p) => ({ ...p, emergency_contact_number: v }))}
+          error={
+            /[^0-9]/.test(form.emergency_contact_number)
+              ? "Alphabets and other characters are not allowed."
+              : null
+          }
         />
       </div>
       <div className="grid sm:grid-cols-2 gap-3 mt-3">
         <TextAreaField
           label="Local address"
           className="sm:col-span-2"
+          rows={3}
+          textareaClassName="max-h-36 overflow-y-auto"
           value={form.local_address}
           onChange={(v) => setForm((p) => ({ ...p, local_address: v }))}
         />
         <TextAreaField
           label="Permanent address"
           className="sm:col-span-2"
+          rows={3}
+          textareaClassName="max-h-36 overflow-y-auto"
           value={form.permanent_address}
           onChange={(v) => setForm((p) => ({ ...p, permanent_address: v }))}
         />

@@ -34,6 +34,7 @@ import { SelfOnboardingPanel } from "@/components/employee-onboarding/SelfOnboar
 import {
   InputField,
   SelectField,
+  TextAreaField,
   FileField,
 } from "@/components/dashboard/ui/forms";
 import { validateRequiredApiDate } from "@/utils/apiDate";
@@ -42,6 +43,9 @@ import {
   resolveProfilePhotoSrc,
 } from "@/components/dashboard/ui/profile";
 import { pickProfileField } from "@/utils/employeeDirectory";
+import { isNonTechProfile } from "@/utils/roles";
+import { useOnboardOptions } from "@/hooks/useOnboardOptions";
+import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { ProfileEmployeeTrainingsSection } from "@/components/dashboard/profile/ProfileEmployeeTrainingsSection";
 import { ProfileAssignedProjectsSection } from "@/components/dashboard/profile/ProfileAssignedProjectsSection";
@@ -78,6 +82,36 @@ export function ProfilePageLeanClient() {
   } = useDashboardAccess();
 
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Same predefined skill list HR sees — keeps the Primary/Secondary Skills fields a
+  // searchable dropdown (with "add custom") for the employee too, not a free-text box.
+  // (React Compiler auto-memoizes; no manual useMemo needed.)
+  const { data: onboardOptions } = useOnboardOptions();
+  const toSkillSelectOptions = (
+    items: { value: string; label: string }[] | undefined,
+    fallback: { value: string; label: string }[],
+  ) => (items?.length ? items : fallback).map((o) => ({ value: o.value, label: o.label }));
+  const primarySkillOptions = toSkillSelectOptions(
+    onboardOptions?.primary_skills,
+    FALLBACK_ONBOARD_OPTIONS.primary_skills,
+  );
+  const secondarySkillOptions = toSkillSelectOptions(
+    onboardOptions?.secondary_skills,
+    FALLBACK_ONBOARD_OPTIONS.secondary_skills,
+  );
+  // Personal-detail dropdowns mirror the ones the employee saw at onboarding.
+  const genderOptions =
+    onboardOptions?.genders?.length
+      ? onboardOptions.genders
+      : FALLBACK_ONBOARD_OPTIONS.genders;
+  const maritalStatusOptions =
+    onboardOptions?.marital_statuses?.length
+      ? onboardOptions.marital_statuses
+      : FALLBACK_ONBOARD_OPTIONS.marital_statuses;
+  const bloodGroupOptions =
+    onboardOptions?.blood_groups?.length
+      ? onboardOptions.blood_groups
+      : FALLBACK_ONBOARD_OPTIONS.blood_groups;
 
   const [profileAssignedProjects, setProfileAssignedProjects] = useState<
     Array<Record<string, unknown>>
@@ -158,10 +192,10 @@ export function ProfilePageLeanClient() {
     const raw = String(selfProfileForm.yoe ?? "")
       .trim()
       .replace(",", ".");
-    if (!raw) return false;
-    const n = Number.parseFloat(raw);
-    return Number.isFinite(n) && n > 0;
-  }, [selfProfileForm.yoe]);
+    const n = raw ? Number.parseFloat(raw) : 0;
+    const months = Number(String(selfProfileForm.yoe_months ?? "").trim() || 0);
+    return (Number.isFinite(n) && n > 0) || (Number.isFinite(months) && months > 0);
+  }, [selfProfileForm.yoe, selfProfileForm.yoe_months]);
 
   async function runAction(label: string, fn: () => Promise<void>) {
     setActionLoading(true);
@@ -221,13 +255,39 @@ export function ProfilePageLeanClient() {
     const dobLocked = Boolean(
       profile.date_of_birth_locked ?? profile.dateOfBirthLocked ?? profileDob
     );
+    const pickStr = (keys: string[]) =>
+      String(pickProfileField(profile, keys) ?? "").trim();
     setSelfProfileForm({
       phone_country: phoneParts.countryIso,
       phone_number: phoneParts.nationalNumber,
       primary_skills: primarySkills,
       secondary_skills: secondarySkills,
       yoe: String(profile.yoe ?? "").trim(),
+      yoe_months: String(profile.yoe_months ?? profile.yoeMonths ?? "").trim(),
+      experience_summary: pickStr([
+        "experience",
+        "experience_summary",
+        "experienceSummary",
+      ]),
       date_of_birth: profileDob,
+      local_address: pickStr([
+        "local_address",
+        "localAddress",
+        "current_address",
+        "currentAddress",
+      ]),
+      permanent_address: pickStr(["permanent_address", "permanentAddress"]),
+      gender: pickStr(["gender"]).toUpperCase(),
+      marital_status: pickStr(["marital_status", "maritalStatus"]).toUpperCase(),
+      blood_group: pickStr(["blood_group", "bloodGroup"]).toUpperCase(),
+      emergency_contact_name: pickStr([
+        "emergency_contact_name",
+        "emergencyContactName",
+      ]),
+      emergency_contact_number: pickStr([
+        "emergency_contact_number",
+        "emergencyContactNumber",
+      ]),
     });
     setDobConfirmed(dobLocked);
     setSelfProfileEmploymentFiles({
@@ -266,6 +326,16 @@ export function ProfilePageLeanClient() {
   const renderEditPanel = () => {
     return (
     <div className="rounded-3xl border border-wt-border bg-wt-surface-1 p-6 shadow-[var(--wt-shadow-md)] wt-soft-in dark:shadow-none md:p-10">
+      <Button
+        variant="outline"
+        size="sm"
+        type="button"
+        className="mb-4"
+        onClick={() => setIsEditingOwnProfile(false)}
+        disabled={actionLoading}
+      >
+        ← Back
+      </Button>
       <h3 className="text-lg font-semibold tracking-tight text-wt-text">Edit Profile</h3>
       <p className="mb-5 mt-1 text-sm text-wt-text-muted">
         Keep your skills and personal details current. Date of birth locks after you confirm your age.
@@ -292,24 +362,56 @@ export function ProfilePageLeanClient() {
         <SkillRatingsListInput
           label="Primary Skills"
           required
-          hint="At least one skill with a self rating"
+          hint="Choose from the predefined list or add a new skill, then set a self rating"
           value={selfProfileForm.primary_skills}
           onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, primary_skills: v }))}
+          skillOptions={primarySkillOptions}
+          allowCustomSkills
           className="sm:col-span-2"
         />
         <SkillRatingsListInput
           label="Secondary Skills"
           required
-          hint="At least one skill with a self rating"
+          hint="Choose from the predefined list or add a new skill, then set a self rating"
           value={selfProfileForm.secondary_skills}
           onChange={(v) => setSelfProfileForm((prev) => ({ ...prev, secondary_skills: v }))}
+          skillOptions={secondarySkillOptions}
+          allowCustomSkills
           className="sm:col-span-2"
         />
         <InputField
           label="Years of Experience (excluding internship)"
+          description="Years and months, e.g. 2 years 6 months."
           required
+          inputMode="numeric"
           value={selfProfileForm.yoe}
-          onChange={(v) => setSelfProfileForm((p) => ({ ...p, yoe: v }))}
+          onChange={(v) =>
+            setSelfProfileForm((p) => ({
+              ...p,
+              // Digits only, capped at 2 chars — no one has >99 years of experience.
+              yoe: v.replace(/\D/g, "").slice(0, 2),
+            }))
+          }
+        />
+        <InputField
+          label="Months"
+          description="Additional whole months (0-11) alongside the years above."
+          inputMode="numeric"
+          value={selfProfileForm.yoe_months}
+          onChange={(v) =>
+            setSelfProfileForm((p) => ({
+              ...p,
+              yoe_months: v.replace(/\D/g, "").slice(0, 2),
+            }))
+          }
+        />
+        <InputField
+          label="Experience Summary"
+          description="Your exact total experience including months, e.g. “2 years 6 months”."
+          value={selfProfileForm.experience_summary}
+          onChange={(v) =>
+            setSelfProfileForm((p) => ({ ...p, experience_summary: v.slice(0, 120) }))
+          }
         />
         <DateOfBirthConfirmField
           value={selfProfileForm.date_of_birth}
@@ -318,6 +420,81 @@ export function ProfilePageLeanClient() {
           onChange={(v) => setSelfProfileForm((p) => ({ ...p, date_of_birth: v }))}
           onConfirmChange={setDobConfirmed}
         />
+      </div>
+
+      <div className="mt-6 border-t border-wt-border pt-5">
+        <h4 className="text-sm font-semibold tracking-tight text-wt-text">
+          Personal details
+        </h4>
+        <p className="mb-4 mt-1 text-xs text-wt-text-muted">
+          Only you can edit these. HR and Admin can view them but not change them.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <SelectField
+            label="Gender"
+            placeholder="Select"
+            value={selfProfileForm.gender}
+            options={genderOptions}
+            onChange={(v) => setSelfProfileForm((p) => ({ ...p, gender: v }))}
+          />
+          <SelectField
+            label="Marital status"
+            placeholder="Select"
+            value={selfProfileForm.marital_status}
+            options={maritalStatusOptions}
+            onChange={(v) =>
+              setSelfProfileForm((p) => ({ ...p, marital_status: v }))
+            }
+          />
+          <SelectField
+            label="Blood group"
+            placeholder="Select"
+            value={selfProfileForm.blood_group}
+            options={bloodGroupOptions}
+            onChange={(v) =>
+              setSelfProfileForm((p) => ({ ...p, blood_group: v }))
+            }
+          />
+          <InputField
+            label="Emergency contact name"
+            value={selfProfileForm.emergency_contact_name}
+            onChange={(v) =>
+              setSelfProfileForm((p) => ({ ...p, emergency_contact_name: v }))
+            }
+          />
+          <InputField
+            label="Emergency contact number"
+            type="tel"
+            inputMode="numeric"
+            value={selfProfileForm.emergency_contact_number}
+            onChange={(v) =>
+              setSelfProfileForm((p) => ({
+                ...p,
+                emergency_contact_number: v.replace(/[^\d+\-\s()]/g, ""),
+              }))
+            }
+          />
+          <TextAreaField
+            label="Current address"
+            className="sm:col-span-2"
+            rows={3}
+            textareaClassName="max-h-36 overflow-y-auto"
+            value={selfProfileForm.local_address}
+            onChange={(v) =>
+              setSelfProfileForm((p) => ({ ...p, local_address: v }))
+            }
+          />
+          <TextAreaField
+            label="Permanent address"
+            className="sm:col-span-2"
+            rows={3}
+            textareaClassName="max-h-36 overflow-y-auto"
+            value={selfProfileForm.permanent_address}
+            onChange={(v) =>
+              setSelfProfileForm((p) => ({ ...p, permanent_address: v }))
+            }
+          />
+        </div>
       </div>
       {priorEmploymentDocsForProfile ? (
         <div className="mt-4 rounded-xl border border-wt-border bg-wt-surface-2 p-4">
@@ -373,10 +550,18 @@ export function ProfilePageLeanClient() {
             runAction("Update my profile", async () => {
               const primarySkills = selfProfileForm.primary_skills.filter((item) => String(item.skill ?? "").trim());
               const secondarySkills = selfProfileForm.secondary_skills.filter((item) => String(item.skill ?? "").trim());
-              if (!primarySkills.length) {
+              // Skills are only mandatory for technical roles; HR / Finance / other
+              // non-tech employees can save their profile without them.
+              const skillsRequired = !isNonTechProfile(
+                readProfileField(employeeProfile, "department"),
+                pickDesignationForDisplay(employeeProfile ?? {}),
+                readProfileField(employeeProfile, "role", "designation"),
+                readProfileField(employeeProfile, "user_type", "userType"),
+              );
+              if (skillsRequired && !primarySkills.length) {
                 throw new Error("At least one primary skill is required.");
               }
-              if (!secondarySkills.length) {
+              if (skillsRequired && !secondarySkills.length) {
                 throw new Error("At least one secondary skill is required.");
               }
               const dobLocked = Boolean(
@@ -450,13 +635,37 @@ export function ProfilePageLeanClient() {
               if (!Number.isInteger(Number(selfProfileForm.yoe))) {
                 throw new Error("Years of experience must be a whole number.");
               }
+              if (yoeValue > 60) {
+                throw new Error("Years of experience must be 60 or less.");
+              }
+              const yoeMonthsRaw = String(selfProfileForm.yoe_months ?? "").trim();
+              const yoeMonthsValue = yoeMonthsRaw ? Number(yoeMonthsRaw) : 0;
+              if (
+                !Number.isInteger(yoeMonthsValue) ||
+                yoeMonthsValue < 0 ||
+                yoeMonthsValue > 11
+              ) {
+                throw new Error(
+                  "Experience months must be a whole number between 0 and 11.",
+                );
+              }
               const profilePayload: Record<string, unknown> = {
                 phone_number: formattedPhoneNumber,
-                primary_skills: primarySkills,
-                secondary_skills: secondarySkills,
+                // Non-tech employees with no skills: omit the arrays entirely so the
+                // backend's "at least one skill" check (which only runs when a skills
+                // list is present) is skipped.
+                ...(skillsRequired || primarySkills.length || secondarySkills.length
+                  ? { primary_skills: primarySkills, secondary_skills: secondarySkills }
+                  : {}),
+                // Prefer the employee's own free-text summary (with months); fall
+                // back to a years+months string derived from YoE.
                 experience:
-                  yoeValue > 0 ? `${yoeValue} years` : null,
+                  selfProfileForm.experience_summary.trim() ||
+                  (yoeValue > 0 || yoeMonthsValue > 0
+                    ? `${yoeValue} years${yoeMonthsValue > 0 ? ` ${yoeMonthsValue} months` : ""}`
+                    : null),
                 yoe: yoeValue,
+                yoe_months: yoeMonthsValue,
               };
               const dobResult = validateRequiredApiDate(
                 selfProfileForm.date_of_birth,
@@ -469,6 +678,17 @@ export function ProfilePageLeanClient() {
               if (!dobLocked) {
                 profilePayload.date_of_birth_confirmed = true;
               }
+              // Personal details — always send (empty string clears the field).
+              profilePayload.local_address = selfProfileForm.local_address.trim();
+              profilePayload.permanent_address =
+                selfProfileForm.permanent_address.trim();
+              profilePayload.gender = selfProfileForm.gender || null;
+              profilePayload.marital_status = selfProfileForm.marital_status || null;
+              profilePayload.blood_group = selfProfileForm.blood_group || null;
+              profilePayload.emergency_contact_name =
+                selfProfileForm.emergency_contact_name.trim();
+              profilePayload.emergency_contact_number =
+                selfProfileForm.emergency_contact_number.trim();
               fd.append("body", JSON.stringify(profilePayload));
               if (selfProfilePic) fd.append("profilePic", selfProfilePic);
               if (selfProfileEmploymentFiles.reliving_letter) {
@@ -543,6 +763,17 @@ export function ProfilePageLeanClient() {
                   employeeProfile?.resumeShareLink ??
                   "",
               ).trim()}
+              initialDateOfBirth={String(
+                pickProfileField(employeeProfile ?? {}, [
+                  "date_of_birth",
+                  "dob",
+                  "dateOfBirth",
+                ]) ?? "",
+              ).trim()}
+              dateOfBirthLocked={Boolean(
+                employeeProfile?.date_of_birth_locked ??
+                  employeeProfile?.dateOfBirthLocked,
+              )}
               actionLoading={actionLoading}
               runAction={(label, fn) => {
                 void runAction(label, fn);

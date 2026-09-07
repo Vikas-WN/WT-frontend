@@ -141,6 +141,12 @@ export function isValidIndiaMobile(phone: string): boolean {
   return /^(\+91)?[6-9]\d{9}$/.test(d);
 }
 
+/** Emergency contacts can be landline or non-Indian numbers; require ten digits only. */
+export function isValidEmergencyContactNumber(phone: string): boolean {
+  const digits = phone.replace(/\D/g, "");
+  return digits.length === 10;
+}
+
 export function generateAutomaticProjectCode(): string {
   const part = `${Date.now()}`.slice(-6);
   return `P00${part}`;

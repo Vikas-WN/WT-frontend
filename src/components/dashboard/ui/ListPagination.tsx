@@ -124,9 +124,9 @@ export function ListPagination({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {pageSizeSelectOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
+                {pageSizeSelectOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>

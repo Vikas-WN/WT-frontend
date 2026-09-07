@@ -249,8 +249,17 @@ function childVisible(
 export function filterVisibleNavigation(
   items: NavItem[],
   userRoles: string[],
-  options: { hasHrAccess: boolean; hasAccountManagerAccess?: boolean; showExitSurveyNav?: boolean }
+  options: {
+    hasHrAccess: boolean;
+    hasAccountManagerAccess?: boolean;
+    showExitSurveyNav?: boolean;
+    /** Employee is still on the pre-active onboarding flow — hide every nav
+     * destination since none of them (Help & Guide, Referral, Reports, etc.)
+     * are relevant or even reachable until onboarding is complete. */
+    requiresSelfOnboarding?: boolean;
+  }
 ): NavItem[] {
+  if (options.requiresSelfOnboarding) return [];
   const result: NavItem[] = [];
   for (const item of items) {
     if (item.kind === "group") {

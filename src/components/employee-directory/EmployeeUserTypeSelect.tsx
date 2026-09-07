@@ -118,7 +118,7 @@ export function EmployeeUserTypeSelect({
 
     setSaving(true);
     try {
-      await hrmsService.updateEmployeeUserType(empId, {
+      const res = await hrmsService.updateEmployeeUserType(empId, {
         user_type: normalizedNext,
         transition_date: transitionDate,
         ...(nextBandId != null && Number.isFinite(nextBandId)
@@ -131,10 +131,17 @@ export function EmployeeUserTypeSelect({
       // Offboarding candidates cache user_type independently — must refresh or
       // Full-Time fields stay visible after FULLTIME → CONSULTANT transitions.
       await queryClient.invalidateQueries({ queryKey: ["offboarding"] });
+      // Trust the server's message: it states whether the change was scheduled
+      // (future-dated) or applied now, based on the server clock — never the
+      // browser's, which can disagree about "today" across timezones.
+      const serverMessage = String(
+        (res as { message?: unknown })?.message ?? ""
+      ).trim();
       showSuccessToast(
-        normalizedNext === "CONSULTANT"
-          ? "User type updated. Designation was cleared — set a consultant designation on the profile."
-          : "User type updated successfully."
+        serverMessage ||
+          (normalizedNext === "CONSULTANT"
+            ? "User type updated. Designation was cleared — set a consultant designation on the profile."
+            : "User type updated successfully.")
       );
       setDialogOpen(false);
       setPendingType(null);
@@ -167,18 +174,29 @@ export function EmployeeUserTypeSelect({
       return;
     }
 
-    setDraftType(normalizedNext);
-
     if (
       requiresUserTypeTransitionDialog(currentType, normalizedNext, {
         currentBandIsInternOnly,
       })
     ) {
+      // Do NOT set the draft here. A transition confirmed through this dialog
+      // can be scheduled for a future date, in which case the employee's user
+      // type must keep displaying its current, unchanged value until that
+      // date actually arrives (the backend only applies it on the scheduled
+      // day). Setting the draft at selection time made the cell flip to the
+      // picked type immediately — before a date was even chosen, let alone
+      // "Confirm Transition" clicked — so a future-dated transition looked
+      // like it had already taken effect. Leave the cell on `currentType`
+      // (via the null draft) until persistUserType below actually completes;
+      // if the backend applied it immediately, the refetched data will show
+      // the new type once it lands — if it scheduled it, currentType stays
+      // correctly unchanged.
       setPendingType(normalizedNext);
       setDialogOpen(true);
       return;
     }
 
+    setDraftType(normalizedNext);
     void persistUserType(normalizedNext);
   };
 

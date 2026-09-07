@@ -25,7 +25,9 @@ export function DesignationCombobox({
   disabled = false,
   required = false,
   canCreate = false,
+  error,
   onError,
+  onCreated,
 }: {
   bandId: number;
   department: string;
@@ -34,7 +36,11 @@ export function DesignationCombobox({
   disabled?: boolean;
   required?: boolean;
   canCreate?: boolean;
+  /** External validation message (e.g. "Designation is required.") shown below the field. */
+  error?: string | null;
   onError?: (message: string) => void;
+  /** Fired after a designation is resolved via the "add new" flow (freshly created, or matched to an existing row on a 400). */
+  onCreated?: (designation: Designation) => void;
 }) {
   const inputId = useId();
   const listId = useId();
@@ -152,6 +158,7 @@ export function DesignationCombobox({
         if (prev.some((p) => p.id === created.id)) return prev;
         return [...prev, created].sort((a, b) => a.name.localeCompare(b.name));
       });
+      onCreated?.(created);
     } catch (error) {
       const message = toUserFriendlyApiErrorMessage(
         error,
@@ -175,6 +182,7 @@ export function DesignationCombobox({
           );
           if (hit) {
             selectDesignation(hit.name);
+            onCreated?.(hit);
             return;
           }
         } catch {
@@ -221,6 +229,10 @@ export function DesignationCombobox({
         {lengthError ? (
           <p className="mt-1 text-xs text-destructive" role="alert">
             {lengthError}
+          </p>
+        ) : error ? (
+          <p className="mt-1 text-xs text-destructive" role="alert">
+            {error}
           </p>
         ) : null}
         {isOpen && !isDisabled ? (

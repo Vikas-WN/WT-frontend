@@ -72,7 +72,9 @@ export function HrLeaveBalancesPanel({
   const [editingEmployee, setEditingEmployee] = useState<LeaveBalancesListItem | null>(null);
 
   const { user } = useAuth();
-  const canEditBalances = Boolean(user?.roles.includes("ROLE_ADMIN"));
+  const canEditBalances = Boolean(
+    user?.roles.includes("ROLE_ADMIN") || user?.roles.includes("ROLE_HR")
+  );
   const columnCount = canEditBalances ? 7 : 6;
 
   const monthOptions =

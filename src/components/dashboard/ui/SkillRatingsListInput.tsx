@@ -23,10 +23,13 @@ export type SkillRatingsListInputProps = {
   required?: boolean;
   className?: string;
   hint?: string;
+  /** Hard cap on how many skill rows can be added. Defaults to 5. */
+  maxItems?: number;
 };
 
 const RATING_OPTIONS = ["1", "2", "3", "4", "5"];
 const DEFAULT_SELF_RATING = 3;
+const DEFAULT_MAX_SKILLS = 5;
 
 function parseSelfRating(raw: string, fallback: number = DEFAULT_SELF_RATING): number {
   const parsed = Number(String(raw ?? "").trim());
@@ -51,7 +54,9 @@ export function SkillRatingsListInput({
   required = false,
   className,
   hint,
+  maxItems = DEFAULT_MAX_SKILLS,
 }: SkillRatingsListInputProps) {
+  const atLimit = value.length >= maxItems;
   const [customSkillRows, setCustomSkillRows] = useState<Set<number>>(() => new Set());
   const normalizedSkillOptions = useMemo(
     () =>
@@ -68,6 +73,7 @@ export function SkillRatingsListInput({
   );
 
   const handleAdd = () => {
+    if (value.length >= maxItems) return;
     onChange([
       ...value,
       { skill: "", self_rating: DEFAULT_SELF_RATING, webknot_rating: null },
@@ -143,15 +149,22 @@ export function SkillRatingsListInput({
             {label}
             {required ? <span className="text-rose-500">*</span> : null}
           </label>
-          {hint ? <p className="mt-0.5 text-[11px] text-wt-text-muted">{hint}</p> : null}
+          {hint || Number.isFinite(maxItems) ? (
+            <p className="mt-0.5 text-[11px] text-wt-text-muted">
+              {hint}
+              {hint && Number.isFinite(maxItems) ? " · " : ""}
+              {Number.isFinite(maxItems) ? `Up to ${maxItems} skills` : ""}
+            </p>
+          ) : null}
         </div>
         <Button
           variant="ghost"
           size="sm"
           type="button"
           onClick={handleAdd}
-          disabled={disabled}
+          disabled={disabled || atLimit}
           className="h-8 gap-1 rounded-lg px-2.5 text-xs"
+          title={atLimit ? `You can add up to ${maxItems} skills` : undefined}
         >
           <Plus className="size-3.5" />
           Add

@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
@@ -47,7 +48,13 @@ export function DayEntriesPanel({
 
   const hasSubmittable = entries.some((e) => isEmployeeTimelogEditable(e.status));
 
-  return (
+  // Render at the document root — the same as DayEntryForm. Rendering inline
+  // leaves this fixed-position overlay inside the dashboard's animated <main>
+  // (whose transform makes it the containing block), which mispositions the
+  // panel over the calendar and causes flicker/ghosting on hover repaints.
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div className="day-entries-overlay" role="presentation" onClick={onClose}>
       <div
         role="dialog"
@@ -179,6 +186,7 @@ export function DayEntriesPanel({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

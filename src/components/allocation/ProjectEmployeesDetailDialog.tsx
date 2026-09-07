@@ -22,6 +22,7 @@ import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { useAllocationProjectEmployees } from "@/hooks/useAllocationProjectEmployees";
 import { useClientOpportunities } from "@/hooks/clients/useClientOpportunities";
+import { ApiError } from "@/api/error";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { hrmsService } from "@/services/hrms.service";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
@@ -113,6 +114,12 @@ export function ProjectEmployeesDetailDialog({
   const metaName = employeesQ.data?.meta.projectName;
   const titleName = projectName?.trim() || metaName || code;
   const rows = useMemo(() => employees, [employees]);
+  // A disabled WK Business integration (503) isn't something the viewer can act
+  // on — show it as an informational note, not a red failure. Real outages
+  // (502 / other 5xx) keep the error treatment.
+  const opportunitiesIntegrationOff =
+    opportunitiesQ.error instanceof ApiError && opportunitiesQ.error.status === 503;
+
   const opportunities = useMemo(() => {
     const raw = opportunitiesQ.data?.items ?? [];
     // Hard filter: only this project's WK client.
@@ -223,6 +230,12 @@ export function ProjectEmployeesDetailDialog({
             />
           ) : opportunitiesQ.isLoading ? (
             <TableRowsSkeleton rows={4} columns={5} />
+          ) : opportunitiesQ.isError && opportunitiesIntegrationOff ? (
+            <EmptyState
+              title="Opportunities unavailable"
+              description="WK Business integration is not enabled, so opportunities cannot be loaded for this client."
+              icon={<Briefcase className="size-5" aria-hidden />}
+            />
           ) : opportunitiesQ.isError ? (
             <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
               Could not load opportunities for this client.

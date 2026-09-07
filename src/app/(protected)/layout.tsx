@@ -2,7 +2,6 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 
@@ -18,7 +17,6 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   const { status } = useAuth();
-  const router = useRouter();
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -34,10 +32,17 @@ export default function ProtectedLayout({
   );
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/login");
-    }
-  }, [status, router]);
+    if (status !== "unauthenticated") return;
+    // Hard navigation, not router.replace: a session end must guarantee the
+    // protected page's entire component tree (state, timers, in-flight
+    // requests) is torn down immediately. An SPA replace only swaps the route
+    // once every ancestor has re-rendered to `status === "unauthenticated"`,
+    // which leaves a window (and, on some transitions, unmounted-but-still
+    // painted content) where the previous page stays visible/interactive
+    // behind the "Session Ended" cover — exactly what must never happen once
+    // the session is gone.
+    window.location.replace("/login");
+  }, [status]);
 
   if (status === "loading") {
     return (

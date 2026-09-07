@@ -199,3 +199,21 @@ export function canOpenEmployeeProfileEditor(roles: string[]): boolean {
 export function isAccountManagerEmployeeUser(roles: string[]): boolean {
   return hasAccountManagerRole(roles) && roles.includes("ROLE_EMPLOYEE");
 }
+
+/**
+ * Tech-role keywords (matches the classification used for learning / account-manager
+ * pickers in utils/learning/onboardOptions.ts). Anything not matching is treated as
+ * non-tech.
+ */
+const TECH_ROLE_PATTERN =
+  /(engineer|developer|devops|qa\b|quality assurance|tester|testing|technical|tech\b|ui\/ux|android|ios|backend|frontend|fullstack|data engineer|ml engineer|architect|sde\b|programmer)/i;
+
+/** True when none of the given profile signals (department, designation, role, etc.) look technical. */
+export function isNonTechProfile(...signals: Array<unknown>): boolean {
+  const blob = signals
+    .map((v) => String(v ?? "").trim().toLowerCase())
+    .filter(Boolean)
+    .join(" ");
+  if (!blob) return false; // unknown → assume tech so skills stay required
+  return !TECH_ROLE_PATTERN.test(blob);
+}

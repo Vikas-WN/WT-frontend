@@ -11,6 +11,7 @@ import {
   normalizeUserStatus,
   resolveProfileStatus,
   shouldRequireSelfOnboarding,
+  shouldRequireSelfOnboardingForUser,
   shouldShowExitSurveyForStatus,
 } from "@/utils/userStatus";
 import { isPortalLockedProfile } from "@/utils/portalLock";
@@ -36,7 +37,13 @@ export function useDashboardAccess() {
   const isOffboarded = isOffboardedUserStatus(profileStatus);
   const isServingNotice = isServingNoticeUserStatus(profileStatus);
   const isPortalLocked = isPortalLockedProfile(profileQ.data ?? null);
-  const requiresSelfOnboarding = shouldRequireSelfOnboarding(profileStatus);
+  // Staff-portal users (HR / Admin / Manager / DM / AM / Finance) are never put
+  // into the employee self-onboarding flow, even if their record carries a
+  // non-ACTIVE / legacy status.
+  const requiresSelfOnboarding = shouldRequireSelfOnboardingForUser(
+    profileStatus,
+    userRoles
+  );
   const requiresExitSurvey = shouldShowExitSurveyForStatus(profileStatus, userRoles);
   const isExitSurveyOnlyAccess = requiresExitSurvey;
   // Own Profile self-edit: employees and HR/Admin personas (HR was previously excluded).

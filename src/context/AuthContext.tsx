@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return rawUser;
   }, [rawUser, activePersona]);
   const sessionInactivityMs = useMemo(
-    () => Math.max(1, Number(user?.session_inactivity_minutes ?? 30)) * 60 * 1000,
+    () => Math.max(1, Number(user?.session_inactivity_minutes ?? 240)) * 60 * 1000,
     [user?.session_inactivity_minutes]
   );
   const sessionMaxMs = useMemo(
@@ -257,8 +257,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const confirmSessionLogout = useCallback(() => {
     setSessionLogoutReason(null);
     timeoutHandled.current = false;
-    router.replace("/login");
-  }, [router]);
+    // Hard navigation (see the (protected) layout guard for why): guarantees
+    // the ended session's page and all of its state/timers are discarded
+    // rather than left running behind the cover until an SPA route swap
+    // happens to complete.
+    window.location.replace("/login");
+  }, []);
 
   const { extendSession } = useSessionTimeout(
     status === "authenticated",

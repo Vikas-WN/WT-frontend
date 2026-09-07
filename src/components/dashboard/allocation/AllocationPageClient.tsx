@@ -3179,17 +3179,15 @@ export function AllocationPageClient() {
     setIsEditingOwnProfile(true);
   };
 
-  const profileAssignedProjectColumns = employeeSelfServeProfile
-    ? ["project_name", "project_code", "role", "allocated_hours", "start_date"]
-    : [
-        "project_name",
-        "project_code",
-        "role",
-        "allocated_hours",
-        "billing_status",
-        "start_date",
-        "end_date",
-      ];
+  const profileAssignedProjectColumns = [
+    "project_name",
+    "project_code",
+    "role",
+    "allocated_hours",
+    "billing_status",
+    "start_date",
+    "end_date",
+  ];
 
   const renderProfileAssignedProjectsSection = () => (
     <div className="mt-8 border-t border-wt-border pt-6">

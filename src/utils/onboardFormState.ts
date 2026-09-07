@@ -1,5 +1,3 @@
-import { defaultPhoneCountryIso } from "@/utils/phoneCountries";
-
 export type OnboardFormState = {
   emp_id: string;
   email: string;
@@ -21,8 +19,6 @@ export type OnboardFormState = {
   gender: string;
   marital_status: string;
   personal_email: string;
-  phone_country: string;
-  phone_number: string;
 };
 
 export function createEmptyOnboardForm(): OnboardFormState {
@@ -47,7 +43,5 @@ export function createEmptyOnboardForm(): OnboardFormState {
     gender: "",
     marital_status: "",
     personal_email: "",
-    phone_country: defaultPhoneCountryIso(),
-    phone_number: "",
   };
 }

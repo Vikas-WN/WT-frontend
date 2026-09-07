@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
   sessionLogoutMessages,
@@ -16,15 +18,51 @@ export function SessionLogoutDialog({
   reason: SessionLogoutReason;
   onConfirm: () => void;
 }) {
-  if (!open) return null;
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  // Lock the page behind the cover so it cannot be scrolled, focused, clicked,
+  // or reached by assistive tech. The overlay's own stacking/opacity already
+  // keeps it visually on top, but that alone doesn't stop keyboard Tab
+  // navigation or screen readers from still reaching the ended session's page
+  // underneath — and it can't compensate for whatever unmounts (or hasn't
+  // yet unmounted) behind it. `inert` closes that gap unconditionally: every
+  // other top-level node becomes fully non-interactive for as long as this
+  // dialog is open, independent of any navigation that's in flight.
+  useEffect(() => {
+    if (!open || typeof document === "undefined") return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const restore: Array<() => void> = [];
+    for (const node of Array.from(document.body.children)) {
+      if (node === overlayRef.current) continue;
+      const el = node as HTMLElement;
+      if (el.hasAttribute("inert")) continue;
+      el.setAttribute("inert", "");
+      restore.push(() => el.removeAttribute("inert"));
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      for (const undo of restore) undo();
+    };
+  }, [open]);
+
+  if (!open || typeof document === "undefined") return null;
 
   const title = sessionLogoutTitles[reason];
   const message = sessionLogoutMessages[reason];
 
-  return (
+  // Render at the document root so a transformed ancestor (the dashboard's
+  // animated <main>) can never turn this fixed cover into a partial overlay.
+  return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]"
+      ref={overlayRef}
+      // Opaque, top-most cover: once the session has ended the app content behind
+      // must be fully hidden and non-interactive until the user signs in again.
+      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-wt-bg p-4"
       role="presentation"
+      onClick={(event) => event.stopPropagation()}
     >
       <div
         role="alertdialog"
@@ -55,7 +93,8 @@ export function SessionLogoutDialog({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

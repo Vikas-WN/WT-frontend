@@ -260,6 +260,6 @@ export const oauthErrorMessages: Record<string, string> = {
   backend_unavailable:
     "The backend service is unavailable. Try again shortly or contact your administrator.",
   oauth_login_failed: "Sign-in failed. Please try again.",
-  session_idle_timeout: "You were logged out after 30 minutes of inactivity.",
+  session_idle_timeout: "You were logged out after 4 hours of inactivity.",
   session_expired: "Your session has expired after 8 hours. Please sign in again.",
 };
