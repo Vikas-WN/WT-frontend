@@ -155,6 +155,8 @@ export function notificationCategoryLabel(
       return "Announcement";
     case "BIRTHDAY_WISH":
       return "Birthday";
+    case "EMPLOYEE_ID_UPDATED":
+      return "Profile";
     default:
       return "—";
   }
@@ -257,6 +259,9 @@ export function resolveNotificationHref(
       return DASHBOARD_ROUTES.profile;
 
     case "ANNOUNCEMENT":
+      return DASHBOARD_ROUTES.profile;
+
+    case "EMPLOYEE_ID_UPDATED":
       return DASHBOARD_ROUTES.profile;
 
     default:

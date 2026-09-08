@@ -163,21 +163,11 @@ export const dashboardNavigation: NavItem[] = [
     ],
   },
   { kind: "link", id: "resumes", label: "Resumes", roles: ["ROLE_AM"], icon: "fileText" },
-  {
-    kind: "link",
-    id: "background-verification",
-    label: "Background Verification",
-    roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN", "ROLE_FINANCE"],
-    icon: "shield",
-  },
-  {
-    kind: "expandable",
-    id: "learning",
-    label: "Learning & Development",
-    roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
-    icon: "graduationCap",
-    children: [],
-  },
+  // Background Verification and Learning & Development were removed from the
+  // sidebar at the user's request. The routes/pages/components themselves are
+  // untouched (background-verification/page.tsx already shows a Coming Soon
+  // panel; learning-development/** is unchanged) — only the nav entries that
+  // pointed to them here were removed, so both remain reachable by direct URL.
   {
     kind: "expandable",
     id: "reports",

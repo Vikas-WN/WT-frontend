@@ -7,10 +7,10 @@ import {
   ProfileHeaderSkeleton,
 } from "@/components/dashboard/ui/SectionSkeleton";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { DASHBOARD_ROUTES } from "@/constants/routes";
+import { DASHBOARD_ROUTES, employeeDirectoryProfilePath } from "@/constants/routes";
 import { AccessRestricted } from "@/components/auth/AccessRestricted";
 import { HARDCODED_DEPARTMENT_OPTIONS } from "@/constants/dashboard";
 import { useEmployeeDirectoryAccess } from "@/hooks/employee-directory/useEmployeeDirectoryAccess";
@@ -142,6 +142,7 @@ function ViewOnlyField({
 
 export function EmployeeProfilePageClient() {
   const params = useParams();
+  const router = useRouter();
   const empId = decodeURIComponent(String(params?.empId ?? "").trim());
   const { user } = useAuth();
   const {
@@ -279,6 +280,24 @@ export function EmployeeProfilePageClient() {
   const empIdDisplay = formatProfileDisplayValue(
     pickProfileField(profileRecord, ["emp_id", "empId"])
   );
+
+  /**
+   * After a save that changed the Employee ID (GWID), the URL's `empId` param
+   * (and the `useEmployeeProfile`/mutation query keys built from it) now point
+   * at an ID that no longer exists — refetching under it would 404. Navigate
+   * to the new profile path instead so the page keeps working; otherwise fall
+   * back to the normal refetch.
+   */
+  const finishAfterSave = async (savedEmpId: string) => {
+    const nextEmpId = savedEmpId.trim();
+    if (nextEmpId && nextEmpId !== empId) {
+      router.replace(employeeDirectoryProfilePath(nextEmpId));
+    } else {
+      await refetch();
+    }
+    setIsEditing(false);
+    setEditForm(null);
+  };
 
   useEffect(() => {
     if (!isEditing || !canEditProfile) return;
@@ -540,6 +559,9 @@ export function EmployeeProfilePageClient() {
             const phoneError = validatePhoneNumber(phoneCountry, editForm.phone_number);
             if (phoneError) throw new Error(phoneError);
             const missingRequiredFields: string[] = [];
+            if (!editForm.emp_id.trim()) {
+              missingRequiredFields.push("Employee ID is required.");
+            }
             if (!isConsultantEmployee && !editForm.band_id.trim()) {
               missingRequiredFields.push("Band is required.");
             }
@@ -586,9 +608,7 @@ export function EmployeeProfilePageClient() {
             await updateMutation.mutateAsync(payload);
           }
 
-          await refetch();
-          setIsEditing(false);
-          setEditForm(null);
+          await finishAfterSave(editForm.emp_id);
           return;
         }
 
@@ -607,6 +627,9 @@ export function EmployeeProfilePageClient() {
           );
           if (phoneError) throw new Error(phoneError);
           const missingRequiredFields: string[] = [];
+          if (!editForm.emp_id.trim()) {
+            missingRequiredFields.push("Employee ID is required.");
+          }
           if (!isConsultantEmployee && !editForm.band_id.trim()) {
             missingRequiredFields.push("Band is required.");
           }
@@ -649,9 +672,7 @@ export function EmployeeProfilePageClient() {
               omitBand: isConsultantEmployee,
             })
           );
-          await refetch();
-          setIsEditing(false);
-          setEditForm(null);
+          await finishAfterSave(editForm.emp_id);
           return;
         }
         await updateMutation.mutateAsync(
@@ -660,9 +681,7 @@ export function EmployeeProfilePageClient() {
             omitBand: isConsultantEmployee,
           })
         );
-        await refetch();
-        setIsEditing(false);
-        setEditForm(null);
+        await finishAfterSave(editForm.emp_id);
       }
     );
   };
@@ -867,6 +886,22 @@ export function EmployeeProfilePageClient() {
                           value={editForm.email}
                           onChange={(v) => setEditForm({ ...editForm, email: v })}
                           disabled={saving}
+                        />
+                      )}
+                      {adminFieldsLocked ? (
+                        <ViewOnlyField
+                          label="Employee ID"
+                          value={editForm.emp_id}
+                          hint={selfAdminLockHint}
+                        />
+                      ) : (
+                        <InputField
+                          label="Employee ID"
+                          required
+                          value={editForm.emp_id}
+                          onChange={(v) => setEditForm({ ...editForm, emp_id: v.trim() })}
+                          disabled={saving}
+                          description="GWID — changing this takes effect immediately and notifies the employee."
                         />
                       )}
                       <div className="flex flex-col gap-2">

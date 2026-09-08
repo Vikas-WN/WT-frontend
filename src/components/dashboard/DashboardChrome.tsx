@@ -237,10 +237,19 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         if (next.size) setProjectNameByCode(next);
       }
 
+      // Cache-invalidating notification types: an unread one of these means
+      // something HR/Admin changed server-side that the employee's own
+      // (sticky, 5-minute-stale) self-profile cache would otherwise keep
+      // showing stale — e.g. their Employee ID (GWID) was just changed and
+      // must "reflect immediately" rather than wait out the cache.
+      const CACHE_INVALIDATING_NOTIFICATION_TYPES = new Set([
+        "EXIT_INTERVIEW_REMINDER",
+        "EMPLOYEE_ID_UPDATED",
+      ]);
       if (
         items.some(
           (row) =>
-            String(row.type ?? "").toUpperCase() === "EXIT_INTERVIEW_REMINDER" &&
+            CACHE_INVALIDATING_NOTIFICATION_TYPES.has(String(row.type ?? "").toUpperCase()) &&
             !notificationIsRead(row)
         )
       ) {

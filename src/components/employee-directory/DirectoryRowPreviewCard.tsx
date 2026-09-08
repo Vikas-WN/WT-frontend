@@ -116,11 +116,26 @@ export function DirectoryRowPreviewCard({
         render={(props) => (
           <tr
             {...props}
-            className={rowClassName}
-            onClick={onRowClick}
-            onKeyDown={onRowKeyDown}
-            tabIndex={0}
-            role="link"
+            className={cn(props.className, rowClassName)}
+            onClick={(event) => {
+              // Base UI's own onClick (from `props`) manages part of the
+              // trigger's open/close bookkeeping — replacing it outright
+              // (instead of calling it alongside ours) previously meant the
+              // hover-card only ever opened over whichever cell still had
+              // Base UI's untouched handlers wired to it (the name cell,
+              // via its own nested elements), never the row as a whole.
+              // Per Base UI's composition guidance, custom handlers must be
+              // merged with, not substituted for, the ones `render` hands
+              // us. See https://base-ui.com/react/handbook/composition.
+              props.onClick?.(event);
+              onRowClick?.();
+            }}
+            onKeyDown={(event) => {
+              props.onKeyDown?.(event);
+              onRowKeyDown?.(event);
+            }}
+            tabIndex={props.tabIndex ?? 0}
+            role={props.role ?? "link"}
             aria-label={rowAriaLabel}
           >
             {children}

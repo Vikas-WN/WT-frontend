@@ -327,6 +327,8 @@ import { SkillRating } from "@/types/onboard";
 export type EmployeeProfileEditForm = {
   name: string;
   email: string;
+  /** Employee ID / GWID — HR/Admin editable. */
+  emp_id: string;
   personal_email: string;
   phone_country?: string;
   phone_number: string;
@@ -382,6 +384,9 @@ export function profileToEditForm(profile: Record<string, unknown>): EmployeePro
   return {
     name: String(pickProfileField(profile, ["name"]) ?? "").trim(),
     email: String(pickProfileField(profile, ["email"]) ?? "").trim(),
+    emp_id: String(
+      pickProfileField(profile, ["emp_id", "empId", "employee_id", "employeeId"]) ?? ""
+    ).trim(),
     personal_email: String(pickProfileField(profile, ["personal_email"]) ?? "").trim(),
     phone_country: phoneParts.countryIso,
     phone_number: phoneParts.nationalNumber,
@@ -473,6 +478,13 @@ export function editFormToUpdatePayload(
     work_mode: form.work_mode.trim(),
     work_location_type: form.work_location_type.trim(),
   };
+
+  // Employee ID (GWID) — only send when actually set. Never blank out an
+  // existing one by accident (e.g. a form seeded before the profile loaded).
+  const empId = form.emp_id.trim();
+  if (empId) {
+    payload.emp_id = empId;
+  }
 
   // Only send skills when the form actually carries some. Sending empty arrays
   // makes the backend run its "at least one skill" check, which wrongly blocks
