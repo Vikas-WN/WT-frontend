@@ -83,7 +83,10 @@ import {
   requestHrStatus,
   requestManagerStatus,
 } from "@/utils/userRequest";
-import { pickManagerEmailList } from "@/utils/leaveManagerDisplay";
+import {
+  isAssignedCompOffUsageManager,
+  pickManagerEmailList,
+} from "@/utils/leaveManagerDisplay";
 import {
   compareApiDates,
   formatApiDate,
@@ -157,9 +160,19 @@ export function CompOffPageClient({
   const { actionLoading, actionBusyLabel, runAction } = useDashboardAction();
   const {
     hasHrAccess,
-    hasManagerAccess,
+    hasManagerAccess: hasProjectManagerRole,
+    hasDmAccess,
+    hasAccountManagerAccess,
     requiresSelfOnboarding,
   } = useDashboardAccess();
+
+  // A comp-off usage request may be routed to any leave approver — Project,
+  // Delivery or Account Manager (the backend accepts all of them in the Primary
+  // Managers picker and validates against that same set). Gating this review
+  // surface on ROLE_MANAGER alone meant a DM or AM named as the approver was
+  // notified about a request they had no team tab to action it on.
+  const hasManagerAccess =
+    hasProjectManagerRole || hasDmAccess || hasAccountManagerAccess;
 
   const userEmail = String(user?.email ?? "").trim().toLowerCase();
   const submitsToHrForReview = isAccountManagerEmployeeUser(user?.roles ?? []);
@@ -607,7 +620,12 @@ export function CompOffPageClient({
       const team = managerTeamEmails;
       const emailCsv = Array.from(team).filter(Boolean).join(",");
       const skipEarn = teamFlow === "USAGE";
-      const skipUsage = earnOnly || teamFlow === "EARN" || !emailCsv;
+      // `emailCsv` is only a hint for the legacy path-based fallback inside
+      // listRequests — GET /userRequest already returns the usage requests
+      // routed to this manager, whoever raised them. Skipping the call whenever
+      // the team list came back empty meant a manager with no allocation-derived
+      // team saw no usage requests at all, however many were assigned to them.
+      const skipUsage = earnOnly || teamFlow === "EARN";
       const [earnSettled, usageSettled] = await Promise.allSettled([
         skipEarn
           ? Promise.resolve([] as Array<Record<string, unknown>>)
@@ -643,13 +661,15 @@ export function CompOffPageClient({
         if (t !== "COMP_OFF_EARN" && t !== "COMP_OFF") return false;
         // Earn inbox from managerOnly already scopes to assigned managers — keep those rows.
         if (t === "COMP_OFF_EARN") return true;
-        const routedManager = String(
-          pickRowField(row, "manager_comp_off_email", "managerCompOffEmail") ?? ""
-        )
-          .trim()
-          .toLowerCase();
+        // Assigned to me — as the routed comp-off approver, or through the
+        // Primary / Secondary Managers picker on the request form. The picker's
+        // selection is stored in primary_manager_emails, so matching only on
+        // manager_comp_off_email (which the API did not even return until now)
+        // meant the whole rule collapsed to "is the requester on my team".
+        // A usage request routed to a manager outside that team was dropped
+        // here, which is why they got the notification but never the request.
+        if (isAssignedCompOffUsageManager(row, userEmail)) return true;
         const emp = requestRowEmail(row);
-        if (routedManager && userEmail && routedManager === userEmail) return true;
         return emp ? team.has(emp) : false;
       });
       const seenMgr = new Set<string>();

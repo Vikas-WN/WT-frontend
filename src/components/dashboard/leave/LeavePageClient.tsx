@@ -722,11 +722,16 @@ export function LeavePageClient() {
   const hasAdminAccess = userRoles.includes("ROLE_ADMIN");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
   const hasDmAccess = hasDmRole(userRoles);
+  // Account Managers can be named as a primary manager on a leave / WFH /
+  // comp-off request (the backend's approver picker accepts them), so they get
+  // the same routed team inbox as a Project or Delivery Manager. Leaving them
+  // out meant an AM was notified about a request they had nowhere to action.
+  const hasAmAccess = userRoles.includes("ROLE_AM");
 
   const [hasPrimaryLeaveInbox, setHasPrimaryLeaveInbox] = useState(false);
 
   useEffect(() => {
-    if (hasManagerAccess || hasHrAccess || hasDmAccess || !userEmail) {
+    if (hasManagerAccess || hasHrAccess || hasDmAccess || hasAmAccess || !userEmail) {
       setHasPrimaryLeaveInbox(false);
       return;
     }
@@ -763,12 +768,13 @@ export function LeavePageClient() {
     return () => {
       cancelled = true;
     };
-  }, [userEmail, hasManagerAccess, hasHrAccess, hasDmAccess]);
+  }, [userEmail, hasManagerAccess, hasHrAccess, hasDmAccess, hasAmAccess]);
 
-  const canViewTeamLeave = hasManagerAccess || hasHrAccess || hasDmAccess || hasPrimaryLeaveInbox;
+  const canViewTeamLeave =
+    hasManagerAccess || hasHrAccess || hasDmAccess || hasAmAccess || hasPrimaryLeaveInbox;
   // All Employee Requests holds the project-allocated side of the split. Managers see it
   // scoped to the allocated employees routed to them; HR sees every allocated employee.
-  const canViewOrgLeaveRequests = hasHrAccess || hasManagerAccess || hasDmAccess;
+  const canViewOrgLeaveRequests = hasHrAccess || hasManagerAccess || hasDmAccess || hasAmAccess;
   const firstLineStatusColumnLabel = hasHrAccess
     ? "Manager/DM status"
     : hasDmAccess && !hasManagerAccess
@@ -1088,7 +1094,7 @@ export function LeavePageClient() {
     // Earn requests are not listed on /userRequest (API returns 400). Use /comp-off/earn.
     if (isCompOffEarnFilter) {
       const managerOnly =
-        !hasHrAccess && (hasManagerAccess || hasDmAccess || hasPrimaryLeaveInbox);
+        !hasHrAccess && (hasManagerAccess || hasDmAccess || hasAmAccess || hasPrimaryLeaveInbox);
       try {
         const earnRes = await compOffService.listEarnRequests({
           fromDate: from,
@@ -1148,7 +1154,7 @@ export function LeavePageClient() {
       totalElements = rows.length;
       totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
 
-      if (normalizedType === "ALL" && (hasManagerAccess || hasDmAccess || hasPrimaryLeaveInbox)) {
+      if (normalizedType === "ALL" && (hasManagerAccess || hasDmAccess || hasAmAccess || hasPrimaryLeaveInbox)) {
         try {
           const earnRes = await compOffService.listEarnRequests({
             fromDate: from,
@@ -2684,7 +2690,7 @@ export function LeavePageClient() {
                                     const earnManagerAct =
                                       !hrCanActOnRow &&
                                       canManagerActOnCompOffEarn(rowRecord, {
-                                        hasManagerAccess: hasManagerAccess || hasDmAccess,
+                                        hasManagerAccess: hasManagerAccess || hasDmAccess || hasAmAccess,
                                         actorEmail: userEmail,
                                       });
                                     const legacyManagerAct =
@@ -2693,7 +2699,7 @@ export function LeavePageClient() {
                                       !leaveClosedForManagers &&
                                       status === "PENDING" &&
                                       canManagerActOnRequest(rowRecord, {
-                                        hasManagerAccess: hasManagerAccess || hasDmAccess,
+                                        hasManagerAccess: hasManagerAccess || hasDmAccess || hasAmAccess,
                                         hasDmAccess,
                                         actorEmail: userEmail,
                                       }) &&
@@ -2719,7 +2725,7 @@ export function LeavePageClient() {
                                         assignedSecondaryReject ||
                                         (legacyManagerAct &&
                                           canManagerRejectRequest(rowRecord, {
-                                            hasManagerAccess: hasManagerAccess || hasDmAccess,
+                                            hasManagerAccess: hasManagerAccess || hasDmAccess || hasAmAccess,
                                             hasDmAccess,
                                             actorEmail: userEmail,
                                           })));

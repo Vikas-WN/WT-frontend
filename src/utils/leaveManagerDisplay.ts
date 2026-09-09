@@ -139,6 +139,37 @@ export function isAssignedLeaveManager(
   );
 }
 
+/**
+ * True when the viewer is an approver on a Comp Off *usage* request.
+ *
+ * Deliberately does not go through `isLeaveOrWfhRequestRow` (which covers only
+ * LEAVE / OPTIONAL / WFH): a usage request collects the very same Primary /
+ * Secondary Managers picker, but that selection lands in
+ * `primary_manager_emails`, not in `manager_comp_off_email`. The Comp Off team
+ * view matched on `manager_comp_off_email` and team membership alone, so a
+ * request routed to a manager through the picker — someone who is not the
+ * requester's own team manager — was filtered out of their queue even though
+ * the backend had assigned it to them and notified them about it.
+ */
+export function isAssignedCompOffUsageManager(
+  row: Record<string, unknown>,
+  actorEmail: string | null | undefined
+): boolean {
+  const email = String(actorEmail ?? "").trim().toLowerCase();
+  if (!email) return false;
+  const routed = String(
+    pickRowField<unknown>(row, "manager_comp_off_email", "managerCompOffEmail") ?? ""
+  )
+    .trim()
+    .toLowerCase();
+  if (routed && routed === email) return true;
+  return (["primary", "secondary"] as const).some((kind) =>
+    pickManagerEmailList(row, kind).some(
+      (managerEmail) => managerEmail.trim().toLowerCase() === email
+    )
+  );
+}
+
 /** True when any assigned manager has already approved or rejected (one decision closes the request). */
 export function isLeaveRequestClosedForManagerAction(
   row: Record<string, unknown>

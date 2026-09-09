@@ -79,7 +79,10 @@ export const dashboardNavigation: NavItem[] = [
       {
         id: "timelog-team",
         label: "Time Logs",
-        roles: ["ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+        // Delivery and Account Managers run the manager portal for the projects
+        // they own, so the team time-log view belongs to them too. Gating it on
+        // ROLE_MANAGER alone hid it from every DM and AM.
+        roles: ["ROLE_MANAGER", "ROLE_DM", "ROLE_AM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "clock",
       },
     ],
@@ -105,7 +108,9 @@ export const dashboardNavigation: NavItem[] = [
       {
         id: "allocation-extension",
         label: "Extend Project Allocation",
-        roles: ["ROLE_MANAGER", "ROLE_AM", "ROLE_HR", "ROLE_ADMIN"],
+        // ROLE_DM was missing: a Delivery Manager runs the allocations on their
+        // projects and must be able to raise extensions for them.
+        roles: ["ROLE_MANAGER", "ROLE_DM", "ROLE_AM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarRange",
       },
       {
@@ -255,9 +260,15 @@ export function filterVisibleNavigation(
     if (item.kind === "group") {
       // The Employee module (onboarding, directory, HR/manager team views) is an
       // HR/admin/manager surface — never show it to plain employees or non-staff roles.
+      // ROLE_AM belongs here too: an Account Manager runs the manager portal for
+      // their projects, and without it this group was dropped wholesale, taking
+      // the team Time Logs entry with it even though that entry lists ROLE_AM.
+      // Membership of the group only makes the *group* visible; each child is
+      // still filtered on its own roles, so HR-only children (Onboarding,
+      // Directory) stay hidden from managers.
       if (
         item.id === "employee" &&
-        !["ROLE_HR", "ROLE_ADMIN", "ROLE_MANAGER", "ROLE_DM"].some((role) =>
+        !["ROLE_HR", "ROLE_ADMIN", "ROLE_MANAGER", "ROLE_DM", "ROLE_AM"].some((role) =>
           userRoles.includes(role)
         )
       ) {

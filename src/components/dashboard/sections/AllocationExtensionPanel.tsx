@@ -63,9 +63,15 @@ export function AllocationExtensionPanel() {
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasManagerRole = userRoles.includes("ROLE_MANAGER");
   const hasAmRole = userRoles.includes("ROLE_AM");
-  const canCreateRequest = hasManagerRole || hasAmRole || hasHrAccess;
+  // Delivery Managers run the allocations on their projects just as Project and
+  // Account Managers do, so they raise extensions too. Omitting ROLE_DM here
+  // showed them "You don't have access to extend project allocation" on a page
+  // the API is happy to serve them.
+  const hasDmRole = userRoles.includes("ROLE_DM");
+  const hasProjectOwnerRole = hasManagerRole || hasAmRole || hasDmRole;
+  const canCreateRequest = hasProjectOwnerRole || hasHrAccess;
 
-  // Create form (Manager / AM / HR)
+  // Create form (Project / Delivery / Account Manager, or HR)
   const [createForm, setCreateForm] = useState(createEmptyAllocationExtensionForm);
   const [creating, setCreating] = useState(false);
   const [managerProjectsData, setManagerProjectsData] = useState<ManagerExtensionProject[]>([]);
@@ -485,7 +491,7 @@ export function AllocationExtensionPanel() {
     />
   ) : null;
 
-  if (!hasHrAccess && !hasManagerRole && !hasAmRole) {
+  if (!hasHrAccess && !hasProjectOwnerRole) {
     return (
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm">
         <p className="text-sm text-wt-text-muted">You don’t have access to extend project allocation.</p>
