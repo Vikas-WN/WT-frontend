@@ -323,6 +323,44 @@ export function ProfilePageLeanClient() {
   const profilePhotoPreviewSrc =
     pickedProfilePicPreview || resolveProfilePhotoSrc(employeeProfile) || "";
 
+  // Prior-employment documents already on file. These are stored as document
+  // rows rather than profile columns, so Edit Profile used to show the fields
+  // empty and demand the same relieving letter / payslip again on every save
+  // even though they had been submitted at onboarding.
+  const fileNameFromUrl = (value: unknown): string => {
+    const raw = String(value ?? "").trim();
+    if (!raw) return "";
+    const parts = raw.split("/");
+    return parts[parts.length - 1] ?? raw;
+  };
+  const storedRelievingLetterName = useMemo(() => {
+    if (selfProfileEmploymentFiles.reliving_letter?.name) {
+      return selfProfileEmploymentFiles.reliving_letter.name;
+    }
+    return fileNameFromUrl(
+      employeeProfile?.relieving_letter_url ?? employeeProfile?.relievingLetterUrl
+    );
+  }, [
+    employeeProfile?.relieving_letter_url,
+    employeeProfile?.relievingLetterUrl,
+    selfProfileEmploymentFiles.reliving_letter,
+  ]);
+  const storedSalarySlipName = useMemo(() => {
+    if (selfProfileEmploymentFiles.salary_slips?.name) {
+      return selfProfileEmploymentFiles.salary_slips.name;
+    }
+    const urls = (employeeProfile?.salary_slip_urls ??
+      employeeProfile?.salarySlipUrls) as unknown;
+    const list = Array.isArray(urls) ? urls : [];
+    if (!list.length) return "";
+    const first = fileNameFromUrl(list[0]);
+    return list.length > 1 ? `${first} (+${list.length - 1} more)` : first;
+  }, [
+    employeeProfile?.salary_slip_urls,
+    employeeProfile?.salarySlipUrls,
+    selfProfileEmploymentFiles.salary_slips,
+  ]);
+
   const renderEditPanel = () => {
     return (
     <div className="rounded-3xl border border-wt-border bg-wt-surface-1 p-6 shadow-[var(--wt-shadow-md)] wt-soft-in dark:shadow-none md:p-10">
@@ -503,13 +541,15 @@ export function ProfilePageLeanClient() {
           </p>
           <p className="mb-3 text-xs text-wt-text-muted">
             Relieving letter and a payslip are required when years of experience
-            is greater than zero.
+            is greater than zero. Anything already submitted is shown below —
+            upload again only to replace it.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <FileField
               label="Relieving letter (previous company)"
-              required
+              required={!storedRelievingLetterName}
               accept=".pdf,image/*"
+              currentFileName={storedRelievingLetterName || undefined}
               onPick={(file) =>
                 setSelfProfileEmploymentFiles((p) => ({
                   ...p,
@@ -519,8 +559,9 @@ export function ProfilePageLeanClient() {
             />
             <FileField
               label="Upload last 3 months's payslip"
-              required
+              required={!storedSalarySlipName}
               accept=".pdf,image/*"
+              currentFileName={storedSalarySlipName || undefined}
               onPick={(file) =>
                 setSelfProfileEmploymentFiles((p) => ({
                   ...p,
@@ -595,12 +636,22 @@ export function ProfilePageLeanClient() {
                 );
               }
               if (priorEmploymentDocsForProfile) {
-                if (!selfProfileEmploymentFiles.reliving_letter) {
+                // Only demand an upload when nothing is on file yet. These
+                // documents are submitted once at onboarding; re-requiring them
+                // on every profile edit forced employees to re-upload files the
+                // system already had.
+                if (
+                  !selfProfileEmploymentFiles.reliving_letter &&
+                  !storedRelievingLetterName
+                ) {
                   throw new Error(
                     "Please upload your relieving letter from the previous company.",
                   );
                 }
-                if (!selfProfileEmploymentFiles.salary_slips) {
+                if (
+                  !selfProfileEmploymentFiles.salary_slips &&
+                  !storedSalarySlipName
+                ) {
                   throw new Error(
                     "Please upload a payslip file in the payslip field.",
                   );
@@ -651,12 +702,14 @@ export function ProfilePageLeanClient() {
               }
               const profilePayload: Record<string, unknown> = {
                 phone_number: formattedPhoneNumber,
-                // Non-tech employees with no skills: omit the arrays entirely so the
-                // backend's "at least one skill" check (which only runs when a skills
-                // list is present) is skipped.
-                ...(skillsRequired || primarySkills.length || secondarySkills.length
-                  ? { primary_skills: primarySkills, secondary_skills: secondarySkills }
-                  : {}),
+                // Always send both skill lists, including empty ones. The backend's
+                // "at least one skill" check only runs for Technical employees (and
+                // that case is already blocked above before we get here), so a
+                // Non-Tech employee's cleared skills are safe to send as-is. Omitting
+                // the arrays when empty used to silently leave old skills in the
+                // database — clearing them here and saving never actually removed them.
+                primary_skills: primarySkills,
+                secondary_skills: secondarySkills,
                 // Prefer the employee's own free-text summary (with months); fall
                 // back to a years+months string derived from YoE.
                 experience:

@@ -48,7 +48,6 @@ import {
 import { directoryUserTypeFilterOptions, FALLBACK_ONBOARD_OPTIONS, resolveDirectoryUserTypes } from "@/utils/onboardFormOptions";
 import { DirectoryStatusSelect } from "@/components/employee-directory/DirectoryStatusSelect";
 import { DirectoryEmployeeNameCell } from "@/components/employee-directory/DirectoryEmployeeNameCell";
-import { DirectoryRowPreviewCard } from "@/components/employee-directory/DirectoryRowPreviewCard";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
@@ -575,25 +574,19 @@ export function EmployeeDirectoryPageClient() {
                             router.push(employeeDirectoryProfilePath(empId));
                           };
                           return (
-                            <DirectoryRowPreviewCard
+                            <TableRow
                               key={directoryKey}
-                              name={display.name}
-                              designation={display.role}
-                              band={display.band}
-                              department={display.department}
-                              email={display.email}
-                              phone={display.phone_number}
-                              profile={record}
-                              onCopy={(value, message) => void handleCopyField(value, message)}
-                              rowClassName="cursor-pointer border-wt-border/70 transition-colors hover:bg-[color-mix(in_srgb,var(--wt-brand)_6%,transparent)] dark:hover:bg-wt-surface-2"
-                              onRowClick={openProfile}
-                              onRowKeyDown={(e) => {
+                              className="cursor-pointer border-wt-border/70 transition-colors hover:bg-[color-mix(in_srgb,var(--wt-brand)_6%,transparent)] dark:hover:bg-wt-surface-2"
+                              onClick={openProfile}
+                              onKeyDown={(e) => {
                                 if (e.key === "Enter" || e.key === " ") {
                                   e.preventDefault();
                                   openProfile();
                                 }
                               }}
-                              rowAriaLabel={`View profile for ${display.name}`}
+                              tabIndex={0}
+                              role="link"
+                              aria-label={`View profile for ${display.name}`}
                             >
                               {LIST_COLUMNS.map((col) => (
                                 <TableCell
@@ -642,6 +635,12 @@ export function EmployeeDirectoryPageClient() {
                                       profile={record}
                                       isOnline={rowIsOnline(record)}
                                       isBirthday={rowIsBirthdayToday(record)}
+                                      designation={display.role}
+                                      band={display.band}
+                                      department={display.department}
+                                      email={display.email}
+                                      phone={display.phone_number}
+                                      onCopy={(value, message) => void handleCopyField(value, message)}
                                     />
                                   ) : col.key === "portal_role" ? (
                                     <EmployeePortalRoleSelect
@@ -719,7 +718,7 @@ export function EmployeeDirectoryPageClient() {
                                   )}
                                 </TableCell>
                               ) : null}
-                            </DirectoryRowPreviewCard>
+                            </TableRow>
                           );
                         })}
                       </TableBody>

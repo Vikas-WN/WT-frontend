@@ -304,7 +304,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ user, status, allRoles, activePersona, setActivePersona, refresh, logout }}>
-      {children}
+      {/*
+       * Once the session has ended, stop rendering the app tree entirely rather
+       * than leaving it mounted behind the dialog. SessionLogoutDialog already
+       * covers and `inert`s everything else, but that only neutralises what is
+       * in the DOM — the ended session's pages kept running underneath
+       * (timers, polling queries, in-flight requests) and remained visible
+       * through anything the cover could not account for (BUG_ID_332).
+       * Unmounting is the only thing that actually ends them; the user is
+       * going to a full page reload via confirmSessionLogout regardless, so
+       * nothing here needs to survive.
+       */}
+      {sessionLogoutReason == null ? children : null}
       <SessionIdleWarningDialog
         open={idleWarningMinutes != null}
         minutesRemaining={idleWarningMinutes ?? 5}

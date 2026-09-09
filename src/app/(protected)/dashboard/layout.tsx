@@ -5,26 +5,27 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
-import { shouldRequireSelfOnboardingForUser } from "@/utils/userStatus";
+import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { DashboardNavProvider } from "@/components/dashboard/DashboardNavContext";
 import { DashboardChrome } from "@/components/dashboard/DashboardChrome";
 import { UserPreferencesProvider } from "@/context/UserPreferencesContext";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 
 function PendingOnboardingGuard({ children }: { children: ReactNode }) {
-  const { user, status, allRoles } = useAuth();
+  const { user, status } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
-  // `allRoles` is fetched asynchronously after auth resolves; during that gap
-  // it is empty, which would wrongly redirect a staff user (HR/Admin/Manager)
-  // whose record has a non-ACTIVE status. The session `user.roles` is available
-  // synchronously, so consider both.
-  const knownRoles = [...(user?.roles ?? []), ...allRoles];
+  // Source the onboarding requirement from the same live, self-correcting
+  // status `useDashboardAccess` computes (it fetches the current /profile
+  // record rather than trusting the JWT/session-derived `user.status`, which
+  // only updates on login or an explicit token refresh). Without this, an
+  // employee whose status changes server-side — completing onboarding, or
+  // being marked Active by HR — without their session token rotating stays
+  // stuck being redirected to Profile on every other route.
+  const { requiresSelfOnboarding } = useDashboardAccess();
   const needsOnboarding =
-    status === "authenticated" &&
-    !!user &&
-    shouldRequireSelfOnboardingForUser(user.status, knownRoles);
+    status === "authenticated" && !!user && requiresSelfOnboarding;
   const profilePath = DASHBOARD_ROUTES.profile;
   const settingsPath = DASHBOARD_ROUTES.settings;
   const isAllowedPath =

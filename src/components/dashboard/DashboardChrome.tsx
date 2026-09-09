@@ -111,6 +111,13 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   } = useDashboardNav();
 
   const userRoles = user?.roles ?? [];
+  // Notification routing must use the account's TRUE roles, not the active
+  // persona. `user.roles` is narrowed to [activePersona] while the persona
+  // switcher is in use, so an HR/Admin viewing as "Employee" stopped counting
+  // as an approver — and an approval notification (which the backend only ever
+  // sends to approvers) was then routed to the personal leave page, where that
+  // request does not exist, so nothing was found to open (BUG_ID_333).
+  const notificationRoles = allRoles.length ? allRoles : userRoles;
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
   const hasDmAccess = userRoles.includes("ROLE_DM");
@@ -267,7 +274,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
 
   const handleNotificationClick = useCallback(
     async (row: NotificationItem) => {
-      const href = resolveNotificationHref(row, { userRoles });
+      const href = resolveNotificationHref(row, { userRoles: notificationRoles });
       if (!href) return;
 
       const id = notificationRowId(row);
@@ -489,7 +496,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                         categoryLabel !== "—"
                           ? categoryLabel
                           : extractRoleFromNotificationMessage(message);
-                      const href = resolveNotificationHref(row, { userRoles });
+                      const href = resolveNotificationHref(row, { userRoles: notificationRoles });
                       const isNavigable = Boolean(href);
 
                       const badgeClass =

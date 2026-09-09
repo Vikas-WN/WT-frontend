@@ -16,10 +16,13 @@ import "./DayEntriesPanel.css";
 import type { DayEntriesPanelProps } from "./DayEntriesPanel.types";
 
 function statusClass(status: string): string {
-  const key = status.toLowerCase();
+  const key = String(status ?? "").trim().toLowerCase();
   const map: Record<string, string> = {
     draft: "day-entries-card-status--draft",
     submitted: "day-entries-card-status--submitted",
+    // An awaiting-decision entry must not fall through to the grey "draft"
+    // styling below: grey reads as "not submitted yet", the opposite of true.
+    pending: "day-entries-card-status--submitted",
     approved: "day-entries-card-status--approved",
     rejected: "day-entries-card-status--rejected",
   };

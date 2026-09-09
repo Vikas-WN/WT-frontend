@@ -243,15 +243,6 @@ export function SelfOnboardingPanel({
       if (!files.aadhaar) throw new Error("Please upload Aadhaar.");
       if (!files.pan_card) throw new Error("Please upload PAN card.");
 
-      if (priorEmploymentDocsRequired) {
-        if (!files.reliving_letter) {
-          throw new Error("Please upload your relieving letter from the previous company.");
-        }
-        if (!files.salary_slips) {
-          throw new Error("Please upload a payslip file in the payslip field.");
-        }
-      }
-
       if (files.profile_photo.type && !files.profile_photo.type.startsWith("image/")) {
         throw new Error("Profile photo must be an image file (jpg/png/webp).");
       }
@@ -498,29 +489,33 @@ export function SelfOnboardingPanel({
         <div className="mt-4 rounded-xl border border-wt-border bg-wt-surface-2 p-4">
           <p className="text-sm font-medium text-wt-text mb-2">Prior employment (YoE &gt; 0)</p>
           <p className="text-xs text-wt-text-muted mb-3">
-            Relieving letter and a payslip are required when years of experience is greater than zero.
+            A relieving letter and a payslip from your previous company are optional but recommended when years of
+            experience is greater than zero.
           </p>
           <div className="grid sm:grid-cols-2 gap-3">
             <FileField
               label="Relieving letter (previous company)"
-              required
               accept=".pdf,image/*"
               onPick={(file) => setFiles((p) => ({ ...p, reliving_letter: file }))}
             />
             <FileField
               label="Upload last 3 months's payslip"
-              required
               accept=".pdf,image/*"
               onPick={(file) => setFiles((p) => ({ ...p, salary_slips: file }))}
             />
           </div>
         </div>
-      ) : (
-        <p className="mt-3 text-xs text-wt-text-muted">
-          If your years of experience is above zero, add an experience summary, relieving letter, and payslip (fields
-          appear when YoE &gt; 0).
-        </p>
-      )}
+      ) : null}
+      {/*
+        Nothing is rendered when YoE is 0. This used to show a note explaining
+        that an experience summary, relieving letter and payslip are needed when
+        YoE > 0 — documents that, by definition, this employee does not need for
+        the step they are on. The initial onboarding form should carry only the
+        fields, instructions and documents required to complete it (BUG_ID_331),
+        and the prior-employment block above already appears on its own the
+        moment YoE goes above zero, so the note explained nothing the form did
+        not already show.
+      */}
       <div className="mt-4">
         <Button variant="brand" type="button" className="px-3 py-2" onClick={submit} disabled={actionLoading}>
           Submit Onboarding Form

@@ -3021,11 +3021,10 @@ export function AllocationPageClient() {
             />
           </div>
         </div>
-      ) : (
-        <p className="mt-3 text-xs text-wt-text-muted">
-          If your years of experience is above zero, add relieving letter and upload last 3 months&apos;s payslip (field appears when YoE &gt; 0).
-        </p>
-      )}
+      ) : null}
+      {/* No note when YoE is 0: it described documents this employee does not
+          need for the step they are on, and the block above already appears on
+          its own once YoE goes above zero (BUG_ID_331). */}
       <div className="mt-4">
         <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
             runAction("Submit onboarding", async () => {
@@ -3277,11 +3276,10 @@ export function AllocationPageClient() {
             />
           </div>
         </div>
-      ) : (
-        <p className="mt-3 text-xs text-wt-text-muted">
-          If your years of experience is above zero, add relieving letter and upload last 3 months&apos;s payslip (field appears when YoE &gt; 0).
-        </p>
-      )}
+      ) : null}
+      {/* No note when YoE is 0: it described documents this employee does not
+          need for the step they are on, and the block above already appears on
+          its own once YoE goes above zero (BUG_ID_331). */}
       <div className="mt-3">
         <FileField label="Profile Picture (required)" required accept="image/*" onPick={setSelfProfilePic} />
       </div>

@@ -486,16 +486,15 @@ export function editFormToUpdatePayload(
     payload.emp_id = empId;
   }
 
-  // Only send skills when the form actually carries some. Sending empty arrays
-  // makes the backend run its "at least one skill" check, which wrongly blocks
-  // saving unrelated changes for Non-Tech employees (HR, Finance, …) who are not
-  // required to have skills. Omitting them leaves the stored skills untouched.
-  if (form.primary_skills.length) {
-    payload.primary_skills = form.primary_skills;
-  }
-  if (form.secondary_skills.length) {
-    payload.secondary_skills = form.secondary_skills;
-  }
+  // Always send both skill lists, including empty ones — the backend only runs
+  // its "at least one skill" requirement for Technical employees (Non-Tech
+  // employees may save an empty list). Previously this only sent skills when
+  // the form had at least one, so clearing every skill and saving silently kept
+  // the old skills in the database (they were never actually sent), and a
+  // Technical employee could be saved with no skills at all since the backend
+  // never got a payload to validate against.
+  payload.primary_skills = form.primary_skills;
+  payload.secondary_skills = form.secondary_skills;
 
   // Date of Joining — only send when set (never blank out an existing DOJ).
   const doj = form.doj.trim();
@@ -684,6 +683,18 @@ export function buildGroupedProfileSections(
     "years_of_experience",
     "yearsOfExperience",
   ]);
+  // Prior experience exactly as entered on the onboarding / edit form. The API's
+  // `total_experience` is prior experience PLUS tenure at Webknot, so showing it
+  // under the "Years of Experience (excluding internship)" label meant the number
+  // on the profile never matched what was just saved in that field, which read as
+  // the update not being applied (BUG_ID_309). The computed total is still shown,
+  // under its own label, alongside Webknot Experience.
+  const priorYoeYears = pickProfileField(profile, ["yoe", "years_of_experience", "yearsOfExperience"]);
+  const priorYoeMonths = pickProfileField(profile, ["yoe_months", "yoeMonths"]);
+  const priorExperienceRaw =
+    priorYoeYears === null || priorYoeYears === undefined || String(priorYoeYears).trim() === ""
+      ? null
+      : `${Number(priorYoeYears) || 0}Y ${Number(priorYoeMonths) || 0}M`;
 
   const information: ProfileDisplayEntry[] = [
     profileEntry("Name", cleanEmployeeName(profile) || pickProfileField(profile, ["name"])),
@@ -761,10 +772,12 @@ export function buildGroupedProfileSections(
     ),
     profileEntry(
       "Years of Experience (excluding internship)",
-      // Prefer the API's year+month total ("3Y 6M") so the profile shows months,
-      // not just the whole-year `yoe` integer captured at onboarding.
-      formatYoeDisplay(experienceTotalRaw)
+      // The value the employee/HR actually entered (prior experience, years +
+      // months) — not the computed prior+Webknot total, which has its own row
+      // below so both figures stay visible.
+      formatYoeDisplay(priorExperienceRaw ?? experienceTotalRaw)
     ),
+    profileEntry("Total Experience (including Webknot)", formatYoeDisplay(experienceTotalRaw)),
     // Show the Experience Summary whenever the employee actually has experience —
     // a written summary OR a non-zero total ("3Y 0M", "4Y 6M", …). Only hide it
     // when both are empty / all-zero ("0Y 0M").

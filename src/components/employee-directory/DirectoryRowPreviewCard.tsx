@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type KeyboardEvent, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { PreviewCard } from "@base-ui/react/preview-card";
 import { Copy } from "lucide-react";
 import {
@@ -66,7 +66,7 @@ function CopyRow({
   );
 }
 
-export type DirectoryRowPreviewCardProps = {
+export type DirectoryNamePreviewCardProps = {
   name: string;
   designation: string;
   band: string;
@@ -76,19 +76,18 @@ export type DirectoryRowPreviewCardProps = {
   /** Raw directory record — used only to resolve the profile photo. */
   profile: Record<string, unknown>;
   onCopy: (value: string, message: string) => void;
-  rowClassName?: string;
-  onRowClick?: () => void;
-  onRowKeyDown?: (event: KeyboardEvent<HTMLTableRowElement>) => void;
-  rowAriaLabel?: string;
+  /** The name/avatar element the hover-card is anchored to. */
   children: ReactNode;
 };
 
 /**
- * A directory table row that reveals a contact card on hover / focus:
- * photo, name, designation, band, department, and one-click-copyable
- * work email + phone.
+ * Wraps just the employee name/avatar cell content with a hover/focus contact
+ * card: photo, name, designation, band, department, and one-click-copyable
+ * work email + phone. Scoped to the name only (not the whole row) so hovering
+ * elsewhere in the row — e.g. to open the Role or Status dropdown — never
+ * triggers it.
  */
-export function DirectoryRowPreviewCard({
+export function DirectoryNamePreviewCard({
   name,
   designation,
   band,
@@ -97,12 +96,8 @@ export function DirectoryRowPreviewCard({
   phone,
   profile,
   onCopy,
-  rowClassName,
-  onRowClick,
-  onRowKeyDown,
-  rowAriaLabel,
   children,
-}: DirectoryRowPreviewCardProps) {
+}: DirectoryNamePreviewCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const photoSrc = resolveProfilePhotoSrc(profile);
   const initials = avatarInitials(name);
@@ -114,32 +109,9 @@ export function DirectoryRowPreviewCard({
         delay={220}
         closeDelay={120}
         render={(props) => (
-          <tr
-            {...props}
-            className={cn(props.className, rowClassName)}
-            onClick={(event) => {
-              // Base UI's own onClick (from `props`) manages part of the
-              // trigger's open/close bookkeeping — replacing it outright
-              // (instead of calling it alongside ours) previously meant the
-              // hover-card only ever opened over whichever cell still had
-              // Base UI's untouched handlers wired to it (the name cell,
-              // via its own nested elements), never the row as a whole.
-              // Per Base UI's composition guidance, custom handlers must be
-              // merged with, not substituted for, the ones `render` hands
-              // us. See https://base-ui.com/react/handbook/composition.
-              props.onClick?.(event);
-              onRowClick?.();
-            }}
-            onKeyDown={(event) => {
-              props.onKeyDown?.(event);
-              onRowKeyDown?.(event);
-            }}
-            tabIndex={props.tabIndex ?? 0}
-            role={props.role ?? "link"}
-            aria-label={rowAriaLabel}
-          >
+          <span {...props} className={cn(props.className, "inline-block min-w-0 max-w-full")}>
             {children}
-          </tr>
+          </span>
         )}
       />
       <PreviewCard.Portal>

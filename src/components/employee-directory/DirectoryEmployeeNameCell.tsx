@@ -9,6 +9,7 @@ import {
 } from "@/components/dashboard/ui/profile";
 import { cn } from "@/lib/utils";
 import { employeeDirectoryProfilePath } from "@/constants/routes";
+import { DirectoryNamePreviewCard } from "@/components/employee-directory/DirectoryRowPreviewCard";
 
 export function DirectoryEmployeeNameCell({
   name,
@@ -16,12 +17,25 @@ export function DirectoryEmployeeNameCell({
   profile,
   isOnline,
   isBirthday = false,
+  designation = "",
+  band = "",
+  department = "",
+  email = "",
+  phone = "",
+  onCopy,
 }: {
   name: string;
   empId?: string;
   profile: Record<string, unknown>;
   isOnline?: boolean;
   isBirthday?: boolean;
+  /** When provided (with onCopy), the name/avatar is wrapped in a hover contact card. */
+  designation?: string;
+  band?: string;
+  department?: string;
+  email?: string;
+  phone?: string;
+  onCopy?: (value: string, message: string) => void;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   const photoSrc = resolveProfilePhotoSrc(profile);
@@ -30,7 +44,7 @@ export function DirectoryEmployeeNameCell({
   const gradientSeed = String(empId ?? profile.email ?? profile.work_email ?? "").trim();
   const profileHref = empId && empId !== "—" ? employeeDirectoryProfilePath(empId) : null;
 
-  return (
+  const cellContent = (
     <div className="flex min-w-0 items-center gap-3">
       <span className="relative shrink-0">
         <span
@@ -109,5 +123,22 @@ export function DirectoryEmployeeNameCell({
         )}
       </span>
     </div>
+  );
+
+  if (!onCopy) return cellContent;
+
+  return (
+    <DirectoryNamePreviewCard
+      name={displayName}
+      designation={designation}
+      band={band}
+      department={department}
+      email={email}
+      phone={phone}
+      profile={profile}
+      onCopy={onCopy}
+    >
+      {cellContent}
+    </DirectoryNamePreviewCard>
   );
 }

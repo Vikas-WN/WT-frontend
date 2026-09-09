@@ -276,13 +276,16 @@ export function LeavePageClient() {
   const [highlightRequestId, setHighlightRequestId] = useState("");
   const deepLinkAppliedKeyRef = useRef("");
   const [leaveSubTab, setLeaveSubTab] = useState<
-    "my" | "team" | "org" | "comp-off" | "wfh" | "balances"
+    "my" | "team" | "org" | "comp-off" | "wfh" | "wfh-exceptions" | "balances"
   >(() => {
     if (tabFromQuery === "comp-off" && !isTeamLeaveRoute) return "comp-off";
     // Balances lives on Employee → Leave Requests (team route) for HR — not Personal leave.
     if (tabFromQuery === "balances" && !isTeamLeaveRoute) return "my";
+    // The HR custom-WFH approval queue is a team/HR view, never Personal leave.
+    if (tabFromQuery === "wfh-exceptions" && !isTeamLeaveRoute) return "my";
     if (
       tabFromQuery === "wfh" ||
+      tabFromQuery === "wfh-exceptions" ||
       tabFromQuery === "balances" ||
       tabFromQuery === "team" ||
       tabFromQuery === "org" ||
@@ -296,6 +299,7 @@ export function LeavePageClient() {
     if (
       tabFromQuery === "comp-off" ||
       tabFromQuery === "wfh" ||
+      tabFromQuery === "wfh-exceptions" ||
       tabFromQuery === "balances" ||
       tabFromQuery === "team" ||
       tabFromQuery === "org" ||
@@ -311,19 +315,40 @@ export function LeavePageClient() {
         setLeaveSubTab("my");
         return;
       }
+      // Custom WFH approvals are team/HR leave only.
+      if (tabFromQuery === "wfh-exceptions" && !isTeamLeaveRoute) {
+        setLeaveSubTab("my");
+        return;
+      }
+      if (tabFromQuery === "wfh" && isTeamLeaveRoute) {
+        setLeaveSubTab("team");
+        return;
+      }
       setLeaveSubTab(tabFromQuery);
       return;
     }
     if (isTeamLeaveRoute) {
       setLeaveSubTab((prev) => {
-        if (prev === "balances" || prev === "team" || prev === "org") {
+        if (
+          prev === "balances" ||
+          prev === "team" ||
+          prev === "org" ||
+          prev === "wfh-exceptions"
+        ) {
           return prev;
         }
         return "team";
       });
     } else if (pathname.includes("/dashboard/leave")) {
       setLeaveSubTab((prev) => {
-        if (prev === "team" || prev === "org" || prev === "balances") return "my";
+        if (
+          prev === "team" ||
+          prev === "org" ||
+          prev === "balances" ||
+          prev === "wfh-exceptions"
+        ) {
+          return "my";
+        }
         if (prev === "comp-off" || prev === "wfh") return prev;
         return "my";
       });
@@ -834,6 +859,9 @@ export function LeavePageClient() {
   }, [hasManagerAccess, hasHrAccess, timelogSubTab]);
   useEffect(() => {
     if (leaveSubTab === "balances" && !hasHrAccess) {
+      setLeaveSubTab("team");
+    }
+    if (leaveSubTab === "wfh-exceptions" && !hasHrAccess) {
       setLeaveSubTab("team");
     }
     if (leaveSubTab === "org" && !canViewOrgLeaveRequests) {
@@ -1744,6 +1772,11 @@ export function LeavePageClient() {
       return [
         canViewTeamLeave ? { value: "team", label: "Team Requests" } : null,
         canViewOrgLeaveRequests ? { value: "org", label: "All Employee Requests" } : null,
+        // HR's org-wide custom-WFH approval queue. It used to render on the
+        // personal leave page's Work From Home tab, which put an approvals queue
+        // for other people's requests on the viewer's own leave page; it belongs
+        // with the other team/HR leave views.
+        hasHrAccess ? { value: "wfh-exceptions", label: "Custom WFH Requests" } : null,
         hasHrAccess ? { value: "balances", label: "Balances" } : null,
       ].filter((item): item is { value: string; label: string } => Boolean(item));
     }
@@ -1769,7 +1802,16 @@ export function LeavePageClient() {
                            {showLeaveSubTabBar ? (
                              <Tabs value={leaveSubTab} onValueChange={(value) => {
                                if (actionLoading) return;
-                               setLeaveSubTab(value as "my" | "team" | "org" | "wfh" | "comp-off" | "balances");
+                               setLeaveSubTab(
+                                 value as
+                                   | "my"
+                                   | "team"
+                                   | "org"
+                                   | "wfh"
+                                   | "wfh-exceptions"
+                                   | "comp-off"
+                                   | "balances"
+                               );
                              }} className="gap-0">
                                  <div className="w-full overflow-x-auto border-b border-wt-border pb-5">
                                    <TabsList aria-label="Leave views" variant="default" className="min-w-max">
@@ -1780,6 +1822,7 @@ export function LeavePageClient() {
                                           {item.value === "org" && <Building2 className="size-4" />}
                                           {item.value === "comp-off" && <Clock className="size-4" />}
                                           {item.value === "wfh" && <Home className="size-4" />}
+                                          {item.value === "wfh-exceptions" && <Home className="size-4" />}
                                           {item.value === "balances" && <Wallet className="size-4" />}
                                           {item.label}
                                         </TabsTrigger>
@@ -2432,10 +2475,12 @@ export function LeavePageClient() {
                           )}
                         </div>
                           ) : null}
-                          {leaveSubTab === "wfh" && hasHrAccess ? (
+                          {leaveSubTab === "wfh-exceptions" && hasHrAccess && isTeamLeaveRoute ? (
                             <div className="mb-8">
-                              {/* HR custom-WFH approval queue belongs with the WFH tab —
-                                  it is not part of the "All Employee Requests" leave view. */}
+                              {/* HR's org-wide custom-WFH approval queue. It lives on the
+                                  team/HR leave route under its own tab — never on the
+                                  viewer's personal leave page, which is for their own
+                                  requests only (BUG_ID_321). */}
                               <HrWfhExceptionPanel
                                 actionLoading={actionLoading}
                                 runAction={runAction}

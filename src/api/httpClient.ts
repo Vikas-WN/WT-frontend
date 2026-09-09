@@ -27,9 +27,26 @@ export interface ApiRequestOptions {
   withCredentials?: boolean;
   responseType?: ResponseType;
   skipAuth?: boolean;
+  /**
+   * Abort the request after this many ms and surface it as a timeout error
+   * instead of hanging forever. Defaults to DEFAULT_REQUEST_TIMEOUT_MS.
+   * Pass 0 to disable (e.g. a long-running upload/export).
+   */
+  timeoutMs?: number;
   /** Internal: set when a request is being retried after a silent token refresh. */
   __isRetry?: boolean;
 }
+
+/**
+ * Browsers do not time out `fetch` on their own — a request that never gets a
+ * response (server hung, connection stalled) leaves its promise pending
+ * forever. Session bootstrap (`GET /auth/me`) awaiting a hung request left
+ * the login page's status stuck at "loading" indefinitely (BUG_ID_314,
+ * "Login page stuck loading"), since nothing ever settled the promise the
+ * page was waiting on. This default timeout guarantees every request either
+ * resolves or rejects within a bounded time.
+ */
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 
 type RequestInterceptor = (
   url: string,
@@ -137,6 +154,7 @@ export class HttpClient {
       withCredentials = true,
       responseType = "json",
       skipAuth = false,
+      timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
       __isRetry = false,
     } = options;
 
@@ -161,6 +179,18 @@ export class HttpClient {
 
     for (const interceptor of this.requestInterceptors) {
       request = await interceptor(request.url, request.init);
+    }
+
+    const timeoutController = timeoutMs > 0 ? new AbortController() : null;
+    let timedOut = false;
+    const timeoutHandle = timeoutController
+      ? setTimeout(() => {
+          timedOut = true;
+          timeoutController.abort();
+        }, timeoutMs)
+      : null;
+    if (timeoutController && !request.init.signal) {
+      request.init = { ...request.init, signal: timeoutController.signal };
     }
 
     try {
@@ -231,7 +261,12 @@ export class HttpClient {
       return (await this.readBody<T>(response, responseType)) as T;
     } catch (error) {
       let nextError: unknown = error;
-      if (error instanceof TypeError) {
+      if (timedOut && error instanceof Error && error.name === "AbortError") {
+        nextError = new ApiError(
+          "The request timed out. Please check your connection and try again.",
+          0
+        );
+      } else if (error instanceof TypeError) {
         const message = error.message.toLowerCase();
         if (message.includes("fetch") || message.includes("network")) {
           nextError = new ApiError(
@@ -244,6 +279,8 @@ export class HttpClient {
         nextError = await interceptor(nextError);
       }
       throw nextError;
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
     }
   }
 

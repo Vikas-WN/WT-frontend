@@ -51,7 +51,7 @@ import {
   buildResumeShareLinkIndex,
   lookupResumeShareLink,
 } from "@/utils/employeeResume";
-import { canFetchEmployeeResumeApi, pickPortalRoles } from "@/utils/roles";
+import { canFetchEmployeeResumeApi, isNonTechProfile, pickPortalRoles } from "@/utils/roles";
 import {
   normalizeEmployeeStatusKey,
   isServingNoticeUserStatus,
@@ -242,6 +242,18 @@ export function EmployeeProfilePageClient() {
       .replace(/[\s\-_]/g, "") === "INTERN";
   const profileUserType = normalizeDirectoryUserType(
     pickProfileField(profileRecord, ["user_type", "userType"])
+  );
+  // Skills are mandatory for Technical roles only (matches the backend's
+  // is_non_tech_profile gate) — HR/Finance/other Non-Tech employees may save
+  // with no skills.
+  const isTechnicalEmployee = Boolean(
+    editForm && !isNonTechProfile(editForm.department, editForm.role, profileUserType)
+  );
+  const hasMissingTechnicalSkills = Boolean(
+    editForm &&
+      isTechnicalEmployee &&
+      (!editForm.primary_skills.some((item) => String(item.skill ?? "").trim()) ||
+        !editForm.secondary_skills.some((item) => String(item.skill ?? "").trim()))
   );
   const currentProfileStatus = String(
     pickProfileField(profileRecord, ["user_status", "status", "userStatus"]) ?? ""
@@ -568,6 +580,14 @@ export function EmployeeProfilePageClient() {
             if (!editForm.role.trim()) {
               missingRequiredFields.push("Designation is required.");
             }
+            if (!editForm.work_location_type.trim()) {
+              missingRequiredFields.push("Work Location is required.");
+            }
+            if (hasMissingTechnicalSkills) {
+              missingRequiredFields.push(
+                "Primary and Secondary Skills are required for technical employees."
+              );
+            }
             if (missingRequiredFields.length) {
               throw new Error(missingRequiredFields.join(" "));
             }
@@ -635,6 +655,14 @@ export function EmployeeProfilePageClient() {
           }
           if (!editForm.role.trim()) {
             missingRequiredFields.push("Designation is required.");
+          }
+          if (!editForm.work_location_type.trim()) {
+            missingRequiredFields.push("Work Location is required.");
+          }
+          if (hasMissingTechnicalSkills) {
+            missingRequiredFields.push(
+              "Primary and Secondary Skills are required for technical employees."
+            );
           }
           if (missingRequiredFields.length) {
             throw new Error(missingRequiredFields.join(" "));

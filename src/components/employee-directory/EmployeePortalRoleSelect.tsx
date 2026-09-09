@@ -74,7 +74,7 @@ export function EmployeePortalRoleSelect({
   compact = false,
 }: Props) {
   const queryClient = useQueryClient();
-  const { user, refresh, logout } = useAuth();
+  const { user, allRoles, refresh, logout } = useAuth();
   const [saving, setSaving] = useState(false);
   const [optimisticRole, setOptimisticRole] = useState<string | null>(null);
   const roles = useMemo(() => normalizePortalRoles(portalRoles), [portalRoles]);
@@ -85,12 +85,15 @@ export function EmployeePortalRoleSelect({
   );
   // Admin is hidden from assignable options unless the viewer is already an Admin —
   // except the row's own current role, so an existing Admin's row still renders correctly.
+  // Gate on the viewer's FULL role set (allRoles), not `user.roles` — the latter is
+  // narrowed to whichever persona the viewer currently has active (e.g. "HR" in the
+  // switcher), so an Admin viewing as HR was incorrectly treated as a non-admin here.
   const assignableOptions = useMemo(() => {
-    const base = portalRoleOptionsForActor(user?.roles ?? []);
+    const base = portalRoleOptionsForActor(allRoles.length ? allRoles : user?.roles ?? []);
     if (base.some((option) => option.value === currentRole)) return base;
     const currentOption = PORTAL_ROLE_SELECT_OPTIONS.find((option) => option.value === currentRole);
     return currentOption ? [...base, currentOption] : base;
-  }, [user?.roles, currentRole]);
+  }, [allRoles, user?.roles, currentRole]);
   const options = useMemo(
     () => assignableOptions.map((option) => ({ value: option.value, label: option.label })),
     [assignableOptions]

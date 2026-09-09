@@ -244,8 +244,11 @@ export const hrmsService = {
   },
 
   completeMyOnboarding(formData: FormData) {
+    // Multiple document uploads (resume/Aadhaar/PAN/photo) can take longer than
+    // the default request timeout on a slow connection — give it more room.
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.user.onboard, {
       body: formData,
+      timeoutMs: 60_000,
     });
   },
 
@@ -293,7 +296,12 @@ export const hrmsService = {
   },
 
   updateMyProfile(fd: FormData) {
-    return apiClient.put<ApiEnvelope<unknown>>(endpoints.profile.self, { body: fd });
+    // May include a profile photo / relieving letter / payslip upload — give it
+    // more room than the default request timeout on a slow connection.
+    return apiClient.put<ApiEnvelope<unknown>>(endpoints.profile.self, {
+      body: fd,
+      timeoutMs: 60_000,
+    });
   },
 
   getMyPreferences() {
@@ -1114,7 +1122,8 @@ export const hrmsService = {
   uploadFile(url: string, file: File) {
     const fd = new FormData();
     fd.append("file", file);
-    return apiClient.post<ApiEnvelope<unknown>>(url, { body: fd });
+    // Bulk Excel imports etc. can take longer than the default request timeout.
+    return apiClient.post<ApiEnvelope<unknown>>(url, { body: fd, timeoutMs: 60_000 });
   },
 
   getBands(params: { search?: string; userType?: string } = {}) {
@@ -1725,7 +1734,10 @@ export const hrmsService = {
     fd.append("title", payload.title);
     fd.append("visibility", payload.visibility ?? "EMPLOYEE");
     fd.append("material_file", payload.materialFile);
-    return apiClient.post<ApiEnvelope<unknown>>(endpoints.learning.materials(trainingId), { body: fd });
+    return apiClient.post<ApiEnvelope<unknown>>(endpoints.learning.materials(trainingId), {
+      body: fd,
+      timeoutMs: 60_000,
+    });
   },
 
   getTrainingMaterials(trainingId: string) {
@@ -1757,7 +1769,10 @@ export const hrmsService = {
     fd.append("description", payload.description ?? "");
     fd.append("weight_percent", String(payload.weight_percent));
     fd.append("assessment_file", payload.assessmentFile);
-    return apiClient.post<ApiEnvelope<unknown>>(endpoints.learning.assessments(trainingId), { body: fd });
+    return apiClient.post<ApiEnvelope<unknown>>(endpoints.learning.assessments(trainingId), {
+      body: fd,
+      timeoutMs: 60_000,
+    });
   },
 
   getAssessments(trainingId: string) {

@@ -178,6 +178,13 @@ export async function fetchPaginatedScopedUserRequests(params: {
   };
   if (params.empEmails?.trim()) query.empEmails = params.empEmails.trim();
   if (params.hrTeamScope) query.hrTeamScope = "true";
+  // `orgScope` was accepted by this function but never actually put on the query
+  // string, so "All Employee Requests" was sent with neither scope flag. The
+  // backend only takes its allocated-requestors branch when one of the two flags
+  // is present; without it the request fell through to the generic unscoped
+  // listing, so the tab returned a different row set than the team/org split
+  // intends — including requests from the Team Requests (unallocated) side.
+  if (params.orgScope) query.orgScope = "true";
 
   try {
     const res = await apiClient.get<ApiEnvelope<unknown>>(endpoints.userRequest.root, {

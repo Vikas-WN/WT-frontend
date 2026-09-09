@@ -319,8 +319,11 @@ export function InvitedEmployeesTable({
         page={pagination.page}
         totalPages={pagination.totalPages}
         totalItems={pagination.totalItems}
+        rangeStart={pagination.rangeStart}
+        rangeEnd={pagination.rangeEnd}
         pageSize={pagination.pageSize}
         onPageChange={pagination.setPage}
+        onPageSizeChange={pagination.setPageSize}
       />
     </div>
   );
