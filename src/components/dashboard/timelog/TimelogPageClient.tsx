@@ -32,7 +32,8 @@ import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 import { HrReviewNoticeBanner } from "@/components/hr-review/HrReviewNoticeBanner";
 import { hrmsService } from "@/services/hrms.service";
 import { toPagedRows } from "@/utils/apiRows";
-import { isOffboardedUserStatus, shouldRequireSelfOnboarding } from "@/utils/userStatus";
+import { isOffboardedUserStatus } from "@/utils/userStatus";
+import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
 import { resolveTimelogProjectLabel } from "@/utils/timelog/projectLabel";
 import { isManagerTimelogDecisionActionable } from "@/utils/timelog/employeeEditability";
@@ -70,7 +71,12 @@ export function TimelogPageClient() {
   const hasAdminAccess = roles.includes("ROLE_ADMIN");
   const hasAmRole = roles.includes("ROLE_AM");
   const isOffboarded = isOffboardedUserStatus(user?.status);
-  const requiresSelfOnboarding = shouldRequireSelfOnboarding(user?.status);
+  // Read the shared access hook rather than the session's `user.status`. That
+  // status is a claim frozen when the session was issued, so an employee who
+  // signed in before finishing onboarding kept being shown "Onboarding Pending"
+  // on Time Logs long after going ACTIVE (BUG_ID_313). useDashboardAccess()
+  // resolves the gate from the live profile record instead.
+  const { requiresSelfOnboarding } = useDashboardAccess();
 
   const subTab = pathname.endsWith("/dashboard/timelog/team")
     ? "team"

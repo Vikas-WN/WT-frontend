@@ -1538,10 +1538,27 @@ export function LeavePageClient() {
     [myLeaveRequests, myLeaveSearch]
   );
 
-  const filteredEmployeeRequests = useMemo(
-    () => employeeRequests.filter((row) => leaveRequestMatchesSearch(row, teamLeaveSearch)),
-    [employeeRequests, teamLeaveSearch]
-  );
+  const filteredEmployeeRequests = useMemo(() => {
+    const matched = employeeRequests.filter((row) =>
+      leaveRequestMatchesSearch(row, teamLeaveSearch)
+    );
+    const selected = String(employeeRequestFilters.requestType || "ALL")
+      .trim()
+      .toUpperCase();
+    if (selected === "ALL") return matched;
+    // The Request Type filter used to be enforced *only* by the fetch, so
+    // whatever `employeeRequests` happened to hold was rendered verbatim. The
+    // filter change is debounced by 400ms and the refetch itself is async, so
+    // between picking "Comp Off Credit" and the earn rows arriving the table
+    // kept showing the previous Leave / Optional Leave rows — and a cached
+    // scope read or an out-of-order response could leave them there for good
+    // (BUG_ID_317). Filtering the rendered rows by the selected type as well
+    // makes the table structurally incapable of showing a type the filter
+    // excludes, whatever the request timing.
+    return matched.filter(
+      (row) => normalizeUserRequestType(row.request_type ?? row.requestType) === selected
+    );
+  }, [employeeRequests, teamLeaveSearch, employeeRequestFilters.requestType]);
 
   const sortedLeaveTabRequests = useMemo(
     () => applyListSort(filteredLeaveTabRequests, myLeaveSortId, LEAVE_REQUEST_SORT_OPTIONS),

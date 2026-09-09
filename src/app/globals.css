@@ -470,22 +470,36 @@ body::-webkit-scrollbar {
   scrollbar-color:
     color-mix(in oklab, var(--wt-text-muted) 75%, transparent)
     color-mix(in oklab, var(--wt-text-muted) 16%, transparent);
-  background:
+  /*
+    Set only the background *image* layers here — never the `background`
+    shorthand, and never `background-color`.
+
+    This class sits outside any cascade layer while Tailwind's utilities live in
+    the `utilities` layer, and unlayered rules beat layered ones regardless of
+    specificity. So the `background` shorthand (which resets background-color to
+    transparent) plus the explicit `background-color: transparent` silently
+    overrode the `bg-wt-surface-2` / `bg-white` utility on every popup carrying
+    this class — the rows-per-page menu and every Select/Combobox dropdown —
+    leaving them see-through, with the table showing straight through the open
+    menu (BUG_ID_337). Painting only the image layers lets each popup's own
+    background utility supply the opaque panel behind them.
+  */
+  background-image:
     /* Cover content under the edge fades while scrolling */
-    linear-gradient(var(--wt-dropdown-scroll-fade) 35%, transparent) center top,
-    linear-gradient(transparent, var(--wt-dropdown-scroll-fade) 65%) center bottom,
+    linear-gradient(var(--wt-dropdown-scroll-fade) 35%, transparent),
+    linear-gradient(transparent, var(--wt-dropdown-scroll-fade) 65%),
     /* Persistent shadow hints that more options are above/below */
     radial-gradient(
       farthest-side at 50% 0,
       color-mix(in oklab, var(--wt-text) 22%, transparent),
       transparent
-    ) center top,
+    ),
     radial-gradient(
       farthest-side at 50% 100%,
       color-mix(in oklab, var(--wt-text) 22%, transparent),
       transparent
-    ) center bottom;
-  background-color: transparent;
+    );
+  background-position: center top, center bottom, center top, center bottom;
   background-repeat: no-repeat;
   background-size: 100% 2rem, 100% 2rem, 100% 0.7rem, 100% 0.7rem;
   background-attachment: local, local, scroll, scroll;

@@ -104,6 +104,11 @@ function SelectContent({
             // the pitch-black page in dark mode, which made this popup read as a
             // set of floating badges with no panel. surface-2 + a real border and
             // shadow give it a visible card edge on any background.
+            //
+            // The scroll fade must match THIS popup's surface: the shared
+            // default is surface-1, which would paint a darker band across the
+            // top and bottom of a surface-2 panel.
+            "[--wt-dropdown-scroll-fade:var(--wt-surface-2)]",
             "wt-combobox-scroll relative isolate z-[200] max-h-[min(15rem,var(--available-height,100dvh))] w-[min(var(--anchor-width),var(--available-width,100vw))] max-w-[var(--available-width,calc(100vw-1rem))] min-w-0 origin-(--transform-origin) overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl border border-wt-border-md bg-wt-surface-2 p-1 text-wt-text shadow-lg shadow-black/10 duration-100 dark:bg-wt-surface-2 dark:shadow-[0_16px_48px_-12px_rgba(0,0,0,0.85),0_0_0_1px_rgba(255,255,255,0.08)] data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
             className
           )}

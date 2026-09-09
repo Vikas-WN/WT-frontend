@@ -32,6 +32,14 @@ import {
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
+/**
+ * Hard ceiling on how long the app may render its "loading" cover. Comfortably
+ * longer than the HTTP client's 30s request timeout so a merely slow (but
+ * working) session check is never cut short — this only fires when something
+ * failed to settle at all. See the watchdog effect in AuthProvider.
+ */
+const AUTH_STATUS_WATCHDOG_MS = 40_000;
+
 interface AuthContextValue {
   /** Reflects the active persona: roles is narrowed to [activePersona] when one is selected. */
   user: AuthUser | null;
@@ -300,6 +308,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (status === "authenticated") {
       timeoutHandled.current = false;
     }
+  }, [status]);
+
+  /*
+   * Watchdog: `status` must never be able to sit at "loading" forever.
+   *
+   * Every code path above is *supposed* to settle it, but each one depends on a
+   * network promise resolving, and the whole app renders a full-screen loader
+   * while the status is "loading" — the login page's "Checking session…" cover
+   * and the protected layout's "Loading your workspace…" are both driven by it.
+   * A single promise that never settles therefore bricks the app with a
+   * spinner and no error and no way out, which is what "login page stuck
+   * loading" looked like (BUG_ID_314). The HTTP client's request timeout is the
+   * primary defence; this is the backstop for anything it cannot cover
+   * (a hung interceptor, an exception between the fetch and setStatus, a
+   * bootstrap that never runs). Falling back to "unauthenticated" is safe: it
+   * shows the sign-in screen rather than granting anything.
+   */
+  useEffect(() => {
+    if (status !== "loading") return;
+    const timer = setTimeout(() => {
+      setStatus((current) => {
+        if (current !== "loading") return current;
+        // eslint-disable-next-line no-console
+        console.warn(
+          "[auth] Session check did not settle within " +
+            `${AUTH_STATUS_WATCHDOG_MS}ms; treating the session as signed out.`
+        );
+        return userRef.current ? "authenticated" : "unauthenticated";
+      });
+    }, AUTH_STATUS_WATCHDOG_MS);
+    return () => clearTimeout(timer);
   }, [status]);
 
   return (

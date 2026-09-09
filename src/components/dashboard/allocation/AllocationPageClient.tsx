@@ -3595,115 +3595,14 @@ export function AllocationPageClient() {
                                                     >
                                                       <IconUsers />
                                                     </Button>
-                                                    <Button
-                                                      type="button"
-                                                      variant="ghost"
-                                                      size="icon-sm"
-                                                      className="text-wt-text-muted hover:text-wt-text disabled:opacity-40"
-                                                      disabled={!code || actionLoading}
-                                                      aria-label={`Edit ${name || code}`}
-                                                      title="Edit project"
-                                                      onClick={() => {
-                                                        if (!code) return;
-                                                        void (async () => {
-                                                          let payload: Record<string, unknown> =
-                                                            row as Record<string, unknown>;
-                                                          let projectManagerEmails: string[] = [];
-                                                          try {
-                                                            const res = await hrmsService.getProjectByCode(code);
-                                                            const data = (res.data ?? res) as Record<string, unknown>;
-                                                            if (data && typeof data === "object") payload = data;
-                                                          } catch {
-                                                            /* fall back to list row */
-                                                          }
-                                                          try {
-                                                            const mgrRes = await hrmsService.getTimelogManagerOptions({
-                                                              projectCode: code,
-                                                            });
-                                                            const mgrData = (mgrRes.data ?? mgrRes) as unknown;
-                                                            const rows = Array.isArray(mgrData)
-                                                              ? mgrData
-                                                              : Array.isArray(
-                                                                    (mgrData as { items?: unknown })?.items
-                                                                  )
-                                                                ? ((mgrData as { items: unknown[] }).items)
-                                                                : [];
-                                                            projectManagerEmails = rows
-                                                              .map((item) => {
-                                                                if (!item || typeof item !== "object") return "";
-                                                                const email = String(
-                                                                  (item as { email?: unknown }).email ?? ""
-                                                                )
-                                                                  .trim()
-                                                                  .toLowerCase();
-                                                                return email.includes("@") ? email : "";
-                                                              })
-                                                              .filter(Boolean);
-                                                          } catch {
-                                                            /* optional — PM field starts empty */
-                                                          }
-                                                          const nextForm: ProjectFormState = {
-                                                            ...createEmptyProjectForm(),
-                                                            project_name: String(
-                                                              payload.project_name ?? payload.projectName ?? name ?? ""
-                                                            ).trim(),
-                                                            project_type: projectTypeCodeFromRow(payload),
-                                                            client_id: String(
-                                                              payload.client_id ?? payload.clientId ?? ""
-                                                            ).trim(),
-                                                            client_name: String(
-                                                              payload.client_name ?? payload.clientName ?? ""
-                                                            ).trim(),
-                                                            account_manager_email: String(
-                                                              payload.account_manager_email ??
-                                                                payload.accountManagerEmail ??
-                                                                ""
-                                                            )
-                                                              .trim()
-                                                              .toLowerCase(),
-                                                            project_manager_emails: projectManagerEmails,
-                                                            start_date: apiDateToInputValue(
-                                                              String(payload.start_date ?? payload.startDate ?? "")
-                                                            ),
-                                                            end_date: apiDateToInputValue(
-                                                              String(payload.end_date ?? payload.endDate ?? "")
-                                                            ),
-                                                          };
-                                                          setEditingProjectCode(code);
-                                                          setEditingProjectForm(nextForm);
-                                                          setCreateProjectPrefillName("");
-                                                          setCreateProjectDialogOpen(true);
-                                                        })();
-                                                      }}
-                                                    >
-                                                      <IconPencil />
-                                                    </Button>
-                                                    <Button
-                                                      type="button"
-                                                      variant="ghost"
-                                                      size="icon-sm"
-                                                      className="text-wt-text-muted hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-40"
-                                                      disabled={!code || actionLoading}
-                                                      aria-label={`Delete ${name || code}`}
-                                                      title="Delete project"
-                                                      onClick={() => {
-                                                        if (!code) return;
-                                                        const label = name || code;
-                                                        if (
-                                                          !window.confirm(
-                                                            `Delete project "${label}"? It will be removed from the active projects list.`
-                                                          )
-                                                        ) {
-                                                          return;
-                                                        }
-                                                        runAction("Delete project", async () => {
-                                                          await hrmsService.deleteProject(code);
-                                                          refreshHrProjects();
-                                                        });
-                                                      }}
-                                                    >
-                                                      <IconTrash />
-                                                    </Button>
+                                                    {/*
+                                                      Projects are not editable or deletable from here. They are owned
+                                                      upstream (WK Business sync / the Projects master), and HR and Admin
+                                                      manage allocations against them rather than the projects themselves,
+                                                      so the Edit and Delete actions were removed (BUG_ID_338). The
+                                                      backend rejects these operations too, so re-adding a button here
+                                                      would only produce a 403.
+                                                    */}
                                                   </div>
                                                 </TableCell>
                                               </TableRow>

@@ -29,6 +29,26 @@ export function useDashboardAccess() {
     hasAccountManagerAccess && !hasHrAccess && !hasManagerAccess;
   const initialStatus = normalizeUserStatus(user?.status);
   const [profileStatus, setProfileStatus] = useState(initialStatus);
+  /**
+   * True once `profileStatus` came from the employee's actual profile record
+   * rather than from the session.
+   *
+   * `user.status` is a claim minted when the session was issued. For anyone who
+   * signed in before completing onboarding it keeps saying INVITED / ONBOARDING
+   * for the life of that session, and GET /profile soft-fails to `null` on a
+   * 403/404/500/502/503/504/timeout (see fetchSelfProfile) — at which point this
+   * hook used to fall straight back to that stale claim. An ACTIVE employee then
+   * got "Onboarding Pending" and was pushed back into the onboarding form
+   * (BUG_ID_319 / BUG_ID_313), intermittently, which is exactly why it survived
+   * a fix that only changed *which* flag the dashboard guard reads.
+   *
+   * So the session status is no longer allowed to *assert* that onboarding is
+   * outstanding — only the live profile is. Withholding the gate is the safe
+   * direction: the worst case is a genuinely invited user briefly seeing the
+   * dashboard (the backend still refuses their writes), whereas the other
+   * direction locks working employees out of the whole app.
+   */
+  const [statusFromProfile, setStatusFromProfile] = useState(false);
   const [isSelfOnboarded, setIsSelfOnboarded] = useState(
     () => !shouldRequireSelfOnboarding(initialStatus)
   );
@@ -40,10 +60,8 @@ export function useDashboardAccess() {
   // Staff-portal users (HR / Admin / Manager / DM / AM / Finance) are never put
   // into the employee self-onboarding flow, even if their record carries a
   // non-ACTIVE / legacy status.
-  const requiresSelfOnboarding = shouldRequireSelfOnboardingForUser(
-    profileStatus,
-    userRoles
-  );
+  const requiresSelfOnboarding =
+    statusFromProfile && shouldRequireSelfOnboardingForUser(profileStatus, userRoles);
   const requiresExitSurvey = shouldShowExitSurveyForStatus(profileStatus, userRoles);
   const isExitSurveyOnlyAccess = requiresExitSurvey;
   // Own Profile self-edit: employees and HR/Admin personas (HR was previously excluded).
@@ -63,14 +81,19 @@ export function useDashboardAccess() {
 
     const profile = profileQ.data ?? null;
     if (!profile) {
+      // No live record to read (soft-failed request, or a portal role that has
+      // no /profile endpoint). Keep the session status for display purposes but
+      // do NOT treat it as authoritative — see `statusFromProfile`.
       const status = normalizeUserStatus(user?.status);
       setProfileStatus(status);
-      setIsSelfOnboarded(!shouldRequireSelfOnboarding(status));
+      setStatusFromProfile(false);
+      setIsSelfOnboarded(true);
       return;
     }
 
     const status = resolveProfileStatus(profile, user);
     setProfileStatus(status);
+    setStatusFromProfile(true);
     setIsSelfOnboarded(!shouldRequireSelfOnboarding(status));
     // Do NOT call refreshSession() here — status sync must not rotate refresh tokens.
     // Profile status is already authoritative for dashboard gating.
@@ -82,11 +105,13 @@ export function useDashboardAccess() {
     if (!profile) {
       const status = normalizeUserStatus(user?.status);
       setProfileStatus(status);
-      setIsSelfOnboarded(!shouldRequireSelfOnboarding(status));
+      setStatusFromProfile(false);
+      setIsSelfOnboarded(true);
       return null;
     }
     const status = resolveProfileStatus(profile, user);
     setProfileStatus(status);
+    setStatusFromProfile(true);
     setIsSelfOnboarded(!shouldRequireSelfOnboarding(status));
     // Avoid rotating refresh tokens just to sync a stale auth.status string.
     void queryClient.invalidateQueries({ queryKey: ["profile", "exit-interview"] });

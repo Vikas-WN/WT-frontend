@@ -1,8 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Suspense, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   fetchMe,
   getGoogleSignInUrl,
@@ -128,17 +128,35 @@ function readPostLoginRedirectCookie(): string | null {
   return match ? safeInternalPath(decodeURIComponent(match[1] ?? "")) : null;
 }
 
-function LoginPageInner() {
+/**
+ * How long the "Checking session…" cover may stay up before the sign-in form is
+ * shown regardless.
+ *
+ * The session check is bounded (the HTTP client aborts a stalled request), but
+ * "bounded" is not the same as "never looks stuck": a slow or cold backend left
+ * this page showing nothing but a spinner, with no way to sign in and no error
+ * (BUG_ID_314). Past this point the form is rendered even while the check is
+ * still running — if it later reports an authenticated session the redirect
+ * effect below still fires, so nothing is lost by showing the button early.
+ */
+const SESSION_CHECK_COVER_MS = 2_500;
+
+function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const postLoginTarget =
-    safeInternalPath(searchParams.get("redirect")) ??
-    readPostLoginRedirectCookie() ??
-    "/dashboard";
   const { status } = useAuth();
+  // Read the query string directly instead of via `useSearchParams()`. That
+  // hook suspends the component during prerender/hydration, so the page's
+  // Suspense fallback — a bare loader — was the whole login screen until the
+  // client bundle hydrated. Any hydration hiccup (a stale HTML shell after a
+  // deploy, a chunk that fails to load) then left the page permanently showing
+  // "Loading" with no sign-in button and no error (BUG_ID_314). Reading
+  // location.search in an effect keeps the form on screen from the first paint.
+  const [params, setParams] = useState<URLSearchParams | null>(null);
+  const [postLoginTarget, setPostLoginTarget] = useState("/dashboard");
   const [error, setError] = useState<string | null>(null);
   const [sessionLogoutReason, setSessionLogoutReason] = useState<SessionLogoutReason | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [sessionCheckCoverExpired, setSessionCheckCoverExpired] = useState(false);
   const didRedirect = useRef(false);
   const didPostLoginRefresh = useRef(false);
 
@@ -147,7 +165,24 @@ function LoginPageInner() {
   }, []);
 
   useEffect(() => {
-    const rawError = searchParams.get("error");
+    const timer = setTimeout(() => setSessionCheckCoverExpired(true), SESSION_CHECK_COVER_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    setParams(new URLSearchParams(window.location.search));
+  }, []);
+
+  useEffect(() => {
+    if (!params) return;
+    setPostLoginTarget(
+      safeInternalPath(params.get("redirect")) ?? readPostLoginRedirectCookie() ?? "/dashboard"
+    );
+  }, [params]);
+
+  useEffect(() => {
+    if (!params) return;
+    const rawError = params.get("error");
     if (!rawError) {
       setError(null);
       setSessionLogoutReason(null);
@@ -161,7 +196,7 @@ function LoginPageInner() {
     }
     setSessionLogoutReason(null);
     setError(oauthErrorMessages[rawError] ?? "An unknown error occurred.");
-  }, [searchParams]);
+  }, [params]);
 
   useEffect(() => {
     if (status === "authenticated" && !didRedirect.current) {
@@ -197,7 +232,7 @@ function LoginPageInner() {
     router.replace("/login");
   }
 
-  if (status === "loading") {
+  if (status === "loading" && !sessionCheckCoverExpired) {
     return (
       <LoginShell>
         <WtLoaderCentered label="Checking session…" />
@@ -269,16 +304,4 @@ function LoginPageInner() {
   );
 }
 
-export default function LoginPage() {
-  return (
-    <Suspense
-      fallback={
-        <LoginShell>
-          <WtLoaderCentered label="Loading" />
-        </LoginShell>
-      }
-    >
-      <LoginPageInner />
-    </Suspense>
-  );
-}
+export default LoginPage;

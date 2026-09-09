@@ -424,41 +424,17 @@ export function CompOffPageClient({
     [projectOptions, projectCatalog]
   );
 
-  const onAddCustomEarnProject = useCallback((projectName: string) => {
-    const name = projectName.trim();
-    if (!name) return;
-    setProjectOptions((prev) => {
-      const exists = prev.some(
-        (p) =>
-          p.code.toLowerCase() === name.toLowerCase() ||
-          p.label.toLowerCase() === name.toLowerCase() ||
-          p.name.toLowerCase() === name.toLowerCase()
-      );
-      if (exists) return prev;
-      const next: CompOffProjectOption = {
-        code: name,
-        name,
-        label: name,
-        managerEmail: "",
-      };
-      return [...prev, next].sort((a, b) => a.label.localeCompare(b.label));
-    });
-  }, []);
-
-  const onAddEarnProject = useCallback(
-    (projectName: string) => {
-      if (hasHrAccess) {
-        setRedirectingToProjects(true);
-        const params = new URLSearchParams({
-          tab: "project",
-        });
-        router.push(`${DASHBOARD_ROUTES.allocation}?${params.toString()}`);
-        return;
-      }
-      onAddCustomEarnProject(projectName);
-    },
-    [hasHrAccess, onAddCustomEarnProject, router]
-  );
+  // Only ever navigates to the Projects screen (HR). There is deliberately no
+  // branch that appends a typed name to `projectOptions`: that used to let any
+  // employee invent a project from this form, producing an option with no
+  // allocation and an empty manager email, which then had nowhere to route the
+  // earn request (BUG_ID_336). The picker is limited to the projects the
+  // employee is actually allocated to.
+  const onAddEarnProject = useCallback(() => {
+    setRedirectingToProjects(true);
+    const params = new URLSearchParams({ tab: "project" });
+    router.push(`${DASHBOARD_ROUTES.allocation}?${params.toString()}`);
+  }, [router]);
 
   const loadMyRequests = useCallback(async () => {
     if (!userEmail) {
@@ -1074,16 +1050,25 @@ export function CompOffPageClient({
                       value={earnForm.project_code}
                       options={projectOptions}
                       onChange={onEarnProjectChange}
-                      onAddProject={onAddEarnProject}
+                      // Employees pick only from the projects they are actually
+                      // allocated to. Passing no handler removes the "Add …"
+                      // row entirely; it previously let anyone invent a project
+                      // by typing a name, which created a client-side option
+                      // with an empty manager email and no allocation behind it
+                      // (BUG_ID_336). HR keeps a shortcut that navigates to the
+                      // Projects screen — it never invents a project here.
+                      onAddProject={hasHrAccess ? onAddEarnProject : undefined}
                       addProjectLabel={
                         hasHrAccess
                           ? (name) => `Go to Projects to create "${name}"`
                           : undefined
                       }
-                      selectOnAdd={!hasHrAccess}
+                      selectOnAdd={false}
                       disabled={actionLoading || redirectingToProjects}
                       placeholder={
-                        hasHrAccess ? "Search projects or create new" : "Search or add project"
+                        hasHrAccess
+                          ? "Search projects or create new"
+                          : "Search your allocated projects"
                       }
                     />
                     <DatePicker

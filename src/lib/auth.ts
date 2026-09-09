@@ -72,6 +72,12 @@ export async function fetchMe(): Promise<AuthUser | null> {
   try {
     const body = await apiClient.get<ApiResponse<AuthUser>>(endpoints.auth.me, {
       skipAuth: true,
+      // Tighter than the 30s client default. The whole UI is covered by a
+      // loader while this call is outstanding, so a stalled session check reads
+      // to the user as "the app is stuck" (BUG_ID_314). This is a cheap
+      // read-only lookup — if it has not answered in 12s it is not going to,
+      // and a null result just shows the sign-in screen.
+      timeoutMs: 12_000,
     });
     return body.data;
   } catch (error) {

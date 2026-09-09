@@ -87,7 +87,12 @@ export function ProjectSelectField({
     [options, trimmedQuery]
   );
 
-  const showAddOption = Boolean(trimmedQuery) && !hasExactMatch && !disabled;
+  // No handler means the caller does not allow inventing a project, so the
+  // "Add …" row must not appear at all. Without this check the option showed
+  // for every caller and, with no onAddProject to run, still selected the typed
+  // text as if it were a real project (BUG_ID_336).
+  const showAddOption =
+    Boolean(onAddProject) && Boolean(trimmedQuery) && !hasExactMatch && !disabled;
 
   function selectProject(projectCode: string, displayLabel?: string) {
     onChange(projectCode);
@@ -96,7 +101,7 @@ export function ProjectSelectField({
   }
 
   function handleAddProject() {
-    if (!trimmedQuery || hasExactMatch) return;
+    if (!onAddProject || !trimmedQuery || hasExactMatch) return;
     const existing = options.find(
       (opt) =>
         opt.label.toLowerCase() === trimmedQuery.toLowerCase() ||
@@ -158,7 +163,15 @@ export function ProjectSelectField({
           >
             {filteredOptions.length === 0 && !showAddOption ? (
               <li className="px-3 py-2 text-wt-text-muted">
-                {trimmedQuery ? "No matches" : "Type to search or add a project"}
+                {trimmedQuery
+                  ? onAddProject
+                    ? "No matches"
+                    : "No matching project you are allocated to"
+                  : onAddProject
+                    ? "Type to search or add a project"
+                    : options.length
+                      ? "Type to search your allocated projects"
+                      : "You are not allocated to any project"}
               </li>
             ) : null}
             {filteredOptions.map((opt) => (
