@@ -244,6 +244,14 @@ export function useDayTimelog() {
     setEditingEntry(null);
   }, []);
 
+  /**
+   * Retarget the date a new entry is being logged against, without closing the
+   * open Add-entry form (unlike selectDate, which is for calendar-cell clicks).
+   */
+  const changeEntryDate = useCallback((dateKey: string) => {
+    setSelectedDate(dateKey);
+  }, []);
+
   const goToMonth = useCallback((year: number, month: number) => {
     setViewYear(year);
     setViewMonth(month);
@@ -476,6 +484,7 @@ export function useDayTimelog() {
     goToToday,
     goToMonth,
     selectDate,
+    changeEntryDate,
     tableEntries,
     tableTotal,
     tablePage,

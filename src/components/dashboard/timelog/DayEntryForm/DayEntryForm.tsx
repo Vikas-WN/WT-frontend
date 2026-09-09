@@ -8,7 +8,6 @@ import {
   subCategoriesFor,
   subCategoryRequired,
   taskCategoriesForProject,
-  TASK_CATEGORY_LABELS,
 } from "@/utils/timelog/categories";
 import {
   MODAL_BODY_CLASS,
@@ -27,7 +26,7 @@ import {
   formatEmployeePickerLabel,
   formatEmployeePickerTitle,
 } from "@/utils/employeePickerLabel";
-import { FieldLabel } from "@/components/dashboard/ui/forms";
+import { FieldLabel, DatePickerField } from "@/components/dashboard/ui/forms";
 import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
 import { showErrorToast } from "@/lib/toast";
 
@@ -65,6 +64,7 @@ export function DayEntryForm({
   onUpdate,
   dayTotalHours,
   selectedDate,
+  onDateChange,
   onCancel,
 }: DayEntryFormProps) {
   const [form, setForm] = useState<DayTimelogEntryForm>(() => formForEntry(entry));
@@ -123,12 +123,6 @@ export function DayEntryForm({
     managersQ.isFetching,
   ]);
 
-  const taskOptions = form.project_code
-    ? taskCategoriesForProject(form.project_code).map((t) => ({
-        value: t,
-        label: TASK_CATEGORY_LABELS[t] ?? t,
-      }))
-    : [];
   const subOptions =
     form.project_code && form.task_category
       ? subCategoriesFor(form.project_code, form.task_category)
@@ -254,6 +248,19 @@ export function DayEntryForm({
             />
           </label>
 
+          {isNew ? (
+            <DatePickerField
+              label="Date"
+              required
+              value={selectedDate}
+              onChange={onDateChange}
+              max={(() => {
+                const today = new Date();
+                return `${String(today.getDate()).padStart(2, "0")}/${String(today.getMonth() + 1).padStart(2, "0")}/${today.getFullYear()}`;
+              })()}
+            />
+          ) : null}
+
           {form.project_code ? (
             <label className="day-entry-form-field">
               <FieldLabel label="Project Manager" required className="day-entry-form-label" />
@@ -295,50 +302,6 @@ export function DayEntryForm({
 
           {form.project_code ? (
             <label className="day-entry-form-field">
-              <FieldLabel label="Task Category" required className="day-entry-form-label" />
-              <SearchableSelectCombobox
-                value={form.task_category}
-                onChange={(task_category) => {
-                  const subs = subCategoriesFor(form.project_code, task_category);
-                  setForm((prev) => ({
-                    ...prev,
-                    task_category,
-                    sub_category: subs[0] ?? "",
-                  }));
-                }}
-                options={taskOptions}
-                placeholder="Search task categories…"
-                inputClassName="day-entry-form-select"
-                showChevron
-              />
-            </label>
-          ) : null}
-
-          {form.project_code && form.task_category && subOptions.length > 0 ? (
-            <label className="day-entry-form-field">
-              <FieldLabel
-                label="Sub Category"
-                required={isSubRequired}
-                className="day-entry-form-label"
-              />
-              <SearchableSelectCombobox
-                value={form.sub_category}
-                onChange={(sub_category) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    sub_category,
-                  }))
-                }
-                options={subOptions.map((value) => ({ value, label: value }))}
-                placeholder="Search sub categories…"
-                inputClassName="day-entry-form-select"
-                showChevron
-              />
-            </label>
-          ) : null}
-
-          {form.project_code && form.task_category ? (
-            <label className="day-entry-form-field">
               <FieldLabel label="Description" required className="day-entry-form-label" />
               <textarea
                 className="day-entry-form-textarea"
@@ -355,7 +318,7 @@ export function DayEntryForm({
             </label>
           ) : null}
 
-          {form.project_code && form.task_category ? (
+          {form.project_code ? (
             <label className="day-entry-form-field">
               <FieldLabel label="Hours" required className="day-entry-form-label" />
               <input

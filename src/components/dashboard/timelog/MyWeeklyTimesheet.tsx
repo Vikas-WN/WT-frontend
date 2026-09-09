@@ -32,6 +32,7 @@ export function MyWeeklyTimesheet() {
     goToToday,
     goToMonth,
     selectDate,
+    changeEntryDate,
     addEntry,
     saveAndSubmitEntry,
     updateEntry,
@@ -90,6 +91,7 @@ export function MyWeeklyTimesheet() {
                 actionLoading={actionLoading}
                 dayTotalHours={selectedDateTotal}
                 selectedDate={selectedDate ?? ""}
+                onDateChange={changeEntryDate}
                 onSave={addEntry}
                 onSaveAndSubmit={saveAndSubmitEntry}
                 onUpdate={updateEntry}
