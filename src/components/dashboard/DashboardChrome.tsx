@@ -381,7 +381,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   }, [mobileNavOpen]);
 
   return (
-    <div className="flex h-dvh overflow-hidden text-wt-text">
+    <div className="wt-app-shell flex h-dvh overflow-hidden text-wt-text">
       <DashboardSidebar
         visibleNavigation={visibleNavigation}
         activeSection={activeSection}
@@ -462,7 +462,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                   </span>
                 ) : null}
               </summary>
-              <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-[min(380px,calc(100vw-1rem))] bg-white dark:bg-wt-surface-1 rounded-2xl shadow-xl shadow-slate-200/60 dark:shadow-none border border-slate-100 dark:border-wt-border-md p-2">
+              <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-[min(380px,calc(100vw-1rem))] rounded-2xl border border-slate-100 bg-white p-2 shadow-xl shadow-slate-200/60 dark:border-wt-border-md dark:bg-wt-surface-1 dark:shadow-none max-sm:fixed max-sm:inset-x-2 max-sm:top-[calc(3.25rem+env(safe-area-inset-top,0px))] max-sm:w-auto">
                 <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 dark:border-wt-border/80 mb-1">
                   <h3 className="font-semibold text-slate-900 dark:text-wt-text text-base">Notifications</h3>
                   <button type="button" className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors disabled:opacity-40" onClick={() =>

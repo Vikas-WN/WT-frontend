@@ -103,8 +103,15 @@ export const INTEGRATIONS_ENDPOINTS: Record<string, IntegrationsEndpoint> = {
     scope: "API key required (ROLE_HR)",
     queryParams: [
       { name: "search", type: "string", required: false, notes: "Filter by employee name or email." },
+      {
+        name: "roles",
+        type: "string",
+        required: false,
+        notes:
+          "Comma-separated portal role names (ROLE_HR, ROLE_MANAGER, ROLE_DM, ROLE_AM, ROLE_ADMIN, ROLE_EMPLOYEE — the ROLE_ prefix is optional, e.g. roles=HR,MANAGER). Omit to return every employee; supply to return only employees holding at least one of the given roles.",
+      },
     ],
-    exampleRequest: `curl --location '{{BASE_URL}}/employees' \\\n  --header 'Authorization: Bearer wtak_your_api_key'`,
+    exampleRequest: `curl --location '{{BASE_URL}}/employees?roles=ROLE_MANAGER,ROLE_HR' \\\n  --header 'Authorization: Bearer wtak_your_api_key'`,
     exampleResponse: `{\n  "message": "success",\n  "data": {\n    "items": [\n      {\n        "empId": "WK-001",\n        "name": "Jane Smith",\n        "email": "jane.smith@example.com",\n        "designation": "Software Engineer",\n        "status": "ACTIVE",\n        "joiningDate": "2024-03-01"\n      }\n    ],\n    "total": 1,\n    "page": 0,\n    "size": 10\n  }\n}`,
   },
   "project-detail": {

@@ -59,7 +59,9 @@ export function clearSessionTiming() {
 }
 
 /**
- * Logs the user out after 4 hours of inactivity or 8 hours absolute session age.
+ * Logs the user out after the configured inactivity window (server-provided
+ * `session_inactivity_minutes`, default 240) or the absolute session-age cap
+ * (`session_max_hours`, default 8).
  * Activity: mouse, keyboard, scroll, touch, focus, and client-side navigation.
  */
 export function useSessionTimeout(

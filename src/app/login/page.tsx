@@ -73,7 +73,7 @@ function ErrorBanner({ message }: { message: string }) {
 
 function LoginShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-dvh bg-[var(--wt-bg)] text-wt-text">
+    <div className="wt-app-shell relative min-h-dvh bg-[var(--wt-bg)] text-wt-text [padding-bottom:env(safe-area-inset-bottom)] [padding-top:env(safe-area-inset-top)]">
       <LoginBackdrop />
       <div className="relative z-10 mx-auto grid min-h-dvh w-full max-w-6xl grid-cols-1 lg:grid-cols-[1.05fr_0.95fr]">
         <section className="hidden flex-col justify-between border-r border-wt-border px-10 py-12 lg:flex xl:px-14">

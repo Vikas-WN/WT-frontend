@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 /** Sidebar shell — fixed viewport height; nav scrolls inside. */
 export const SIDEBAR_SHELL_BASE =
-  "wt-sidebar z-40 flex h-dvh max-h-dvh shrink-0 flex-col border-r border-wt-border bg-wt-surface-1 transition-[width,transform,padding,background-color,border-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)] max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,288px)] lg:min-w-0 lg:translate-x-0 max-lg:shadow-[0_24px_64px_rgba(15,23,42,0.22)]";
+  "wt-sidebar wt-mobile-drawer z-40 flex h-dvh max-h-dvh shrink-0 flex-col border-r border-wt-border bg-wt-surface-1 transition-[width,transform,padding,background-color,border-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)] max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,288px)] lg:min-w-0 lg:translate-x-0 max-lg:shadow-[0_24px_64px_rgba(15,23,42,0.22)]";
 
 /** @deprecated Use sidebarShellClass */
 export const SIDEBAR_SHELL_CLASS = cn(
@@ -98,7 +98,7 @@ export const SIDEBAR_COMPACT_MARK_CLASS =
   "flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--wt-brand)] text-[11px] font-bold tracking-tight text-white";
 
 export const DASHBOARD_HEADER_CLASS =
-  "z-20 flex shrink-0 items-center justify-between gap-3 border-b border-wt-border bg-wt-surface-1/90 px-4 py-3.5 sm:gap-4 sm:px-7 sm:py-4 dark:bg-black/90 dark:backdrop-blur-xl backdrop-blur-xl transition-[background-color,border-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)]";
+  "wt-app-header z-20 flex shrink-0 items-center justify-between gap-3 border-b border-wt-border bg-wt-surface-1/90 px-4 py-3.5 sm:gap-4 sm:px-7 sm:py-4 dark:bg-black/90 dark:backdrop-blur-xl backdrop-blur-xl transition-[background-color,border-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)]";
 
 export const DASHBOARD_HEADER_MENU_BUTTON_CLASS =
   "flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2 text-wt-text shadow-sm transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:bg-wt-surface-3 hover:-translate-y-px lg:hidden";

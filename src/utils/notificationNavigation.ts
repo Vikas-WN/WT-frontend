@@ -69,6 +69,34 @@ export function parseLeaveNotificationDeepLink(message: string): {
   };
 }
 
+const MONTH_NAMES = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+];
+
+/** Pull a "<Month> <Year>" (e.g. "May 2026") out of free text → 1-based month. */
+export function parseMonthYearFromText(
+  text: string
+): { year: number; month: number } | null {
+  const match = String(text ?? "")
+    .toLowerCase()
+    .match(
+      /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})\b/
+    );
+  if (!match) return null;
+  return { year: Number(match[2]), month: MONTH_NAMES.indexOf(match[1]) + 1 };
+}
+
 function withLeaveDeepLink(
   basePath: string,
   row: NotificationItem | Record<string, unknown>,
@@ -157,6 +185,8 @@ export function notificationCategoryLabel(
       return "Birthday";
     case "EMPLOYEE_ID_UPDATED":
       return "Profile";
+    case "LOP_REPORT_READY":
+      return "LOP Report";
     default:
       return "—";
   }
@@ -263,6 +293,13 @@ export function resolveNotificationHref(
 
     case "EMPLOYEE_ID_UPDATED":
       return DASHBOARD_ROUTES.profile;
+
+    case "LOP_REPORT_READY": {
+      const base = DASHBOARD_ROUTES["reports-lop"];
+      const period = parseMonthYearFromText(readNotificationMessage(row));
+      if (!period) return base;
+      return `${base}?year=${period.year}&month=${period.month}`;
+    }
 
     default:
       return null;

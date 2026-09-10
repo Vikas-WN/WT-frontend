@@ -22,9 +22,21 @@ const plusJakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "WebTrak — Workforce Tracker",
   description: "Modern workforce tracking and management platform",
+  applicationName: "WebTrak",
+  manifest: "/manifest.webmanifest",
   icons: {
-    icon: [{ url: "/webtrak-logo.png", type: "image/png" }],
-    apple: [{ url: "/webtrak-logo.png", type: "image/png" }],
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icons/icon-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/icons/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icons/icon-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "WebTrak",
+    statusBarStyle: "black-translucent",
   },
 };
 
@@ -32,6 +44,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#070b14",
 };
 
 export default function RootLayout({

@@ -180,7 +180,6 @@ import { compOffService } from "@/services/compOff.service";
 import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
 import { CompOffCreditsDialog } from "@/components/dashboard/leave/CompOffCreditsDialog";
 import { WfhExceptionModal } from "@/components/dashboard/leave/WfhExceptionModal";
-import { HrWfhExceptionPanel } from "@/components/dashboard/leave/HrWfhExceptionPanel";
 import dynamic from "next/dynamic";
 import { LeaveRequestForm } from "@/components/dashboard/leave/LeaveRequestForm";
 import { MyLeaveRequestsView } from "@/components/dashboard/leave/MyLeaveRequestsView";
@@ -276,16 +275,13 @@ export function LeavePageClient() {
   const [highlightRequestId, setHighlightRequestId] = useState("");
   const deepLinkAppliedKeyRef = useRef("");
   const [leaveSubTab, setLeaveSubTab] = useState<
-    "my" | "team" | "org" | "comp-off" | "wfh" | "wfh-exceptions" | "balances"
+    "my" | "team" | "org" | "comp-off" | "wfh" | "balances"
   >(() => {
     if (tabFromQuery === "comp-off" && !isTeamLeaveRoute) return "comp-off";
     // Balances lives on Employee → Leave Requests (team route) for HR — not Personal leave.
     if (tabFromQuery === "balances" && !isTeamLeaveRoute) return "my";
-    // The HR custom-WFH approval queue is a team/HR view, never Personal leave.
-    if (tabFromQuery === "wfh-exceptions" && !isTeamLeaveRoute) return "my";
     if (
       tabFromQuery === "wfh" ||
-      tabFromQuery === "wfh-exceptions" ||
       tabFromQuery === "balances" ||
       tabFromQuery === "team" ||
       tabFromQuery === "org" ||
@@ -296,10 +292,12 @@ export function LeavePageClient() {
     return isTeamLeaveRoute ? "team" : "my";
   });
   useEffect(() => {
+    // `wfh-exceptions` was a removed tab (custom-WFH requests now appear in Team
+    // Requests / All Employee Requests) — a stale ?tab=wfh-exceptions link lands
+    // on the default team/personal view instead of a dead tab.
     if (
       tabFromQuery === "comp-off" ||
       tabFromQuery === "wfh" ||
-      tabFromQuery === "wfh-exceptions" ||
       tabFromQuery === "balances" ||
       tabFromQuery === "team" ||
       tabFromQuery === "org" ||
@@ -315,11 +313,6 @@ export function LeavePageClient() {
         setLeaveSubTab("my");
         return;
       }
-      // Custom WFH approvals are team/HR leave only.
-      if (tabFromQuery === "wfh-exceptions" && !isTeamLeaveRoute) {
-        setLeaveSubTab("my");
-        return;
-      }
       if (tabFromQuery === "wfh" && isTeamLeaveRoute) {
         setLeaveSubTab("team");
         return;
@@ -329,24 +322,14 @@ export function LeavePageClient() {
     }
     if (isTeamLeaveRoute) {
       setLeaveSubTab((prev) => {
-        if (
-          prev === "balances" ||
-          prev === "team" ||
-          prev === "org" ||
-          prev === "wfh-exceptions"
-        ) {
+        if (prev === "balances" || prev === "team" || prev === "org") {
           return prev;
         }
         return "team";
       });
     } else if (pathname.includes("/dashboard/leave")) {
       setLeaveSubTab((prev) => {
-        if (
-          prev === "team" ||
-          prev === "org" ||
-          prev === "balances" ||
-          prev === "wfh-exceptions"
-        ) {
+        if (prev === "team" || prev === "org" || prev === "balances") {
           return "my";
         }
         if (prev === "comp-off" || prev === "wfh") return prev;
@@ -865,9 +848,6 @@ export function LeavePageClient() {
   }, [hasManagerAccess, hasHrAccess, timelogSubTab]);
   useEffect(() => {
     if (leaveSubTab === "balances" && !hasHrAccess) {
-      setLeaveSubTab("team");
-    }
-    if (leaveSubTab === "wfh-exceptions" && !hasHrAccess) {
       setLeaveSubTab("team");
     }
     if (leaveSubTab === "org" && !canViewOrgLeaveRequests) {
@@ -1795,11 +1775,6 @@ export function LeavePageClient() {
       return [
         canViewTeamLeave ? { value: "team", label: "Team Requests" } : null,
         canViewOrgLeaveRequests ? { value: "org", label: "All Employee Requests" } : null,
-        // HR's org-wide custom-WFH approval queue. It used to render on the
-        // personal leave page's Work From Home tab, which put an approvals queue
-        // for other people's requests on the viewer's own leave page; it belongs
-        // with the other team/HR leave views.
-        hasHrAccess ? { value: "wfh-exceptions", label: "Custom WFH Requests" } : null,
         hasHrAccess ? { value: "balances", label: "Balances" } : null,
       ].filter((item): item is { value: string; label: string } => Boolean(item));
     }
@@ -1831,7 +1806,6 @@ export function LeavePageClient() {
                                    | "team"
                                    | "org"
                                    | "wfh"
-                                   | "wfh-exceptions"
                                    | "comp-off"
                                    | "balances"
                                );
@@ -1845,7 +1819,6 @@ export function LeavePageClient() {
                                           {item.value === "org" && <Building2 className="size-4" />}
                                           {item.value === "comp-off" && <Clock className="size-4" />}
                                           {item.value === "wfh" && <Home className="size-4" />}
-                                          {item.value === "wfh-exceptions" && <Home className="size-4" />}
                                           {item.value === "balances" && <Wallet className="size-4" />}
                                           {item.label}
                                         </TabsTrigger>
@@ -2497,18 +2470,6 @@ export function LeavePageClient() {
                             </>
                           )}
                         </div>
-                          ) : null}
-                          {leaveSubTab === "wfh-exceptions" && hasHrAccess && isTeamLeaveRoute ? (
-                            <div className="mb-8">
-                              {/* HR's org-wide custom-WFH approval queue. It lives on the
-                                  team/HR leave route under its own tab — never on the
-                                  viewer's personal leave page, which is for their own
-                                  requests only (BUG_ID_321). */}
-                              <HrWfhExceptionPanel
-                                actionLoading={actionLoading}
-                                runAction={runAction}
-                              />
-                            </div>
                           ) : null}
                           {(leaveSubTab === "team" || leaveSubTab === "org") && canViewTeamLeave ? (
                           <div className="space-y-5">

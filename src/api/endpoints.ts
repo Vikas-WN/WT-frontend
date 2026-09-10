@@ -282,6 +282,9 @@ export const endpoints = {
     contractDistribution: `${api}/reports/compliance/contract-distribution`,
     bgvDashboard: `${api}/reports/bgv`,
     bgvByEmployee: (empId: string) => `${api}/reports/bgv/${encodeURIComponent(empId)}`,
+    lop: `${api}/reports/lop`,
+    lopExport: `${api}/reports/lop/export`,
+    lopSend: `${api}/reports/lop/send`,
   },
   referral: {
     jobs: `${api}/jobs`,

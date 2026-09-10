@@ -92,6 +92,37 @@ export interface NotificationItem {
   sender_email?: string | null;
 }
 
+export interface LopReportRow {
+  emp_id: string;
+  name: string;
+  email: string;
+  employee_type: string;
+  band: string;
+  primary_balance: number;
+  secondary_balance: number;
+  lop_days: number;
+}
+
+export interface LopReportData {
+  year: number;
+  month: number;
+  month_label: string;
+  period_label: string;
+  generated_on: string;
+  finance_email: string;
+  total_employees: number;
+  total_lop_days: number;
+  rows: LopReportRow[];
+}
+
+export interface LopReportSendResult {
+  finance_email: string;
+  period_label: string;
+  total_employees: number;
+  total_lop_days: number;
+  filename: string;
+}
+
 export type AllocationExtensionRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface ApiPage<T> {
@@ -1535,6 +1566,35 @@ export const hrmsService = {
   } = {}) {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.hrReports.contractDistribution, {
       query: params,
+    });
+  },
+
+  /** Monthly Loss-of-Pay report (active full-time / consultant / intern in LOP). */
+  getLopReport(params: { year?: number; month?: number } = {}) {
+    const query = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
+    ) as Record<string, number>;
+    return apiClient.get<ApiEnvelope<LopReportData>>(endpoints.hrReports.lop, { query });
+  },
+
+  /** Download the monthly LOP report as an .xlsx sheet. */
+  async downloadLopReport(params: { year?: number; month?: number } = {}): Promise<Blob> {
+    const query = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
+    ) as Record<string, number>;
+    return apiClient.get<Blob>(endpoints.hrReports.lopExport, {
+      query,
+      responseType: "blob",
+    });
+  },
+
+  /** Email the monthly LOP report (xlsx attached) to the finance team. */
+  sendLopReportToFinance(params: { year?: number; month?: number } = {}) {
+    const query = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
+    ) as Record<string, number>;
+    return apiClient.post<ApiEnvelope<LopReportSendResult>>(endpoints.hrReports.lopSend, {
+      query,
     });
   },
 

@@ -18,7 +18,11 @@ import {
   persistSessionTiming,
   useSessionTimeout,
 } from "@/hooks/useSessionTimeout";
-import { SESSION_REFRESH_INTERVAL_MS, type SessionLogoutReason } from "@/constants/sessionPolicy";
+import {
+  SESSION_REFRESH_INTERVAL_MS,
+  persistSessionPolicy,
+  type SessionLogoutReason,
+} from "@/constants/sessionPolicy";
 import { SessionLogoutDialog } from "@/components/auth/SessionLogoutDialog";
 import { SessionIdleWarningDialog } from "@/components/auth/SessionIdleWarningDialog";
 import {
@@ -107,6 +111,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     userRef.current = user;
   }, [user]);
+
+  // Remember the real session window so the sign-out dialog can state the
+  // actual duration — even when it renders on /login after a redirect.
+  useEffect(() => {
+    if (user?.session_inactivity_minutes || user?.session_max_hours) {
+      persistSessionPolicy({
+        inactivityMinutes: user?.session_inactivity_minutes ?? null,
+        maxHours: user?.session_max_hours ?? null,
+      });
+    }
+  }, [user?.session_inactivity_minutes, user?.session_max_hours]);
 
   const setActivePersona = useCallback(
     (role: string) => {
@@ -364,6 +379,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         open={sessionLogoutReason != null}
         reason={sessionLogoutReason ?? "server"}
         onConfirm={confirmSessionLogout}
+        inactivityMinutes={user?.session_inactivity_minutes ?? null}
+        maxHours={user?.session_max_hours ?? null}
       />
     </AuthContext.Provider>
   );

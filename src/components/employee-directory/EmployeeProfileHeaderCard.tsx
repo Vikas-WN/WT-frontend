@@ -86,7 +86,9 @@ function MetaChip({
         <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-wt-text-faint">
           {label}
         </span>
-        <span className="mt-0.5 block text-sm font-medium text-wt-text break-all">{value}</span>
+        <span className="mt-0.5 block text-sm font-medium text-wt-text [overflow-wrap:anywhere]">
+          {value}
+        </span>
       </span>
     </div>
   );
@@ -172,21 +174,23 @@ export function EmployeeProfileHeaderCard({
   return (
     <Card className={cn("w-full overflow-hidden p-0 wt-soft-in", CONTENT_CARD_CLASS)}>
       <div className="h-1.5 w-full bg-gradient-to-r from-[var(--wt-brand)] via-[color-mix(in_srgb,var(--wt-brand)_55%,#f59e0b)] to-emerald-400" />
-      <CardContent className="px-5 py-5 sm:px-6">
-        <div className="flex items-start gap-4 sm:gap-5">
+      <CardContent className="px-4 py-5 sm:px-6">
+        {/* Mobile: avatar centred on top, everything full-width below. From `sm`
+            up: avatar beside the details (the original two-column layout). */}
+        <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:gap-5 sm:text-left">
           <ProfileHeaderAvatar profile={profile} displayName={displayName} isBirthday={isBirthday} />
 
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
+          <div className="min-w-0 w-full flex-1">
+            <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 w-full sm:w-auto">
                 {editModeLabel ? (
                   <span className="mb-1.5 inline-flex rounded-md bg-[var(--wt-brand)] px-2 py-0.5 text-xs font-semibold text-white">
                     {editModeLabel}
                   </span>
                 ) : null}
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                   <h1
-                    className="truncate text-xl font-bold tracking-tight text-wt-text sm:text-2xl"
+                    className="text-xl font-bold tracking-tight text-wt-text [overflow-wrap:anywhere] sm:text-2xl"
                     title={displayName}
                   >
                     {displayName}
@@ -203,10 +207,12 @@ export function EmployeeProfileHeaderCard({
                   <p className="mt-1 text-sm text-wt-text-muted">{subtitle}</p>
                 ) : null}
               </div>
-              {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
+              {headerAction ? (
+                <div className="shrink-0">{headerAction}</div>
+              ) : null}
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 grid grid-cols-1 gap-2.5 text-left sm:grid-cols-2 xl:grid-cols-4">
               {metaItems.map((item) => (
                 <MetaChip key={item.key} icon={item.icon} label={item.label} value={item.value} />
               ))}

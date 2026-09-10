@@ -7,11 +7,20 @@
     <list default="true" id="277eea37-5920-433d-98e6-176d094caf49" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/app/globals.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/globals.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/login/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/login/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/api-docs/docsSections.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/api-docs/docsSections.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/auth/SessionLogoutDialog.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/auth/SessionLogoutDialog.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/dashboard/DashboardChrome.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/DashboardChrome.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/leave/HrWfhExceptionPanel.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/leave/LeavePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/leave/LeavePageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/ui/sidebarLayout.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/ui/sidebarLayout.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/dashboard/ui/uiLayout.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/ui/uiLayout.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/employee-directory/EmployeeDirectoryPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/employee-directory/EmployeeDirectoryPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/employee-directory/EmployeeProfilePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/employee-directory/EmployeeProfilePageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/userStatus.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/userStatus.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/employee-directory/EmployeeProfileHeaderCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/employee-directory/EmployeeProfileHeaderCard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/integrations-api/integrationsSections.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/integrations-api/integrationsSections.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/constants/sessionPolicy.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/constants/sessionPolicy.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/context/AuthContext.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/context/AuthContext.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/useSessionTimeout.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/useSessionTimeout.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -53,12 +62,12 @@
     }
   ]
 }</component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/Vikas-WN/WT-frontend.git",
-    "accountId": "e7b19179-d9f1-4d2a-a76c-3656d168b3f0"
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/Vikas-WN/WT-frontend.git&quot;,
+    &quot;accountId&quot;: &quot;e7b19179-d9f1-4d2a-a76c-3656d168b3f0&quot;
   }
-}]]></component>
+}</component>
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
@@ -131,32 +140,32 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "develop",
-    "git.auto.fetch.suggestion.counter": "1",
-    "js.debugger.nextJs.config.created.client": "true",
-    "js.debugger.nextJs.config.created.server": "true",
-    "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "/home/likhithrajup/Developer/WT-frontend",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "pnpm",
-    "to.speed.mode.migration.done": "true",
-    "ts.external.directory.path": "/Users/likhithrajup/Developer/WT-frontend/node_modules/typescript/lib",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;develop&quot;,
+    &quot;git.auto.fetch.suggestion.counter&quot;: &quot;1&quot;,
+    &quot;js.debugger.nextJs.config.created.client&quot;: &quot;true&quot;,
+    &quot;js.debugger.nextJs.config.created.server&quot;: &quot;true&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/likhithrajup/Developer/WT-frontend&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;pnpm&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;/Users/likhithrajup/Developer/WT-frontend/node_modules/typescript/lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="npm.Next.js: server-side">
     <configuration name="Next.js: debug client-side" type="JavascriptDebugType" uri="http://localhost:3000/">
       <method v="2" />
@@ -207,5 +216,9 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="changing the responiveness of the application to handle mobile screens" />
+    <option name="LAST_COMMIT_MESSAGE" value="changing the responiveness of the application to handle mobile screens" />
   </component>
 </project>

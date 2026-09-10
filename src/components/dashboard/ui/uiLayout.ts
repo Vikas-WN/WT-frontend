@@ -120,7 +120,8 @@ export const NATIVE_CONTROL_CLASS = cn(
 /** Dialog / modal shell — shared by WtFormDialog and hand-rolled overlays. */
 export const MODAL_OVERLAY_CLASS = cn(
   // Scroll the overlay itself so tall dialogs are never clipped at the top.
-  "fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain",
+  // `wt-modal-overlay` adds env(safe-area-inset-*) padding on notched devices.
+  "wt-modal-overlay fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain",
   "bg-black/55 p-4 backdrop-blur-[2px] dark:bg-black/75"
 );
 export const MODAL_PANEL_CLASS = cn(

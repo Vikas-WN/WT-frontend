@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
-  sessionLogoutMessages,
+  sessionLogoutMessage,
   sessionLogoutTitles,
   type SessionLogoutReason,
 } from "@/constants/sessionPolicy";
@@ -13,10 +13,15 @@ export function SessionLogoutDialog({
   open,
   reason,
   onConfirm,
+  inactivityMinutes,
+  maxHours,
 }: {
   open: boolean;
   reason: SessionLogoutReason;
   onConfirm: () => void;
+  /** Real per-user window from the server; falls back to the persisted value. */
+  inactivityMinutes?: number | null;
+  maxHours?: number | null;
 }) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -51,7 +56,7 @@ export function SessionLogoutDialog({
   if (!open || typeof document === "undefined") return null;
 
   const title = sessionLogoutTitles[reason];
-  const message = sessionLogoutMessages[reason];
+  const message = sessionLogoutMessage(reason, { inactivityMinutes, maxHours });
 
   // Render at the document root so a transformed ancestor (the dashboard's
   // animated <main>) can never turn this fixed cover into a partial overlay.
@@ -60,7 +65,7 @@ export function SessionLogoutDialog({
       ref={overlayRef}
       // Opaque, top-most cover: once the session has ended the app content behind
       // must be fully hidden and non-interactive until the user signs in again.
-      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-wt-bg p-4"
+      className="wt-modal-overlay fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-wt-bg p-4"
       role="presentation"
       onClick={(event) => event.stopPropagation()}
     >
