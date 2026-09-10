@@ -581,10 +581,23 @@ body::-webkit-scrollbar {
 /* Sticky headers for all data tables */
 .wt-scrollable-table,
 [data-slot="table"] {
-  width: 100%;
+  /* Grow to the natural width of the content so wide tables overflow their
+     scroll shell and scroll horizontally on mobile, instead of squeezing
+     every column until the text is clipped. `min-width: 100%` still makes
+     short tables fill the shell on desktop. This rule is unlayered, so a
+     `min-w-[…]` utility on the table cannot override it — the width comes
+     from the content (and any `min-w-*` on the cells) instead. */
+  width: max-content;
   min-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
+}
+
+/* A table that opts into fixed layout (equal columns from its colgroup / first
+   row) should stay pinned to the shell width, not grow to content. */
+.wt-scrollable-table.table-fixed,
+[data-slot="table"].table-fixed {
+  width: 100%;
 }
 
 /* Sticky headers — only inside bounded scroll shells (never on page scroll) */
@@ -1782,6 +1795,24 @@ select.input-field {
   }
 }
 
+/* Phones: the top-right toast sat behind the notch and the sticky app header,
+   so success / error confirmations were effectively invisible. Pin the stack
+   full-width just below the safe area + header instead. */
+@media (max-width: 40rem) {
+  [data-sonner-toaster],
+  [data-sonner-toaster][data-x-position="right"],
+  [data-sonner-toaster][data-x-position="left"] {
+    top: calc(env(safe-area-inset-top, 0px) + 3.75rem) !important;
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+    width: auto !important;
+    transform: none !important;
+  }
+  [data-sonner-toast].wt-toast {
+    width: 100% !important;
+  }
+}
+
 [data-sonner-toast].wt-toast {
   position: relative;
   overflow: hidden;
@@ -1945,6 +1976,42 @@ select.input-field {
   to {
     transform: scaleX(0);
   }
+}
+
+/* Centre-screen action confirmation splash (see ActionSplash.tsx) */
+@keyframes wt-action-splash-pop {
+  from {
+    transform: scale(0.82);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes wt-action-splash-check {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.wt-action-splash--in {
+  animation: wt-action-splash-pop 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.wt-action-splash--out {
+  transform: scale(0.96);
+  opacity: 0;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.wt-action-splash__check path {
+  stroke-dasharray: 28;
+  stroke-dashoffset: 28;
+  animation: wt-action-splash-check 0.34s 0.12s ease forwards;
 }
 
 @media (prefers-reduced-motion: reduce) {

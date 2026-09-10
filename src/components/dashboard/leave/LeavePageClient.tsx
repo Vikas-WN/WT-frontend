@@ -16,6 +16,8 @@ import {
 } from "@/components/dashboard/ui/wtTable";
 import { Skeleton } from "@/components/ui/skeleton";
 import { showErrorToast, showSuccessToast, showMissingFieldsToast } from "@/lib/toast";
+import { showActionSplash } from "@/lib/actionSplash";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -178,6 +180,10 @@ import {
 } from "@/utils/compOff";
 import { compOffService } from "@/services/compOff.service";
 import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
+import {
+  LeaveRequestDetailDialog,
+  type LeaveRequestDetailView,
+} from "@/components/dashboard/leave/LeaveRequestDetailDialog";
 import { CompOffCreditsDialog } from "@/components/dashboard/leave/CompOffCreditsDialog";
 import { WfhExceptionModal } from "@/components/dashboard/leave/WfhExceptionModal";
 import dynamic from "next/dynamic";
@@ -372,6 +378,7 @@ export function LeavePageClient() {
         body: JSON.stringify(body),
       });
       showSuccessToast("Custom Work From Home request submitted to HR for approval.");
+      showActionSplash("Request submitted");
       invalidateLeaveBalance();
       try {
         await loadMyLeaveRequests();
@@ -544,6 +551,14 @@ export function LeavePageClient() {
   } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [teamStatusUpdatingId, setTeamStatusUpdatingId] = useState<string | null>(null);
+  const [detailView, setDetailView] = useState<LeaveRequestDetailView | null>(null);
+  const [confirmState, setConfirmState] = useState<{
+    title: string;
+    description?: string;
+    confirmLabel: string;
+    tone?: "default" | "danger";
+    run: () => Promise<unknown> | void;
+  } | null>(null);
 
   // Notification deep-link: open the matching leave request regardless of prior date filters.
   useEffect(() => {
@@ -927,7 +942,11 @@ export function LeavePageClient() {
     return () => window.clearTimeout(id);
   }, [canAccessProfile, requiresSelfOnboarding, leaveSubTab]);
 
-  async function runAction(label: string, fn: () => Promise<unknown>) {
+  async function runAction(
+    label: string,
+    fn: () => Promise<unknown>,
+    options?: { splash?: boolean }
+  ) {
     setActionLoading(true);
     setActionBusyLabel(label);
     try {
@@ -936,7 +955,12 @@ export function LeavePageClient() {
         return;
       }
 
-      showSuccessToast(formatActionSuccessMessage(label));
+      const message = formatActionSuccessMessage(label);
+      showSuccessToast(message);
+      // Centre-screen tick as well — corner toasts are easy to miss on phones.
+      if (options?.splash !== false) {
+        showActionSplash(message);
+      }
     } catch (error) {
       const backendMessage =
         error instanceof ApiError
@@ -1464,6 +1488,30 @@ export function LeavePageClient() {
   function closeRejectDialog() {
     setPendingReject(null);
     setRejectReason("");
+  }
+
+  /** Approve a team/org request from the request detail dialog. Mirrors the
+   *  inline row Approve handlers (status update + cache refresh). */
+  function approveTeamRequest(requestId: string, requestType: unknown) {
+    return runAction(userRequestActionLabel(requestType, "approve"), async () => {
+      setTeamStatusUpdatingId(requestId);
+      try {
+        await updateEmployeeRequestStatus(requestId, "APPROVED", {
+          requireReasonOnReject: false,
+          requestType,
+        });
+        invalidateTeamCache();
+        invalidateLeaveBalance();
+        void loadEmployeeRequestsForApprover(
+          leaveSubTab === "org" ? "org" : "team",
+          0,
+          200,
+          true
+        );
+      } finally {
+        setTeamStatusUpdatingId(null);
+      }
+    });
   }
 
   async function confirmRejectRequest() {
@@ -2045,7 +2093,7 @@ export function LeavePageClient() {
                                     pagination={myLeavePagination}
                                     highlightRequestId={highlightRequestId}
                                     actionLoading={actionLoading}
-                                    onRefresh={() => runAction("Refresh my requests", loadMyLeaveRequests)}
+                                    onRefresh={() => runAction("Refresh my requests", loadMyLeaveRequests, { splash: false })}
                                     fromDate={myRequestsFromDate}
                                     toDate={myRequestsToDate}
                                     onFromDateChange={setMyRequestsFromDate}
@@ -2079,9 +2127,16 @@ export function LeavePageClient() {
                                       setWfhRequestViewTab("request");
                                     }}
                                     onRevoke={(requestId) =>
-                                      runAction(
-                                        userRequestActionLabel("WFH", "revoke"),
-                                        async () => {
+                                      setConfirmState({
+                                        title: "Delete this WFH request?",
+                                        description:
+                                          "The request will be withdrawn and your manager notified. This can't be undone.",
+                                        confirmLabel: "Delete request",
+                                        tone: "danger",
+                                        run: () =>
+                                          runAction(
+                                            userRequestActionLabel("WFH", "revoke"),
+                                            async () => {
                                         try {
                                           await revokeOwnedUserRequest(Number(requestId));
                                         } catch (error) {
@@ -2098,6 +2153,8 @@ export function LeavePageClient() {
                                           setSelectedWfhManagerEmails([]);
                                         }
                                         await loadMyLeaveRequests();
+                                      }
+                                          ),
                                       })
                                     }
                                   />
@@ -2406,7 +2463,7 @@ export function LeavePageClient() {
                                     pagination={myLeavePagination}
                                     highlightRequestId={highlightRequestId}
                                     actionLoading={actionLoading}
-                                    onRefresh={() => runAction("Refresh my requests", loadMyLeaveRequests)}
+                                    onRefresh={() => runAction("Refresh my requests", loadMyLeaveRequests, { splash: false })}
                                     fromDate={myRequestsFromDate}
                                     toDate={myRequestsToDate}
                                     onFromDateChange={setMyRequestsFromDate}
@@ -2442,9 +2499,16 @@ export function LeavePageClient() {
                                       setRequestViewTab("request");
                                     }}
                                     onRevoke={(requestId) =>
-                                      runAction(
-                                        userRequestActionLabel("LEAVE", "revoke"),
-                                        async () => {
+                                      setConfirmState({
+                                        title: "Delete this leave request?",
+                                        description:
+                                          "The request will be withdrawn and your approver notified. This can't be undone.",
+                                        confirmLabel: "Delete request",
+                                        tone: "danger",
+                                        run: () =>
+                                          runAction(
+                                            userRequestActionLabel("LEAVE", "revoke"),
+                                            async () => {
                                         try {
                                           await revokeOwnedUserRequest(Number(requestId));
                                         } catch (error) {
@@ -2462,6 +2526,8 @@ export function LeavePageClient() {
                                           setSelectedAdditionalRecipientEmails([]);
                                         }
                                         await loadMyLeaveRequests();
+                                      }
+                                          ),
                                       })
                                     }
                                   />
@@ -2736,12 +2802,74 @@ export function LeavePageClient() {
                                           : status === "PENDING"
                                             ? filledBadgeClass("warning")
                                             : "";
+                                    const appliedOnRaw = String(
+                                      pickRowField(
+                                        rowRecord,
+                                        "created_at",
+                                        "createdAt",
+                                        "request_raised_date",
+                                        "requestRaisedDate"
+                                      ) ?? ""
+                                    ).trim();
+                                    const appliedOnParsed = appliedOnRaw
+                                      ? new Date(appliedOnRaw)
+                                      : null;
+                                    const appliedOn =
+                                      appliedOnParsed && !Number.isNaN(appliedOnParsed.getTime())
+                                        ? formatApiDate(appliedOnParsed)
+                                        : appliedOnRaw;
+                                    const detailViewForRow: LeaveRequestDetailView = {
+                                      requestId,
+                                      employee: employee || "—",
+                                      email: rowEmail || null,
+                                      isAccountManager: isAm,
+                                      requestTypeLabel,
+                                      status,
+                                      managerStatus,
+                                      secondaryStatus: secondaryStage,
+                                      hasDualManagers,
+                                      duration,
+                                      isHalfDay,
+                                      days:
+                                        durationDays && durationDays !== "—"
+                                          ? String(durationDays)
+                                          : "—",
+                                      appliedOn,
+                                      employeeComments: comments,
+                                      managerReason,
+                                      hrReason: String(
+                                        pickRowField(rowRecord, "hr_reason", "hrReason") ?? ""
+                                      ).trim(),
+                                      attachmentUrl: String(
+                                        pickRowField(
+                                          rowRecord,
+                                          "reference_file_url",
+                                          "referenceFileUrl"
+                                        ) ?? ""
+                                      ).trim(),
+                                      canApprove: Boolean(hrCanActOnRow || showManagerApprove),
+                                      canReject: Boolean(hrCanActOnRow || showManagerReject),
+                                      blockedHint: blockedHint ?? null,
+                                      requestType: rowRequestType,
+                                    };
+                                    const openDetail = () => setDetailView(detailViewForRow);
                                     return (
                                       <TableRow
                                         key={`${requestId || "req"}-${idx}`}
                                         data-leave-request-id={requestId || undefined}
+                                        role="button"
+                                        tabIndex={0}
+                                        aria-label={`View ${employee || "request"} details`}
+                                        onClick={openDetail}
+                                        onKeyDown={(event) => {
+                                          if (event.key === "Enter" || event.key === " ") {
+                                            event.preventDefault();
+                                            openDetail();
+                                          }
+                                        }}
                                         className={
                                           [
+                                            "cursor-pointer transition-colors hover:bg-[var(--wt-brand-soft)]/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--wt-brand)]/40",
                                             idx % 2 === 1 ? "bg-muted/20" : "",
                                             highlightRequestId && requestId === highlightRequestId
                                               ? "bg-[var(--wt-brand-soft)]/40 ring-1 ring-inset ring-[var(--wt-brand)]/30"
@@ -2805,7 +2933,10 @@ export function LeavePageClient() {
                                           )}
                                         </TableCell>
                                         {showTeamActionsColumn ? (
-                                          <TableCell className="px-4 py-3 text-right">
+                                          <TableCell
+                                            className="px-4 py-3 text-right"
+                                            onClick={(event) => event.stopPropagation()}
+                                          >
                                             {hrCanActOnRow ? (
                                               <div className="inline-flex items-center justify-end gap-1">
                                                 <Button
@@ -2998,6 +3129,37 @@ export function LeavePageClient() {
                 )
               }
               loading={actionLoading}
+            />
+            <LeaveRequestDetailDialog
+              open={Boolean(detailView)}
+              view={detailView}
+              busy={
+                actionLoading ||
+                (detailView ? teamStatusUpdatingId === detailView.requestId : false)
+              }
+              onClose={() => setDetailView(null)}
+              onApprove={(view) => {
+                setDetailView(null);
+                void approveTeamRequest(view.requestId, view.requestType);
+              }}
+              onReject={(view) => {
+                setDetailView(null);
+                openRejectDialog(view.requestId, view.requestType);
+              }}
+            />
+            <ConfirmDialog
+              open={Boolean(confirmState)}
+              title={confirmState?.title ?? ""}
+              description={confirmState?.description}
+              confirmLabel={confirmState?.confirmLabel ?? "Confirm"}
+              tone={confirmState?.tone ?? "default"}
+              loading={actionLoading}
+              onCancel={() => setConfirmState(null)}
+              onConfirm={() => {
+                const pending = confirmState;
+                setConfirmState(null);
+                void pending?.run();
+              }}
             />
             <CompOffCreditsDialog open={compOffCreditsOpen} onClose={() => setCompOffCreditsOpen(false)} />
             <WfhExceptionModal

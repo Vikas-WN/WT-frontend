@@ -438,7 +438,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 onChange={(next) => setActivePersona(next)}
                 options={allRoles.map((role) => ({ value: role, label: formatRoleLabel(role) }))}
                 variant="compact"
-                className="w-[7.25rem] sm:w-35"
+                className="w-[8.25rem] shrink-0 sm:w-35"
                 contentClassName="w-auto min-w-[9rem]"
                 aria-label="Switch active role"
                 clearSelectionOnEmptyInput={false}

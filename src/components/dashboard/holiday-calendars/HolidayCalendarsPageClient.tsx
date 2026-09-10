@@ -41,11 +41,14 @@ function yearSelectOptions(anchorYear: number): string[] {
   return Array.from({ length: YEAR_LOOKBACK + 1 }, (_, index) => String(anchorYear - index));
 }
 
+// Real min widths (not %) so the table keeps its shape on a phone and the
+// wrapper scrolls horizontally instead of crushing "New Year's Day" to
+// "New Ye…" and "1-Jan-2026" to "1-…".
 const HOLIDAY_COLUMN_WIDTHS: Record<HolidayCalendarColumnKey, string> = {
-  date: "16%",
-  day: "18%",
-  holiday: "28%",
-  optional: "38%",
+  date: "7.5rem",
+  day: "8rem",
+  holiday: "16rem",
+  optional: "18rem",
 };
 
 function cellClassName(key: HolidayCalendarColumnKey): string {
@@ -204,8 +207,8 @@ export function HolidayCalendarsPageClient() {
           </div>
         }
       >
-        <div className="w-full overflow-x-auto rounded-xl border border-wt-border">
-          <WtTable className="w-full table-fixed">
+        <div className="wt-scroll-x-visible w-full overflow-x-auto rounded-xl border border-wt-border">
+          <WtTable className="w-full">
             <colgroup>
               {HOLIDAY_CALENDAR_COLUMNS.map((column) => (
                 <col key={column.key} style={{ width: HOLIDAY_COLUMN_WIDTHS[column.key] }} />

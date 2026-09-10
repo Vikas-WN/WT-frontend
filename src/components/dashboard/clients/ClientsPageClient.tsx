@@ -252,7 +252,6 @@ export function ClientsPageClient() {
           <div className="wt-detail-scroll-section min-h-0">
             <ScrollableTable
               scrollChain
-              axis="y"
               maxHeightClass="max-h-[min(68vh,640px)]"
             >
               <WtTable className="w-full text-sm">

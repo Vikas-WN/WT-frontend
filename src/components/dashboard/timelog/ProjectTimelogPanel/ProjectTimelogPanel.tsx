@@ -95,7 +95,7 @@ function TimelogDateRangeFields({
   onToDateChange: (value: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:min-w-[20rem]">
+    <div className="grid w-full grid-cols-1 gap-2 min-[420px]:w-auto min-[420px]:grid-cols-2 sm:min-w-[20rem]">
       <DatePicker
         label="From Date"
         value={fromDate}
@@ -266,14 +266,14 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
     return (
       <>
         <Card>
-          <CardHeader className="flex flex-row items-end justify-between gap-3">
-            <div className="flex items-center gap-3 self-center">
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex items-center gap-3 self-start sm:self-center">
               <Button variant="outline" size="sm" type="button" onClick={handleBackFromEmployee}>
                 ← Back
               </Button>
               <CardTitle className="text-base">{selectedEmployeeName}</CardTitle>
             </div>
-            <div className="flex items-end gap-2">
+            <div className="flex flex-col items-start gap-2 min-[420px]:flex-row min-[420px]:items-end">
               <TimelogDateRangeFields
                 fromDate={fromDate}
                 toDate={toDate}
@@ -418,9 +418,9 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
   return (
     <>
     <Card>
-      <CardHeader className="flex flex-row items-end justify-between gap-3">
-        <CardTitle className="self-center">Team Time Logs</CardTitle>
-        <div className="flex items-end gap-2">
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <CardTitle className="self-start sm:self-center">Team Time Logs</CardTitle>
+        <div className="flex flex-col items-start gap-2 min-[420px]:flex-row min-[420px]:items-end">
           <TimelogDateRangeFields
             fromDate={fromDate}
             toDate={toDate}

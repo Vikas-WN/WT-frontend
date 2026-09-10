@@ -163,6 +163,7 @@ export function AppsPageClient() {
           emptyDescription={'Click "Create App" to issue the first key.'}
           skeletonColumns={8}
         >
+          <div className="wt-scroll-x-visible w-full overflow-x-auto">
           <WtTable className="w-full text-sm">
             <TableHeader>
               <TableRow>
@@ -249,6 +250,7 @@ export function AppsPageClient() {
                 ))}
             </TableBody>
           </WtTable>
+          </div>
 
           <div className="mt-3">
             <ListPagination

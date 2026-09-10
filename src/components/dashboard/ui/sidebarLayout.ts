@@ -98,7 +98,7 @@ export const SIDEBAR_COMPACT_MARK_CLASS =
   "flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--wt-brand)] text-[11px] font-bold tracking-tight text-white";
 
 export const DASHBOARD_HEADER_CLASS =
-  "wt-app-header z-20 flex shrink-0 items-center justify-between gap-3 border-b border-wt-border bg-wt-surface-1/90 px-4 py-3.5 sm:gap-4 sm:px-7 sm:py-4 dark:bg-black/90 dark:backdrop-blur-xl backdrop-blur-xl transition-[background-color,border-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)]";
+  "wt-app-header z-20 flex shrink-0 items-center justify-between gap-2 border-b border-wt-border bg-wt-surface-1/90 px-3 py-3.5 sm:gap-4 sm:px-7 sm:py-4 dark:bg-black/90 dark:backdrop-blur-xl backdrop-blur-xl transition-[background-color,border-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)]";
 
 export const DASHBOARD_HEADER_MENU_BUTTON_CLASS =
   "flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2 text-wt-text shadow-sm transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:bg-wt-surface-3 hover:-translate-y-px lg:hidden";

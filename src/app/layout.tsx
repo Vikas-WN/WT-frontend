@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
+import { ActionSplashHost } from "@/components/ui/ActionSplash";
 import { themeInitScript } from "@/components/shared/ThemeInitScript";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -68,6 +69,7 @@ export default function RootLayout({
       <body className="min-h-full bg-wt-bg text-wt-text antialiased">
         <AuthProvider>{children}</AuthProvider>
         <Toaster />
+        <ActionSplashHost />
       </body>
     </html>
   );
