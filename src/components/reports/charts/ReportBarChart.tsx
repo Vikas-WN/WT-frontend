@@ -73,45 +73,43 @@ export function ReportBarChart({
             margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
           >
             <CartesianGrid stroke={REPORT_CHART_GRID} strokeDasharray="3 3" vertical={!isVertical} />
-            {isVertical ? (
-              <>
-                <XAxis
-                  type="number"
-                  tick={{ fill: REPORT_CHART_MUTED, fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v) => `${v}${valueSuffix}`}
-                />
-                <YAxis
-                  type="category"
-                  dataKey={categoryKey}
-                  width={88}
-                  tick={{ fill: REPORT_CHART_MUTED, fontSize: 10 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-              </>
-            ) : (
-              <>
-                <XAxis
-                  dataKey={categoryKey}
-                  tick={{ fill: REPORT_CHART_MUTED, fontSize: 10 }}
-                  axisLine={false}
-                  tickLine={false}
-                  interval={0}
-                  angle={data.length > 6 ? -28 : 0}
-                  textAnchor={data.length > 6 ? "end" : "middle"}
-                  height={data.length > 6 ? 64 : 32}
-                />
-                <YAxis
-                  tick={{ fill: REPORT_CHART_MUTED, fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={40}
-                  tickFormatter={(v) => `${v}${valueSuffix}`}
-                />
-              </>
-            )}
+            {/* XAxis / YAxis must be *direct* children of BarChart — recharts
+                collects them by walking props.children, and wrapping them in a
+                fragment inside a ternary makes it silently drop the axes (the
+                chart then renders with no ticks and every bar stacked at the
+                same coordinate). Swap props by orientation instead. */}
+            <XAxis
+              {...(isVertical
+                ? {
+                    type: "number" as const,
+                    tickFormatter: (v: number | string) => `${v}${valueSuffix}`,
+                  }
+                : {
+                    dataKey: categoryKey,
+                    interval: 0 as const,
+                    angle: data.length > 6 ? -28 : 0,
+                    textAnchor: data.length > 6 ? ("end" as const) : ("middle" as const),
+                    height: data.length > 6 ? 64 : 32,
+                  })}
+              tick={{ fill: REPORT_CHART_MUTED, fontSize: isVertical ? 11 : 10 }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              {...(isVertical
+                ? {
+                    type: "category" as const,
+                    dataKey: categoryKey,
+                    width: 96,
+                  }
+                : {
+                    width: 40,
+                    tickFormatter: (v: number | string) => `${v}${valueSuffix}`,
+                  })}
+              tick={{ fill: REPORT_CHART_MUTED, fontSize: isVertical ? 10 : 11 }}
+              axisLine={false}
+              tickLine={false}
+            />
             <Tooltip
               cursor={{ fill: "color-mix(in srgb, var(--wt-brand) 8%, transparent)" }}
               contentStyle={{

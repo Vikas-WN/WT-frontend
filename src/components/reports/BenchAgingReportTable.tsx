@@ -18,15 +18,20 @@ type Props = {
 export function BenchAgingReportTable({ rows, peopleOnBench, loading = false }: Props) {
   const agingBuckets = useMemo(() => benchDaysBuckets(rows), [rows]);
 
-  /** Department chart counts people (not days) — bench_days may be non-numeric for investment. */
+  /** Department chart counts people (not days) — bench_days may be non-numeric for investment.
+   *  Group case-insensitively so "DEVELOPER" (bench-aging API) and "Developer"
+   *  (investment merge) don't split into two bars; keep the first-seen label. */
   const departmentHeadcount = useMemo(() => {
-    const map = new Map<string, number>();
+    const byKey = new Map<string, { label: string; people: number }>();
     for (const row of rows) {
-      const dept = String(row.department ?? "—").trim() || "—";
-      map.set(dept, (map.get(dept) ?? 0) + 1);
+      const label = String(row.department ?? "").trim() || "—";
+      const key = label.toLowerCase();
+      const entry = byKey.get(key);
+      if (entry) entry.people += 1;
+      else byKey.set(key, { label, people: 1 });
     }
-    return Array.from(map.entries())
-      .map(([name, value]) => ({ name, people: value }))
+    return Array.from(byKey.values())
+      .map(({ label, people }) => ({ name: label, people }))
       .sort((a, b) => b.people - a.people)
       .slice(0, 8);
   }, [rows]);

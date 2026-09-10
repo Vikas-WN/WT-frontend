@@ -149,6 +149,8 @@ export const endpoints = {
     deliveryManagers: `${api}/employees/delivery-managers`,
   },
 
+  search: `${api}/search`,
+
   learning: {
     trainings: `${api}/trainings`,
     trainingById: (trainingId: string | number) => `${api}/trainings/${encodeURIComponent(String(trainingId))}`,

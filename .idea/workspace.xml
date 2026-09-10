@@ -6,16 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="277eea37-5920-433d-98e6-176d094caf49" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/globals.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/globals.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/layout.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/DashboardChrome.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/DashboardChrome.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/apps/AppsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/apps/AppsPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/clients/ClientsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/clients/ClientsPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/holiday-calendars/HolidayCalendarsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/holiday-calendars/HolidayCalendarsPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/leave/LeavePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/leave/LeavePageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/timelog/ProjectTimelogPanel/ProjectTimelogPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/timelog/ProjectTimelogPanel/ProjectTimelogPanel.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/ui/sidebarLayout.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/ui/sidebarLayout.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/context/AuthContext.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/context/AuthContext.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -231,6 +221,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="changing the responiveness of the application to handle mobile screens" />
-    <option name="LAST_COMMIT_MESSAGE" value="changing the responiveness of the application to handle mobile screens" />
+    <MESSAGE value="updated mobile based in-app notifications and then correcting few misplaced things" />
+    <option name="LAST_COMMIT_MESSAGE" value="updated mobile based in-app notifications and then correcting few misplaced things" />
   </component>
 </project>

@@ -13,7 +13,9 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { Search } from "lucide-react";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
+import { useCommandPalette } from "@/components/dashboard/CommandPalette";
 import { dashboardHref } from "@/constants/routes";
 import { learningSubNav, LEARNING_BASE } from "@/constants/learningNav";
 import type { NavItem, AccordionSectionId } from "@/constants/dashboardNavigation";
@@ -40,6 +42,41 @@ import {
   sidebarShellClass,
   SIDEBAR_BACKDROP_CLASS,
 } from "@/components/dashboard/ui/sidebarLayout";
+
+function SidebarSearchTrigger({
+  collapsed,
+  onOpen,
+}: {
+  collapsed: boolean;
+  onOpen: () => void;
+}) {
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label="Search"
+        title="Search (⌘K)"
+        className="mx-auto flex size-10 items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2 text-wt-text-muted transition-colors hover:bg-wt-surface-3 hover:text-wt-text"
+      >
+        <Search className="size-4" aria-hidden />
+      </button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex w-full items-center gap-2.5 rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-left text-sm text-wt-text-muted transition-colors hover:bg-wt-surface-3 hover:text-wt-text"
+    >
+      <Search className="size-4 shrink-0" aria-hidden />
+      <span className="min-w-0 flex-1 truncate">Search…</span>
+      <kbd className="hidden shrink-0 rounded border border-wt-border bg-wt-surface-1 px-1.5 py-0.5 font-sans text-[10px] text-wt-text-faint lg:inline">
+        ⌘K
+      </kbd>
+    </button>
+  );
+}
 
 function IconChevronLeft({ className = "" }: { className?: string }) {
   return (
@@ -211,6 +248,7 @@ export function DashboardSidebar({
   const pathname = usePathname();
   const [flyoutId, setFlyoutId] = useState<AccordionSectionId | null>(null);
   const showCollapsed = collapsed && !mobileNavOpen;
+  const { open: openCommandPalette } = useCommandPalette();
   const flyoutCloseTimer = useRef<number | null>(null);
 
   const clearFlyoutTimer = useCallback(() => {
@@ -312,6 +350,16 @@ export function DashboardSidebar({
               </>
             )}
           </div>
+        </div>
+
+        <div className={cn("px-3 pb-1", showCollapsed && "lg:px-2")}>
+          <SidebarSearchTrigger
+            collapsed={showCollapsed}
+            onOpen={() => {
+              closeMobileNav();
+              openCommandPalette();
+            }}
+          />
         </div>
 
         <nav

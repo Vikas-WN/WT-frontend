@@ -81,6 +81,23 @@ export interface InvitedUsersListData {
   size: number;
 }
 
+export interface SearchHit {
+  kind: "employee" | "project" | "client";
+  id: string;
+  title: string;
+  subtitle: string | null;
+  badge: string | null;
+  ref: string;
+}
+
+export interface GlobalSearchResults {
+  query: string;
+  employees: SearchHit[];
+  projects: SearchHit[];
+  clients: SearchHit[];
+  total: number;
+}
+
 export interface NotificationItem {
   id: number;
   type?: string;
@@ -1139,6 +1156,13 @@ export const hrmsService = {
   getNotifications(params: Record<string, string>) {
     return apiClient.get<ApiEnvelope<PagedData<NotificationItem>>>(endpoints.notifications.root, {
       query: params,
+    });
+  },
+
+  /** Command-palette cross-entity search (employees / projects / clients). */
+  globalSearch(q: string) {
+    return apiClient.get<ApiEnvelope<GlobalSearchResults>>(endpoints.search, {
+      query: { q },
     });
   },
 
