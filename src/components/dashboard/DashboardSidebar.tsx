@@ -8,6 +8,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -16,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { Search } from "lucide-react";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
 import { useCommandPalette } from "@/components/dashboard/CommandPalette";
+import { modKeyLabel } from "@/lib/keyboard";
 import { dashboardHref } from "@/constants/routes";
 import { learningSubNav, LEARNING_BASE } from "@/constants/learningNav";
 import type { NavItem, AccordionSectionId } from "@/constants/dashboardNavigation";
@@ -50,13 +52,21 @@ function SidebarSearchTrigger({
   collapsed: boolean;
   onOpen: () => void;
 }) {
+  // "Ctrl" during SSR/hydration, then the real platform label on the client —
+  // no setState-in-effect, no hydration mismatch.
+  const mod = useSyncExternalStore(
+    () => () => {},
+    () => modKeyLabel(),
+    () => "Ctrl"
+  );
+
   if (collapsed) {
     return (
       <button
         type="button"
         onClick={onOpen}
         aria-label="Search"
-        title="Search (⌘K)"
+        title={`Search (${mod}+K)`}
         className="mx-auto flex size-10 items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2 text-wt-text-muted transition-colors hover:bg-wt-surface-3 hover:text-wt-text"
       >
         <Search className="size-4" aria-hidden />
@@ -72,7 +82,7 @@ function SidebarSearchTrigger({
       <Search className="size-4 shrink-0" aria-hidden />
       <span className="min-w-0 flex-1 truncate">Search…</span>
       <kbd className="hidden shrink-0 rounded border border-wt-border bg-wt-surface-1 px-1.5 py-0.5 font-sans text-[10px] text-wt-text-faint lg:inline">
-        ⌘K
+        {mod === "⌘" ? "⌘K" : `${mod}+K`}
       </kbd>
     </button>
   );

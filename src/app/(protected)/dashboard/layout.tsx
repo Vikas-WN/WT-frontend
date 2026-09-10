@@ -9,6 +9,7 @@ import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAc
 import { DashboardNavProvider } from "@/components/dashboard/DashboardNavContext";
 import { DashboardChrome } from "@/components/dashboard/DashboardChrome";
 import { CommandPaletteProvider } from "@/components/dashboard/CommandPalette";
+import { KeyboardShortcutsProvider } from "@/components/dashboard/KeyboardShortcuts";
 import { UserPreferencesProvider } from "@/context/UserPreferencesContext";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 
@@ -67,9 +68,11 @@ function DashboardChromeBoundary({ children }: { children: ReactNode }) {
     <DashboardNavProvider>
       <UserPreferencesProvider>
         <CommandPaletteProvider>
-          <DashboardChrome>
-            <PendingOnboardingGuard>{children}</PendingOnboardingGuard>
-          </DashboardChrome>
+          <KeyboardShortcutsProvider>
+            <DashboardChrome>
+              <PendingOnboardingGuard>{children}</PendingOnboardingGuard>
+            </DashboardChrome>
+          </KeyboardShortcutsProvider>
         </CommandPaletteProvider>
       </UserPreferencesProvider>
     </DashboardNavProvider>

@@ -373,6 +373,9 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                 <span>
                   <kbd className="rounded bg-wt-surface-2 px-1">esc</kbd> close
                 </span>
+                <span className="ml-auto">
+                  <kbd className="rounded bg-wt-surface-2 px-1">?</kbd> all shortcuts
+                </span>
               </div>
             </div>
           </div>,

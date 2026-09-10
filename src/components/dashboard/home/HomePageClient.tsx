@@ -16,6 +16,12 @@ import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useCommandPalette } from "@/components/dashboard/CommandPalette";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService, type WhosOutData } from "@/services/hrms.service";
+import { holidayCalendarStorageService } from "@/services/holidayCalendarStorage.service";
+import {
+  parseHolidayCalendarDate,
+  upcomingHolidayRowsInYear,
+  type HolidayCalendarRow,
+} from "@/utils/holidayCalendarTable";
 import { fetchPaginatedScopedUserRequests } from "@/utils/userRequest";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { normalizeRoles } from "@/utils/roles";
@@ -117,11 +123,6 @@ export function HomePageClient() {
 
   const today = useMemo(() => new Date(), []);
   const todayIso = iso(today);
-  const windowEnd = useMemo(() => {
-    const d = new Date(today);
-    d.setDate(d.getDate() + 45);
-    return iso(d);
-  }, [today]);
 
   const balance = useLoad(() => hrmsService.getMyLeaveBalance().then((r) => r.data), []);
   const allocations = useLoad(
@@ -129,9 +130,26 @@ export function HomePageClient() {
     []
   );
   const whosOut = useLoad<WhosOutData | null>(
-    () => hrmsService.getWhosOut({ from: todayIso, to: windowEnd, scope: "team" }).then((r) => r.data ?? null),
-    [todayIso, windowEnd]
+    () =>
+      hrmsService
+        .getWhosOut({ from: todayIso, to: todayIso, scope: "team" })
+        .then((r) => r.data ?? null),
+    [todayIso]
   );
+  // Holidays come from the same stored calendar the Annual Calendar page uses
+  // (works for every role, independent of the who's-out feature). Pull this year
+  // and next so the list still works near the year boundary.
+  const thisYear = today.getFullYear();
+  const holidays = useLoad<{ year: number; rows: HolidayCalendarRow[] }[]>(async () => {
+    const [cur, next] = await Promise.all([
+      holidayCalendarStorageService.fetchByYear(thisYear).catch(() => null),
+      holidayCalendarStorageService.fetchByYear(thisYear + 1).catch(() => null),
+    ]);
+    return [
+      { year: thisYear, rows: cur?.rows ?? [] },
+      { year: thisYear + 1, rows: next?.rows ?? [] },
+    ];
+  }, [thisYear]);
   const approvals = useLoad<number | null>(async () => {
     if (!isApprover) return null;
     const from = new Date(today);
@@ -177,6 +195,7 @@ export function HomePageClient() {
     balance.status === "error" ||
     allocations.status === "error" ||
     whosOut.status === "error" ||
+    holidays.status === "error" ||
     approvals.status === "error";
   const errorNotified = useRef(false);
   useEffect(() => {
@@ -194,10 +213,23 @@ export function HomePageClient() {
     );
   }, [whosOut.data, todayIso]);
 
-  const upcomingHolidays = useMemo(
-    () => (whosOut.data?.holidays ?? []).filter((h) => h.date >= todayIso).slice(0, 3),
-    [whosOut.data, todayIso]
-  );
+  const upcomingHolidays = useMemo(() => {
+    const out: { key: string; name: string; label: string; optional: boolean }[] = [];
+    for (const { year, rows } of holidays.data ?? []) {
+      for (const row of upcomingHolidayRowsInYear(rows, year, today)) {
+        const d = parseHolidayCalendarDate(row.date, year);
+        out.push({
+          key: `${year}-${row.date}-${row.holiday}`,
+          name: row.holiday || "Holiday",
+          label: d
+            ? d.toLocaleDateString(undefined, { day: "numeric", month: "short" })
+            : row.date,
+          optional: Boolean(row.optional && row.optional.trim() && row.optional !== "—"),
+        });
+      }
+    }
+    return out.slice(0, 3);
+  }, [holidays.data, today]);
 
   const activeProjects = useMemo(() => {
     return (allocations.data ?? [])
@@ -366,21 +398,23 @@ export function HomePageClient() {
           href={DASHBOARD_ROUTES["annual-calendar"]}
           cta="Calendar"
         >
-          {whosOut.status === "loading" ? (
+          {holidays.status === "loading" ? (
             <CardSkeleton />
+          ) : holidays.status === "error" ? (
+            <CardMessage text="Unavailable" />
           ) : upcomingHolidays.length === 0 ? (
-            <p className="text-sm text-wt-text-muted">Nothing in the next 6 weeks.</p>
+            <p className="text-sm text-wt-text-muted">No holidays coming up.</p>
           ) : (
             <ul className="space-y-1.5">
               {upcomingHolidays.map((h) => (
-                <li key={h.date} className="flex items-center justify-between text-sm">
-                  <span className="min-w-0 truncate text-wt-text">{h.name}</span>
-                  <span className="shrink-0 text-xs text-wt-text-muted">
-                    {new Date(`${h.date}T00:00:00`).toLocaleDateString(undefined, {
-                      day: "numeric",
-                      month: "short",
-                    })}
+                <li key={h.key} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="min-w-0 truncate text-wt-text">
+                    {h.name}
+                    {h.optional ? (
+                      <span className="ml-1.5 text-xs text-wt-text-faint">optional</span>
+                    ) : null}
                   </span>
+                  <span className="shrink-0 text-xs text-wt-text-muted">{h.label}</span>
                 </li>
               ))}
             </ul>
