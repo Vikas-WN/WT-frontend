@@ -410,7 +410,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-wt-page-bg dark:bg-black">
         <header className={DASHBOARD_HEADER_CLASS}>
-          <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <button
               type="button"
               className={DASHBOARD_HEADER_MENU_BUTTON_CLASS}
@@ -420,9 +420,9 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
             >
               <IconMenu />
             </button>
-            <WebTrakBrand variant="header" compact className="shrink-0 lg:hidden" />
+            <WebTrakBrand variant="header" compact className="hidden shrink-0 min-[420px]:flex lg:hidden" />
             <div className="min-w-0">
-            <h2 className="truncate text-xl font-semibold tracking-tight text-wt-text sm:text-[1.35rem]">
+            <h2 className="truncate text-lg font-semibold tracking-tight text-wt-text sm:text-[1.35rem]">
               {pageTitle}
             </h2>
             {isLearningRoute ? (
@@ -430,7 +430,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
             ) : null}
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             {/* activePersona is only ever set for users with ROLE_ADMIN — see AuthContext.syncRolesAndPersona. */}
             {activePersona ? (
               <DropdownSelect
@@ -438,7 +438,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 onChange={(next) => setActivePersona(next)}
                 options={allRoles.map((role) => ({ value: role, label: formatRoleLabel(role) }))}
                 variant="compact"
-                className="w-35"
+                className="w-[7.25rem] sm:w-35"
                 contentClassName="w-auto min-w-[9rem]"
                 aria-label="Switch active role"
                 clearSelectionOnEmptyInput={false}
@@ -587,7 +587,10 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         </header>
 
         <div className="wt-page-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
-          {children}
+          {/* Cap content width on very large / TV screens so line lengths, forms
+              and tables stay readable instead of stretching edge-to-edge. Below
+              ~2000px viewport this has no visible effect. */}
+          <div className="mx-auto w-full max-w-[1800px]">{children}</div>
         </div>
       </div>
     </div>

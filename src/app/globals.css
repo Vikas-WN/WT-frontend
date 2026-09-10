@@ -1650,7 +1650,6 @@ select.input-field {
 }
 
 .wt-sidebar {
-  position: relative;
   isolation: isolate;
   overflow: hidden;
   background:
@@ -1660,6 +1659,17 @@ select.input-field {
       var(--wt-surface-1) 28%
     );
   animation: wt-sidebar-shell-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Only take part in normal flow on desktop. Below lg the sidebar is an
+   off-canvas overlay via Tailwind's `max-lg:fixed`; an unconditional
+   `position: relative` here (same specificity, later in the cascade) was
+   overriding that, so the collapsed drawer kept reserving its width and
+   pushed every page's content off-screen on phones and tablets. */
+@media (min-width: 1024px) {
+  .wt-sidebar {
+    position: relative;
+  }
 }
 
 .wt-sidebar::before {

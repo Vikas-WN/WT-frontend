@@ -123,6 +123,10 @@ function normalizeRoleName(role: string): string {
 /** Employee self-service onboarding — INVITED/ONBOARDING only; not ACTIVE, offboarded, or serving notice. */
 export function shouldRequireSelfOnboarding(status: unknown): boolean {
   const statusKey = normalizeEmployeeStatusKey(status);
+  // An empty / unknown status is a data-fetch artifact (profile loaded before its
+  // status field, legacy row, transient error) — it must NOT trap an already-Active
+  // employee behind the "Onboarding Pending" banner. Only a real pre-active status does.
+  if (!statusKey) return false;
   if (statusKey === "INACTIVE" || statusKey === "SERVING_NOTICE") return false;
   return statusKey !== "ACTIVE";
 }
@@ -183,5 +187,17 @@ export function resolveProfileStatus(
   profile: Record<string, unknown> | null | undefined,
   user?: { status?: string } | null
 ): string {
-  return normalizeUserStatus(profile?.status ?? profile?.user_status ?? user?.status);
+  // Use the first source that yields a non-empty value — a `??` chain stops on an
+  // explicit "" from the API and would then report "no status" for an Active user.
+  const candidates = [
+    profile?.status,
+    profile?.user_status,
+    (profile as Record<string, unknown> | null | undefined)?.userStatus,
+    user?.status,
+  ];
+  for (const candidate of candidates) {
+    const normalized = normalizeUserStatus(candidate);
+    if (normalized) return normalized;
+  }
+  return "";
 }

@@ -7,10 +7,10 @@ import {
   ProfileHeaderSkeleton,
 } from "@/components/dashboard/ui/SectionSkeleton";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { DASHBOARD_ROUTES, employeeDirectoryProfilePath } from "@/constants/routes";
+import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { AccessRestricted } from "@/components/auth/AccessRestricted";
 import { HARDCODED_DEPARTMENT_OPTIONS } from "@/constants/dashboard";
 import { useEmployeeDirectoryAccess } from "@/hooks/employee-directory/useEmployeeDirectoryAccess";
@@ -142,7 +142,6 @@ function ViewOnlyField({
 
 export function EmployeeProfilePageClient() {
   const params = useParams();
-  const router = useRouter();
   const empId = decodeURIComponent(String(params?.empId ?? "").trim());
   const { user } = useAuth();
   const {
@@ -243,17 +242,13 @@ export function EmployeeProfilePageClient() {
   const profileUserType = normalizeDirectoryUserType(
     pickProfileField(profileRecord, ["user_type", "userType"])
   );
-  // Skills are mandatory for Technical roles only (matches the backend's
-  // is_non_tech_profile gate) — HR/Finance/other Non-Tech employees may save
-  // with no skills.
-  const isTechnicalEmployee = Boolean(
-    editForm && !isNonTechProfile(editForm.department, editForm.role, profileUserType)
-  );
-  const hasMissingTechnicalSkills = Boolean(
-    editForm &&
-      isTechnicalEmployee &&
-      (!editForm.primary_skills.some((item) => String(item.skill ?? "").trim()) ||
-        !editForm.secondary_skills.some((item) => String(item.skill ?? "").trim()))
+  // Technical employees must keep at least one primary + one secondary skill;
+  // HR / Finance / other non-tech employees may be saved with none.
+  const skillsRequiredForProfile = !isNonTechProfile(
+    department,
+    employeeRole,
+    pickProfileField(profileRecord, ["role", "designation"]),
+    pickProfileField(profileRecord, ["user_type", "userType"])
   );
   const currentProfileStatus = String(
     pickProfileField(profileRecord, ["user_status", "status", "userStatus"]) ?? ""
@@ -292,24 +287,6 @@ export function EmployeeProfilePageClient() {
   const empIdDisplay = formatProfileDisplayValue(
     pickProfileField(profileRecord, ["emp_id", "empId"])
   );
-
-  /**
-   * After a save that changed the Employee ID (GWID), the URL's `empId` param
-   * (and the `useEmployeeProfile`/mutation query keys built from it) now point
-   * at an ID that no longer exists — refetching under it would 404. Navigate
-   * to the new profile path instead so the page keeps working; otherwise fall
-   * back to the normal refetch.
-   */
-  const finishAfterSave = async (savedEmpId: string) => {
-    const nextEmpId = savedEmpId.trim();
-    if (nextEmpId && nextEmpId !== empId) {
-      router.replace(employeeDirectoryProfilePath(nextEmpId));
-    } else {
-      await refetch();
-    }
-    setIsEditing(false);
-    setEditForm(null);
-  };
 
   useEffect(() => {
     if (!isEditing || !canEditProfile) return;
@@ -571,22 +548,11 @@ export function EmployeeProfilePageClient() {
             const phoneError = validatePhoneNumber(phoneCountry, editForm.phone_number);
             if (phoneError) throw new Error(phoneError);
             const missingRequiredFields: string[] = [];
-            if (!editForm.emp_id.trim()) {
-              missingRequiredFields.push("Employee ID is required.");
-            }
             if (!isConsultantEmployee && !editForm.band_id.trim()) {
               missingRequiredFields.push("Band is required.");
             }
             if (!editForm.role.trim()) {
               missingRequiredFields.push("Designation is required.");
-            }
-            if (!editForm.work_location_type.trim()) {
-              missingRequiredFields.push("Work Location is required.");
-            }
-            if (hasMissingTechnicalSkills) {
-              missingRequiredFields.push(
-                "Primary and Secondary Skills are required for technical employees."
-              );
             }
             if (missingRequiredFields.length) {
               throw new Error(missingRequiredFields.join(" "));
@@ -617,6 +583,12 @@ export function EmployeeProfilePageClient() {
             if (missingSelfRating.length) {
               throw new Error("Each skill must have a self rating between 1 and 5.");
             }
+            if (skillsRequiredForProfile && !editForm.primary_skills.some((s) => String(s.skill ?? "").trim())) {
+              throw new Error("At least one Primary Skill is required for technical employees.");
+            }
+            if (skillsRequiredForProfile && !editForm.secondary_skills.some((s) => String(s.skill ?? "").trim())) {
+              throw new Error("At least one Secondary Skill is required for technical employees.");
+            }
             const normalizedEditForm = {
               ...editForm,
               primary_skills: primarySkills,
@@ -628,7 +600,9 @@ export function EmployeeProfilePageClient() {
             await updateMutation.mutateAsync(payload);
           }
 
-          await finishAfterSave(editForm.emp_id);
+          await refetch();
+          setIsEditing(false);
+          setEditForm(null);
           return;
         }
 
@@ -647,22 +621,11 @@ export function EmployeeProfilePageClient() {
           );
           if (phoneError) throw new Error(phoneError);
           const missingRequiredFields: string[] = [];
-          if (!editForm.emp_id.trim()) {
-            missingRequiredFields.push("Employee ID is required.");
-          }
           if (!isConsultantEmployee && !editForm.band_id.trim()) {
             missingRequiredFields.push("Band is required.");
           }
           if (!editForm.role.trim()) {
             missingRequiredFields.push("Designation is required.");
-          }
-          if (!editForm.work_location_type.trim()) {
-            missingRequiredFields.push("Work Location is required.");
-          }
-          if (hasMissingTechnicalSkills) {
-            missingRequiredFields.push(
-              "Primary and Secondary Skills are required for technical employees."
-            );
           }
           if (missingRequiredFields.length) {
             throw new Error(missingRequiredFields.join(" "));
@@ -693,6 +656,12 @@ export function EmployeeProfilePageClient() {
           if (missingSelfRating.length) {
             throw new Error("Each skill must have a self rating between 1 and 5.");
           }
+          if (skillsRequiredForProfile && !editForm.primary_skills.some((s) => String(s.skill ?? "").trim())) {
+            throw new Error("At least one Primary Skill is required for technical employees.");
+          }
+          if (skillsRequiredForProfile && !editForm.secondary_skills.some((s) => String(s.skill ?? "").trim())) {
+            throw new Error("At least one Secondary Skill is required for technical employees.");
+          }
           const normalizedEditForm = { ...editForm, primary_skills: primarySkills };
           await updateMutation.mutateAsync(
             editFormToUpdatePayload(normalizedEditForm, {
@@ -700,7 +669,9 @@ export function EmployeeProfilePageClient() {
               omitBand: isConsultantEmployee,
             })
           );
-          await finishAfterSave(editForm.emp_id);
+          await refetch();
+          setIsEditing(false);
+          setEditForm(null);
           return;
         }
         await updateMutation.mutateAsync(
@@ -709,7 +680,9 @@ export function EmployeeProfilePageClient() {
             omitBand: isConsultantEmployee,
           })
         );
-        await finishAfterSave(editForm.emp_id);
+        await refetch();
+        setIsEditing(false);
+        setEditForm(null);
       }
     );
   };
@@ -914,22 +887,6 @@ export function EmployeeProfilePageClient() {
                           value={editForm.email}
                           onChange={(v) => setEditForm({ ...editForm, email: v })}
                           disabled={saving}
-                        />
-                      )}
-                      {adminFieldsLocked ? (
-                        <ViewOnlyField
-                          label="Employee ID"
-                          value={editForm.emp_id}
-                          hint={selfAdminLockHint}
-                        />
-                      ) : (
-                        <InputField
-                          label="Employee ID"
-                          required
-                          value={editForm.emp_id}
-                          onChange={(v) => setEditForm({ ...editForm, emp_id: v.trim() })}
-                          disabled={saving}
-                          description="GWID — changing this takes effect immediately and notifies the employee."
                         />
                       )}
                       <div className="flex flex-col gap-2">

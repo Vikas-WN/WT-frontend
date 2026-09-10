@@ -33,7 +33,6 @@ import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { ManagementListCard, ManagementListContent } from "@/components/dashboard/ui/ManagementListCard";
 import { FieldLabel, SelectField } from "@/components/dashboard/ui/forms";
 import { SearchInput } from "@/components/dashboard/ui/SearchInput";
-import { CARD_TOOLBAR_INNER_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   cleanEmployeeName,
@@ -412,8 +411,8 @@ export function EmployeeDirectoryPageClient() {
               </div>
             }
             toolbar={
-              <div className={CARD_TOOLBAR_INNER_CLASS}>
-                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+                <div className="flex min-w-0 flex-col gap-1.5 xl:max-w-xs xl:flex-1">
                   <FieldLabel label="Search" htmlFor="employee-directory-search" />
                   <SearchInput
                     id="employee-directory-search"
@@ -424,10 +423,10 @@ export function EmployeeDirectoryPageClient() {
                     className="h-10 border-wt-border bg-wt-surface-1 shadow-sm"
                   />
                 </div>
-                <div className="flex flex-wrap items-end gap-2.5">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4 xl:flex xl:flex-wrap xl:items-end">
                   <SelectField
                     label="Department"
-                    className="w-[11.5rem] shrink-0 gap-1.5"
+                    className="w-full shrink-0 gap-1.5 xl:w-[11.5rem]"
                     value={departmentFilter}
                     onChange={setDepartmentFilter}
                     options={departmentOptions}
@@ -436,7 +435,7 @@ export function EmployeeDirectoryPageClient() {
                   />
                   <SelectField
                     label="User Type"
-                    className="w-[11rem] shrink-0 gap-1.5"
+                    className="w-full shrink-0 gap-1.5 xl:w-[11rem]"
                     value={userTypeFilter}
                     onChange={setUserTypeFilter}
                     options={userTypeSelectOptions}
@@ -444,7 +443,7 @@ export function EmployeeDirectoryPageClient() {
                   />
                   <SelectField
                     label="Primary Skill"
-                    className="w-[11.5rem] shrink-0 gap-1.5"
+                    className="w-full shrink-0 gap-1.5 xl:w-[11.5rem]"
                     value={primarySkillFilter}
                     onChange={setPrimarySkillFilter}
                     options={primarySkillOptions}
@@ -453,7 +452,7 @@ export function EmployeeDirectoryPageClient() {
                   />
                   <SelectField
                     label="Secondary Skill"
-                    className="w-[11.5rem] shrink-0 gap-1.5"
+                    className="w-full shrink-0 gap-1.5 xl:w-[11.5rem]"
                     value={secondarySkillFilter}
                     onChange={setSecondarySkillFilter}
                     options={secondarySkillOptions}

@@ -136,7 +136,7 @@ export const MODAL_HEADER_CLASS =
 export const MODAL_BODY_CLASS =
   "relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-5 sm:px-7";
 export const MODAL_FOOTER_CLASS =
-  "relative z-10 flex shrink-0 justify-end gap-3 border-t border-wt-border bg-wt-surface-1 px-5 py-5 sm:px-7 dark:border-wt-border/80";
+  "relative z-10 flex shrink-0 flex-wrap justify-end gap-3 border-t border-wt-border bg-wt-surface-1 px-5 py-5 sm:px-7 dark:border-wt-border/80";
 
 /** Filter / toolbar strip inside a content card. */
 export const FILTER_BAR_CLASS = cn(
