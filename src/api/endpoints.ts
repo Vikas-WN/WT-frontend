@@ -150,6 +150,7 @@ export const endpoints = {
   },
 
   search: `${api}/search`,
+  whosOut: `${api}/whos-out`,
 
   learning: {
     trainings: `${api}/trainings`,

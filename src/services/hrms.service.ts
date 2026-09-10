@@ -81,6 +81,36 @@ export interface InvitedUsersListData {
   size: number;
 }
 
+export type WhosOutEntryType = "LEAVE" | "WFH" | "WFH_EXCEPTION";
+
+export interface WhosOutEntry {
+  type: WhosOutEntryType;
+  from_date: string;
+  to_date: string;
+  is_half_day: boolean;
+}
+
+export interface WhosOutPerson {
+  emp_id: string | null;
+  name: string;
+  email: string;
+  entries: WhosOutEntry[];
+}
+
+export interface WhosOutHoliday {
+  date: string;
+  name: string;
+  is_optional: boolean;
+}
+
+export interface WhosOutData {
+  from_date: string;
+  to_date: string;
+  scope: "team" | "org";
+  people: WhosOutPerson[];
+  holidays: WhosOutHoliday[];
+}
+
 export interface SearchHit {
   kind: "employee" | "project" | "client";
   id: string;
@@ -1164,6 +1194,19 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<GlobalSearchResults>>(endpoints.search, {
       query: { q },
     });
+  },
+
+  /** Who's-out team calendar: approved leave / WFH + holidays over a range. */
+  getWhosOut(params: {
+    from?: string;
+    to?: string;
+    scope?: "team" | "org";
+    department?: string;
+  }) {
+    const query = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")
+    ) as Record<string, string>;
+    return apiClient.get<ApiEnvelope<WhosOutData>>(endpoints.whosOut, { query });
   },
 
   markAllNotificationsRead() {

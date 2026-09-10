@@ -33,6 +33,12 @@ export const LazyLopReportPageClient = lazyPage(
   "Loading LOP report…"
 );
 
+export const LazyWhosOutPageClient = lazyPage(
+  () => import("@/components/dashboard/whos-out/WhosOutPageClient"),
+  "WhosOutPageClient",
+  "Loading calendar…"
+);
+
 export const LazyAllocationPageClient = lazyPage(
   () => import("@/components/dashboard/allocation/AllocationPageClient"),
   "AllocationPageClient",

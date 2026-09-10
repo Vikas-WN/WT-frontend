@@ -140,6 +140,12 @@ export const dashboardNavigation: NavItem[] = [
         icon: "calendarDays",
       },
       {
+        id: "whos-out",
+        label: "Who's Out",
+        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN", "ROLE_FINANCE"],
+        icon: "calendarRange",
+      },
+      {
         id: "my-allocations",
         label: "My Allocations",
         roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
