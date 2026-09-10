@@ -35,14 +35,14 @@ type PaletteItem =
 
 type CommandPaletteContextValue = { open: () => void; close: () => void };
 
-const CommandPaletteContext = createContext<CommandPaletteContextValue | null>(null);
+const NOOP_PALETTE: CommandPaletteContextValue = { open: () => {}, close: () => {} };
 
+const CommandPaletteContext = createContext<CommandPaletteContextValue>(NOOP_PALETTE);
+
+/** Returns a no-op palette controller when no provider is mounted, so any
+ *  screen that renders the dashboard chrome (e.g. /guide) still works. */
 export function useCommandPalette(): CommandPaletteContextValue {
-  const ctx = useContext(CommandPaletteContext);
-  if (!ctx) {
-    throw new Error("useCommandPalette must be used inside <CommandPaletteProvider>");
-  }
-  return ctx;
+  return useContext(CommandPaletteContext);
 }
 
 function flattenPages(items: NavItem[]): PageHit[] {

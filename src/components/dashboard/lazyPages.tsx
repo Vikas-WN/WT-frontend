@@ -21,6 +21,12 @@ export const LazyOverviewPageClient = lazyPage(
   "Loading overview…"
 );
 
+export const LazyHomePageClient = lazyPage(
+  () => import("@/components/dashboard/home/HomePageClient"),
+  "HomePageClient",
+  "Loading home…"
+);
+
 export const LazyReportsPageClient = lazyPage(
   () => import("@/components/dashboard/reports/ReportsPageClient"),
   "ReportsPageClient",

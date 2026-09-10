@@ -16,6 +16,7 @@ import {
   type WhosOutPerson,
 } from "@/services/hrms.service";
 import { normalizeRoles } from "@/utils/roles";
+import { notifyError } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 
 const MONTHS = [
@@ -115,6 +116,7 @@ export function WhosOutPageClient() {
       if (seq !== reqSeq.current) return;
       setData(null);
       setStatus("error");
+      notifyError("Couldn't load the team calendar.");
     }
   }, [anchor, scope]);
 
@@ -255,22 +257,19 @@ export function WhosOutPageClient() {
       </div>
 
       {status === "loading" && !data ? (
-        <SectionLoading label="Loading calendar…" />
-      ) : status === "error" ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-wt-border px-6 py-14 text-center">
+        <SectionLoading label="" />
+      ) : status === "error" && !data ? (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-wt-border px-6 py-14">
           <CalendarRange className="size-8 text-wt-text-faint" aria-hidden />
-          <p className="text-sm text-wt-text-muted">
-            Couldn&apos;t load the calendar.
-          </p>
           <Button variant="outline" size="sm" onClick={() => void load()}>
             <RotateCw className="mr-1.5 size-3.5" /> Try again
           </Button>
         </div>
       ) : agendaDays.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-wt-border px-6 py-14 text-center text-sm text-wt-text-muted">
+        <div className="rounded-2xl border border-dashed border-wt-border px-6 py-16 text-center text-sm text-wt-text-muted">
           {scope === "org"
-            ? `No approved leave or WFH across the org in ${monthLabel}.`
-            : `No one on your team has approved leave or WFH in ${monthLabel}.`}
+            ? `Nobody across the org has approved leave or WFH in ${monthLabel}.`
+            : `Nobody on your team has approved leave or WFH in ${monthLabel}.`}
         </div>
       ) : view === "month" ? (
         <MonthGrid
@@ -283,9 +282,6 @@ export function WhosOutPageClient() {
         />
       ) : (
         <div className="space-y-2.5">
-          {status === "loading" ? (
-            <p className="text-xs text-wt-text-faint">Refreshing…</p>
-          ) : null}
           {agendaDays.map((day) => {
             const d = new Date(`${day}T00:00:00`);
             const holiday = holidaysByDay.get(day);

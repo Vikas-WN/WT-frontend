@@ -162,7 +162,9 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     () => new Map()
   );
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Sidebar defaults to collapsed (icon rail) on every load; readSidebarCollapsed
+  // below restores an explicit "expanded" choice if the user made one.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);

@@ -41,6 +41,21 @@ export type NavItem = NavGroup | NavLink | NavExpandable;
 
 export const dashboardNavigation: NavItem[] = [
   {
+    kind: "link",
+    id: "home",
+    label: "Home",
+    roles: [
+      "ROLE_EMPLOYEE",
+      "ROLE_AM",
+      "ROLE_MANAGER",
+      "ROLE_DM",
+      "ROLE_HR",
+      "ROLE_ADMIN",
+      "ROLE_FINANCE",
+    ],
+    icon: "layoutGrid",
+  },
+  {
     kind: "group",
     id: "employee",
     label: "Employee",

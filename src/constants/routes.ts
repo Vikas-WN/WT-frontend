@@ -1,7 +1,7 @@
-import { normalizeRoles } from "@/utils/roles";
 
 /** Path for each dashboard nav id (route-based; no ?tab=). */
 export const DASHBOARD_ROUTES: Record<string, string> = {
+  home: "/dashboard/home",
   overview: "/dashboard/overview",
   "employee-directory": "/dashboard/employee-directory",
   resumes: "/dashboard/resumes",
@@ -43,7 +43,7 @@ export const DASHBOARD_ROUTES: Record<string, string> = {
   guide: "/guide",
 };
 
-export const DASHBOARD_DEFAULT_PATH = DASHBOARD_ROUTES["employee-directory"];
+export const DASHBOARD_DEFAULT_PATH = DASHBOARD_ROUTES["home"];
 
 const PATH_TO_NAV_ID: Array<{ prefix: string; id: string }> = [
   { prefix: "/dashboard/learning-development", id: "learning" },
@@ -56,6 +56,7 @@ const PATH_TO_NAV_ID: Array<{ prefix: string; id: string }> = [
   { prefix: "/dashboard/reports/compliance", id: "reports-section-6" },
   { prefix: "/dashboard/reports/bgv-dashboard", id: "reports-section-7" },
   { prefix: "/dashboard/reports/lop", id: "reports-lop" },
+  { prefix: "/dashboard/home", id: "home" },
   { prefix: "/dashboard/overview", id: "overview" },
   { prefix: "/dashboard/employee-directory", id: "employee-directory" },
   { prefix: "/dashboard/resumes", id: "resumes" },
@@ -129,22 +130,11 @@ export function colleagueProfilePath(empId: string): string {
 }
 
 /** Landing route after login based on the user's roles. */
-export function defaultDashboardPathForRoles(roles: string[]): string {
-  const r = normalizeRoles(roles ?? []);
-  if (r.includes("ROLE_HR") || r.includes("ROLE_ADMIN") || r.includes("ROLE_FINANCE")) {
-    return DASHBOARD_ROUTES["employee-directory"];
-  }
-  if (r.includes("ROLE_AM") && !r.includes("ROLE_HR") && !r.includes("ROLE_ADMIN")) {
-    return DASHBOARD_ROUTES.resumes;
-  }
-  if (r.includes("ROLE_DM") && !r.includes("ROLE_HR") && !r.includes("ROLE_ADMIN")) {
-    return DASHBOARD_ROUTES["leave-team"];
-  }
-  if (r.includes("ROLE_MANAGER")) {
-    return DASHBOARD_ROUTES.timelog;
-  }
-  if (r.includes("ROLE_EMPLOYEE")) {
-    return DASHBOARD_ROUTES.profile;
-  }
-  return DASHBOARD_ROUTES["employee-directory"];
+export function defaultDashboardPathForRoles(_roles: string[]): string {
+  // Every authenticated user now lands on the Home dashboard. (INVITED /
+  // ONBOARDING employees are still routed to the onboarding form earlier, by
+  // shouldRequireSelfOnboardingForUser.) To restore the old per-role landings,
+  // revert this commit — the mapping was: HR/Admin/Finance → Directory,
+  // AM → Resumes, DM → Team Leave, Manager → Time Logs, Employee → Profile.
+  return DASHBOARD_ROUTES.home;
 }

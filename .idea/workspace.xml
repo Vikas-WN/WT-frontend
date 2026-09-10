@@ -4,7 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="277eea37-5920-433d-98e6-176d094caf49" name="Changes" comment="" />
+    <list default="true" id="277eea37-5920-433d-98e6-176d094caf49" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/lazyPages.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/lazyPages.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/constants/dashboardNavigation.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/constants/dashboardNavigation.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/constants/routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/constants/routes.ts" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -133,7 +138,7 @@
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "uat",
+    "git-widget-placeholder": "develop",
     "git.auto.fetch.suggestion.counter": "1",
     "js.debugger.nextJs.config.created.client": "true",
     "js.debugger.nextJs.config.created.server": "true",
@@ -228,6 +233,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="changing the responiveness of the application to handle mobile screens" />
     <MESSAGE value="updated mobile based in-app notifications and then correcting few misplaced things" />
-    <option name="LAST_COMMIT_MESSAGE" value="updated mobile based in-app notifications and then correcting few misplaced things" />
+    <MESSAGE value="added who's out features" />
+    <option name="LAST_COMMIT_MESSAGE" value="added who's out features" />
   </component>
 </project>
