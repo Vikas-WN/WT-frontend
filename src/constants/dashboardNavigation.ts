@@ -92,6 +92,14 @@ export const dashboardNavigation: NavItem[] = [
         icon: "calendarDays",
       },
       {
+        id: "whos-out",
+        label: "Who's Out",
+        // Managers/DMs see their team; HR/Admin see the whole org. Not an
+        // employee self-service view.
+        roles: ["ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
+        icon: "calendarRange",
+      },
+      {
         id: "timelog-team",
         label: "Time Logs",
         // Delivery and Account Managers run the manager portal for the projects
@@ -153,12 +161,6 @@ export const dashboardNavigation: NavItem[] = [
         label: "Leave Requests",
         roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
         icon: "calendarDays",
-      },
-      {
-        id: "whos-out",
-        label: "Who's Out",
-        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN", "ROLE_FINANCE"],
-        icon: "calendarRange",
       },
       {
         id: "my-allocations",

@@ -84,14 +84,22 @@ export function WhosOutPageClient() {
   const { user } = useAuth();
   const roles = useMemo(() => normalizeRoles(user?.roles ?? []), [user?.roles]);
   const canSeeOrg = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
+  const isApprover =
+    canSeeOrg ||
+    roles.includes("ROLE_MANAGER") ||
+    roles.includes("ROLE_DM");
 
   const searchParams = useSearchParams();
   const initialMonth = useMemo(
     () => parseMonthParam(searchParams.get("month")) ?? new Date(),
     [searchParams]
   );
-  const initialScope: "team" | "org" =
-    canSeeOrg && searchParams.get("scope") === "org" ? "org" : "team";
+  // HR/Admin land on the whole-org view; managers/DMs are always team-scoped.
+  const initialScope: "team" | "org" = canSeeOrg
+    ? searchParams.get("scope") === "team"
+      ? "team"
+      : "org"
+    : "team";
 
   const [anchor, setAnchor] = useState(
     () => new Date(initialMonth.getFullYear(), initialMonth.getMonth(), 1)
@@ -104,6 +112,11 @@ export function WhosOutPageClient() {
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const load = useCallback(async () => {
+    if (!isApprover) {
+      setData(null);
+      setStatus("done");
+      return;
+    }
     const { from, to } = monthRange(anchor);
     const seq = ++reqSeq.current;
     setStatus("loading");
@@ -118,7 +131,7 @@ export function WhosOutPageClient() {
       setStatus("error");
       notifyError("Couldn't load the team calendar.");
     }
-  }, [anchor, scope]);
+  }, [anchor, scope, isApprover]);
 
   useEffect(() => {
     void load();
@@ -176,11 +189,38 @@ export function WhosOutPageClient() {
 
   const totalPeople = data?.people.length ?? 0;
 
+  const outTodayCount = useMemo(
+    () => (occByDay.get(todayIso) ?? []).length,
+    [occByDay, todayIso]
+  );
+
+  if (!isApprover) {
+    return (
+      <DashboardPageShell>
+        <PageSectionHeader
+          title="Who's Out"
+          description="Team leave and work-from-home at a glance."
+        />
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-wt-border px-6 py-16 text-center">
+          <CalendarRange className="size-8 text-wt-text-faint" aria-hidden />
+          <p className="max-w-xs text-sm text-wt-text-muted">
+            This calendar is for people who approve leave. Check your own time off
+            on the Leave page.
+          </p>
+        </div>
+      </DashboardPageShell>
+    );
+  }
+
   return (
     <DashboardPageShell>
       <PageSectionHeader
         title="Who's Out"
-        description="Approved leave and work-from-home across your team, plus holidays."
+        description={
+          scope === "org"
+            ? "Approved leave and work-from-home across the organisation, plus holidays."
+            : "Approved leave and work-from-home across your team, plus holidays."
+        }
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -255,6 +295,34 @@ export function WhosOutPageClient() {
           </div>
         </div>
       </div>
+
+      {status === "done" ? (
+        <button
+          type="button"
+          onClick={() => openDayInAgenda(todayIso)}
+          className="group flex w-full items-center gap-3 rounded-2xl border border-wt-border bg-gradient-to-br from-wt-surface-1 to-wt-surface-2/40 px-4 py-3 text-left transition-colors hover:border-[var(--wt-brand)]/40"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]">
+            <CalendarRange className="size-[18px]" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-wt-text">
+              {outTodayCount === 0
+                ? scope === "org"
+                  ? "Everyone's in today"
+                  : "Your team is all in today"
+                : `${outTodayCount} ${outTodayCount === 1 ? "person" : "people"} out today`}
+            </span>
+            <span className="block truncate text-xs text-wt-text-muted">
+              {(occByDay.get(todayIso) ?? [])
+                .map((o) => o.person.name.split(" ")[0])
+                .slice(0, 6)
+                .join(", ") || "Tap to jump to today"}
+            </span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-wt-text-faint transition-transform group-hover:translate-x-0.5" />
+        </button>
+      ) : null}
 
       {status === "loading" && !data ? (
         <SectionLoading label="" />

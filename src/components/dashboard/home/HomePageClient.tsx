@@ -119,6 +119,7 @@ export function HomePageClient() {
     roles.includes("ROLE_DM") ||
     roles.includes("ROLE_HR") ||
     roles.includes("ROLE_ADMIN");
+  const canSeeOrgOut = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
   const firstName = (user?.name ?? "").trim().split(/\s+/)[0] || "there";
 
   const today = useMemo(() => new Date(), []);
@@ -129,12 +130,20 @@ export function HomePageClient() {
     () => hrmsService.getMyAllocations().then((r) => (r.data ?? []) as Array<Record<string, unknown>>),
     []
   );
+  // Who's-out is an approver-only feature (managers/DMs see their team, HR/Admin
+  // the whole org). Plain employees never call it — the endpoint would 403.
   const whosOut = useLoad<WhosOutData | null>(
     () =>
-      hrmsService
-        .getWhosOut({ from: todayIso, to: todayIso, scope: "team" })
-        .then((r) => r.data ?? null),
-    [todayIso]
+      isApprover
+        ? hrmsService
+            .getWhosOut({
+              from: todayIso,
+              to: todayIso,
+              scope: canSeeOrgOut ? "org" : "team",
+            })
+            .then((r) => r.data ?? null)
+        : Promise.resolve(null),
+    [todayIso, isApprover, canSeeOrgOut]
   );
   // Holidays come from the same stored calendar the Annual Calendar page uses
   // (works for every role, independent of the who's-out feature). Pull this year
@@ -332,6 +341,7 @@ export function HomePageClient() {
           )}
         </HomeCard>
 
+        {isApprover ? (
         <HomeCard
           title="Who's out today"
           icon={<CalendarRange className="size-4" />}
@@ -362,6 +372,7 @@ export function HomePageClient() {
             </div>
           )}
         </HomeCard>
+        ) : null}
 
         <HomeCard
           title="My projects"

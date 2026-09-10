@@ -69,11 +69,47 @@ function hrefForHit(hit: SearchHit): string {
   return `${DASHBOARD_ROUTES.clients}?client=${encodeURIComponent(hit.ref)}`;
 }
 
+const HIT_TILE: Record<SearchHit["kind"], string> = {
+  employee: "bg-indigo-500/12 text-indigo-600 dark:text-indigo-300",
+  project: "bg-amber-500/12 text-amber-600 dark:text-amber-300",
+  client: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-300",
+};
+
 function HitIcon({ kind }: { kind: SearchHit["kind"] }) {
-  const cls = "size-4 shrink-0 text-wt-text-muted";
-  if (kind === "employee") return <Users className={cls} aria-hidden />;
-  if (kind === "project") return <FolderKanban className={cls} aria-hidden />;
-  return <Building2 className={cls} aria-hidden />;
+  const Icon = kind === "employee" ? Users : kind === "project" ? FolderKanban : Building2;
+  return (
+    <span
+      className={cn(
+        "flex size-8 shrink-0 items-center justify-center rounded-lg",
+        HIT_TILE[kind]
+      )}
+    >
+      <Icon className="size-4" aria-hidden />
+    </span>
+  );
+}
+
+const GROUP_LABEL: Record<SearchHit["kind"], string> = {
+  employee: "People",
+  project: "Projects",
+  client: "Clients",
+};
+
+/** Split "… · Skills: Python, Django" into a plain lead + skill chips. */
+function splitSubtitle(subtitle: string | null | undefined): {
+  lead: string;
+  skills: string[];
+} {
+  if (!subtitle) return { lead: "", skills: [] };
+  const marker = subtitle.indexOf("Skills: ");
+  if (marker === -1) return { lead: subtitle, skills: [] };
+  const lead = subtitle.slice(0, marker).replace(/\s*·\s*$/, "").trim();
+  const skills = subtitle
+    .slice(marker + "Skills: ".length)
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return { lead, skills };
 }
 
 export function CommandPaletteProvider({ children }: { children: ReactNode }) {
@@ -227,9 +263,9 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
         : status === "error"
           ? "Couldn't run the search. Check your connection and try again."
           : q.length >= 2 && status === "done" && results.length === 0
-            ? `No people, projects or clients match "${q}".`
+            ? `Nothing matches "${q}" — try a name, skill, phone number, project or client.`
             : q.length === 0 && pagesShown.length === 0
-              ? "Search people, projects and clients."
+              ? "Search anyone by name, skill or phone — plus projects and clients."
               : null;
 
   const firstResultIndex = pagesShown.length;
@@ -240,7 +276,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
           <div
             className={cn(
               "wt-modal-overlay fixed inset-0 z-[210] flex items-start justify-center overflow-y-auto",
-              "bg-black/50 p-4 backdrop-blur-[2px] sm:pt-[10vh]"
+              "bg-black/50 p-4 backdrop-blur-sm sm:pt-[10vh]"
             )}
             role="presentation"
             onClick={(e) => {
@@ -252,14 +288,14 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
               aria-modal="true"
               aria-label="Search WebTrak"
               className={cn(
-                "flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-wt-border bg-wt-surface-1 shadow-2xl dark:border-wt-border-md",
-                "max-sm:h-[100dvh] max-sm:max-w-none max-sm:rounded-none max-sm:border-0"
+                "flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-wt-border bg-wt-surface-1 shadow-[0_24px_64px_-16px_rgba(0,0,0,0.4)] ring-1 ring-black/5 dark:border-wt-border-md dark:ring-white/5",
+                "max-sm:h-[100dvh] max-sm:max-w-none max-sm:rounded-none max-sm:border-0 max-sm:ring-0"
               )}
               onClick={(e) => e.stopPropagation()}
               onKeyDown={onKeyDown}
             >
-              <div className="flex items-center gap-2.5 border-b border-wt-border px-4 py-3">
-                <Search className="size-4 shrink-0 text-wt-text-muted" aria-hidden />
+              <div className="flex items-center gap-2.5 border-b border-wt-border px-4 py-3.5">
+                <Search className="size-[18px] shrink-0 text-wt-text-muted" aria-hidden />
                 <input
                   ref={inputRef}
                   value={query}
@@ -267,8 +303,8 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                     setQuery(e.target.value);
                     setActiveIndex(0);
                   }}
-                  placeholder="Search people, projects, clients…"
-                  className="min-w-0 flex-1 bg-transparent text-sm text-wt-text outline-none placeholder:text-wt-text-faint"
+                  placeholder="Search anyone by name, skill, phone — plus projects & clients…"
+                  className="min-w-0 flex-1 bg-transparent text-[15px] text-wt-text outline-none placeholder:text-wt-text-faint"
                   autoComplete="off"
                   spellCheck={false}
                 />
@@ -287,8 +323,8 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                 className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
               >
                 {pagesShown.length > 0 ? (
-                  <p className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-wt-text-faint">
-                    Pages
+                  <p className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-wt-text-faint">
+                    Jump to
                   </p>
                 ) : null}
 
@@ -303,25 +339,45 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                         onMouseMove={() => setActiveIndex(idx)}
                         onClick={() => go(item)}
                         className={cn(
-                          "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm",
+                          "group/row flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm transition-colors",
                           isActive
                             ? "bg-[var(--wt-brand-soft)] text-wt-text"
-                            : "text-wt-text-muted"
+                            : "text-wt-text-muted hover:bg-wt-surface-2/60"
                         )}
                       >
-                        <ArrowRight
-                          className="size-4 shrink-0 text-wt-text-faint"
-                          aria-hidden
-                        />
-                        <span className="min-w-0 flex-1 truncate">{item.page.label}</span>
+                        <span
+                          className={cn(
+                            "flex size-8 shrink-0 items-center justify-center rounded-lg bg-wt-surface-2 text-wt-text-faint",
+                            isActive && "bg-white/60 text-[var(--wt-brand)] dark:bg-white/10"
+                          )}
+                        >
+                          <ArrowRight className="size-4" aria-hidden />
+                        </span>
+                        <span className="min-w-0 flex-1 truncate font-medium">
+                          {item.page.label}
+                        </span>
+                        {isActive ? (
+                          <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-wt-text-faint">
+                            Enter
+                          </span>
+                        ) : null}
                       </button>
                     );
                   }
+                  const ri = idx - firstResultIndex;
+                  const showHeader = ri === 0 || results[ri - 1]?.kind !== item.hit.kind;
+                  const groupCount = results.filter(
+                    (r) => r.kind === item.hit.kind
+                  ).length;
+                  const { lead, skills } = splitSubtitle(item.hit.subtitle);
                   return (
                     <div key={item.key}>
-                      {idx === firstResultIndex ? (
-                        <p className="px-2 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-wt-text-faint">
-                          Results
+                      {showHeader ? (
+                        <p className="flex items-center gap-1.5 px-2 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-wt-text-faint">
+                          {GROUP_LABEL[item.hit.kind]}
+                          <span className="rounded-full bg-wt-surface-2 px-1.5 text-[10px] font-medium text-wt-text-muted">
+                            {groupCount}
+                          </span>
                         </p>
                       ) : null}
                       <button
@@ -330,18 +386,32 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                         onMouseMove={() => setActiveIndex(idx)}
                         onClick={() => go(item)}
                         className={cn(
-                          "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left",
-                          isActive ? "bg-[var(--wt-brand-soft)]" : ""
+                          "group/row flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors",
+                          isActive
+                            ? "bg-[var(--wt-brand-soft)]"
+                            : "hover:bg-wt-surface-2/60"
                         )}
                       >
                         <HitIcon kind={item.hit.kind} />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm text-wt-text">
+                          <span className="block truncate text-sm font-medium text-wt-text">
                             {item.hit.title}
                           </span>
-                          {item.hit.subtitle ? (
+                          {lead ? (
                             <span className="block truncate text-xs text-wt-text-muted">
-                              {item.hit.subtitle}
+                              {lead}
+                            </span>
+                          ) : null}
+                          {skills.length > 0 ? (
+                            <span className="mt-1 flex flex-wrap gap-1">
+                              {skills.map((s) => (
+                                <span
+                                  key={s}
+                                  className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 dark:text-indigo-300"
+                                >
+                                  {s}
+                                </span>
+                              ))}
                             </span>
                           ) : null}
                         </span>
@@ -350,6 +420,13 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                             {item.hit.badge}
                           </span>
                         ) : null}
+                        <ArrowRight
+                          className={cn(
+                            "size-4 shrink-0 text-wt-text-faint transition-opacity",
+                            isActive ? "opacity-100" : "opacity-0"
+                          )}
+                          aria-hidden
+                        />
                       </button>
                     </div>
                   );

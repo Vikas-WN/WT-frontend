@@ -1,7 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import {
+  BadgeCheck,
+  Briefcase,
+  ChevronDown,
+  ChevronRight,
+  Percent,
+  UserCog,
+} from "lucide-react";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
@@ -33,6 +40,87 @@ import { cn } from "@/lib/utils";
 function formatDateLabel(value: string): string {
   if (!value || value === "—") return "—";
   return formatApiDateDisplay(value);
+}
+
+function pctValue(raw: string | undefined | null): number {
+  const n = parseFloat(String(raw ?? "").replace("%", ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function MetaPill({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center rounded-md bg-wt-surface-2 px-2 py-0.5 text-[11px] font-medium text-wt-text-muted">
+      {children}
+    </span>
+  );
+}
+
+function SummaryStrip({
+  projects,
+  hideOperationalDetails,
+}: {
+  projects: MyAllocationProject[];
+  hideOperationalDetails: boolean;
+}) {
+  const totalPct = projects.reduce(
+    (sum, p) => sum + pctValue(p.myAllocation?.allocatedPercent),
+    0
+  );
+  const managing = projects.filter((p) => p.capacity !== "team_member").length;
+  const billable = projects.filter((p) =>
+    /billable/i.test(p.myAllocation?.billingStatus ?? "") &&
+    !/non[-\s]?billable/i.test(p.myAllocation?.billingStatus ?? "")
+  ).length;
+
+  const tiles: { key: string; label: string; value: string; icon: React.ReactNode }[] = [
+    {
+      key: "projects",
+      label: projects.length === 1 ? "Active project" : "Active projects",
+      value: String(projects.length),
+      icon: <Briefcase className="size-4" />,
+    },
+  ];
+  if (!hideOperationalDetails) {
+    tiles.push({
+      key: "allocation",
+      label: "Total allocation",
+      value: `${Math.round(totalPct)}%`,
+      icon: <Percent className="size-4" />,
+    });
+    tiles.push({
+      key: "billable",
+      label: "Billable",
+      value: String(billable),
+      icon: <BadgeCheck className="size-4" />,
+    });
+  }
+  tiles.push({
+    key: "managing",
+    label: "As manager",
+    value: String(managing),
+    icon: <UserCog className="size-4" />,
+  });
+
+  return (
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      {tiles.map((t) => (
+        <div
+          key={t.key}
+          className="rounded-xl border border-wt-border bg-wt-surface-1 px-3.5 py-3"
+        >
+          <div className="flex items-center gap-1.5 text-wt-text-faint">
+            {t.icon}
+            <span className="text-[11px] font-medium uppercase tracking-wide">
+              {t.label}
+            </span>
+          </div>
+          <p className="mt-1.5 text-2xl font-semibold tabular-nums text-wt-text">
+            {t.value}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function HistoryTable({
@@ -132,21 +220,33 @@ function ProjectAllocationCard({
             <p className="mt-1 pl-6 text-xs text-wt-text-muted">{project.clientName}</p>
           ) : null}
           {myAllocation ? (
-            <p className="mt-2 pl-6 text-sm text-wt-text-muted">
-              Your Role: {formatRoleDisplayValue(myAllocation.role)}
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-6">
+              <MetaPill>{formatRoleDisplayValue(myAllocation.role)}</MetaPill>
               {!hideOperationalDetails ? (
                 <>
-                  {" "}
-                  · {myAllocation.allocatedPercent} · {formatDateLabel(myAllocation.startDate)} –{" "}
-                  {formatDateLabel(myAllocation.endDate)}
+                  <MetaPill>{myAllocation.allocatedPercent}</MetaPill>
+                  <MetaPill>
+                    {formatDateLabel(myAllocation.startDate)} – {formatDateLabel(myAllocation.endDate)}
+                  </MetaPill>
+                  {myAllocation.billingStatus && myAllocation.billingStatus !== "—" ? (
+                    <MetaPill>{myAllocation.billingStatus}</MetaPill>
+                  ) : null}
                 </>
               ) : null}
-            </p>
+            </div>
           ) : (
             <p className="mt-2 pl-6 text-sm text-wt-text-muted">
               You manage this project as Project Manager. Team allocation dates are listed below.
             </p>
           )}
+          {!hideOperationalDetails && myAllocation && pctValue(myAllocation.allocatedPercent) > 0 ? (
+            <div className="mt-3 ml-6 h-1.5 w-full max-w-[16rem] overflow-hidden rounded-full bg-wt-surface-2">
+              <div
+                className="h-full rounded-full bg-[var(--wt-brand)]"
+                style={{ width: `${Math.min(100, pctValue(myAllocation.allocatedPercent))}%` }}
+              />
+            </div>
+          ) : null}
         </div>
       </button>
 
@@ -254,8 +354,8 @@ export function MyAllocationsPageClient() {
           <div>
             <h2 className="text-lg font-semibold text-wt-text">My Allocations</h2>
             <p className="mt-1 text-sm text-wt-text-muted">
-              View your project details, team members, project managers, and allocation dates. If you are
-              a project manager, projects you manage appear here even without a personal allocation.
+              Your projects, teammates and allocation dates — including projects you
+              manage without a personal allocation.
             </p>
           </div>
           <RefreshIconButton onClick={() => void refetch()} loading={isFetching} />
@@ -263,7 +363,7 @@ export function MyAllocationsPageClient() {
 
         {isLoading ? (
           <div className="p-6">
-            <SectionLoading label="Loading allocations…" />
+            <SectionLoading label="" />
           </div>
         ) : isError ? (
           <div className="p-6">
@@ -285,13 +385,19 @@ export function MyAllocationsPageClient() {
             <div className={cn(PAGE_TAB_BODY_CLASS, tab === "current" ? "space-y-4" : undefined)}>
               {tab === "current" ? (
                 currentProjects.length ? (
-                  currentProjects.map((project) => (
-                    <ProjectAllocationCard
-                      key={project.projectCode}
-                      project={project}
+                  <>
+                    <SummaryStrip
+                      projects={currentProjects}
                       hideOperationalDetails={hideOperationalDetails}
                     />
-                  ))
+                    {currentProjects.map((project) => (
+                      <ProjectAllocationCard
+                        key={project.projectCode}
+                        project={project}
+                        hideOperationalDetails={hideOperationalDetails}
+                      />
+                    ))}
+                  </>
                 ) : (
                   <EmptyState
                     title="No Current Allocations"
