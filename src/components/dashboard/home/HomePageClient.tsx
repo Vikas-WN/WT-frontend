@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   CalendarDays,
   CalendarRange,
-  ChevronRight,
   ClipboardCheck,
   LayoutGrid,
   Plane,
@@ -14,8 +13,16 @@ import {
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { useCommandPalette } from "@/components/dashboard/CommandPalette";
+import { HomeCard, CardMessage, CardSkeleton } from "@/components/dashboard/home/HomeCard";
+import { CelebrationsCard } from "@/components/dashboard/home/CelebrationsCard";
+import { AttendanceCard } from "@/components/dashboard/home/AttendanceCard";
 import { useAuth } from "@/context/AuthContext";
-import { hrmsService, type WhosOutData } from "@/services/hrms.service";
+import {
+  hrmsService,
+  type AttendanceSnapshot,
+  type CelebrationsData,
+  type WhosOutData,
+} from "@/services/hrms.service";
 import { holidayCalendarStorageService } from "@/services/holidayCalendarStorage.service";
 import {
   parseHolidayCalendarDate,
@@ -60,54 +67,6 @@ function greeting(): string {
   if (h < 12) return "Good morning";
   if (h < 17) return "Good afternoon";
   return "Good evening";
-}
-
-function HomeCard({
-  title,
-  icon,
-  href,
-  cta,
-  children,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  href?: string;
-  cta?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="flex flex-col rounded-2xl border border-wt-border bg-wt-surface-1 p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-wt-text-muted">{icon}</span>
-          <h2 className="text-sm font-semibold text-wt-text">{title}</h2>
-        </div>
-        {href ? (
-          <Link
-            href={href}
-            className="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--wt-brand)] hover:underline"
-          >
-            {cta ?? "Open"}
-            <ChevronRight className="size-3.5" />
-          </Link>
-        ) : null}
-      </div>
-      <div className="mt-3 min-h-0 flex-1">{children}</div>
-    </section>
-  );
-}
-
-function CardMessage({ text }: { text: string }) {
-  return <p className="py-4 text-sm text-wt-text-muted">{text}</p>;
-}
-
-function CardSkeleton() {
-  return (
-    <div className="space-y-2 py-1" aria-hidden>
-      <div className="h-3 w-2/3 animate-pulse rounded bg-wt-surface-3" />
-      <div className="h-3 w-1/3 animate-pulse rounded bg-wt-surface-3" />
-    </div>
-  );
 }
 
 export function HomePageClient() {
@@ -159,6 +118,19 @@ export function HomePageClient() {
       { year: thisYear + 1, rows: next?.rows ?? [] },
     ];
   }, [thisYear]);
+  // Everyone's card — recurring birthdays & work anniversaries, org-wide.
+  const celebrations = useLoad<CelebrationsData | null>(
+    () => hrmsService.getCelebrations().then((r) => r.data ?? null),
+    []
+  );
+  // HR/Admin only — today's office / WFH / on-leave headcount.
+  const attendance = useLoad<AttendanceSnapshot | null>(
+    () =>
+      canSeeOrgOut
+        ? hrmsService.getAttendanceToday().then((r) => r.data ?? null)
+        : Promise.resolve(null),
+    [canSeeOrgOut]
+  );
   const approvals = useLoad<number | null>(async () => {
     if (!isApprover) return null;
     const from = new Date(today);
@@ -205,6 +177,8 @@ export function HomePageClient() {
     allocations.status === "error" ||
     whosOut.status === "error" ||
     holidays.status === "error" ||
+    celebrations.status === "error" ||
+    attendance.status === "error" ||
     approvals.status === "error";
   const errorNotified = useRef(false);
   useEffect(() => {
@@ -289,6 +263,10 @@ export function HomePageClient() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {canSeeOrgOut ? (
+          <AttendanceCard data={attendance.data} status={attendance.status} />
+        ) : null}
+
         {isApprover ? (
           <HomeCard
             title="Pending approvals"
@@ -431,6 +409,8 @@ export function HomePageClient() {
             </ul>
           )}
         </HomeCard>
+
+        <CelebrationsCard data={celebrations.data} status={celebrations.status} />
       </div>
     </DashboardPageShell>
   );

@@ -27,6 +27,24 @@ export const LazyHomePageClient = lazyPage(
   "Loading home…"
 );
 
+export const LazyPulsePageClient = lazyPage(
+  () => import("@/components/dashboard/pulse/PulsePageClient"),
+  "PulsePageClient",
+  "Loading Pulse…"
+);
+
+export const LazyCompanyWikiPageClient = lazyPage(
+  () => import("@/components/dashboard/wiki/CompanyWikiPageClient"),
+  "CompanyWikiPageClient",
+  "Loading wiki…"
+);
+
+export const LazyCompanyPoliciesPageClient = lazyPage(
+  () => import("@/components/dashboard/wiki/CompanyPoliciesPageClient"),
+  "CompanyPoliciesPageClient",
+  "Loading policies…"
+);
+
 export const LazyReportsPageClient = lazyPage(
   () => import("@/components/dashboard/reports/ReportsPageClient"),
   "ReportsPageClient",

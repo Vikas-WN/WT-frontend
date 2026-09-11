@@ -192,6 +192,79 @@ export function notificationCategoryLabel(
   }
 }
 
+/** Coarser bucket a notification's fine-grained category rolls up into, so the
+ *  bell panel can group ~20 category labels into a handful of sections
+ *  instead of a flat chronological list. Order here doubles as display order
+ *  — see `NOTIFICATION_GROUP_ORDER`. */
+export function notificationGroupLabel(categoryLabel: string): string {
+  switch (categoryLabel) {
+    case "Leave":
+    case "WFH":
+    case "WFH Exception":
+    case "Comp Off":
+      return "Leave & Time Off";
+    case "Time Log":
+      return "Time Logs";
+    case "Allocation":
+    case "Extend Project Allocation":
+      return "Allocations";
+    case "Training":
+    case "Training Scores":
+      return "Training";
+    case "Onboarding":
+    case "Exit Survey":
+    case "Internship":
+    case "Profile":
+      return "Employee Lifecycle";
+    case "Uploads":
+    case "Policy":
+    case "LOP Report":
+      return "Admin";
+    case "Announcement":
+    case "Birthday":
+      return "Announcements";
+    default:
+      return "Other";
+  }
+}
+
+/** Fixed display order for notification groups — keeps the panel's section
+ *  order stable regardless of which types happen to be present. Anything not
+ *  listed (there shouldn't be anything) sorts last. */
+export const NOTIFICATION_GROUP_ORDER = [
+  "Leave & Time Off",
+  "Time Logs",
+  "Allocations",
+  "Announcements",
+  "Employee Lifecycle",
+  "Training",
+  "Admin",
+  "Other",
+];
+
+/** Group notifications by `notificationGroupLabel`, preserving each item's
+ *  original relative order within its group, and ordering groups per
+ *  `NOTIFICATION_GROUP_ORDER`. */
+export function groupNotificationsByCategory<T extends NotificationItem | Record<string, unknown>>(
+  rows: T[]
+): { label: string; rows: T[] }[] {
+  const buckets = new Map<string, T[]>();
+  for (const row of rows) {
+    const group = notificationGroupLabel(notificationCategoryLabel(row));
+    const list = buckets.get(group) ?? [];
+    list.push(row);
+    buckets.set(group, list);
+  }
+  return [...buckets.entries()]
+    .sort((a, b) => {
+      const ai = NOTIFICATION_GROUP_ORDER.indexOf(a[0]);
+      const bi = NOTIFICATION_GROUP_ORDER.indexOf(b[0]);
+      return (ai === -1 ? NOTIFICATION_GROUP_ORDER.length : ai) -
+        (bi === -1 ? NOTIFICATION_GROUP_ORDER.length : bi);
+    })
+    .map(([label, groupRows]) => ({ label, rows: groupRows }));
+}
+
 /** Resolve the dashboard path a notification should open. */
 export function resolveNotificationHref(
   row: NotificationItem | Record<string, unknown>,

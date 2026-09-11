@@ -47,11 +47,16 @@ function pctValue(raw: string | undefined | null): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function MetaPill({ children }: { children: React.ReactNode }) {
+/** Labelled key/value cell for the "your assignment" strip — clearer than a
+ *  run of unlabelled pills once there's more than one or two facts to show. */
+function AssignmentField({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center rounded-md bg-wt-surface-2 px-2 py-0.5 text-[11px] font-medium text-wt-text-muted">
-      {children}
-    </span>
+    <div className="min-w-0">
+      <p className="text-[10px] font-medium uppercase tracking-wide text-wt-text-faint">
+        {label}
+      </p>
+      <p className="mt-0.5 truncate text-sm font-medium text-wt-text">{value}</p>
+    </div>
   );
 }
 
@@ -189,12 +194,15 @@ function capacityLabel(capacity: MyAllocationProject["capacity"]): string {
 function ProjectAllocationCard({
   project,
   hideOperationalDetails = false,
+  defaultExpanded = false,
 }: {
   project: MyAllocationProject;
   hideOperationalDetails?: boolean;
+  defaultExpanded?: boolean;
 }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const { myAllocation, capacity } = project;
+  const rosterCount = project.projectManagers.length + project.teamMembers.length;
 
   return (
     <section className="rounded-2xl border border-wt-border bg-wt-surface-1">
@@ -204,49 +212,68 @@ function ProjectAllocationCard({
         onClick={() => setExpanded((value) => !value)}
         aria-expanded={expanded}
       >
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            {expanded ? (
-              <ChevronDown className="size-4 shrink-0 text-wt-text-muted" aria-hidden />
-            ) : (
-              <ChevronRight className="size-4 shrink-0 text-wt-text-muted" aria-hidden />
-            )}
             <h3 className="truncate text-base font-semibold text-wt-text">{project.projectName}</h3>
             <span className="rounded-md bg-wt-surface-2 px-2 py-0.5 text-[11px] font-medium text-wt-text-muted">
               {capacityLabel(capacity)}
             </span>
           </div>
           {project.clientName ? (
-            <p className="mt-1 pl-6 text-xs text-wt-text-muted">{project.clientName}</p>
+            <p className="mt-1 text-xs text-wt-text-muted">{project.clientName}</p>
           ) : null}
+
           {myAllocation ? (
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-6">
-              <MetaPill>{formatRoleDisplayValue(myAllocation.role)}</MetaPill>
+            <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:flex sm:flex-wrap sm:gap-x-8">
+              <AssignmentField label="Your role" value={formatRoleDisplayValue(myAllocation.role)} />
               {!hideOperationalDetails ? (
                 <>
-                  <MetaPill>{myAllocation.allocatedPercent}</MetaPill>
-                  <MetaPill>
-                    {formatDateLabel(myAllocation.startDate)} – {formatDateLabel(myAllocation.endDate)}
-                  </MetaPill>
+                  <AssignmentField
+                    label="Allocation"
+                    value={
+                      <span className="flex items-center gap-2">
+                        {myAllocation.allocatedPercent}
+                        {pctValue(myAllocation.allocatedPercent) > 0 ? (
+                          <span className="h-1.5 w-16 overflow-hidden rounded-full bg-wt-surface-2">
+                            <span
+                              className="block h-full rounded-full bg-[var(--wt-brand)]"
+                              style={{
+                                width: `${Math.min(100, pctValue(myAllocation.allocatedPercent))}%`,
+                              }}
+                            />
+                          </span>
+                        ) : null}
+                      </span>
+                    }
+                  />
+                  <AssignmentField
+                    label="Duration"
+                    value={`${formatDateLabel(myAllocation.startDate)} – ${formatDateLabel(myAllocation.endDate)}`}
+                  />
                   {myAllocation.billingStatus && myAllocation.billingStatus !== "—" ? (
-                    <MetaPill>{myAllocation.billingStatus}</MetaPill>
+                    <AssignmentField label="Billing" value={myAllocation.billingStatus} />
                   ) : null}
                 </>
               ) : null}
             </div>
           ) : (
-            <p className="mt-2 pl-6 text-sm text-wt-text-muted">
-              You manage this project as Project Manager. Team allocation dates are listed below.
+            <p className="mt-3 text-sm text-wt-text-muted">
+              You manage this project as Project Manager — no personal allocation.
             </p>
           )}
-          {!hideOperationalDetails && myAllocation && pctValue(myAllocation.allocatedPercent) > 0 ? (
-            <div className="mt-3 ml-6 h-1.5 w-full max-w-[16rem] overflow-hidden rounded-full bg-wt-surface-2">
-              <div
-                className="h-full rounded-full bg-[var(--wt-brand)]"
-                style={{ width: `${Math.min(100, pctValue(myAllocation.allocatedPercent))}%` }}
-              />
-            </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2 pt-0.5 text-xs text-wt-text-faint">
+          {rosterCount > 0 ? (
+            <span className="hidden sm:inline">
+              {rosterCount} {rosterCount === 1 ? "person" : "people"}
+            </span>
           ) : null}
+          {expanded ? (
+            <ChevronDown className="size-4 shrink-0 text-wt-text-muted" aria-hidden />
+          ) : (
+            <ChevronRight className="size-4 shrink-0 text-wt-text-muted" aria-hidden />
+          )}
         </div>
       </button>
 
@@ -395,6 +422,7 @@ export function MyAllocationsPageClient() {
                         key={project.projectCode}
                         project={project}
                         hideOperationalDetails={hideOperationalDetails}
+                        defaultExpanded={currentProjects.length === 1}
                       />
                     ))}
                   </>

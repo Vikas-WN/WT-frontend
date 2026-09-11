@@ -13,6 +13,20 @@ import {
 } from "@/utils/apiDate";
 import { timelogViewerRolesQueryValue } from "@/utils/timelog/viewerRoles";
 import type { BandListItem, DepartmentListItem, Designation } from "@/types/masters";
+import type {
+  KpiDefinitionItem,
+  KpiDefinitionWritePayload,
+  SubmissionCycleItem,
+  SubmissionCycleWritePayload,
+  SubmissionWindowStatus,
+} from "@/types/kpi";
+import type {
+  PaginatedWikiPages,
+  WikiPageCreatePayload,
+  WikiPageDetail,
+  WikiPageUpdatePayload,
+  WikiSpace,
+} from "@/types/wiki";
 
 export type { OnboardListData, OnboardListItem, OnboardUserResponse } from "@/types/onboard";
 
@@ -117,6 +131,9 @@ export interface SearchHit {
   title: string;
   subtitle: string | null;
   badge: string | null;
+  /** Raw stored profile-photo reference for employee hits (resolve via
+   *  resolveProfilePhotoSrc). Null for projects / clients. */
+  image: string | null;
   ref: string;
 }
 
@@ -126,6 +143,42 @@ export interface GlobalSearchResults {
   projects: SearchHit[];
   clients: SearchHit[];
   total: number;
+}
+
+export interface CelebrationEntry {
+  emp_id: string | null;
+  name: string;
+  month: number; // 1-12
+  day: number;
+  next_date: string; // ISO date, next occurrence from today
+  days_until: number;
+  /** Years of service as of next_date — set for anniversaries only. */
+  years: number | null;
+}
+
+export interface CelebrationsData {
+  birthdays: CelebrationEntry[];
+  anniversaries: CelebrationEntry[];
+}
+
+export interface AttendanceEmployee {
+  emp_id: string | null;
+  name: string;
+  email: string;
+  department: string | null;
+}
+
+export interface AttendanceBucket {
+  count: number;
+  employees: AttendanceEmployee[];
+}
+
+export interface AttendanceSnapshot {
+  date: string;
+  total_active: number;
+  office: AttendanceBucket;
+  work_from_home: AttendanceBucket;
+  on_leave: AttendanceBucket;
 }
 
 export interface NotificationItem {
@@ -1209,6 +1262,58 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<WhosOutData>>(endpoints.whosOut, { query });
   },
 
+  /** Recurring birthdays & work anniversaries — org-wide, every role. */
+  getCelebrations() {
+    return apiClient.get<ApiEnvelope<CelebrationsData>>(endpoints.celebrations);
+  },
+
+  /** Today's office / WFH / on-leave headcount + employee lists (HR/Admin). */
+  getAttendanceToday() {
+    return apiClient.get<ApiEnvelope<AttendanceSnapshot>>(endpoints.attendanceToday);
+  },
+
+  /** Company Wiki + Policies & Handbook — one API, two spaces ("WIKI" | "POLICY"). */
+  listWikiPages(params: {
+    space: WikiSpace;
+    page?: number;
+    size?: number;
+    category?: string;
+    search?: string;
+  }) {
+    const query: Record<string, string> = { space: params.space };
+    if (params.page != null) query.page = String(params.page);
+    if (params.size != null) query.size = String(params.size);
+    if (params.category?.trim()) query.category = params.category.trim();
+    if (params.search?.trim()) query.search = params.search.trim();
+    return apiClient.get<ApiEnvelope<PaginatedWikiPages>>(endpoints.wiki.pages, { query });
+  },
+
+  listWikiCategories(space: WikiSpace) {
+    return apiClient.get<ApiEnvelope<string[]>>(endpoints.wiki.categories, { query: { space } });
+  },
+
+  getWikiPage(id: number) {
+    return apiClient.get<ApiEnvelope<WikiPageDetail>>(endpoints.wiki.pageById(id));
+  },
+
+  createWikiPage(payload: WikiPageCreatePayload) {
+    return apiClient.post<ApiEnvelope<WikiPageDetail>>(endpoints.wiki.pages, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateWikiPage(id: number, payload: WikiPageUpdatePayload) {
+    return apiClient.put<ApiEnvelope<WikiPageDetail>>(endpoints.wiki.pageById(id), {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deleteWikiPage(id: number) {
+    return apiClient.delete<ApiEnvelope<unknown>>(endpoints.wiki.pageById(id));
+  },
+
   markAllNotificationsRead() {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.notifications.readAll);
   },
@@ -1266,8 +1371,74 @@ export const hrmsService = {
     });
   },
 
+  /** @deprecated Use getKpiDefinitions — kept for legacy callers */
   getKpis(params: Record<string, string>) {
     return apiClient.get<unknown>(endpoints.masters.kpiDefinitions, { query: params });
+  },
+
+  /** Pass band_id + department to get every KPI for that combination
+   *  (unpaginated); omit both for a plain paginated list. */
+  getKpiDefinitions(params: { bandId?: number; department?: string; activeOnly?: boolean } = {}) {
+    const query: Record<string, string> = {};
+    if (params.bandId != null) query.band_id = String(params.bandId);
+    if (params.department?.trim()) query.department = params.department.trim();
+    if (params.activeOnly) query.active_only = "true";
+    return apiClient.get<ApiEnvelope<KpiDefinitionItem[]>>(endpoints.masters.kpiDefinitions, {
+      query,
+    });
+  },
+
+  createKpiDefinition(payload: KpiDefinitionWritePayload) {
+    return apiClient.post<ApiEnvelope<KpiDefinitionItem>>(endpoints.masters.kpiDefinitions, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateKpiDefinition(kpiId: number, payload: Partial<KpiDefinitionWritePayload>) {
+    return apiClient.put<ApiEnvelope<KpiDefinitionItem>>(
+      endpoints.masters.kpiDefinitionById(String(kpiId)),
+      { contentType: "application/json", body: JSON.stringify(payload) }
+    );
+  },
+
+  deleteKpiDefinition(kpiId: number) {
+    return apiClient.delete<ApiEnvelope<unknown>>(
+      endpoints.masters.kpiDefinitionById(String(kpiId))
+    );
+  },
+
+  /** The KPI submission "portal" — HR opens/closes it per cycle key + scope. */
+  getSubmissionCycles() {
+    return apiClient.get<ApiEnvelope<SubmissionCycleItem[]>>(endpoints.masters.submissionCycles);
+  },
+
+  getSubmissionWindowStatus(params: { scope?: string; cycleKey?: string } = {}) {
+    const query: Record<string, string> = {};
+    if (params.scope?.trim()) query.scope = params.scope.trim();
+    if (params.cycleKey?.trim()) query.cycle_key = params.cycleKey.trim();
+    return apiClient.get<ApiEnvelope<SubmissionWindowStatus>>(
+      endpoints.masters.submissionCycleStatus,
+      { query }
+    );
+  },
+
+  createSubmissionCycle(payload: SubmissionCycleWritePayload) {
+    return apiClient.post<ApiEnvelope<SubmissionCycleItem>>(endpoints.masters.submissionCycles, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateSubmissionCycle(cycleId: number, payload: Partial<SubmissionCycleWritePayload>) {
+    return apiClient.put<ApiEnvelope<SubmissionCycleItem>>(
+      endpoints.masters.submissionCycleById(cycleId),
+      { contentType: "application/json", body: JSON.stringify(payload) }
+    );
+  },
+
+  deleteSubmissionCycle(cycleId: number) {
+    return apiClient.delete<ApiEnvelope<unknown>>(endpoints.masters.submissionCycleById(cycleId));
   },
 
   listClients(

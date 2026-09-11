@@ -24,6 +24,7 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const AGENDA_PAGE_SIZE = 12;
 
 function iso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
@@ -108,6 +109,7 @@ export function WhosOutPageClient() {
   const [view, setView] = useState<"agenda" | "month">("agenda");
   const [data, setData] = useState<WhosOutData | null>(null);
   const [status, setStatus] = useState<"loading" | "done" | "error">("loading");
+  const [visibleDays, setVisibleDays] = useState(AGENDA_PAGE_SIZE);
   const reqSeq = useRef(0);
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -137,6 +139,13 @@ export function WhosOutPageClient() {
     void load();
   }, [load]);
 
+  // Collapse the agenda back to the first page whenever the month or scope
+  // changes so a fresh load doesn't start half-expanded. (Not on view toggle —
+  // jumping from the month grid to a specific day needs to keep its expansion.)
+  useEffect(() => {
+    setVisibleDays(AGENDA_PAGE_SIZE);
+  }, [anchor, scope]);
+
   const { from: fromIso, to: toIso } = monthRange(anchor);
   const monthLabel = `${MONTHS[anchor.getMonth()]} ${anchor.getFullYear()}`;
   const todayIso = iso(new Date());
@@ -155,8 +164,11 @@ export function WhosOutPageClient() {
           entry.from_date < fromIso ? fromIso : entry.from_date,
           entry.to_date > toIso ? toIso : entry.to_date
         )) {
-          const dow = new Date(`${day}T00:00:00`).getDay();
-          if (dow === 0 || dow === 6) continue; // skip weekends
+          // Do NOT skip weekends here — a multi-day leave/WFH entry that
+          // spans a Sat/Sun (or where "today" itself falls on one) must
+          // still show. Dropping weekend days silently hid people from the
+          // agenda and from the "out today" count whenever the check
+          // happened to land on a weekend.
           const list = map.get(day) ?? [];
           list.push({ person, entry });
           map.set(day, list);
@@ -180,12 +192,22 @@ export function WhosOutPageClient() {
   const goMonth = (delta: number) =>
     setAnchor((a) => new Date(a.getFullYear(), a.getMonth() + delta, 1));
 
-  const openDayInAgenda = useCallback((day: string) => {
-    setView("agenda");
-    window.setTimeout(() => {
-      dayRefs.current[day]?.scrollIntoView({ block: "center", behavior: "smooth" });
-    }, 60);
-  }, []);
+  const openDayInAgenda = useCallback(
+    (day: string) => {
+      setView("agenda");
+      // Make sure the target day is past the "show more" cut-off before scrolling.
+      const idx = agendaDays.indexOf(day);
+      if (idx >= 0) {
+        setVisibleDays((n) =>
+          idx < n ? n : Math.min(agendaDays.length, idx + AGENDA_PAGE_SIZE)
+        );
+      }
+      window.setTimeout(() => {
+        dayRefs.current[day]?.scrollIntoView({ block: "center", behavior: "smooth" });
+      }, 80);
+    },
+    [agendaDays]
+  );
 
   const totalPeople = data?.people.length ?? 0;
 
@@ -350,7 +372,7 @@ export function WhosOutPageClient() {
         />
       ) : (
         <div className="space-y-2.5">
-          {agendaDays.map((day) => {
+          {agendaDays.slice(0, visibleDays).map((day) => {
             const d = new Date(`${day}T00:00:00`);
             const holiday = holidaysByDay.get(day);
             const occ = occByDay.get(day) ?? [];
@@ -403,11 +425,29 @@ export function WhosOutPageClient() {
               </div>
             );
           })}
+
+          {agendaDays.length > visibleDays ? (
+            <div className="flex justify-center pt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setVisibleDays((n) => Math.min(n + AGENDA_PAGE_SIZE, agendaDays.length))
+                }
+              >
+                Show {Math.min(AGENDA_PAGE_SIZE, agendaDays.length - visibleDays)} more
+                {agendaDays.length - visibleDays === 1 ? " day" : " days"}
+              </Button>
+            </div>
+          ) : null}
         </div>
       )}
 
       {status === "done" && agendaDays.length > 0 ? (
         <p className="text-center text-xs text-wt-text-faint">
+          {view === "agenda" && agendaDays.length > visibleDays
+            ? `Showing ${visibleDays} of ${agendaDays.length} days · `
+            : null}
           {totalPeople} {totalPeople === 1 ? "person" : "people"} with time off ·{" "}
           {(data?.holidays.length ?? 0)} holiday
           {(data?.holidays.length ?? 0) === 1 ? "" : "s"} in {monthLabel}

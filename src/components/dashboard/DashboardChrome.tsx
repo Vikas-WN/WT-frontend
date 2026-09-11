@@ -18,6 +18,7 @@ import { toPagedRows } from "@/utils/apiRows";
 import {
   notificationCategoryLabel,
   resolveNotificationHref,
+  groupNotificationsByCategory,
 } from "@/utils/notificationNavigation";
 import {
   dashboardNavigation,
@@ -326,6 +327,13 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     [notifications]
   );
 
+  // Sections instead of one flat chronological list — "Leave & Time Off",
+  // "Allocations", etc. — so the panel reads like an inbox, not a feed.
+  const groupedNotifications = useMemo(
+    () => groupNotificationsByCategory(notifications),
+    [notifications]
+  );
+
   const isLearningRoute = pathname.startsWith("/dashboard/learning-development");
 
   const pageTitle = useMemo(() => {
@@ -488,85 +496,102 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                   ) : notificationsError ? (
                     <p className="text-sm text-rose-500 px-3 py-4 text-center">{notificationsError}</p>
                   ) : notifications.length ? (
-                    notifications.map((row, idx) => {
-                      const id = notificationRowId(row);
-                      const isRead = notificationIsRead(row);
-                      const { title, message } = resolveNotificationDisplayCopy(row, projectNameByCode);
-                      const createdAt = formatNotificationTimestamp(row.created_at);
-                      const categoryLabel = notificationCategoryLabel(row);
-                      const roleLabel =
-                        categoryLabel !== "—"
-                          ? categoryLabel
-                          : extractRoleFromNotificationMessage(message);
-                      const href = resolveNotificationHref(row, { userRoles: notificationRoles });
-                      const isNavigable = Boolean(href);
-
-                      const badgeClass =
-                        /leave|wfh/i.test(roleLabel)
-                          ? "bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
-                          : /time.?log/i.test(roleLabel)
-                            ? "bg-blue-50 text-blue-700 dark:bg-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)] dark:text-[#b8c7e8]"
-                            : /exit|survey/i.test(roleLabel)
-                              ? "bg-purple-50 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400"
-                              : "bg-slate-50 text-slate-600 dark:bg-wt-surface-3 dark:text-wt-text-muted";
-
+                    groupedNotifications.map(({ label: groupLabel, rows: groupRows }) => {
+                      const groupUnread = groupRows.filter((row) => !notificationIsRead(row)).length;
                       return (
-                        <div
-                          key={id ? `notification-${id}` : `notification-${idx}`}
-                          role={isNavigable ? "button" : undefined}
-                          tabIndex={isNavigable ? 0 : undefined}
-                          onClick={() => {
-                            if (isNavigable) void handleNotificationClick(row);
-                          }}
-                          onKeyDown={(event) => {
-                            if (!isNavigable) return;
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              void handleNotificationClick(row);
-                            }
-                          }}
-                          className={cn(
-                            "p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-wt-surface-2 transition-all duration-150 group cursor-pointer border-b border-slate-50 dark:border-wt-border last:border-0",
-                            isNavigable && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 dark:focus-visible:ring-wt-brand"
-                          )}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${badgeClass}`}>
-                                  {roleLabel}
-                                </span>
-                                {createdAt ? (
-                                  <span className="text-xs text-slate-400 dark:text-wt-text-muted ml-auto">{createdAt}</span>
-                                ) : null}
-                              </div>
-                              {title && title !== message ? (
-                                <p className="font-medium text-slate-800 dark:text-wt-text text-sm mt-1">{title}</p>
-                              ) : null}
-                              <p className="text-xs text-slate-500 dark:text-wt-text-muted line-clamp-2 mt-0.5 leading-relaxed">{message}</p>
-                            </div>
-                            {!isRead && id ? (
-                              <button
-                                type="button"
-                                className="shrink-0 mt-1 size-6 rounded-full flex items-center justify-center text-slate-300 dark:text-wt-text-faint hover:text-blue-600 dark:hover:text-wt-brand hover:bg-blue-50 dark:hover:bg-wt-surface-2 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-0"
-                                disabled={actionLoading}
-                                 onClick={(event) => {
-                                   event.stopPropagation();
-                                   runAction("Mark notification read", async () => {
-                                     try {
-                                       await hrmsService.markNotificationRead(id);
-                                     } catch {
-                                       /* Silently ignore — non-critical action */
-                                     }
-                                     await loadNotifications();
-                                   });
-                                 }}
-                                title="Mark as read"
-                              >
-                                <IconCheck className="size-3.5" />
-                              </button>
+                        <div key={groupLabel} className="mb-1 last:mb-0">
+                          <div className="sticky top-0 z-10 flex items-center gap-1.5 bg-white/95 px-3 py-1.5 backdrop-blur-sm dark:bg-wt-surface-1/95">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-wt-text-faint">
+                              {groupLabel}
+                            </p>
+                            {groupUnread ? (
+                              <span className="rounded-full bg-blue-50 px-1.5 text-[10px] font-medium text-blue-600 dark:bg-wt-surface-3 dark:text-wt-brand">
+                                {groupUnread}
+                              </span>
                             ) : null}
                           </div>
+                          {groupRows.map((row, idx) => {
+                            const id = notificationRowId(row);
+                            const isRead = notificationIsRead(row);
+                            const { title, message } = resolveNotificationDisplayCopy(row, projectNameByCode);
+                            const createdAt = formatNotificationTimestamp(row.created_at);
+                            const categoryLabel = notificationCategoryLabel(row);
+                            const roleLabel =
+                              categoryLabel !== "—"
+                                ? categoryLabel
+                                : extractRoleFromNotificationMessage(message);
+                            const href = resolveNotificationHref(row, { userRoles: notificationRoles });
+                            const isNavigable = Boolean(href);
+
+                            const badgeClass =
+                              /leave|wfh/i.test(roleLabel)
+                                ? "bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
+                                : /time.?log/i.test(roleLabel)
+                                  ? "bg-blue-50 text-blue-700 dark:bg-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)] dark:text-[#b8c7e8]"
+                                  : /exit|survey/i.test(roleLabel)
+                                    ? "bg-purple-50 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400"
+                                    : "bg-slate-50 text-slate-600 dark:bg-wt-surface-3 dark:text-wt-text-muted";
+
+                            return (
+                              <div
+                                key={id ? `notification-${id}` : `notification-${groupLabel}-${idx}`}
+                                role={isNavigable ? "button" : undefined}
+                                tabIndex={isNavigable ? 0 : undefined}
+                                onClick={() => {
+                                  if (isNavigable) void handleNotificationClick(row);
+                                }}
+                                onKeyDown={(event) => {
+                                  if (!isNavigable) return;
+                                  if (event.key === "Enter" || event.key === " ") {
+                                    event.preventDefault();
+                                    void handleNotificationClick(row);
+                                  }
+                                }}
+                                className={cn(
+                                  "p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-wt-surface-2 transition-all duration-150 group cursor-pointer border-b border-slate-50 dark:border-wt-border last:border-0",
+                                  isNavigable && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 dark:focus-visible:ring-wt-brand"
+                                )}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${badgeClass}`}>
+                                        {roleLabel}
+                                      </span>
+                                      {createdAt ? (
+                                        <span className="text-xs text-slate-400 dark:text-wt-text-muted ml-auto">{createdAt}</span>
+                                      ) : null}
+                                    </div>
+                                    {title && title !== message ? (
+                                      <p className="font-medium text-slate-800 dark:text-wt-text text-sm mt-1">{title}</p>
+                                    ) : null}
+                                    <p className="text-xs text-slate-500 dark:text-wt-text-muted line-clamp-2 mt-0.5 leading-relaxed">{message}</p>
+                                  </div>
+                                  {!isRead && id ? (
+                                    <button
+                                      type="button"
+                                      className="shrink-0 mt-1 size-6 rounded-full flex items-center justify-center text-slate-300 dark:text-wt-text-faint hover:text-blue-600 dark:hover:text-wt-brand hover:bg-blue-50 dark:hover:bg-wt-surface-2 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-0"
+                                      disabled={actionLoading}
+                                       onClick={(event) => {
+                                         event.stopPropagation();
+                                         runAction("Mark notification read", async () => {
+                                           try {
+                                             await hrmsService.markNotificationRead(id);
+                                           } catch {
+                                             /* Silently ignore — non-critical action */
+                                           }
+                                           await loadNotifications();
+                                         });
+                                       }}
+                                      title="Mark as read"
+                                    >
+                                      <IconCheck className="size-3.5" />
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       );
                     })

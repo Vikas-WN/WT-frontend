@@ -151,6 +151,13 @@ export const endpoints = {
 
   search: `${api}/search`,
   whosOut: `${api}/whos-out`,
+  celebrations: `${api}/celebrations`,
+  attendanceToday: `${api}/attendance-today`,
+  wiki: {
+    pages: `${api}/wiki/pages`,
+    pageById: (id: number | string) => `${api}/wiki/pages/${encodeURIComponent(id)}`,
+    categories: `${api}/wiki/categories`,
+  },
 
   learning: {
     trainings: `${api}/trainings`,
@@ -207,7 +214,8 @@ export const endpoints = {
       `${api}/masters/webknot-values/${encodeURIComponent(rowId)}`,
     submissionCycles: `${api}/masters/submission-cycles`,
     submissionCycleByKey: `${api}/masters/submission-cycles/by-key`,
-    submissionCycleById: (cycleId: string) =>
+    submissionCycleStatus: `${api}/masters/submission-cycles/is-open`,
+    submissionCycleById: (cycleId: string | number) =>
       `${api}/masters/submission-cycles/${encodeURIComponent(cycleId)}`,
     clients: `${api}/masters/clients`,
     clientById: (clientId: string | number) =>

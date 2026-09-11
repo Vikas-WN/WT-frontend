@@ -1,20 +1,12 @@
-import { ComingSoonPanel } from "@/components/dashboard/ComingSoonPanel";
-import { Activity } from "lucide-react";
+import { LazyPulsePageClient } from "@/components/dashboard/lazyPages";
 
 /**
- * Keeps the Pulse route/nav wired without redirecting out to the external RT
- * portal. To restore the redirect, swap this back to:
- *   import { redirect } from "next/navigation";
- *   import { PULSE_EXTERNAL_URL } from "@/constants/dashboardNavigation";
- *   export default function PulsePage() { redirect(PULSE_EXTERNAL_URL); }
- * See background-verification/page.tsx for the same coming-soon pattern.
+ * Pulse used to redirect out to the external RT portal
+ * (rtportal.webknot-dev.in) — see dashboardNavigation.ts's PULSE_EXTERNAL_URL
+ * for that history. It's native now: HR/Admin manage KPI definitions and the
+ * submission portal here; everyone else sees a coming-soon screen (the
+ * self-review *filling* flow itself isn't built yet).
  */
 export default function PulsePage() {
-  return (
-    <ComingSoonPanel
-      title="Pulse"
-      description="Pulse insights will appear here soon. Your existing Pulse tooling stays connected behind this screen."
-      icon={<Activity className="size-6" />}
-    />
-  );
+  return <LazyPulsePageClient />;
 }

@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { Search, Users, FolderKanban, Building2, ArrowRight, X } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
+import { UserAvatar } from "@/components/dashboard/ui/profile";
 import { hrmsService, type SearchHit } from "@/services/hrms.service";
 import {
   dashboardNavigation,
@@ -392,7 +393,19 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                             : "hover:bg-wt-surface-2/60"
                         )}
                       >
-                        <HitIcon kind={item.hit.kind} />
+                        {item.hit.kind === "employee" ? (
+                          <UserAvatar
+                            size="md"
+                            fallbackName={item.hit.title}
+                            profile={{
+                              name: item.hit.title,
+                              emp_id: item.hit.ref,
+                              profile_photo: item.hit.image ?? undefined,
+                            }}
+                          />
+                        ) : (
+                          <HitIcon kind={item.hit.kind} />
+                        )}
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-medium text-wt-text">
                             {item.hit.title}
