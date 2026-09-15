@@ -12,6 +12,7 @@ import {
 import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainerDirectory";
 import { TrainingCard } from "@/components/learning-development/TrainingCard";
 import { InputField, SelectField, Sheet } from "@/components/learning-development/ui/forms";
+import { Checkbox } from "@/components/ui/checkbox";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
@@ -123,6 +124,10 @@ function HrTrainingsView() {
       start_date: normalizeToApiDate(String(row.start_date ?? row.training_start ?? "")),
       end_date: normalizeToApiDate(String(row.end_date ?? row.training_end ?? "")),
       status: String(row.status ?? "DRAFT").trim(),
+      is_mandatory: Boolean(row.is_mandatory),
+      completion_deadline: row.completion_deadline
+        ? normalizeToApiDate(String(row.completion_deadline))
+        : "",
     });
     setSheetOpen(true);
   }
@@ -145,6 +150,8 @@ function HrTrainingsView() {
       start_date: sd,
       end_date: ed,
       status: form.status,
+      is_mandatory: form.is_mandatory,
+      completion_deadline: form.completion_deadline.trim() || null,
     };
     if (editingId) {
       await updateMut.mutateAsync(payload);
@@ -288,7 +295,9 @@ function HrTrainingsView() {
             required
             value={form.type}
             options={["MANDATORY", "OPTIONAL", "HYBRID"]}
-            onChange={(v) => setForm((p) => ({ ...p, type: v }))}
+            onChange={(v) =>
+              setForm((p) => ({ ...p, type: v, is_mandatory: v === "MANDATORY" ? true : p.is_mandatory }))
+            }
           />
           <SelectField
             label="Status"
@@ -312,6 +321,22 @@ function HrTrainingsView() {
             value={form.end_date}
             onChange={(v) => setForm((p) => ({ ...p, end_date: v }))}
           />
+          <label className="flex items-center gap-2 text-sm text-wt-text">
+            <Checkbox
+              checked={form.is_mandatory}
+              onCheckedChange={(v) => setForm((p) => ({ ...p, is_mandatory: Boolean(v) }))}
+            />
+            Mandatory — tracked for compliance, with a completion deadline
+          </label>
+          {form.is_mandatory ? (
+            <InputField
+              label="Completion deadline"
+              type="date"
+              value={form.completion_deadline}
+              onChange={(v) => setForm((p) => ({ ...p, completion_deadline: v }))}
+              description="Employees + their manager get reminded once overdue or due within 3 days."
+            />
+          ) : null}
           <div className="sm:col-span-2">
             <InputField
               label="Description"

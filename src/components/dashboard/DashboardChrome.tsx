@@ -17,8 +17,10 @@ import {
 import { toPagedRows } from "@/utils/apiRows";
 import {
   notificationCategoryLabel,
+  notificationGroupLabel,
   resolveNotificationHref,
   groupNotificationsByCategory,
+  NOTIFICATION_GROUP_ORDER,
 } from "@/utils/notificationNavigation";
 import {
   dashboardNavigation,
@@ -159,6 +161,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
+  const [notificationFilter, setNotificationFilter] = useState<string>("All");
   const [projectNameByCode, setProjectNameByCode] = useState<Map<string, string>>(
     () => new Map()
   );
@@ -327,11 +330,45 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     [notifications]
   );
 
+  // Filter chips — only for groups actually present, so the row doesn't show
+  // seven mostly-empty options. "Unread" is a separate axis from category.
+  const notificationFilterOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const row of notifications) {
+      const group = notificationGroupLabel(notificationCategoryLabel(row));
+      counts.set(group, (counts.get(group) ?? 0) + 1);
+    }
+    const present = NOTIFICATION_GROUP_ORDER.filter((group) => counts.has(group));
+    return [
+      { value: "All", label: "All", count: notifications.length },
+      { value: "Unread", label: "Unread", count: unreadNotificationCount },
+      ...present.map((group) => ({ value: group, label: group, count: counts.get(group) ?? 0 })),
+    ];
+  }, [notifications, unreadNotificationCount]);
+
+  // A category chip can vanish (its last notification got read/cleared) while
+  // still selected — fall back to "All" without a state-syncing effect.
+  const effectiveNotificationFilter = notificationFilterOptions.some(
+    (opt) => opt.value === notificationFilter
+  )
+    ? notificationFilter
+    : "All";
+
+  const filteredNotificationRows = useMemo(() => {
+    if (effectiveNotificationFilter === "All") return notifications;
+    if (effectiveNotificationFilter === "Unread") {
+      return notifications.filter((row) => !notificationIsRead(row));
+    }
+    return notifications.filter(
+      (row) => notificationGroupLabel(notificationCategoryLabel(row)) === effectiveNotificationFilter
+    );
+  }, [notifications, effectiveNotificationFilter]);
+
   // Sections instead of one flat chronological list — "Leave & Time Off",
   // "Allocations", etc. — so the panel reads like an inbox, not a feed.
   const groupedNotifications = useMemo(
-    () => groupNotificationsByCategory(notifications),
-    [notifications]
+    () => groupNotificationsByCategory(filteredNotificationRows),
+    [filteredNotificationRows]
   );
 
   const isLearningRoute = pathname.startsWith("/dashboard/learning-development");
@@ -490,12 +527,31 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                     Read All
                   </button>
                 </div>
+                {notifications.length ? (
+                  <div className="flex gap-1.5 overflow-x-auto px-3 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {notificationFilterOptions.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setNotificationFilter(opt.value)}
+                        className={cn(
+                          "shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                          effectiveNotificationFilter === opt.value
+                            ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-wt-brand/40 dark:bg-wt-surface-3 dark:text-wt-brand"
+                            : "border-transparent bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-wt-surface-2 dark:text-wt-text-muted dark:hover:bg-wt-surface-3"
+                        )}
+                      >
+                        {opt.label} {opt.count ? <span className="tabular-nums opacity-70">{opt.count}</span> : null}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
                 <div className="max-h-[320px] overflow-auto">
                   {notificationsLoading && !notifications.length ? (
                     <p className="text-sm text-slate-400 dark:text-wt-text-muted px-3 py-4 text-center">Loading notifications…</p>
                   ) : notificationsError ? (
                     <p className="text-sm text-rose-500 px-3 py-4 text-center">{notificationsError}</p>
-                  ) : notifications.length ? (
+                  ) : filteredNotificationRows.length ? (
                     groupedNotifications.map(({ label: groupLabel, rows: groupRows }) => {
                       const groupUnread = groupRows.filter((row) => !notificationIsRead(row)).length;
                       return (
@@ -596,7 +652,11 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                       );
                     })
                   ) : (
-                    <p className="text-sm text-slate-400 dark:text-wt-text-muted px-3 py-4 text-center">No notifications.</p>
+                    <p className="text-sm text-slate-400 dark:text-wt-text-muted px-3 py-4 text-center">
+                      {effectiveNotificationFilter === "All"
+                        ? "No notifications."
+                        : `No ${effectiveNotificationFilter.toLowerCase()} notifications.`}
+                    </p>
                   )}
                 </div>
               </div>

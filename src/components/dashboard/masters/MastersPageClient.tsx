@@ -3136,14 +3136,19 @@ export function MastersPageClient() {
                                     required
                                     value={roleAssignForm.role}
                                     placeholder="Select role"
+                                    // Matches the backend's _GRANTABLE_ADDITIONAL_ROLES exactly —
+                                    // this endpoint grants an elevated role additively. Resetting
+                                    // someone to Employee, or making them a Manager, goes through
+                                    // the per-row Role dropdown in Employee Directory
+                                    // (set-portal-role) / project-manager assignment instead —
+                                    // picking either here always 400'd.
                                     options={[
                                       { value: "ROLE_HR", label: "HR" },
-                                      { value: "ROLE_MANAGER", label: "Manager" },
                                       { value: "ROLE_DM", label: "Delivery Manager" },
                                       { value: "ROLE_AM", label: "Account Manager" },
-                                      { value: "ROLE_EMPLOYEE", label: "Employee" },
                                       { value: "ROLE_ADMIN", label: "Admin" },
                                       { value: "ROLE_FINANCE", label: "Finance" },
+                                      { value: "ROLE_OFFICE_ADMIN", label: "Office Admin" },
                                     ]}
                                     onChange={(role) =>
                                       setRoleAssignForm((prev) => ({

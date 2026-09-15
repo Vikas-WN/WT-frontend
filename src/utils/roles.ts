@@ -9,6 +9,7 @@ const SESSION_ROLE_LABELS: Record<string, string> = {
   ROLE_FINANCE: "Finance",
   ROLE_AM: "Account Manager",
   ROLE_DM: "Delivery Manager",
+  ROLE_OFFICE_ADMIN: "Office Admin",
 };
 
 /** Canonical ROLE_* names for auth/session (matches backend resolve_session_roles). */
@@ -66,6 +67,7 @@ export const PORTAL_ROLE_SELECT_OPTIONS = [
   { value: "ROLE_AM", label: "Account Manager" },
   { value: "ROLE_DM", label: "Delivery Manager" },
   { value: "ROLE_MANAGER", label: "Manager" },
+  { value: "ROLE_OFFICE_ADMIN", label: "Office Admin" },
 ] as const;
 
 const PORTAL_ROLE_PRIORITY = [
@@ -75,6 +77,7 @@ const PORTAL_ROLE_PRIORITY = [
   "ROLE_DM",
   "ROLE_AM",
   "ROLE_MANAGER",
+  "ROLE_OFFICE_ADMIN",
 ] as const;
 
 export function normalizePortalRoles(value: unknown): string[] {

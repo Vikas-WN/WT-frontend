@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
+import { Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CertificateModal } from "@/components/learning-development/CertificateModal";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -70,6 +73,7 @@ export function EmployeeTrainingMyMarks({
 }) {
   const qc = useQueryClient();
   const marksQ = useMyTrainingMarks(trainingId, Boolean(enabled && trainingId.trim()));
+  const [showCertificate, setShowCertificate] = useState(false);
 
   const enrollMut = useMutation({
     mutationFn: () => hrmsService.selfEnrollTraining(trainingId),
@@ -132,6 +136,14 @@ export function EmployeeTrainingMyMarks({
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button type="button" variant="outline" size="sm" onClick={() => setShowCertificate(true)}>
+          <Award className="mr-1.5 size-4" /> View Certificate
+        </Button>
+      </div>
+      {showCertificate ? (
+        <CertificateModal trainingId={trainingId} onClose={() => setShowCertificate(false)} />
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <article className="rounded-xl border border-wt-border bg-wt-surface-2 p-4">
           <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">

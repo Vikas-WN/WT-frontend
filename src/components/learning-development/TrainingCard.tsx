@@ -33,6 +33,10 @@ export function TrainingCard({
   const status = String(row.status ?? "—");
   const start = formatApiDateDisplay(String(row.start_date ?? row.training_start ?? ""));
   const end = formatApiDateDisplay(String(row.end_date ?? row.training_end ?? ""));
+  // Only show the compliance badge when it adds information beyond the Type
+  // badge — Type "Mandatory" already conveys is_mandatory in that case.
+  const isMandatory = Boolean(row.is_mandatory) && String(row.type ?? "").trim().toUpperCase() !== "MANDATORY";
+  const deadline = row.completion_deadline ? formatApiDateDisplay(String(row.completion_deadline)) : null;
 
   return (
     <article
@@ -64,9 +68,15 @@ export function TrainingCard({
           <span className="rounded-lg bg-wt-surface-2 px-2.5 py-1 text-[11px] font-medium text-wt-text-muted ring-1 ring-wt-border/80">
             {type}
           </span>
+          {isMandatory ? (
+            <span className="rounded-lg bg-rose-500/10 px-2.5 py-1 text-[11px] font-medium text-rose-700 ring-1 ring-rose-500/20 dark:text-rose-400">
+              Mandatory
+            </span>
+          ) : null}
         </div>
         <p className="mt-4 text-xs tabular-nums text-wt-text-faint">
           {start} → {end}
+          {deadline ? ` · Due ${deadline}` : ""}
         </p>
       </div>
       {showEdit && onEdit ? (

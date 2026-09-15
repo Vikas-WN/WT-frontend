@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CalendarRange,
   ClipboardCheck,
+  GraduationCap,
   LayoutGrid,
   Plane,
   Search,
@@ -23,6 +24,7 @@ import {
   type CelebrationsData,
   type WhosOutData,
 } from "@/services/hrms.service";
+import type { MyLearningSummary } from "@/types/learning";
 import { holidayCalendarStorageService } from "@/services/holidayCalendarStorage.service";
 import {
   parseHolidayCalendarDate,
@@ -85,6 +87,10 @@ export function HomePageClient() {
   const todayIso = iso(today);
 
   const balance = useLoad(() => hrmsService.getMyLeaveBalance().then((r) => r.data), []);
+  const learning = useLoad<MyLearningSummary | null>(
+    () => hrmsService.getMyLearningSummary().then((r) => r.data),
+    []
+  );
   const allocations = useLoad(
     () => hrmsService.getMyAllocations().then((r) => (r.data ?? []) as Array<Record<string, unknown>>),
     []
@@ -315,6 +321,46 @@ export function HomePageClient() {
                   <p className="text-xs text-wt-text-muted">{b.label}</p>
                 </div>
               ))}
+            </div>
+          )}
+        </HomeCard>
+
+        <HomeCard
+          title="My learning"
+          icon={<GraduationCap className="size-4" />}
+          href={DASHBOARD_ROUTES.learning}
+          cta="Open"
+        >
+          {learning.status === "loading" ? (
+            <CardSkeleton />
+          ) : learning.status === "error" || !learning.data ? (
+            <CardMessage text="Unavailable" />
+          ) : learning.data.enrolled_count === 0 ? (
+            <p className="text-sm text-wt-text-muted">No trainings enrolled yet.</p>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex gap-5">
+                {[
+                  { label: "Enrolled", value: learning.data.enrolled_count },
+                  { label: "Completed", value: learning.data.completed_count },
+                  { label: "In progress", value: learning.data.in_progress_count },
+                ].map((b) => (
+                  <div key={b.label}>
+                    <p className="text-2xl font-semibold tabular-nums text-wt-text">{b.value}</p>
+                    <p className="text-xs text-wt-text-muted">{b.label}</p>
+                  </div>
+                ))}
+              </div>
+              {learning.data.overdue_mandatory_count > 0 ? (
+                <p className="text-xs font-medium text-rose-600 dark:text-rose-400">
+                  {learning.data.overdue_mandatory_count} mandatory training
+                  {learning.data.overdue_mandatory_count === 1 ? "" : "s"} overdue
+                </p>
+              ) : learning.data.next_deadline_training_name ? (
+                <p className="text-xs text-wt-text-muted">
+                  Next due: {learning.data.next_deadline_training_name}
+                </p>
+              ) : null}
             </div>
           )}
         </HomeCard>

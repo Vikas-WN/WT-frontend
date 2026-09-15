@@ -159,6 +159,17 @@ export const endpoints = {
     categories: `${api}/wiki/categories`,
   },
 
+  assets: {
+    root: `${api}/assets`,
+    byId: (id: number | string) => `${api}/assets/${encodeURIComponent(id)}`,
+    categories: `${api}/assets/categories`,
+    roster: `${api}/assets/roster`,
+    mine: `${api}/assets/mine`,
+    history: (id: number | string) => `${api}/assets/${encodeURIComponent(id)}/history`,
+    assign: (id: number | string) => `${api}/assets/${encodeURIComponent(id)}/assign`,
+    return: (id: number | string) => `${api}/assets/${encodeURIComponent(id)}/return`,
+  },
+
   learning: {
     trainings: `${api}/trainings`,
     trainingById: (trainingId: string | number) => `${api}/trainings/${encodeURIComponent(String(trainingId))}`,
@@ -189,6 +200,12 @@ export const endpoints = {
       `${api}/trainings/${encodeURIComponent(String(trainingId))}/assessments/${encodeURIComponent(String(assessmentId))}/marks/publish`,
     analytics: (trainingId: string | number) =>
       `${api}/trainings/${encodeURIComponent(String(trainingId))}/analytics`,
+    myProgress: (trainingId: string | number) =>
+      `${api}/trainings/${encodeURIComponent(String(trainingId))}/my-progress`,
+    myLearningSummary: `${api}/trainings/my-learning-summary`,
+    teamCompletion: `${api}/trainings/team-completion`,
+    certificate: (trainingId: string | number) =>
+      `${api}/trainings/${encodeURIComponent(String(trainingId))}/certificate`,
   },
 
   notifications: {
@@ -217,12 +234,30 @@ export const endpoints = {
     submissionCycleStatus: `${api}/masters/submission-cycles/is-open`,
     submissionCycleById: (cycleId: string | number) =>
       `${api}/masters/submission-cycles/${encodeURIComponent(cycleId)}`,
+    certifications: `${api}/masters/certifications`,
+    certificationById: (rowId: string | number) =>
+      `${api}/masters/certifications/${encodeURIComponent(String(rowId))}`,
     clients: `${api}/masters/clients`,
     clientById: (clientId: string | number) =>
       `${api}/masters/clients/${encodeURIComponent(String(clientId))}`,
     opportunities: `${api}/masters/opportunities`,
     allocateProjectToClient: (projectId: string | number, clientId: string | number) =>
       `${api}/clients/allocate/${encodeURIComponent(String(projectId))}/client/${encodeURIComponent(String(clientId))}`,
+  },
+
+  monthlySubmissions: {
+    applicableKpis: `${api}/monthly-submissions/applicable-kpis`,
+    webknotValues: `${api}/monthly-submissions/webknot-values`,
+    draft: `${api}/monthly-submissions/draft`,
+    self: `${api}/monthly-submissions/self`,
+    managerTeam: `${api}/monthly-submissions/manager/team`,
+    managerReview: (submissionId: string | number) =>
+      `${api}/monthly-submissions/${encodeURIComponent(String(submissionId))}/manager-review`,
+    list: `${api}/monthly-submissions`,
+    scoreBreakdown: (submissionId: string | number) =>
+      `${api}/monthly-submissions/${encodeURIComponent(String(submissionId))}/score-breakdown`,
+    adminReview: (submissionId: string | number) =>
+      `${api}/monthly-submissions/${encodeURIComponent(String(submissionId))}/admin-review`,
   },
 
   roleAdmin: {

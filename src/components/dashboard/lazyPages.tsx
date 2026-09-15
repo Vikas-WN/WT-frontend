@@ -45,6 +45,12 @@ export const LazyCompanyPoliciesPageClient = lazyPage(
   "Loading policies…"
 );
 
+export const LazyAssetTrackingPageClient = lazyPage(
+  () => import("@/components/dashboard/assets/AssetTrackingPageClient"),
+  "AssetTrackingPageClient",
+  "Loading assets…"
+);
+
 export const LazyReportsPageClient = lazyPage(
   () => import("@/components/dashboard/reports/ReportsPageClient"),
   "ReportsPageClient",

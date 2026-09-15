@@ -160,6 +160,7 @@ export function notificationCategoryLabel(
     case "TRAINING_WITHDRAWAL_APPROVED":
     case "TRAINING_WITHDRAWAL_REJECTED":
     case "TRAINING_ASSESSMENT_ASSIGNED":
+    case "TRAINING_DEADLINE_REMINDER":
       return "Training";
     case "TRAINING_MARKS_PUBLISHED":
       return "Training Scores";
@@ -336,6 +337,7 @@ export function resolveNotificationHref(
     case "TRAINING_WITHDRAWAL_APPROVED":
     case "TRAINING_WITHDRAWAL_REJECTED":
     case "TRAINING_ASSESSMENT_ASSIGNED":
+    case "TRAINING_DEADLINE_REMINDER":
       return DASHBOARD_ROUTES.learning;
 
     case "EXIT_INTERVIEW_REMINDER":

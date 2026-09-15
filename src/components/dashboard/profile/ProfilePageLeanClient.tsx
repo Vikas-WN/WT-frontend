@@ -842,9 +842,9 @@ export function ProfilePageLeanClient() {
             isEditingOwnProfile && !isProfileLoading ? (
               renderEditPanel()
             ) : (
-              <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-10 md:p-12">
+              <div>
                 {isProfileLoading ? (
-                  <>
+                  <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-6 sm:p-8">
                     <ProfileHeaderSkeleton />
                     <div className="mt-6">
                       <ProfileDetailsSkeleton />
@@ -855,7 +855,7 @@ export function ProfilePageLeanClient() {
                       </h4>
                       <TableRowsSkeleton rows={3} columns={5} />
                     </div>
-                  </>
+                  </div>
                 ) : (
                   <div className="w-full space-y-4">
                     <EmployeeProfileHeaderCard

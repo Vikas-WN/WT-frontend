@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import type { CelebrationEntry, CelebrationsData } from "@/services/hrms.service";
 import { cn } from "@/lib/utils";
+import { parseApiDate } from "@/utils/apiDate";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -38,7 +39,12 @@ function relativeLabel(daysUntil: number, nextDate: string): string {
   if (daysUntil === 0) return "Today";
   if (daysUntil === 1) return "Tomorrow";
   if (daysUntil <= 6) return `In ${daysUntil} days`;
-  const d = new Date(`${nextDate}T00:00:00`);
+  // parseApiDate (not a bare `new Date(...)`) handles both the ISO date the
+  // backend actually sends and the dd/mm/yyyy shape used elsewhere in this
+  // app, and returns null instead of an unparseable "Invalid Date" — the bug
+  // this replaced.
+  const d = parseApiDate(nextDate);
+  if (!d) return `In ${daysUntil} days`;
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
 }
 

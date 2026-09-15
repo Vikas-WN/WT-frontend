@@ -45,17 +45,32 @@ import { normalizeDayTimelogEntries } from "@/utils/timelog/normalizeWeekSnapsho
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useTeamTimelogAccess } from "@/hooks/timelog/useTeamTimelogAccess";
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 
 function unwrapPayload<T>(response: unknown): T {
   return ((response as { data?: T }).data ?? response) as T;
 }
 
 function entryStatusClass(status: string): string {
+  // Light/dark-aware — the old APPROVED/REJECTED pair used a light-mode-only
+  // text tone (emerald-300 / rose-300) on a near-white light background,
+  // which was close to unreadable outside dark mode.
   const map: Record<string, string> = {
     DRAFT: "rounded-md bg-wt-surface-3 px-2 py-0.5 text-xs font-medium text-wt-text-muted",
     SUBMITTED: "rounded-md bg-[var(--wt-brand-soft)] px-2 py-0.5 text-xs font-medium text-[var(--wt-brand)]",
-    APPROVED: "rounded-md bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-300",
-    REJECTED: "rounded-md bg-rose-500/15 px-2 py-0.5 text-xs font-medium text-rose-300",
+    APPROVED:
+      "rounded-md bg-emerald-500/12 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400",
+    REJECTED:
+      "rounded-md bg-rose-500/12 px-2 py-0.5 text-xs font-medium text-rose-700 dark:text-rose-400",
   };
   return map[status] ?? map.DRAFT;
 }
@@ -390,41 +405,41 @@ export function TimelogPageClient() {
                     className="py-10"
                   />
                 ) : (
-                  <div className="overflow-x-auto rounded-lg border border-wt-border">
-                    <table className="w-full text-sm border-collapse">
-                      <thead className="bg-wt-surface-2 text-wt-text-muted">
-                        <tr>
-                          <th className="text-left px-2 py-2 font-medium whitespace-nowrap">Date</th>
-                          <th className="text-left px-2 py-2 font-medium">Project</th>
-                          <th className="text-left px-2 py-2 font-medium">Task Category</th>
-                          <th className="text-left px-2 py-2 font-medium">Sub Category</th>
-                          <th className="text-left px-2 py-2 font-medium">Description</th>
-                          <th className="text-center px-2 py-2 font-medium">Hours</th>
-                          <th className="text-center px-2 py-2 font-medium">Status</th>
+                  <ScrollableTable maxHeightClass="max-h-[min(65vh,600px)]">
+                    <WtTable>
+                      <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead>Date</TableHead>
+                          <TableHead>Project</TableHead>
+                          <TableHead>Task Category</TableHead>
+                          <TableHead>Sub Category</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="text-center">Hours</TableHead>
+                          <TableHead className="text-center">Status</TableHead>
                           {canManagerApprove ? (
-                            <th className="text-center px-2 py-2 font-medium">Approve / Reject</th>
+                            <TableHead className="text-center">Approve / Reject</TableHead>
                           ) : null}
-                        </tr>
-                      </thead>
-                      <tbody>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {employeeEntries.map((entry) => {
                           const taskLabel = TASK_CATEGORY_LABELS[entry.task_category] ?? entry.task_category;
                           const isActionable = isManagerTimelogDecisionActionable(entry.status);
                           return (
-                            <tr key={entry.id} className="border-t border-wt-border hover:bg-wt-surface-2/50">
-                              <td className="px-2 py-2 whitespace-nowrap tabular-nums">{entry.log_date}</td>
-                              <td className="px-2 py-2 whitespace-nowrap">
+                            <TableRow key={entry.id}>
+                              <TableCell className="whitespace-nowrap tabular-nums">{entry.log_date}</TableCell>
+                              <TableCell className="whitespace-nowrap">
                                 {resolveTimelogProjectLabel(entry)}
-                              </td>
-                              <td className="px-2 py-2 whitespace-nowrap">{taskLabel}</td>
-                              <td className="px-2 py-2 whitespace-nowrap">{entry.sub_category || "—"}</td>
-                              <td className="px-2 py-2 max-w-[240px]">
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap">{taskLabel}</TableCell>
+                              <TableCell className="whitespace-nowrap">{entry.sub_category || "—"}</TableCell>
+                              <TableCell className="max-w-[240px]">
                                 <span className="line-clamp-3 whitespace-pre-wrap break-words" title={entry.description || undefined}>
                                   {entry.description || "—"}
                                 </span>
-                              </td>
-                              <td className="px-2 py-2 text-center tabular-nums">{entry.hours}h</td>
-                              <td className="px-2 py-2 text-center">
+                              </TableCell>
+                              <TableCell className="text-center tabular-nums">{entry.hours}h</TableCell>
+                              <TableCell className="text-center">
                                 <span className={entryStatusClass(entry.status)}>
                                   {formatUiStatusLabel(entry.status)}
                                 </span>
@@ -433,16 +448,16 @@ export function TimelogPageClient() {
                                     Remark: {entry.manager_comment}
                                   </div>
                                 ) : null}
-                              </td>
+                              </TableCell>
                               {canManagerApprove ? (
-                                <td className="px-2 py-2 text-center whitespace-nowrap">
+                                <TableCell className="text-center whitespace-nowrap">
                                   {isActionable ? (
                                     <div className="flex gap-1 justify-center">
                                       <Button
                                         type="button"
                                         variant="outline"
                                         size="xs"
-                                        className="border-emerald-300 px-1.5 py-0.5 text-[10px] text-emerald-700 hover:bg-emerald-50"
+                                        className="border-emerald-300 px-1.5 py-0.5 text-[10px] text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
                                         onClick={() => handleApproveEntry(entry.id)}
                                       >
                                         Approve
@@ -460,14 +475,14 @@ export function TimelogPageClient() {
                                   ) : (
                                     <span className="text-xs text-wt-text-muted">—</span>
                                   )}
-                                </td>
+                                </TableCell>
                               ) : null}
-                            </tr>
+                            </TableRow>
                           );
                         })}
-                      </tbody>
-                    </table>
-                  </div>
+                      </TableBody>
+                    </WtTable>
+                  </ScrollableTable>
                 )}
             </div>
           ) : null}

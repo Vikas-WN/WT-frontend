@@ -4,11 +4,35 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="277eea37-5920-433d-98e6-176d094caf49" name="Changes" comment="enahancing search and who's out feature">
+    <list default="true" id="277eea37-5920-433d-98e6-176d094caf49" name="Changes" comment="feat: added new features of the checking in-office, added a new wiki page, and tracking of the ratings">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/CommandPalette.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/CommandPalette.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/whos-out/WhosOutPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/whos-out/WhosOutPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/endpoints.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/endpoints.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/(protected)/dashboard/learning-development/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/(protected)/dashboard/learning-development/layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/(protected)/dashboard/learning-development/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/(protected)/dashboard/learning-development/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/DashboardChrome.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/DashboardChrome.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/annual-calendar/PersonalHolidayCalendarView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/annual-calendar/PersonalHolidayCalendarView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/holiday-calendars/HolidayCalendarsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/holiday-calendars/HolidayCalendarsPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/home/CelebrationsCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/home/CelebrationsCard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/home/HomePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/home/HomePageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/lazyPages.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/lazyPages.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/masters/MastersPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/masters/MastersPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/profile/ProfilePageLeanClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/profile/ProfilePageLeanClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/pulse/KpiDefinitionsPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/pulse/KpiDefinitionsPanel.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/pulse/PulsePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/pulse/PulsePageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/pulse/SubmissionPortalPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/pulse/SubmissionPortalPanel.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/timelog/TimelogPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/timelog/TimelogPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/employee-directory/ProfileFieldGrid.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/employee-directory/ProfileFieldGrid.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/learning-development/EmployeeTrainingMyMarks.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/EmployeeTrainingMyMarks.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/learning-development/TrainingCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/TrainingCard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/learning-development/TrainingsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/TrainingsPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/ui/ActionSplash.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ui/ActionSplash.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/constants/dashboardNavigation.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/constants/dashboardNavigation.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/constants/routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/constants/routes.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/services/hrms.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/hrms.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/types/kpi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types/kpi.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/learningFormState.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/learningFormState.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/notificationNavigation.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/notificationNavigation.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/roles.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/roles.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -16,7 +40,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="664" />
+    <option name="cachedIndexableFilesCount" value="702" />
     <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
   </component>
   <component name="Git.Settings">

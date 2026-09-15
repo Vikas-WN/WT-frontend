@@ -125,7 +125,16 @@ function SkillsTable({ skills }: { skills: unknown }) {
   );
 }
 
-function ProfileFieldValue({ entry }: { entry: ProfileDisplayEntry }) {
+function ProfileFieldValue({
+  entry,
+  softenEmpty = false,
+}: {
+  entry: ProfileDisplayEntry;
+  /** Render an unset value as a quieter "Not set" instead of a bare "—" —
+   *  used only in the profile-summary tile layout, where an open dash next
+   *  to a bold label reads as unfinished rather than intentional. */
+  softenEmpty?: boolean;
+}) {
   if (entry.resumeShareHref !== undefined) {
     return <EmployeeResumeLink href={entry.resumeShareHref} />;
   }
@@ -157,7 +166,11 @@ function ProfileFieldValue({ entry }: { entry: ProfileDisplayEntry }) {
     );
   }
 
-  return <>{formatProfileDisplayValue(entry.value)}</>;
+  const formatted = formatProfileDisplayValue(entry.value);
+  if (softenEmpty && formatted === "—") {
+    return <span className="text-wt-text-faint/80">Not set</span>;
+  }
+  return <>{formatted}</>;
 }
 
 export function ProfileFieldGrid({
@@ -196,18 +209,31 @@ export function ProfileFieldGrid({
 
   if (variant === "default" || variant === "dashboard") {
     return (
-      <dl className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">
-        {entries.map((entry) => (
-          <div
-            key={entry.label}
-            className={cn("min-w-0", entry.fullWidth ? "sm:col-span-2" : undefined)}
-          >
-            <dt className="text-sm font-medium text-wt-text-muted">{entry.label}</dt>
-            <dd className="mt-1.5 text-sm font-medium text-wt-text break-words">
-              <ProfileFieldValue entry={entry} />
-            </dd>
-          </div>
-        ))}
+      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {entries.map((entry) => {
+          // Tables / scrollable text already carry their own border — a
+          // second tile border around them would double up.
+          const isRichContent = Boolean(
+            entry.asSkillsTable || entry.asUserTypeHistoryTable || entry.asScrollableText
+          );
+          return (
+            <div
+              key={entry.label}
+              className={cn(
+                "min-w-0 rounded-xl px-3.5 py-3",
+                !isRichContent && "border border-wt-border/70 bg-wt-surface-2/30",
+                entry.fullWidth || isRichContent ? "sm:col-span-2" : undefined
+              )}
+            >
+              <dt className="text-[11px] font-semibold uppercase tracking-wide text-wt-text-faint">
+                {entry.label}
+              </dt>
+              <dd className="mt-1.5 text-sm font-medium text-wt-text break-words">
+                <ProfileFieldValue entry={entry} softenEmpty />
+              </dd>
+            </div>
+          );
+        })}
       </dl>
     );
   }

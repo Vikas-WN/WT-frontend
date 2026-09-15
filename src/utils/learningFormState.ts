@@ -6,6 +6,8 @@ export type TrainingFormState = {
   start_date: string;
   end_date: string;
   status: string;
+  is_mandatory: boolean;
+  completion_deadline: string;
 };
 
 export type SessionFormState = {
@@ -37,6 +39,8 @@ export function createEmptyTrainingForm(): TrainingFormState {
     start_date: "",
     end_date: "",
     status: "",
+    is_mandatory: false,
+    completion_deadline: "",
   };
 }
 

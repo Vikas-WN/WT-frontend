@@ -1,44 +1,50 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Activity } from "lucide-react";
 
-import { ComingSoonPanel } from "@/components/dashboard/ComingSoonPanel";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { KpiDefinitionsPanel } from "@/components/dashboard/pulse/KpiDefinitionsPanel";
 import { SubmissionPortalPanel } from "@/components/dashboard/pulse/SubmissionPortalPanel";
+import { SubmissionsReviewPanel } from "@/components/dashboard/pulse/SubmissionsReviewPanel";
+import { EmployeeMonthlyReviewPanel } from "@/components/dashboard/pulse/employee/EmployeeMonthlyReviewPanel";
+import { ManagerTeamReviewPanel } from "@/components/dashboard/pulse/manager/ManagerTeamReviewPanel";
 import { useAuth } from "@/context/AuthContext";
 import { normalizeRoles } from "@/utils/roles";
 
-/**
- * Pulse used to send everyone out to the external RT portal
- * (rtportal.webknot-dev.in). This is the native replacement: HR/Admin manage
- * KPI definitions and open/close the submission portal right here. Everyone
- * else still sees a coming-soon screen — the self-review *filling* flow
- * itself hasn't been built natively yet, only the HR-side controls.
- */
+/** Pulse: everyone's monthly KPI self-review, in one place — employees and
+ *  managers fill theirs in, managers review their team's, HR/Admin defines
+ *  KPIs, runs the submission window, and gives final approval. */
 export function PulsePageClient() {
   const { user } = useAuth();
   const roles = useMemo(() => normalizeRoles(user?.roles ?? []), [user?.roles]);
   const isHrOrAdmin = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
+  const isManager = roles.includes("ROLE_MANAGER") || roles.includes("ROLE_DM");
 
-  if (!isHrOrAdmin) {
-    return (
-      <ComingSoonPanel
-        title="Pulse"
-        description="Your monthly KPI self-review will live here. HR is setting up KPIs and opening the submission window — check back once it's live."
-        icon={<Activity className="size-6" />}
-      />
-    );
-  }
-
-  return <PulseAdminPageClient />;
+  if (isHrOrAdmin) return <PulseAdminPageClient />;
+  if (isManager) return <PulseManagerPageClient />;
+  return <PulseEmployeePageClient />;
 }
 
-function PulseAdminPageClient() {
-  const [tab, setTab] = useState<"kpis" | "portal">("kpis");
+function PulseEmployeePageClient() {
+  return (
+    <DashboardPageShell className="wt-detail-page">
+      <ContentCard>
+        <div className="border-b border-wt-border px-5 py-4 sm:px-8">
+          <h2 className="text-lg font-semibold text-wt-text">Pulse</h2>
+          <p className="mt-1 text-sm text-wt-text-muted">Your monthly KPI self-review.</p>
+        </div>
+        <div className={PAGE_TAB_BODY_CLASS}>
+          <EmployeeMonthlyReviewPanel />
+        </div>
+      </ContentCard>
+    </DashboardPageShell>
+  );
+}
+
+function PulseManagerPageClient() {
+  const [tab, setTab] = useState<"my-review" | "team">("team");
 
   return (
     <DashboardPageShell className="wt-detail-page">
@@ -46,8 +52,40 @@ function PulseAdminPageClient() {
         <div className="border-b border-wt-border px-5 py-4 sm:px-8">
           <h2 className="text-lg font-semibold text-wt-text">Pulse</h2>
           <p className="mt-1 text-sm text-wt-text-muted">
-            Define KPIs per band and designation, and open or close the submission
-            portal for employees and managers.
+            Your monthly self-review, and your team&apos;s submissions awaiting review.
+          </p>
+        </div>
+
+        <PageTabs
+          embedded
+          aria-label="Pulse manager tabs"
+          value={tab}
+          onValueChange={(value) => setTab(value as "my-review" | "team")}
+          items={[
+            { value: "team", label: "Team Reviews" },
+            { value: "my-review", label: "My Review" },
+          ]}
+        />
+
+        <div className={PAGE_TAB_BODY_CLASS}>
+          {tab === "team" ? <ManagerTeamReviewPanel /> : <EmployeeMonthlyReviewPanel />}
+        </div>
+      </ContentCard>
+    </DashboardPageShell>
+  );
+}
+
+function PulseAdminPageClient() {
+  const [tab, setTab] = useState<"kpis" | "portal" | "submissions">("submissions");
+
+  return (
+    <DashboardPageShell className="wt-detail-page">
+      <ContentCard>
+        <div className="border-b border-wt-border px-5 py-4 sm:px-8">
+          <h2 className="text-lg font-semibold text-wt-text">Pulse</h2>
+          <p className="mt-1 text-sm text-wt-text-muted">
+            Define KPIs per band and designation, open or close the submission window, and give final
+            approval on manager-reviewed submissions.
           </p>
         </div>
 
@@ -55,15 +93,22 @@ function PulseAdminPageClient() {
           embedded
           aria-label="Pulse admin tabs"
           value={tab}
-          onValueChange={(value) => setTab(value as "kpis" | "portal")}
+          onValueChange={(value) => setTab(value as "kpis" | "portal" | "submissions")}
           items={[
+            { value: "submissions", label: "Submissions" },
             { value: "kpis", label: "KPI Definitions" },
             { value: "portal", label: "Submission Portal" },
           ]}
         />
 
         <div className={PAGE_TAB_BODY_CLASS}>
-          {tab === "kpis" ? <KpiDefinitionsPanel /> : <SubmissionPortalPanel />}
+          {tab === "submissions" ? (
+            <SubmissionsReviewPanel />
+          ) : tab === "kpis" ? (
+            <KpiDefinitionsPanel />
+          ) : (
+            <SubmissionPortalPanel />
+          )}
         </div>
       </ContentCard>
     </DashboardPageShell>

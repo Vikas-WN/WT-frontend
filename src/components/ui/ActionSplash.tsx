@@ -52,7 +52,10 @@ export function ActionSplashHost() {
   return createPortal(
     <div
       className={cn(
-        "pointer-events-none fixed inset-0 z-[300] flex items-center justify-center p-6",
+        // Phones/tablets only — desktop already gets a corner toast for this
+        // same event, and showing both on a normal-sized screen just reads as
+        // a duplicate confirmation.
+        "pointer-events-none fixed inset-0 z-[300] hidden items-center justify-center p-6 max-sm:flex",
         "transition-opacity duration-200 ease-out",
         visible ? "opacity-100" : "opacity-0"
       )}

@@ -19,7 +19,17 @@ import type {
   SubmissionCycleItem,
   SubmissionCycleWritePayload,
   SubmissionWindowStatus,
+  CertificationItem,
+  CertificationWritePayload,
+  WebknotValueItem,
+  MonthlySubmissionItem,
+  MonthlySubmissionDraftPayload,
+  MonthlySubmissionType,
+  ManagerReviewSubmitPayload,
+  AdminReviewSubmitPayload,
+  ScoreBreakdown,
 } from "@/types/kpi";
+import type { MyLearningSummary, TeamTrainingCompletionRow, CertificateOut } from "@/types/learning";
 import type {
   PaginatedWikiPages,
   WikiPageCreatePayload,
@@ -27,6 +37,16 @@ import type {
   WikiPageUpdatePayload,
   WikiSpace,
 } from "@/types/wiki";
+import type {
+  AssetAssignPayload,
+  AssetAssignmentHistoryItem,
+  AssetCreatePayload,
+  AssetItem,
+  AssetReturnPayload,
+  AssetRosterEmployee,
+  AssetUpdatePayload,
+  PaginatedAssets,
+} from "@/types/asset";
 
 export type { OnboardListData, OnboardListItem, OnboardUserResponse } from "@/types/onboard";
 
@@ -312,6 +332,24 @@ export interface CsvImportResult {
   processed: number;
   skipped: number;
   errors?: string[];
+}
+
+/**
+ * A handful of `/masters/*` list endpoints (bands, departments, KPI
+ * definitions without a band+department filter) return a bare JSON array
+ * instead of the `{ message, data }` envelope every other endpoint uses —
+ * same inconsistency already worked around in utils/learning/trainers.ts and
+ * participants.ts. Normalize so callers can keep doing `res.data`.
+ */
+function toEnvelope<T>(res: ApiEnvelope<T> | T): ApiEnvelope<T> {
+  if (Array.isArray(res)) return { message: "", data: res as T };
+  // A bare object response (e.g. SubmissionWindowStatus's `response_model`
+  // isn't wrapped in GenericResponse either) has no top-level `data` key —
+  // a real envelope always does.
+  if (res && typeof res === "object" && !("data" in res)) {
+    return { message: "", data: res as T };
+  }
+  return res as ApiEnvelope<T>;
 }
 
 export const hrmsService = {
@@ -1314,6 +1352,73 @@ export const hrmsService = {
     return apiClient.delete<ApiEnvelope<unknown>>(endpoints.wiki.pageById(id));
   },
 
+  /** Asset Tracking (Office Admin / HR / Admin). */
+  listAssets(
+    params: { page?: number; size?: number; category?: string; status?: string; search?: string } = {}
+  ) {
+    const query: Record<string, string> = {};
+    if (params.page != null) query.page = String(params.page);
+    if (params.size != null) query.size = String(params.size);
+    if (params.category?.trim()) query.category = params.category.trim();
+    if (params.status?.trim()) query.status = params.status.trim();
+    if (params.search?.trim()) query.search = params.search.trim();
+    return apiClient.get<ApiEnvelope<PaginatedAssets>>(endpoints.assets.root, { query });
+  },
+
+  listAssetCategories() {
+    return apiClient.get<ApiEnvelope<string[]>>(endpoints.assets.categories);
+  },
+
+  searchAssetRoster(search?: string) {
+    const query: Record<string, string> = {};
+    if (search?.trim()) query.search = search.trim();
+    return apiClient.get<ApiEnvelope<AssetRosterEmployee[]>>(endpoints.assets.roster, { query });
+  },
+
+  getMyAssets() {
+    return apiClient.get<ApiEnvelope<AssetItem[]>>(endpoints.assets.mine);
+  },
+
+  getAsset(id: number) {
+    return apiClient.get<ApiEnvelope<AssetItem>>(endpoints.assets.byId(id));
+  },
+
+  getAssetHistory(id: number) {
+    return apiClient.get<ApiEnvelope<AssetAssignmentHistoryItem[]>>(endpoints.assets.history(id));
+  },
+
+  createAsset(payload: AssetCreatePayload) {
+    return apiClient.post<ApiEnvelope<AssetItem>>(endpoints.assets.root, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateAsset(id: number, payload: AssetUpdatePayload) {
+    return apiClient.put<ApiEnvelope<AssetItem>>(endpoints.assets.byId(id), {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deleteAsset(id: number) {
+    return apiClient.delete<ApiEnvelope<unknown>>(endpoints.assets.byId(id));
+  },
+
+  assignAsset(id: number, payload: AssetAssignPayload) {
+    return apiClient.post<ApiEnvelope<AssetItem>>(endpoints.assets.assign(id), {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  returnAsset(id: number, payload: AssetReturnPayload) {
+    return apiClient.post<ApiEnvelope<AssetItem>>(endpoints.assets.return(id), {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
   markAllNotificationsRead() {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.notifications.readAll);
   },
@@ -1333,11 +1438,15 @@ export const hrmsService = {
     const query: Record<string, string> = {};
     if (params.search?.trim()) query.search = params.search.trim();
     if (params.userType?.trim()) query.user_type = params.userType.trim();
-    return apiClient.get<ApiEnvelope<BandListItem[]>>(endpoints.masters.bands, { query });
+    return apiClient
+      .get<ApiEnvelope<BandListItem[]> | BandListItem[]>(endpoints.masters.bands, { query })
+      .then(toEnvelope);
   },
 
   getDepartments() {
-    return apiClient.get<ApiEnvelope<DepartmentListItem[]>>(endpoints.masters.departments);
+    return apiClient
+      .get<ApiEnvelope<DepartmentListItem[]> | DepartmentListItem[]>(endpoints.masters.departments)
+      .then(toEnvelope);
   },
 
   /** GET /masters/onboard-options — `{ message, data: { categories, ... } }`. */
@@ -1383,9 +1492,11 @@ export const hrmsService = {
     if (params.bandId != null) query.band_id = String(params.bandId);
     if (params.department?.trim()) query.department = params.department.trim();
     if (params.activeOnly) query.active_only = "true";
-    return apiClient.get<ApiEnvelope<KpiDefinitionItem[]>>(endpoints.masters.kpiDefinitions, {
-      query,
-    });
+    return apiClient
+      .get<ApiEnvelope<KpiDefinitionItem[]> | KpiDefinitionItem[]>(endpoints.masters.kpiDefinitions, {
+        query,
+      })
+      .then(toEnvelope);
   },
 
   createKpiDefinition(payload: KpiDefinitionWritePayload) {
@@ -1410,17 +1521,21 @@ export const hrmsService = {
 
   /** The KPI submission "portal" — HR opens/closes it per cycle key + scope. */
   getSubmissionCycles() {
-    return apiClient.get<ApiEnvelope<SubmissionCycleItem[]>>(endpoints.masters.submissionCycles);
+    return apiClient
+      .get<ApiEnvelope<SubmissionCycleItem[]> | SubmissionCycleItem[]>(endpoints.masters.submissionCycles)
+      .then(toEnvelope);
   },
 
   getSubmissionWindowStatus(params: { scope?: string; cycleKey?: string } = {}) {
     const query: Record<string, string> = {};
     if (params.scope?.trim()) query.scope = params.scope.trim();
     if (params.cycleKey?.trim()) query.cycle_key = params.cycleKey.trim();
-    return apiClient.get<ApiEnvelope<SubmissionWindowStatus>>(
-      endpoints.masters.submissionCycleStatus,
-      { query }
-    );
+    return apiClient
+      .get<ApiEnvelope<SubmissionWindowStatus> | SubmissionWindowStatus>(
+        endpoints.masters.submissionCycleStatus,
+        { query }
+      )
+      .then(toEnvelope);
   },
 
   createSubmissionCycle(payload: SubmissionCycleWritePayload) {
@@ -1439,6 +1554,94 @@ export const hrmsService = {
 
   deleteSubmissionCycle(cycleId: number) {
     return apiClient.delete<ApiEnvelope<unknown>>(endpoints.masters.submissionCycleById(cycleId));
+  },
+
+  // --- Certifications catalog (bare array/object responses — no envelope) ---
+
+  getCertifications(params: { activeOnly?: boolean } = {}) {
+    const query: Record<string, string> = {};
+    if (params.activeOnly) query.active_only = "true";
+    return apiClient.get<CertificationItem[]>(endpoints.masters.certifications, { query });
+  },
+
+  createCertification(payload: CertificationWritePayload) {
+    return apiClient.post<CertificationItem>(endpoints.masters.certifications, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateCertification(rowId: number, payload: Partial<CertificationWritePayload>) {
+    return apiClient.put<CertificationItem>(endpoints.masters.certificationById(rowId), {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deleteCertification(rowId: number) {
+    return apiClient.delete<unknown>(endpoints.masters.certificationById(rowId));
+  },
+
+  // --- Pulse: monthly self-review submissions (bare array/object responses) ---
+
+  getApplicableKpis() {
+    return apiClient.get<KpiDefinitionItem[]>(endpoints.monthlySubmissions.applicableKpis);
+  },
+
+  getActiveWebknotValues() {
+    return apiClient.get<WebknotValueItem[]>(endpoints.monthlySubmissions.webknotValues);
+  },
+
+  getMonthlySubmissionDraft(params: { month: string; submissionType?: MonthlySubmissionType }) {
+    return apiClient.get<MonthlySubmissionItem>(endpoints.monthlySubmissions.draft, {
+      query: {
+        month: params.month,
+        submission_type: params.submissionType ?? "EMPLOYEE_MONTHLY_SUBMISSION",
+      },
+    });
+  },
+
+  saveMonthlySubmissionDraft(payload: MonthlySubmissionDraftPayload) {
+    return apiClient.put<MonthlySubmissionItem>(endpoints.monthlySubmissions.draft, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  submitMonthlySubmission(payload: MonthlySubmissionDraftPayload) {
+    return apiClient.post<MonthlySubmissionItem>(endpoints.monthlySubmissions.self, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  getManagerTeamSubmissions() {
+    return apiClient.get<MonthlySubmissionItem[]>(endpoints.monthlySubmissions.managerTeam);
+  },
+
+  submitManagerReview(submissionId: number, payload: ManagerReviewSubmitPayload) {
+    return apiClient.put<MonthlySubmissionItem>(
+      endpoints.monthlySubmissions.managerReview(submissionId),
+      { contentType: "application/json", body: JSON.stringify(payload) }
+    );
+  },
+
+  listAllMonthlySubmissions(params: { reviewStatus?: string; month?: string } = {}) {
+    const query: Record<string, string> = {};
+    if (params.reviewStatus?.trim()) query.review_status = params.reviewStatus.trim();
+    if (params.month?.trim()) query.month = params.month.trim();
+    return apiClient.get<MonthlySubmissionItem[]>(endpoints.monthlySubmissions.list, { query });
+  },
+
+  getMonthlySubmissionScoreBreakdown(submissionId: number) {
+    return apiClient.get<ScoreBreakdown>(endpoints.monthlySubmissions.scoreBreakdown(submissionId));
+  },
+
+  submitAdminReview(submissionId: number, payload: AdminReviewSubmitPayload) {
+    return apiClient.put<MonthlySubmissionItem>(
+      endpoints.monthlySubmissions.adminReview(submissionId),
+      { contentType: "application/json", body: JSON.stringify(payload) }
+    );
   },
 
   listClients(
@@ -1942,7 +2145,7 @@ export const hrmsService = {
 
   // Learning & Development
   createTraining(payload: Record<string, unknown>) {
-    const body = applyApiDateFields(payload, ["start_date", "end_date"]);
+    const body = applyApiDateFields(payload, ["start_date", "end_date", "completion_deadline"]);
     return apiClient.post<ApiEnvelope<unknown>>(endpoints.learning.trainings, {
       contentType: "application/json",
       body: JSON.stringify(body),
@@ -1950,7 +2153,7 @@ export const hrmsService = {
   },
 
   updateTraining(trainingId: string, payload: Record<string, unknown>) {
-    const body = applyApiDateFields(payload, ["start_date", "end_date"]);
+    const body = applyApiDateFields(payload, ["start_date", "end_date", "completion_deadline"]);
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.learning.trainingById(trainingId), {
       contentType: "application/json",
       body: JSON.stringify(body),
@@ -2085,6 +2288,25 @@ export const hrmsService = {
   /** Enrolled employee — published marks only (403 until published). */
   getMyTrainingMarks(trainingId: string) {
     return apiClient.get<ApiEnvelope<unknown>>(endpoints.learning.myMarks(trainingId));
+  },
+
+  updateMyTrainingProgress(trainingId: string, progressPercent: number) {
+    return apiClient.put<ApiEnvelope<unknown>>(endpoints.learning.myProgress(trainingId), {
+      contentType: "application/json",
+      body: JSON.stringify({ progress_percent: progressPercent }),
+    });
+  },
+
+  getMyLearningSummary() {
+    return apiClient.get<ApiEnvelope<MyLearningSummary>>(endpoints.learning.myLearningSummary);
+  },
+
+  getTeamTrainingCompletion() {
+    return apiClient.get<ApiEnvelope<TeamTrainingCompletionRow[]>>(endpoints.learning.teamCompletion);
+  },
+
+  getTrainingCertificate(trainingId: string) {
+    return apiClient.get<ApiEnvelope<CertificateOut>>(endpoints.learning.certificate(trainingId));
   },
 
   submitTrainingScores(trainingId: string, payload: {

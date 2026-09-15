@@ -71,6 +71,8 @@ export async function GET(request: NextRequest) {
       "unauthorized_email_domain",
       "invalid_redirect_uri",
       "google_token_exchange_failed",
+      "google_code_expired_or_used",
+      "google_client_misconfigured",
       "invalid_oauth_state",
       "backend_unavailable",
     ]);

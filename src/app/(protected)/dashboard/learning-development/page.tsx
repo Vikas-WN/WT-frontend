@@ -8,10 +8,11 @@ import { PageHero } from "@/components/dashboard/ui/PageHero";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { EmployeeLearningCatalog } from "@/components/learning-development/EmployeeLearningCatalog";
+import { TeamTrainingCompletionPanel } from "@/components/learning-development/TeamTrainingCompletionPanel";
 import { TrainingCard } from "@/components/learning-development/TrainingCard";
 import { useHrTrainingsList } from "@/hooks/learning/useLearningTrainings";
 
-function EmployeeLearningDashboard() {
+function EmployeeLearningDashboard({ showTeamCompletion = false }: { showTeamCompletion?: boolean }) {
   return (
     <div className="space-y-8">
       <PageHero
@@ -20,6 +21,7 @@ function EmployeeLearningDashboard() {
         description="Browse optional open trainings available to everyone. Enroll to access materials and marks."
       />
       <EmployeeLearningCatalog />
+      {showTeamCompletion ? <TeamTrainingCompletionPanel /> : null}
     </div>
   );
 }
@@ -100,6 +102,11 @@ export default function LearningDevelopmentDashboardPage() {
   const { user } = useAuth();
   const roles = user?.roles ?? [];
   const hasHrAccess = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
+  const isManager = roles.includes("ROLE_MANAGER") || roles.includes("ROLE_DM");
 
-  return hasHrAccess ? <HrLearningDashboard /> : <EmployeeLearningDashboard />;
+  return hasHrAccess ? (
+    <HrLearningDashboard />
+  ) : (
+    <EmployeeLearningDashboard showTeamCompletion={isManager} />
+  );
 }

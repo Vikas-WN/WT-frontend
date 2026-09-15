@@ -219,11 +219,20 @@ export const dashboardNavigation: NavItem[] = [
     ],
   },
   { kind: "link", id: "resumes", label: "Resumes", roles: ["ROLE_AM"], icon: "fileText" },
-  // Background Verification and Learning & Development were removed from the
-  // sidebar at the user's request. The routes/pages/components themselves are
-  // untouched (background-verification/page.tsx already shows a Coming Soon
-  // panel; learning-development/** is unchanged) — only the nav entries that
-  // pointed to them here were removed, so both remain reachable by direct URL.
+  // Background Verification stays removed from the sidebar per the user's
+  // earlier request (still reachable by direct URL — background-verification
+  // /page.tsx shows a Coming Soon panel). Learning & Development was restored
+  // 2026-09-11: it already has a full backend + frontend (trainings, sessions,
+  // trainers, materials, attendance, assessments/scores, analytics,
+  // self-enrollment) — it just needed to be linked again.
+  {
+    kind: "expandable",
+    id: "learning",
+    label: "Learning & Development",
+    roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_HR", "ROLE_ADMIN"],
+    icon: "graduationCap",
+    children: [],
+  },
   {
     kind: "expandable",
     id: "reports",
@@ -242,6 +251,13 @@ export const dashboardNavigation: NavItem[] = [
     ],
   },
   { kind: "link", id: "uploads", label: "Uploads", roles: ["ROLE_HR", "ROLE_ADMIN"], icon: "upload" },
+  {
+    kind: "link",
+    id: "assets",
+    label: "Asset Tracking",
+    roles: ["ROLE_OFFICE_ADMIN", "ROLE_HR", "ROLE_ADMIN"],
+    icon: "layoutGrid",
+  },
   { kind: "link", id: "apps", label: "Apps", roles: ["ROLE_ADMIN"], icon: "code" },
   {
     kind: "link",

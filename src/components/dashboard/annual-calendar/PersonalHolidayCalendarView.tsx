@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpFromLine } from "lucide-react";
+import { ArrowUpFromLine, CalendarHeart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
@@ -18,12 +18,7 @@ import {
   WT_STICKY_TABLE_HEAD_CLASS,
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
-import {
-  CARD_CONTENT_CLASS,
-  INFO_BANNER_BODY_CLASS,
-  INFO_BANNER_CLASS,
-  INFO_BANNER_TITLE_CLASS,
-} from "@/components/dashboard/ui/uiLayout";
+import { CARD_CONTENT_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { ApiError } from "@/api/error";
 import {
   isValidHolidayCalendarYear,
@@ -34,7 +29,6 @@ import { holidayCalendarStorageService } from "@/services/holidayCalendarStorage
 import {
   filterHolidayRowsByYear,
   HOLIDAY_CALENDAR_COLUMNS,
-  holidayRowsTomorrow,
   parseHolidayCalendarDate,
   type HolidayCalendarRow,
 } from "@/utils/holidayCalendarTable";
@@ -46,17 +40,6 @@ function yearSelectOptions(anchorYear: number): string[] {
   return Array.from({ length: YEAR_LOOKBACK + 1 }, (_, index) => String(anchorYear - index));
 }
 
-function formatTomorrowReminder(holidays: HolidayCalendarRow[]): string {
-  if (holidays.length === 1) {
-    const holiday = holidays[0];
-    const day = holiday.day.trim() || "Tomorrow";
-    return `${holiday.holiday.trim()} falls on ${day} (${holiday.date.trim()}).`;
-  }
-
-  const names = holidays.map((holiday) => holiday.holiday.trim()).filter(Boolean);
-  return `${names.join(", ")} fall tomorrow.`;
-}
-
 function sortHolidayRowsByDate(rows: HolidayCalendarRow[], year: number): HolidayCalendarRow[] {
   return [...rows].sort((left, right) => {
     const leftDate = parseHolidayCalendarDate(left.date, year);
@@ -66,6 +49,51 @@ function sortHolidayRowsByDate(rows: HolidayCalendarRow[], year: number): Holida
     if (!rightDate) return -1;
     return leftDate.getTime() - rightDate.getTime();
   });
+}
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function isOptionalHoliday(row: HolidayCalendarRow): boolean {
+  const value = row.optional?.trim();
+  return Boolean(value && value !== "—");
+}
+
+/** Rows (already date-sorted) grouped into month sections for a calendar-like read. */
+function groupRowsByMonth(
+  rows: HolidayCalendarRow[],
+  year: number
+): { month: string; rows: HolidayCalendarRow[] }[] {
+  const buckets = new Map<number, HolidayCalendarRow[]>();
+  for (const row of rows) {
+    const parsed = parseHolidayCalendarDate(row.date, year);
+    const monthIndex = parsed ? parsed.getMonth() : 12; // undated rows sink to the end
+    const list = buckets.get(monthIndex) ?? [];
+    list.push(row);
+    buckets.set(monthIndex, list);
+  }
+  return [...buckets.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([monthIndex, monthRows]) => ({
+      month: MONTH_NAMES[monthIndex] ?? "Other",
+      rows: monthRows,
+    }));
+}
+
+function daysUntil(row: HolidayCalendarRow, year: number, today: Date): number | null {
+  const parsed = parseHolidayCalendarDate(row.date, year);
+  if (!parsed) return null;
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const target = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  return Math.round((target.getTime() - start.getTime()) / 86_400_000);
+}
+
+function relativeDayLabel(days: number): string {
+  if (days === 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  return `In ${days} days`;
 }
 
 export function PersonalHolidayCalendarView() {
@@ -156,10 +184,24 @@ export function PersonalHolidayCalendarView() {
     }
   }
 
-  const tomorrowHolidays = useMemo(() => {
-    if (yearNumber !== currentYear) return [];
-    return holidayRowsTomorrow(rowsInYear, yearNumber);
-  }, [rowsInYear, yearNumber, currentYear]);
+  // The nearest holiday from today — only meaningful while looking at the
+  // current year (a past/future year has no "next").
+  const nextHoliday = useMemo(() => {
+    if (yearNumber !== currentYear) return null;
+    const today = new Date();
+    let best: { row: HolidayCalendarRow; days: number } | null = null;
+    for (const row of displayRows) {
+      const days = daysUntil(row, yearNumber, today);
+      if (days == null || days < 0) continue;
+      if (!best || days < best.days) best = { row, days };
+    }
+    return best;
+  }, [displayRows, yearNumber, currentYear]);
+
+  const monthGroups = useMemo(
+    () => groupRowsByMonth(displayRows, yearNumber),
+    [displayRows, yearNumber]
+  );
 
   const yearOptions = useMemo(() => yearSelectOptions(currentYear), [currentYear]);
   const yearSelectItems = useMemo(
@@ -210,11 +252,30 @@ export function PersonalHolidayCalendarView() {
           }
         />
 
-        {tomorrowHolidays.length > 0 ? (
-          <div className={`${INFO_BANNER_CLASS} mt-6`}>
-            <p className={INFO_BANNER_TITLE_CLASS}>Holiday Tomorrow</p>
-            <p className={INFO_BANNER_BODY_CLASS}>{formatTomorrowReminder(tomorrowHolidays)}</p>
-          </div>
+        {nextHoliday ? (
+          <button
+            type="button"
+            onClick={() => {
+              document
+                .getElementById(`holiday-row-${nextHoliday.row.date}-${nextHoliday.row.holiday}`)
+                ?.scrollIntoView({ block: "center", behavior: "smooth" });
+            }}
+            className="mt-6 flex w-full items-center gap-3 rounded-2xl border border-wt-border bg-gradient-to-br from-wt-surface-1 to-wt-surface-2/40 px-4 py-3.5 text-left transition-colors hover:border-[var(--wt-brand)]/40"
+          >
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]">
+              <CalendarHeart className="size-5" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-wt-text">
+                {nextHoliday.row.holiday.trim() || "Holiday"}
+              </span>
+              <span className="block text-xs text-wt-text-muted">
+                {relativeDayLabel(nextHoliday.days)} · {nextHoliday.row.day.trim()},{" "}
+                {nextHoliday.row.date.trim()}
+                {isOptionalHoliday(nextHoliday.row) ? " · Optional" : ""}
+              </span>
+            </span>
+          </button>
         ) : null}
 
         <div className="mt-6">
@@ -236,27 +297,61 @@ export function PersonalHolidayCalendarView() {
               description={`No holidays are listed for ${selectedYear}.`}
             />
           ) : (
-            <ScrollableTable maxHeightClass="max-h-[min(70vh,520px)]">
-              <WtTable>
-                <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead>Date</TableHead>
-                    <TableHead>Day</TableHead>
-                    <TableHead>Holiday</TableHead>
-                    <TableHead>Optional</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {displayRows.map((row) => (
-                    <TableRow key={`${row.date}|${row.holiday}`}>
-                      <TableCell className="px-3 py-2 whitespace-nowrap">{row.date}</TableCell>
-                      <TableCell className="px-3 py-2 whitespace-nowrap">{row.day}</TableCell>
-                      <TableCell className="px-3 py-2">{row.holiday}</TableCell>
-                      <TableCell className="px-3 py-2 whitespace-normal">{row.optional || "—"}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </WtTable>
+            <ScrollableTable maxHeightClass="max-h-[min(70vh,560px)]">
+              <div className="space-y-5">
+                {monthGroups.map(({ month, rows }) => (
+                  <div key={month}>
+                    <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-wt-text-faint">
+                      {month}
+                    </p>
+                    <WtTable>
+                      <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead>Date</TableHead>
+                          <TableHead>Day</TableHead>
+                          <TableHead>Holiday</TableHead>
+                          <TableHead>Type</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {rows.map((row) => {
+                          const weekend = /^(sat|sun)/i.test(row.day.trim());
+                          const optional = isOptionalHoliday(row);
+                          return (
+                            <TableRow
+                              key={`${row.date}|${row.holiday}`}
+                              id={`holiday-row-${row.date}-${row.holiday}`}
+                            >
+                              <TableCell className="px-3 py-2 whitespace-nowrap tabular-nums">
+                                {row.date}
+                              </TableCell>
+                              <TableCell
+                                className={`px-3 py-2 whitespace-nowrap ${weekend ? "text-wt-text-faint" : ""}`}
+                              >
+                                {row.day}
+                              </TableCell>
+                              <TableCell className="px-3 py-2 font-medium text-wt-text">
+                                {row.holiday}
+                              </TableCell>
+                              <TableCell className="px-3 py-2 whitespace-nowrap">
+                                {optional ? (
+                                  <span className="rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                                    Optional{row.optional.trim() !== "Optional" ? ` · ${row.optional.trim()}` : ""}
+                                  </span>
+                                ) : (
+                                  <span className="rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+                                    Mandatory
+                                  </span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </WtTable>
+                  </div>
+                ))}
+              </div>
             </ScrollableTable>
           )}
         </div>

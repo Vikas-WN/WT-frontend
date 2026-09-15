@@ -152,7 +152,7 @@ export function HolidayCalendarsPageClient() {
   const description = !yearIsValid
     ? "Select a year to view or upload the holiday calendar."
     : storageQuery.data
-      ? `Showing holidays for ${selectedYear}. Loaded file: ${storageLabel}`
+      ? `${filteredRows.length} holiday${filteredRows.length === 1 ? "" : "s"} for ${selectedYear}. Loaded file: ${storageLabel}`
       : `Upload a CSV or XLSX file to store holidays for ${selectedYear}.`;
 
   return (
@@ -237,11 +237,29 @@ export function HolidayCalendarsPageClient() {
               ) : filteredRows.length ? (
                 filteredRows.map((row, rowIndex) => (
                   <TableRow key={`holiday-row-${rowIndex}`}>
-                    {HOLIDAY_CALENDAR_COLUMNS.map((column) => (
-                      <TableCell key={column.key} className={cellClassName(column.key)}>
-                        {row[column.key]?.trim() ? row[column.key] : "—"}
-                      </TableCell>
-                    ))}
+                    {HOLIDAY_CALENDAR_COLUMNS.map((column) => {
+                      const value = row[column.key]?.trim();
+                      if (column.key === "optional") {
+                        return (
+                          <TableCell key={column.key} className={cellClassName(column.key)}>
+                            {value ? (
+                              <span className="rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                                {value}
+                              </span>
+                            ) : (
+                              <span className="rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+                                Mandatory
+                              </span>
+                            )}
+                          </TableCell>
+                        );
+                      }
+                      return (
+                        <TableCell key={column.key} className={cellClassName(column.key)}>
+                          {value || "—"}
+                        </TableCell>
+                      );
+                    })}
                   </TableRow>
                 ))
               ) : (
