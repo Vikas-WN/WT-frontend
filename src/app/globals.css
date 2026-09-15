@@ -1048,7 +1048,16 @@ select.input-field {
   animation: spin 0.7s linear infinite;
 }
 
-/* Fade-in */
+/* Fade-in
+ * `to` ends at `transform: none` (not `translateY(0)`, which renders
+ * identically but is still a non-`none` transform value) — with
+ * `animation-fill-mode: both`, elements using this keyframe (e.g.
+ * `.wt-page-enter` on every DashboardPageShell `<main>`) keep whatever
+ * the `to` transform is indefinitely, and any non-`none` transform makes
+ * that element a new containing block for `position: fixed` descendants —
+ * which silently confines every non-portaled `fixed inset-0` modal nested
+ * inside it (all of this app's modals) to that element's box instead of
+ * the viewport, clipping the dialog and pushing its footer out of view. */
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -1056,7 +1065,7 @@ select.input-field {
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
@@ -1200,12 +1209,18 @@ select.input-field {
   }
 }
 
+/* No fill-mode: a zero-delay animation already paints its `from` keyframe on
+ * first frame (no "backwards" gap to cover), and NOT holding the `to`
+ * keyframe after it finishes (via `both`/`forwards`) matters here — see the
+ * `fadeUp` keyframe comment above for why an indefinitely-held `transform`
+ * on `.wt-page-enter` (present on every DashboardPageShell `<main>`) breaks
+ * every non-portaled `fixed` modal nested inside it. */
 .fade-up {
-  animation: fadeUp var(--wt-duration-slow) var(--wt-ease) both;
+  animation: fadeUp var(--wt-duration-slow) var(--wt-ease);
 }
 
 .wt-page-enter {
-  animation: fadeUp var(--wt-duration-slow) var(--wt-ease) both;
+  animation: fadeUp var(--wt-duration-slow) var(--wt-ease);
 }
 
 .wt-status-badge-motion {
@@ -1217,6 +1232,9 @@ select.input-field {
     transform var(--wt-duration-fast) var(--wt-ease);
 }
 
+/* `to` ends at `transform: none` — see the `fadeUp` comment above for why
+ * a non-`none` end transform on an animation using `both` fill-mode breaks
+ * fixed-position modals nested anywhere inside a `.wt-soft-in` element. */
 @keyframes wt-soft-in {
   from {
     opacity: 0;
@@ -1224,12 +1242,12 @@ select.input-field {
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: none;
   }
 }
 
 .wt-soft-in {
-  animation: wt-soft-in var(--wt-duration-slow) var(--wt-ease-out) both;
+  animation: wt-soft-in var(--wt-duration-slow) var(--wt-ease-out);
 }
 
 /* Access Restricted page animations */

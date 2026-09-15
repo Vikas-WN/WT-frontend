@@ -22,6 +22,8 @@ import type {
   CertificationItem,
   CertificationWritePayload,
   WebknotValueItem,
+  WebknotValueWritePayload,
+  PaginatedWebknotValues,
   MonthlySubmissionItem,
   MonthlySubmissionDraftPayload,
   MonthlySubmissionType,
@@ -1556,6 +1558,34 @@ export const hrmsService = {
 
   deleteSubmissionCycle(cycleId: number) {
     return apiClient.delete<ApiEnvelope<unknown>>(endpoints.masters.submissionCycleById(cycleId));
+  },
+
+  // --- WebKnot values catalog (bare paginated/object responses — no envelope) ---
+
+  getWebknotValues(params: { limit?: number; offset?: number; activeOnly?: boolean } = {}) {
+    const query: Record<string, string> = {};
+    if (params.limit != null) query.limit = String(params.limit);
+    if (params.offset != null) query.offset = String(params.offset);
+    if (params.activeOnly) query.active_only = "true";
+    return apiClient.get<PaginatedWebknotValues>(endpoints.masters.webknotValues, { query });
+  },
+
+  createWebknotValue(payload: WebknotValueWritePayload) {
+    return apiClient.post<WebknotValueItem>(endpoints.masters.webknotValues, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateWebknotValue(rowId: number, payload: Partial<WebknotValueWritePayload>) {
+    return apiClient.put<WebknotValueItem>(endpoints.masters.webknotValueById(String(rowId)), {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deleteWebknotValue(rowId: number) {
+    return apiClient.delete<unknown>(endpoints.masters.webknotValueById(String(rowId)));
   },
 
   // --- Certifications catalog (bare array/object responses — no envelope) ---

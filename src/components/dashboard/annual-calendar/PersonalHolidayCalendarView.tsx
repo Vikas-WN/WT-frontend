@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { ArrowUpFromLine, CalendarHeart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
@@ -298,60 +298,63 @@ export function PersonalHolidayCalendarView() {
             />
           ) : (
             <ScrollableTable maxHeightClass="max-h-[min(70vh,560px)]">
-              <div className="space-y-5">
-                {monthGroups.map(({ month, rows }) => (
-                  <div key={month}>
-                    <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-wt-text-faint">
-                      {month}
-                    </p>
-                    <WtTable>
-                      <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                        <TableRow className="hover:bg-transparent">
-                          <TableHead>Date</TableHead>
-                          <TableHead>Day</TableHead>
-                          <TableHead>Holiday</TableHead>
-                          <TableHead>Type</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {rows.map((row) => {
-                          const weekend = /^(sat|sun)/i.test(row.day.trim());
-                          const optional = isOptionalHoliday(row);
-                          return (
-                            <TableRow
-                              key={`${row.date}|${row.holiday}`}
-                              id={`holiday-row-${row.date}-${row.holiday}`}
+              <WtTable>
+                <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>Date</TableHead>
+                    <TableHead>Day</TableHead>
+                    <TableHead>Holiday</TableHead>
+                    <TableHead>Type</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {monthGroups.map(({ month, rows }) => (
+                    <Fragment key={month}>
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell
+                          colSpan={4}
+                          className="bg-wt-surface-2/60 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-wt-text-faint"
+                        >
+                          {month}
+                        </TableCell>
+                      </TableRow>
+                      {rows.map((row) => {
+                        const weekend = /^(sat|sun)/i.test(row.day.trim());
+                        const optional = isOptionalHoliday(row);
+                        return (
+                          <TableRow
+                            key={`${row.date}|${row.holiday}`}
+                            id={`holiday-row-${row.date}-${row.holiday}`}
+                          >
+                            <TableCell className="px-3 py-2 whitespace-nowrap tabular-nums">
+                              {row.date}
+                            </TableCell>
+                            <TableCell
+                              className={`px-3 py-2 whitespace-nowrap ${weekend ? "text-wt-text-faint" : ""}`}
                             >
-                              <TableCell className="px-3 py-2 whitespace-nowrap tabular-nums">
-                                {row.date}
-                              </TableCell>
-                              <TableCell
-                                className={`px-3 py-2 whitespace-nowrap ${weekend ? "text-wt-text-faint" : ""}`}
-                              >
-                                {row.day}
-                              </TableCell>
-                              <TableCell className="px-3 py-2 font-medium text-wt-text">
-                                {row.holiday}
-                              </TableCell>
-                              <TableCell className="px-3 py-2 whitespace-nowrap">
-                                {optional ? (
-                                  <span className="rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
-                                    Optional{row.optional.trim() !== "Optional" ? ` · ${row.optional.trim()}` : ""}
-                                  </span>
-                                ) : (
-                                  <span className="rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
-                                    Mandatory
-                                  </span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </WtTable>
-                  </div>
-                ))}
-              </div>
+                              {row.day}
+                            </TableCell>
+                            <TableCell className="px-3 py-2 font-medium text-wt-text">
+                              {row.holiday}
+                            </TableCell>
+                            <TableCell className="px-3 py-2 whitespace-nowrap">
+                              {optional ? (
+                                <span className="rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                                  Optional{row.optional.trim() !== "Optional" ? ` · ${row.optional.trim()}` : ""}
+                                </span>
+                              ) : (
+                                <span className="rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+                                  Mandatory
+                                </span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </Fragment>
+                  ))}
+                </TableBody>
+              </WtTable>
             </ScrollableTable>
           )}
         </div>

@@ -1,16 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { TrendingUp } from "lucide-react";
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { ComingSoonPanel } from "@/components/dashboard/ComingSoonPanel";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { KpiDefinitionsPanel } from "@/components/dashboard/pulse/KpiDefinitionsPanel";
+import { WebknotValuesPanel } from "@/components/dashboard/pulse/WebknotValuesPanel";
+import { CertificationsPanel } from "@/components/dashboard/pulse/CertificationsPanel";
+import { KpiReportsPanel } from "@/components/dashboard/pulse/KpiReportsPanel";
 import { SubmissionPortalPanel } from "@/components/dashboard/pulse/SubmissionPortalPanel";
 import { SubmissionsReviewPanel } from "@/components/dashboard/pulse/SubmissionsReviewPanel";
-import { EmployeeMonthlyReviewPanel } from "@/components/dashboard/pulse/employee/EmployeeMonthlyReviewPanel";
-import { MyKpiSummaryPanel } from "@/components/dashboard/pulse/employee/MyKpiSummaryPanel";
-import { ManagerTeamReviewPanel } from "@/components/dashboard/pulse/manager/ManagerTeamReviewPanel";
 import { useAuth } from "@/context/AuthContext";
 import { normalizeRoles } from "@/utils/roles";
 
@@ -28,77 +30,35 @@ export function PulsePageClient() {
   return <PulseEmployeePageClient />;
 }
 
+/** Employee and manager Pulse are shown as "coming soon" for now — the real
+ *  implementation (EmployeeMonthlyReviewPanel, ManagerTeamReviewPanel,
+ *  MyKpiSummaryPanel) is untouched and importable for a one-line restore,
+ *  same pattern as referral/page.tsx and background-verification/page.tsx.
+ *  Admin's Pulse (KPI Definitions / Submissions / Submission Portal) stays live. */
 function PulseEmployeePageClient() {
-  const [tab, setTab] = useState<"review" | "summary">("review");
-
   return (
-    <DashboardPageShell className="wt-detail-page">
-      <ContentCard>
-        <div className="border-b border-wt-border px-5 py-4 sm:px-8">
-          <h2 className="text-lg font-semibold text-wt-text">Pulse</h2>
-          <p className="mt-1 text-sm text-wt-text-muted">Your monthly KPI self-review.</p>
-        </div>
-
-        <PageTabs
-          embedded
-          aria-label="Pulse employee tabs"
-          value={tab}
-          onValueChange={(value) => setTab(value as "review" | "summary")}
-          items={[
-            { value: "review", label: "My Review" },
-            { value: "summary", label: "My KPI Summary" },
-          ]}
-        />
-
-        <div className={PAGE_TAB_BODY_CLASS}>
-          {tab === "review" ? <EmployeeMonthlyReviewPanel /> : <MyKpiSummaryPanel />}
-        </div>
-      </ContentCard>
-    </DashboardPageShell>
+    <ComingSoonPanel
+      title="Pulse"
+      description="Your monthly KPI self-review is on its way. Everything behind the scenes stays wired — you'll get access as soon as it launches."
+      icon={<TrendingUp className="size-6" />}
+    />
   );
 }
 
 function PulseManagerPageClient() {
-  const [tab, setTab] = useState<"my-review" | "team" | "summary">("team");
-
   return (
-    <DashboardPageShell className="wt-detail-page">
-      <ContentCard>
-        <div className="border-b border-wt-border px-5 py-4 sm:px-8">
-          <h2 className="text-lg font-semibold text-wt-text">Pulse</h2>
-          <p className="mt-1 text-sm text-wt-text-muted">
-            Your monthly self-review, and your team&apos;s submissions awaiting review.
-          </p>
-        </div>
-
-        <PageTabs
-          embedded
-          aria-label="Pulse manager tabs"
-          value={tab}
-          onValueChange={(value) => setTab(value as "my-review" | "team" | "summary")}
-          items={[
-            { value: "team", label: "Team Reviews" },
-            { value: "my-review", label: "My Review" },
-            { value: "summary", label: "My KPI Summary" },
-          ]}
-        />
-
-        <div className={PAGE_TAB_BODY_CLASS}>
-          {tab === "team" ? (
-            <ManagerTeamReviewPanel />
-          ) : tab === "my-review" ? (
-            <EmployeeMonthlyReviewPanel />
-          ) : (
-            <MyKpiSummaryPanel />
-          )}
-        </div>
-      </ContentCard>
-    </DashboardPageShell>
+    <ComingSoonPanel
+      title="Pulse"
+      description="Your team's monthly KPI reviews are on their way. Everything behind the scenes stays wired — you'll get access as soon as it launches."
+      icon={<TrendingUp className="size-6" />}
+    />
   );
 }
 
+type AdminTab = "submissions" | "kpis" | "values" | "certifications" | "reports" | "portal";
+
 function PulseAdminPageClient() {
-  const [tab, setTab] = useState<"kpis" | "portal" | "submissions">("submissions");
+  const [tab, setTab] = useState<AdminTab>("submissions");
 
   return (
     <DashboardPageShell className="wt-detail-page">
@@ -106,8 +66,8 @@ function PulseAdminPageClient() {
         <div className="border-b border-wt-border px-5 py-4 sm:px-8">
           <h2 className="text-lg font-semibold text-wt-text">Pulse</h2>
           <p className="mt-1 text-sm text-wt-text-muted">
-            Define KPIs per band and designation, open or close the submission window, and give final
-            approval on manager-reviewed submissions.
+            Define KPIs and WebKnot values per band and designation, open or close the submission
+            window, give final approval, and review KPI reports.
           </p>
         </div>
 
@@ -115,10 +75,13 @@ function PulseAdminPageClient() {
           embedded
           aria-label="Pulse admin tabs"
           value={tab}
-          onValueChange={(value) => setTab(value as "kpis" | "portal" | "submissions")}
+          onValueChange={(value) => setTab(value as AdminTab)}
           items={[
             { value: "submissions", label: "Submissions" },
             { value: "kpis", label: "KPI Definitions" },
+            { value: "values", label: "WebKnot Values" },
+            { value: "certifications", label: "Certifications" },
+            { value: "reports", label: "KPI Reports" },
             { value: "portal", label: "Submission Portal" },
           ]}
         />
@@ -128,6 +91,12 @@ function PulseAdminPageClient() {
             <SubmissionsReviewPanel />
           ) : tab === "kpis" ? (
             <KpiDefinitionsPanel />
+          ) : tab === "values" ? (
+            <WebknotValuesPanel />
+          ) : tab === "certifications" ? (
+            <CertificationsPanel />
+          ) : tab === "reports" ? (
+            <KpiReportsPanel />
           ) : (
             <SubmissionPortalPanel />
           )}

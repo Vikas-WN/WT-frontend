@@ -47,7 +47,8 @@ function StatTile({ label, value, sub }: { label: string; value: string; sub?: s
   );
 }
 
-function SummarySection({ summary }: { summary: AllTimeKpiSummary }) {
+/** Exported for reuse by KpiReportsPanel.tsx (admin browsing any employee's summary). */
+export function SummarySection({ summary }: { summary: AllTimeKpiSummary }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -117,7 +118,8 @@ function SummarySection({ summary }: { summary: AllTimeKpiSummary }) {
   );
 }
 
-function HistorySection({ rows }: { rows: MonthlySubmissionItem[] }) {
+/** Exported for reuse by KpiReportsPanel.tsx (admin browsing any employee's history). */
+export function HistorySection({ rows }: { rows: MonthlySubmissionItem[] }) {
   if (rows.length === 0) {
     return <EmptyState title="No submission history" description="Your past monthly reviews will show up here." />;
   }

@@ -67,6 +67,14 @@ export interface WebknotValueWritePayload {
   active: boolean;
 }
 
+export interface PaginatedWebknotValues {
+  data: WebknotValueItem[];
+  current_page: number;
+  page_size: number;
+  total_element: number;
+  total_page: number;
+}
+
 export interface CertificationItem {
   id: number;
   name: string;
