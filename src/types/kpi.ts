@@ -164,6 +164,10 @@ export interface MonthlySubmissionItem {
   manager_review: ReviewDecision | null;
   admin_review: AdminReviewDecision | null;
   final_score: number | null;
+  employee_rating_display: string | null;
+  manager_rating_display: string | null;
+  admin_rating_display: string | null;
+  promotion_eligible: boolean;
   locked: boolean;
   reopened_for_resubmission: boolean;
   submitted_at: string | null;
@@ -186,12 +190,63 @@ export interface AdminReviewSubmitPayload {
   tech_showcase?: string | null;
 }
 
+/** RTP performance score: KPI 90% + WebKnot values 10%, plus certification/
+ * reward brownie points on top of the weighted KPI component. Matches the
+ * legacy Java backend's SubmissionScoreCalculator exactly (see
+ * webtrak1.0/app/domain/kpi_score.py). */
 export interface ScoreBreakdown {
-  kpi_score: number;
-  values_score: number;
-  certifications_score: number;
-  final_score: number;
+  normalized_kpi_score: number;
+  normalized_values_score: number;
+  weighted_kpi_component: number;
+  weighted_values_component: number;
+  certification_points: number;
+  recognition_points: number;
+  brownie_points: number;
+  total_score: number;
+  promotion_eligible: boolean;
   kpi_weight: number;
   values_weight: number;
-  certifications_weight: number;
+}
+
+export interface CycleKpiSummary {
+  cycle_key: string;
+  cycle_label: string;
+  submissions: number;
+  kpi_average: number | null;
+  manager_kpi_average: number | null;
+  employee_rating_average: number | null;
+  employee_rating_display: string | null;
+  manager_rating_average: number | null;
+  manager_rating_display: string | null;
+  admin_rating_average: number | null;
+  admin_rating_display: string | null;
+}
+
+export interface AllTimeKpiSummary {
+  user_id: number;
+  emp_id: string | null;
+  employee_name: string;
+  employee_email: string;
+  date_of_joining: string | null;
+  total_submissions: number;
+  reviewed_submissions: number;
+  all_time_kpi_average: number | null;
+  all_time_manager_kpi_average: number | null;
+  employee_rating_average: number | null;
+  employee_rating_display: string | null;
+  manager_rating_average: number | null;
+  manager_rating_display: string | null;
+  admin_rating_average: number | null;
+  admin_rating_display: string | null;
+  cycles: CycleKpiSummary[];
+}
+
+export interface AdminMonthlyOverview {
+  month: string;
+  cycle_key: string;
+  six_month_review_month: boolean;
+  total_submissions: number;
+  manager_reviewed: number;
+  approved: number;
+  pending_manager_review: number;
 }

@@ -1,13 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, ChevronRight, XCircle } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { CheckCircle2, ChevronRight, Trash2, Upload, XCircle } from "lucide-react";
 
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
+import { MetricCard } from "@/components/dashboard/ui/MetricCard";
 import { ToolbarFilterSelect } from "@/components/dashboard/ui/ToolbarFilterSelect";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   MODAL_BODY_CLASS,
   MODAL_FOOTER_CLASS,
@@ -19,7 +21,12 @@ import { hrmsService } from "@/services/hrms.service";
 import { notifyError, notifySuccess } from "@/lib/notify";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { ApiError } from "@/api/error";
-import type { MonthlySubmissionItem, MonthlySubmissionReviewStatus, ScoreBreakdown } from "@/types/kpi";
+import type {
+  AdminMonthlyOverview,
+  MonthlySubmissionItem,
+  MonthlySubmissionReviewStatus,
+  ScoreBreakdown,
+} from "@/types/kpi";
 
 type Load<T> = { status: "loading" | "done" | "error"; data: T | null };
 
@@ -60,16 +67,78 @@ function statusLabel(status: MonthlySubmissionReviewStatus | null): string {
 export function SubmissionsReviewPanel() {
   const [statusFilter, setStatusFilter] = useState("MANAGER_SUBMITTED");
   const [reloadTick, setReloadTick] = useState(0);
+  const refresh = useCallback(() => setReloadTick((t) => t + 1), []);
   const submissions = useLoad<MonthlySubmissionItem[]>(
     () => hrmsService.listAllMonthlySubmissions({ reviewStatus: statusFilter || undefined }),
     [statusFilter, reloadTick]
   );
+  const overview = useLoad<AdminMonthlyOverview>(() => hrmsService.getAdminMonthlyOverview(), [reloadTick]);
   const [reviewing, setReviewing] = useState<MonthlySubmissionItem | null>(null);
+
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const handleImport = async (file: File) => {
+    setImporting(true);
+    try {
+      const res = await hrmsService.importMonthlySubmissionsRatingsCsv(file);
+      notifySuccess(res.message ?? "Ratings history imported.");
+      refresh();
+    } catch (error) {
+      notifyError(
+        toUserFriendlyApiErrorMessage(
+          error,
+          error instanceof ApiError ? error.message : "Couldn't import the CSV."
+        )
+      );
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const [deleteTarget, setDeleteTarget] = useState<MonthlySubmissionItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await hrmsService.deleteMonthlySubmission(deleteTarget.id);
+      notifySuccess("Submission deleted.");
+      setDeleteTarget(null);
+      refresh();
+    } catch (error) {
+      notifyError(
+        toUserFriendlyApiErrorMessage(
+          error,
+          error instanceof ApiError ? error.message : "Couldn't delete the submission."
+        )
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const rows = submissions.data ?? [];
 
   return (
     <div className="space-y-5">
+      {overview.data ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <MetricCard label="This cycle" value={overview.data.total_submissions} loading={false} />
+          <MetricCard label="Manager reviewed" value={overview.data.manager_reviewed} loading={false} />
+          <MetricCard label="Approved" value={overview.data.approved} loading={false} />
+          <MetricCard
+            label="Pending manager review"
+            value={overview.data.pending_manager_review}
+            loading={false}
+          />
+        </div>
+      ) : null}
+      {overview.data?.six_month_review_month ? (
+        <p className="text-xs text-wt-text-muted">
+          {overview.data.cycle_key} is a six-month review month.
+        </p>
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-wt-text">Submissions</h3>
@@ -77,13 +146,35 @@ export function SubmissionsReviewPanel() {
             Manager-reviewed submissions, weighted score, final approval.
           </p>
         </div>
-        <ToolbarFilterSelect
-          value={statusFilter}
-          onChange={setStatusFilter}
-          options={STATUS_OPTIONS}
-          placeholder="All statuses"
-          aria-label="Filter by status"
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (!file) return;
+              void handleImport(file);
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => importInputRef.current?.click()}
+            disabled={importing}
+          >
+            <Upload className="mr-1.5 size-4" /> {importing ? "Importing…" : "Import Ratings CSV"}
+          </Button>
+          <ToolbarFilterSelect
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={STATUS_OPTIONS}
+            placeholder="All statuses"
+            aria-label="Filter by status"
+          />
+        </div>
       </div>
 
       {submissions.status === "loading" ? (
@@ -93,22 +184,35 @@ export function SubmissionsReviewPanel() {
       ) : (
         <div className="space-y-2">
           {rows.map((row) => (
-            <button
+            <div
               key={row.id}
-              type="button"
-              onClick={() => setReviewing(row)}
-              className="flex w-full items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-4 py-3 text-left transition-colors hover:border-wt-brand/40"
+              className="flex w-full items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-4 py-3 transition-colors hover:border-wt-brand/40"
             >
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-wt-text">{row.employee.name}</p>
-                <p className="text-xs text-wt-text-muted">{row.cycle_label}</p>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <Badge variant="outline">{statusLabel(row.review_status)}</Badge>
-                {row.final_score != null ? <Badge>{row.final_score}%</Badge> : null}
-                <ChevronRight className="size-4 text-wt-text-faint" />
-              </div>
-            </button>
+              <button
+                type="button"
+                onClick={() => setReviewing(row)}
+                className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-wt-text">{row.employee.name}</p>
+                  <p className="text-xs text-wt-text-muted">{row.cycle_label}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Badge variant="outline">{statusLabel(row.review_status)}</Badge>
+                  {row.final_score != null ? <Badge>{row.final_score}</Badge> : null}
+                  <ChevronRight className="size-4 text-wt-text-faint" />
+                </div>
+              </button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setDeleteTarget(row)}
+                aria-label={`Delete ${row.employee.name}'s submission`}
+              >
+                <Trash2 className="size-3.5 text-rose-600" />
+              </Button>
+            </div>
           ))}
         </div>
       )}
@@ -119,10 +223,25 @@ export function SubmissionsReviewPanel() {
           onClose={() => setReviewing(null)}
           onDone={() => {
             setReviewing(null);
-            setReloadTick((t) => t + 1);
+            refresh();
           }}
         />
       ) : null}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete this submission?"
+        description={
+          deleteTarget
+            ? `"${deleteTarget.employee.name}"'s ${deleteTarget.cycle_label} submission will be removed. This can't be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        tone="danger"
+        loading={deleting}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
@@ -197,27 +316,41 @@ function AdminReviewModal({
           <div className="space-y-5">
             {canScore ? (
               <div>
-                <h3 className="text-sm font-semibold text-wt-text">Weighted score</h3>
+                <h3 className="text-sm font-semibold text-wt-text">RTP score</h3>
                 {breakdown.status === "loading" ? (
                   <SectionLoading label="" />
                 ) : breakdown.data ? (
-                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    <ScoreTile label={`KPI (${breakdown.data.kpi_weight}%)`} value={breakdown.data.kpi_score} />
-                    <ScoreTile
-                      label={`Values (${breakdown.data.values_weight}%)`}
-                      value={breakdown.data.values_score}
-                    />
-                    <ScoreTile
-                      label={`Certs (${breakdown.data.certifications_weight}%)`}
-                      value={breakdown.data.certifications_score}
-                    />
-                    <ScoreTile label="Final" value={breakdown.data.final_score} emphasize />
-                  </div>
+                  <>
+                    <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      <ScoreTile
+                        label={`KPI (${Math.round(breakdown.data.kpi_weight * 100)}%)`}
+                        value={breakdown.data.weighted_kpi_component}
+                      />
+                      <ScoreTile
+                        label={`Values (${Math.round(breakdown.data.values_weight * 100)}%)`}
+                        value={breakdown.data.weighted_values_component}
+                      />
+                      <ScoreTile label="Brownie points" value={breakdown.data.brownie_points} />
+                      <ScoreTile label="Final" value={breakdown.data.total_score} emphasize />
+                    </div>
+                    <p className="mt-2 text-xs text-wt-text-muted">
+                      Normalized KPI {breakdown.data.normalized_kpi_score}/5 · Values{" "}
+                      {breakdown.data.normalized_values_score}/5 · Certification points{" "}
+                      {breakdown.data.certification_points} · Recognition points{" "}
+                      {breakdown.data.recognition_points}
+                      {breakdown.data.promotion_eligible ? " · Promotion eligible (≥ 4.0)" : ""}
+                    </p>
+                  </>
                 ) : null}
               </div>
             ) : submission.final_score != null ? (
               <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-wt-text">
-                Final score: <span className="font-semibold">{submission.final_score}%</span>
+                Final score: <span className="font-semibold">{submission.final_score}</span>
+                {submission.promotion_eligible ? (
+                  <span className="ml-2 text-xs text-emerald-600 dark:text-emerald-400">
+                    Promotion eligible
+                  </span>
+                ) : null}
               </div>
             ) : null}
 
@@ -327,7 +460,9 @@ function ScoreTile({ label, value, emphasize = false }: { label: string; value: 
       }`}
     >
       <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">{label}</p>
-      <p className={`mt-0.5 text-lg font-semibold ${emphasize ? "text-wt-brand" : "text-wt-text"}`}>{value}%</p>
+      <p className={`mt-0.5 text-lg font-semibold ${emphasize ? "text-wt-brand" : "text-wt-text"}`}>
+        {value.toFixed(2)}
+      </p>
     </div>
   );
 }

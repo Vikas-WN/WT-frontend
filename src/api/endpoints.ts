@@ -226,6 +226,7 @@ export const endpoints = {
     kpiDefinitions: `${api}/masters/kpi-definitions`,
     kpiDefinitionById: (kpiId: string) =>
       `${api}/masters/kpi-definitions/${encodeURIComponent(kpiId)}`,
+    kpiDefinitionsImportCsv: `${api}/masters/kpi-definitions/import-csv`,
     webknotValues: `${api}/masters/webknot-values`,
     webknotValueById: (rowId: string) =>
       `${api}/masters/webknot-values/${encodeURIComponent(rowId)}`,
@@ -250,14 +251,25 @@ export const endpoints = {
     webknotValues: `${api}/monthly-submissions/webknot-values`,
     draft: `${api}/monthly-submissions/draft`,
     self: `${api}/monthly-submissions/self`,
+    me: `${api}/monthly-submissions/me`,
+    meHistory: `${api}/monthly-submissions/me/history`,
+    meKpiSummary: `${api}/monthly-submissions/me/kpi-summary`,
+    user: (userId: string | number) =>
+      `${api}/monthly-submissions/user/${encodeURIComponent(String(userId))}`,
+    userKpiSummary: (userId: string | number) =>
+      `${api}/monthly-submissions/user/${encodeURIComponent(String(userId))}/kpi-summary`,
     managerTeam: `${api}/monthly-submissions/manager/team`,
     managerReview: (submissionId: string | number) =>
       `${api}/monthly-submissions/${encodeURIComponent(String(submissionId))}/manager-review`,
     list: `${api}/monthly-submissions`,
+    adminOverview: `${api}/monthly-submissions/admin-overview`,
     scoreBreakdown: (submissionId: string | number) =>
       `${api}/monthly-submissions/${encodeURIComponent(String(submissionId))}/score-breakdown`,
     adminReview: (submissionId: string | number) =>
       `${api}/monthly-submissions/${encodeURIComponent(String(submissionId))}/admin-review`,
+    byId: (submissionId: string | number) =>
+      `${api}/monthly-submissions/${encodeURIComponent(String(submissionId))}`,
+    importCsv: `${api}/monthly-submissions/import-csv`,
   },
 
   roleAdmin: {

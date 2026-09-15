@@ -173,6 +173,11 @@ export function EmployeeMonthlyReviewPanel() {
             {isApproved && draft.data.final_score != null ? (
               <p className="mt-1 text-sm text-wt-text-muted">
                 Final score: <span className="font-semibold text-wt-text">{draft.data.final_score}</span>
+                {draft.data.promotion_eligible ? (
+                  <span className="ml-2 text-xs text-emerald-600 dark:text-emerald-400">
+                    Promotion eligible
+                  </span>
+                ) : null}
               </p>
             ) : null}
           </div>

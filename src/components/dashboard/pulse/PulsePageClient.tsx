@@ -9,6 +9,7 @@ import { KpiDefinitionsPanel } from "@/components/dashboard/pulse/KpiDefinitions
 import { SubmissionPortalPanel } from "@/components/dashboard/pulse/SubmissionPortalPanel";
 import { SubmissionsReviewPanel } from "@/components/dashboard/pulse/SubmissionsReviewPanel";
 import { EmployeeMonthlyReviewPanel } from "@/components/dashboard/pulse/employee/EmployeeMonthlyReviewPanel";
+import { MyKpiSummaryPanel } from "@/components/dashboard/pulse/employee/MyKpiSummaryPanel";
 import { ManagerTeamReviewPanel } from "@/components/dashboard/pulse/manager/ManagerTeamReviewPanel";
 import { useAuth } from "@/context/AuthContext";
 import { normalizeRoles } from "@/utils/roles";
@@ -28,6 +29,8 @@ export function PulsePageClient() {
 }
 
 function PulseEmployeePageClient() {
+  const [tab, setTab] = useState<"review" | "summary">("review");
+
   return (
     <DashboardPageShell className="wt-detail-page">
       <ContentCard>
@@ -35,8 +38,20 @@ function PulseEmployeePageClient() {
           <h2 className="text-lg font-semibold text-wt-text">Pulse</h2>
           <p className="mt-1 text-sm text-wt-text-muted">Your monthly KPI self-review.</p>
         </div>
+
+        <PageTabs
+          embedded
+          aria-label="Pulse employee tabs"
+          value={tab}
+          onValueChange={(value) => setTab(value as "review" | "summary")}
+          items={[
+            { value: "review", label: "My Review" },
+            { value: "summary", label: "My KPI Summary" },
+          ]}
+        />
+
         <div className={PAGE_TAB_BODY_CLASS}>
-          <EmployeeMonthlyReviewPanel />
+          {tab === "review" ? <EmployeeMonthlyReviewPanel /> : <MyKpiSummaryPanel />}
         </div>
       </ContentCard>
     </DashboardPageShell>
@@ -44,7 +59,7 @@ function PulseEmployeePageClient() {
 }
 
 function PulseManagerPageClient() {
-  const [tab, setTab] = useState<"my-review" | "team">("team");
+  const [tab, setTab] = useState<"my-review" | "team" | "summary">("team");
 
   return (
     <DashboardPageShell className="wt-detail-page">
@@ -60,15 +75,22 @@ function PulseManagerPageClient() {
           embedded
           aria-label="Pulse manager tabs"
           value={tab}
-          onValueChange={(value) => setTab(value as "my-review" | "team")}
+          onValueChange={(value) => setTab(value as "my-review" | "team" | "summary")}
           items={[
             { value: "team", label: "Team Reviews" },
             { value: "my-review", label: "My Review" },
+            { value: "summary", label: "My KPI Summary" },
           ]}
         />
 
         <div className={PAGE_TAB_BODY_CLASS}>
-          {tab === "team" ? <ManagerTeamReviewPanel /> : <EmployeeMonthlyReviewPanel />}
+          {tab === "team" ? (
+            <ManagerTeamReviewPanel />
+          ) : tab === "my-review" ? (
+            <EmployeeMonthlyReviewPanel />
+          ) : (
+            <MyKpiSummaryPanel />
+          )}
         </div>
       </ContentCard>
     </DashboardPageShell>

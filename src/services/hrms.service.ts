@@ -28,6 +28,8 @@ import type {
   ManagerReviewSubmitPayload,
   AdminReviewSubmitPayload,
   ScoreBreakdown,
+  AllTimeKpiSummary,
+  AdminMonthlyOverview,
 } from "@/types/kpi";
 import type { MyLearningSummary, TeamTrainingCompletionRow, CertificateOut } from "@/types/learning";
 import type {
@@ -1615,6 +1617,41 @@ export const hrmsService = {
     });
   },
 
+  /** My own submissions, optionally filtered. */
+  getMyMonthlySubmissions(
+    params: { month?: string; submissionType?: string; cycleKey?: string } = {}
+  ) {
+    const query: Record<string, string> = {};
+    if (params.month?.trim()) query.month = params.month.trim();
+    if (params.submissionType?.trim()) query.submission_type = params.submissionType.trim();
+    if (params.cycleKey?.trim()) query.cycle_key = params.cycleKey.trim();
+    return apiClient.get<MonthlySubmissionItem[]>(endpoints.monthlySubmissions.me, { query });
+  },
+
+  getMyMonthlySubmissionHistory() {
+    return apiClient.get<MonthlySubmissionItem[]>(endpoints.monthlySubmissions.meHistory);
+  },
+
+  getMyKpiSummary() {
+    return apiClient.get<AllTimeKpiSummary>(endpoints.monthlySubmissions.meKpiSummary);
+  },
+
+  /** A specific employee's submissions — HR/Admin can view anyone; a manager only their reports. */
+  getUserMonthlySubmissions(
+    userId: number,
+    params: { month?: string; submissionType?: string; cycleKey?: string } = {}
+  ) {
+    const query: Record<string, string> = {};
+    if (params.month?.trim()) query.month = params.month.trim();
+    if (params.submissionType?.trim()) query.submission_type = params.submissionType.trim();
+    if (params.cycleKey?.trim()) query.cycle_key = params.cycleKey.trim();
+    return apiClient.get<MonthlySubmissionItem[]>(endpoints.monthlySubmissions.user(userId), { query });
+  },
+
+  getUserKpiSummary(userId: number) {
+    return apiClient.get<AllTimeKpiSummary>(endpoints.monthlySubmissions.userKpiSummary(userId));
+  },
+
   getManagerTeamSubmissions() {
     return apiClient.get<MonthlySubmissionItem[]>(endpoints.monthlySubmissions.managerTeam);
   },
@@ -1626,11 +1663,22 @@ export const hrmsService = {
     );
   },
 
-  listAllMonthlySubmissions(params: { reviewStatus?: string; month?: string } = {}) {
+  listAllMonthlySubmissions(
+    params: { reviewStatus?: string; month?: string; cycleKey?: string; onlyManagerSubmitted?: boolean } = {}
+  ) {
     const query: Record<string, string> = {};
     if (params.reviewStatus?.trim()) query.review_status = params.reviewStatus.trim();
     if (params.month?.trim()) query.month = params.month.trim();
+    if (params.cycleKey?.trim()) query.cycle_key = params.cycleKey.trim();
+    if (params.onlyManagerSubmitted) query.only_manager_submitted = "true";
     return apiClient.get<MonthlySubmissionItem[]>(endpoints.monthlySubmissions.list, { query });
+  },
+
+  getAdminMonthlyOverview(params: { month?: string; cycleKey?: string } = {}) {
+    const query: Record<string, string> = {};
+    if (params.month?.trim()) query.month = params.month.trim();
+    if (params.cycleKey?.trim()) query.cycle_key = params.cycleKey.trim();
+    return apiClient.get<AdminMonthlyOverview>(endpoints.monthlySubmissions.adminOverview, { query });
   },
 
   getMonthlySubmissionScoreBreakdown(submissionId: number) {
@@ -1642,6 +1690,30 @@ export const hrmsService = {
       endpoints.monthlySubmissions.adminReview(submissionId),
       { contentType: "application/json", body: JSON.stringify(payload) }
     );
+  },
+
+  /** Hard-deletes a submission row — for correcting bad test/import data. */
+  deleteMonthlySubmission(submissionId: number) {
+    return apiClient.delete<{ message: string }>(endpoints.monthlySubmissions.byId(submissionId));
+  },
+
+  /** Updates review_status/final_score on EXISTING submissions only. */
+  importMonthlySubmissionsRatingsCsv(file: File) {
+    const fd = new FormData();
+    fd.append("file", file);
+    return apiClient.post<{ message: string }>(endpoints.monthlySubmissions.importCsv, {
+      body: fd,
+      timeoutMs: 60_000,
+    });
+  },
+
+  importKpiDefinitionsCsv(file: File) {
+    const fd = new FormData();
+    fd.append("file", file);
+    return apiClient.post<{ message: string }>(endpoints.masters.kpiDefinitionsImportCsv, {
+      body: fd,
+      timeoutMs: 60_000,
+    });
   },
 
   listClients(

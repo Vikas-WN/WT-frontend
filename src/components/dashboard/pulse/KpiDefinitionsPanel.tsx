@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Hash, Layers3, Pencil, Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, Hash, Layers3, Pencil, Plus, Trash2, Upload } from "lucide-react";
 
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
@@ -207,6 +207,27 @@ export function KpiDefinitionsPanel() {
   const [deleteTarget, setDeleteTarget] = useState<KpiDefinitionItem | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+
+  const handleImport = async (file: File) => {
+    setImporting(true);
+    try {
+      const res = await hrmsService.importKpiDefinitionsCsv(file);
+      notifySuccess(res.message ?? "KPI definitions imported.");
+      refresh();
+    } catch (error) {
+      notifyError(
+        toUserFriendlyApiErrorMessage(
+          error,
+          error instanceof ApiError ? error.message : "Couldn't import the CSV."
+        )
+      );
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const openAdd = () => {
     setForm(emptyForm({ bandId: filterBandId, department: filterDepartment }));
     setFormError(null);
@@ -371,9 +392,31 @@ export function KpiDefinitionsPanel() {
             />
           </div>
         </div>
-        <Button type="button" onClick={openAdd} className="shrink-0">
-          <Plus className="mr-1.5 size-4" /> Add KPI
-        </Button>
+        <div className="flex shrink-0 gap-2">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (!file) return;
+              void handleImport(file);
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => importInputRef.current?.click()}
+            disabled={importing}
+          >
+            <Upload className="mr-1.5 size-4" /> {importing ? "Importing…" : "Import CSV"}
+          </Button>
+          <Button type="button" onClick={openAdd}>
+            <Plus className="mr-1.5 size-4" /> Add KPI
+          </Button>
+        </div>
       </div>
 
       {status === "loading" ? (
