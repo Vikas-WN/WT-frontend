@@ -186,6 +186,7 @@ export function InputField({
   inputMode,
   pattern,
   autoComplete,
+  list,
 }: {
   label: string;
   value: string;
@@ -199,6 +200,8 @@ export function InputField({
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   pattern?: string;
   autoComplete?: string;
+  /** Wires to a sibling <datalist id="..."> for free-text-with-suggestions fields. */
+  list?: string;
 }) {
   const fieldId = useId();
   const descriptionId = description ? `${fieldId}-description` : undefined;
@@ -231,6 +234,7 @@ export function InputField({
         inputMode={inputMode}
         pattern={pattern}
         autoComplete={autoComplete}
+        list={list}
         aria-invalid={error ? true : undefined}
         aria-describedby={errorId ?? descriptionId}
       />

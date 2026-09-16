@@ -48,6 +48,7 @@ import type {
   AssetItem,
   AssetReturnPayload,
   AssetRosterEmployee,
+  AssetStats,
   AssetUpdatePayload,
   PaginatedAssets,
 } from "@/types/asset";
@@ -1371,6 +1372,19 @@ export const hrmsService = {
 
   listAssetCategories() {
     return apiClient.get<ApiEnvelope<string[]>>(endpoints.assets.categories);
+  },
+
+  getAssetStats() {
+    return apiClient.get<ApiEnvelope<AssetStats>>(endpoints.assets.stats);
+  },
+
+  importAssetsCsv(file: File) {
+    const fd = new FormData();
+    fd.append("file", file);
+    return apiClient.post<ApiEnvelope<unknown>>(endpoints.assets.importCsv, {
+      body: fd,
+      timeoutMs: 60_000,
+    });
   },
 
   searchAssetRoster(search?: string) {

@@ -169,6 +169,20 @@ export const dashboardNavigation: NavItem[] = [
         icon: "layoutGrid",
       },
       {
+        id: "my-assets",
+        label: "My Assets",
+        roles: [
+          "ROLE_EMPLOYEE",
+          "ROLE_AM",
+          "ROLE_MANAGER",
+          "ROLE_DM",
+          "ROLE_OFFICE_ADMIN",
+          "ROLE_HR",
+          "ROLE_ADMIN",
+        ],
+        icon: "layoutGrid",
+      },
+      {
         id: "annual-calendar",
         label: "Annual Calendar",
         roles: [

@@ -81,3 +81,12 @@ export interface AssetRosterEmployee {
   email: string;
   department: string | null;
 }
+
+export interface AssetStats {
+  total: number;
+  available: number;
+  assigned: number;
+  in_repair: number;
+  retired: number;
+  lost: number;
+}

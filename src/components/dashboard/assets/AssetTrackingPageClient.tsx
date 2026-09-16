@@ -1,11 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { History, Package, Plus, RotateCcw, Trash2, UserPlus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Boxes,
+  History,
+  Package,
+  PackageCheck,
+  PackageX,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Trash2,
+  Upload,
+  UserPlus,
+  Wrench,
+} from "lucide-react";
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
+import { MetricCard } from "@/components/dashboard/ui/MetricCard";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
@@ -35,6 +49,7 @@ import type {
   AssetAssignmentHistoryItem,
   AssetItem,
   AssetRosterEmployee,
+  AssetStats,
   AssetStatus,
 } from "@/types/asset";
 import { notifyError, notifySuccess } from "@/lib/notify";
@@ -82,6 +97,14 @@ const NEXT_STATUS_OPTIONS = [
   { value: "LOST", label: "Lost" },
 ];
 
+// Direct status edits (via the Edit dialog) — ASSIGNED is owned by assign/return.
+const EDITABLE_STATUS_OPTIONS = [
+  { value: "AVAILABLE", label: "Available" },
+  { value: "IN_REPAIR", label: "In Repair" },
+  { value: "RETIRED", label: "Retired" },
+  { value: "LOST", label: "Lost" },
+];
+
 const STATUS_TONE: Record<AssetStatus, string> = {
   AVAILABLE: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400",
   ASSIGNED: "bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]",
@@ -100,7 +123,9 @@ type FormState = {
   brand: string;
   model: string;
   serialNumber: string;
+  purchaseDate: string;
   notes: string;
+  status: string;
 };
 
 const EMPTY_FORM: FormState = {
@@ -109,8 +134,23 @@ const EMPTY_FORM: FormState = {
   brand: "",
   model: "",
   serialNumber: "",
+  purchaseDate: "",
   notes: "",
+  status: "AVAILABLE",
 };
+
+function formFromAsset(asset: AssetItem): FormState {
+  return {
+    assetTag: asset.asset_tag,
+    category: asset.category,
+    brand: asset.brand ?? "",
+    model: asset.model ?? "",
+    serialNumber: asset.serial_number ?? "",
+    purchaseDate: asset.purchase_date ?? "",
+    notes: asset.notes ?? "",
+    status: asset.status,
+  };
+}
 
 export function AssetTrackingPageClient() {
   const [search, setSearch] = useState("");
@@ -131,9 +171,11 @@ export function AssetTrackingPageClient() {
     [category, statusFilter, search, listTick]
   );
   const categoriesQuery = useLoad(() => hrmsService.listAssetCategories(), [listTick]);
+  const statsQuery = useLoad(() => hrmsService.getAssetStats(), [listTick]);
   const assets: AssetItem[] = listQuery.data?.data?.data ?? [];
+  const stats: AssetStats | null = statsQuery.data?.data ?? null;
 
-  const [formOpen, setFormOpen] = useState(false);
+  const [dialog, setDialog] = useState<{ mode: "add" | "edit"; row?: AssetItem } | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -160,6 +202,9 @@ export function AssetTrackingPageClient() {
   const [historyItems, setHistoryItems] = useState<AssetAssignmentHistoryItem[] | null>(null);
   const [historyStatus, setHistoryStatus] = useState<"loading" | "done" | "error">("loading");
 
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+
   // Assignee search inside the Assign dialog — debounced, triggered by user typing.
   useEffect(() => {
     if (!assignTarget) return;
@@ -184,10 +229,16 @@ export function AssetTrackingPageClient() {
   const openAdd = () => {
     setForm(EMPTY_FORM);
     setFormError(null);
-    setFormOpen(true);
+    setDialog({ mode: "add" });
   };
 
-  const submitAdd = async () => {
+  const openEdit = (row: AssetItem) => {
+    setForm(formFromAsset(row));
+    setFormError(null);
+    setDialog({ mode: "edit", row });
+  };
+
+  const submit = async () => {
     if (!form.assetTag.trim() || !form.category.trim()) {
       setFormError("Asset tag and category are required.");
       return;
@@ -195,22 +246,42 @@ export function AssetTrackingPageClient() {
     setFormError(null);
     setSaving(true);
     try {
-      await hrmsService.createAsset({
-        asset_tag: form.assetTag.trim(),
-        category: form.category.trim(),
-        brand: form.brand.trim() || null,
-        model: form.model.trim() || null,
-        serial_number: form.serialNumber.trim() || null,
-        notes: form.notes.trim() || null,
-      });
-      notifySuccess("Asset added.");
-      setFormOpen(false);
+      if (dialog?.mode === "edit" && dialog.row) {
+        await hrmsService.updateAsset(dialog.row.id, {
+          category: form.category.trim(),
+          brand: form.brand.trim() || null,
+          model: form.model.trim() || null,
+          serial_number: form.serialNumber.trim() || null,
+          purchase_date: form.purchaseDate.trim() || null,
+          notes: form.notes.trim() || null,
+          ...(dialog.row.status !== "ASSIGNED"
+            ? { status: form.status as "AVAILABLE" | "IN_REPAIR" | "RETIRED" | "LOST" }
+            : {}),
+        });
+        notifySuccess("Asset updated.");
+      } else {
+        await hrmsService.createAsset({
+          asset_tag: form.assetTag.trim(),
+          category: form.category.trim(),
+          brand: form.brand.trim() || null,
+          model: form.model.trim() || null,
+          serial_number: form.serialNumber.trim() || null,
+          purchase_date: form.purchaseDate.trim() || null,
+          notes: form.notes.trim() || null,
+        });
+        notifySuccess("Asset added.");
+      }
+      setDialog(null);
       refresh();
     } catch (error) {
       setFormError(
         toUserFriendlyApiErrorMessage(
           error,
-          error instanceof ApiError ? error.message : "Couldn't add this asset."
+          error instanceof ApiError
+            ? error.message
+            : dialog?.mode === "edit"
+              ? "Couldn't update this asset."
+              : "Couldn't add this asset."
         )
       );
     } finally {
@@ -322,6 +393,24 @@ export function AssetTrackingPageClient() {
     }
   };
 
+  const handleImport = async (file: File) => {
+    setImporting(true);
+    try {
+      const res = await hrmsService.importAssetsCsv(file);
+      notifySuccess(res.message ?? "Assets imported.");
+      refresh();
+    } catch (error) {
+      notifyError(
+        toUserFriendlyApiErrorMessage(
+          error,
+          error instanceof ApiError ? error.message : "Couldn't import the CSV."
+        )
+      );
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <DashboardPageShell className="wt-detail-page">
       <ContentCard>
@@ -332,8 +421,28 @@ export function AssetTrackingPageClient() {
               Laptops, phones, chargers — everything the company owns and who has it.
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <RefreshIconButton onClick={refresh} loading={listQuery.status === "loading"} />
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (!file) return;
+                void handleImport(file);
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => importInputRef.current?.click()}
+              disabled={importing}
+            >
+              <Upload className="mr-1.5 size-4" /> {importing ? "Importing…" : "Import CSV"}
+            </Button>
             <Button type="button" onClick={openAdd}>
               <Plus className="mr-1.5 size-4" /> Add asset
             </Button>
@@ -341,6 +450,23 @@ export function AssetTrackingPageClient() {
         </div>
 
         <div className="space-y-4 p-4 sm:p-6">
+          {stats ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              <MetricCard label="Total" value={stats.total} loading={false} icon={Boxes} />
+              <MetricCard label="Available" value={stats.available} loading={false} icon={PackageCheck} />
+              <MetricCard label="Assigned" value={stats.assigned} loading={false} icon={Package} />
+              <MetricCard label="In Repair" value={stats.in_repair} loading={false} icon={Wrench} />
+              <MetricCard label="Retired" value={stats.retired} loading={false} icon={PackageX} />
+              <MetricCard label="Lost" value={stats.lost} loading={false} icon={PackageX} />
+            </div>
+          ) : statsQuery.status === "loading" ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <MetricCard key={i} label="—" value={0} loading icon={Boxes} />
+              ))}
+            </div>
+          ) : null}
+
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Input
               value={searchInput}
@@ -349,7 +475,7 @@ export function AssetTrackingPageClient() {
                 if (e.key === "Enter") setSearch(searchInput.trim());
               }}
               onBlur={() => setSearch(searchInput.trim())}
-              placeholder="Search tag, brand, model, serial…"
+              placeholder="Search tag, brand, model, serial, holder…"
               className="flex-1"
             />
             <SelectField
@@ -395,6 +521,7 @@ export function AssetTrackingPageClient() {
                     <TableHead>Tag</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Brand / Model</TableHead>
+                    <TableHead>Purchased</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Holder</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -409,6 +536,9 @@ export function AssetTrackingPageClient() {
                       <TableCell className="whitespace-nowrap">{asset.category}</TableCell>
                       <TableCell className="whitespace-nowrap text-wt-text-muted">
                         {[asset.brand, asset.model].filter(Boolean).join(" ") || "—"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-wt-text-muted">
+                        {asset.purchase_date || "—"}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <span
@@ -448,6 +578,15 @@ export function AssetTrackingPageClient() {
                             type="button"
                             variant="ghost"
                             size="icon-sm"
+                            onClick={() => openEdit(asset)}
+                            aria-label={`Edit ${asset.asset_tag}`}
+                          >
+                            <Pencil className="size-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
                             onClick={() => void openHistory(asset)}
                             aria-label={`History for ${asset.asset_tag}`}
                           >
@@ -475,18 +614,20 @@ export function AssetTrackingPageClient() {
         </div>
       </ContentCard>
 
-      {/* Add asset */}
-      {formOpen ? (
+      {/* Add / edit asset */}
+      {dialog ? (
         <div
           className={MODAL_OVERLAY_CLASS}
           role="presentation"
           onClick={(e) => {
-            if (e.target === e.currentTarget && !saving) setFormOpen(false);
+            if (e.target === e.currentTarget && !saving) setDialog(null);
           }}
         >
           <div role="dialog" aria-modal="true" className={MODAL_PANEL_CLASS}>
             <div className={MODAL_HEADER_CLASS}>
-              <h2 className="text-base font-semibold text-wt-text">Add asset</h2>
+              <h2 className="text-base font-semibold text-wt-text">
+                {dialog.mode === "add" ? "Add asset" : `Edit ${dialog.row?.asset_tag}`}
+              </h2>
             </div>
             <div className={MODAL_BODY_CLASS}>
               <div className="space-y-4">
@@ -495,6 +636,7 @@ export function AssetTrackingPageClient() {
                   value={form.assetTag}
                   onChange={(v) => setForm((f) => ({ ...f, assetTag: v }))}
                   required
+                  disabled={dialog.mode === "edit"}
                   placeholder="e.g. LAP-0042"
                 />
                 <InputField
@@ -503,7 +645,13 @@ export function AssetTrackingPageClient() {
                   onChange={(v) => setForm((f) => ({ ...f, category: v }))}
                   required
                   placeholder="Laptop, Phone, Charger, Monitor…"
+                  list="asset-category-suggestions"
                 />
+                <datalist id="asset-category-suggestions">
+                  {(categoriesQuery.data?.data ?? []).map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
                 <InputField
                   label="Brand"
                   value={form.brand}
@@ -519,6 +667,20 @@ export function AssetTrackingPageClient() {
                   value={form.serialNumber}
                   onChange={(v) => setForm((f) => ({ ...f, serialNumber: v }))}
                 />
+                <InputField
+                  label="Purchase Date"
+                  type="date"
+                  value={form.purchaseDate}
+                  onChange={(v) => setForm((f) => ({ ...f, purchaseDate: v }))}
+                />
+                {dialog.mode === "edit" && dialog.row?.status !== "ASSIGNED" ? (
+                  <SelectField
+                    label="Status"
+                    value={form.status}
+                    onChange={(v) => setForm((f) => ({ ...f, status: v }))}
+                    options={EDITABLE_STATUS_OPTIONS}
+                  />
+                ) : null}
                 <TextAreaField
                   label="Notes"
                   value={form.notes}
@@ -533,11 +695,11 @@ export function AssetTrackingPageClient() {
               </div>
             </div>
             <div className={MODAL_FOOTER_CLASS}>
-              <Button type="button" variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
+              <Button type="button" variant="outline" onClick={() => setDialog(null)} disabled={saving}>
                 Cancel
               </Button>
-              <Button type="button" onClick={() => void submitAdd()} disabled={saving}>
-                {saving ? "Saving…" : "Add asset"}
+              <Button type="button" onClick={() => void submit()} disabled={saving}>
+                {saving ? "Saving…" : dialog.mode === "add" ? "Add asset" : "Save changes"}
               </Button>
             </div>
           </div>

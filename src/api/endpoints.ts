@@ -163,11 +163,13 @@ export const endpoints = {
     root: `${api}/assets`,
     byId: (id: number | string) => `${api}/assets/${encodeURIComponent(id)}`,
     categories: `${api}/assets/categories`,
+    stats: `${api}/assets/stats`,
     roster: `${api}/assets/roster`,
     mine: `${api}/assets/mine`,
     history: (id: number | string) => `${api}/assets/${encodeURIComponent(id)}/history`,
     assign: (id: number | string) => `${api}/assets/${encodeURIComponent(id)}/assign`,
     return: (id: number | string) => `${api}/assets/${encodeURIComponent(id)}/return`,
+    importCsv: `${api}/assets/import-csv`,
   },
 
   learning: {

@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
+import { CONTENT_CARD_CLASS } from "@/components/dashboard/ui/uiLayout";
+import { cn } from "@/lib/utils";
+
 export function HomeCard({
   title,
   icon,
@@ -10,6 +13,11 @@ export function HomeCard({
   cta,
   onAction,
   children,
+  /** Brand-tinted prominent treatment for the one or two cards on the page
+   *  that are genuinely more actionable than the rest (e.g. pending
+   *  approvals) — spend sparingly, at most one or two per page. */
+  featured = false,
+  className,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -19,18 +27,28 @@ export function HomeCard({
    *  opening a dialog. */
   onAction?: () => void;
   children: React.ReactNode;
+  featured?: boolean;
+  className?: string;
 }) {
   return (
-    <section className="flex flex-col rounded-2xl border border-wt-border bg-wt-surface-1 p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-wt-text-muted">{icon}</span>
-          <h2 className="text-sm font-semibold text-wt-text">{title}</h2>
+    <section
+      className={cn(
+        CONTENT_CARD_CLASS,
+        "flex flex-col p-4 sm:p-5",
+        featured &&
+          "border-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)] bg-[var(--wt-brand-soft)] dark:bg-[var(--wt-brand-soft)]",
+        className
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className={featured ? "text-[var(--wt-brand)]" : "text-wt-text-muted"}>{icon}</span>
+          <h2 className="truncate text-sm font-semibold text-wt-text">{title}</h2>
         </div>
         {href ? (
           <Link
             href={href}
-            className="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--wt-brand)] hover:underline"
+            className="inline-flex shrink-0 items-center gap-0.5 text-xs font-medium text-[var(--wt-brand)] hover:underline"
           >
             {cta ?? "Open"}
             <ChevronRight className="size-3.5" />
@@ -39,7 +57,7 @@ export function HomeCard({
           <button
             type="button"
             onClick={onAction}
-            className="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--wt-brand)] hover:underline"
+            className="inline-flex shrink-0 items-center gap-0.5 text-xs font-medium text-[var(--wt-brand)] hover:underline"
           >
             {cta ?? "Open"}
             <ChevronRight className="size-3.5" />

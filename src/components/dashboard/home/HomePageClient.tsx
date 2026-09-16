@@ -13,10 +13,12 @@ import {
 } from "lucide-react";
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { PageHero } from "@/components/dashboard/ui/PageHero";
 import { useCommandPalette } from "@/components/dashboard/CommandPalette";
 import { HomeCard, CardMessage, CardSkeleton } from "@/components/dashboard/home/HomeCard";
 import { CelebrationsCard } from "@/components/dashboard/home/CelebrationsCard";
 import { AttendanceCard } from "@/components/dashboard/home/AttendanceCard";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import {
   hrmsService,
@@ -35,6 +37,7 @@ import { fetchPaginatedScopedUserRequests } from "@/utils/userRequest";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { normalizeRoles } from "@/utils/roles";
 import { notifyError } from "@/lib/notify";
+import { cn } from "@/lib/utils";
 
 type Load<T> = { status: "loading" | "done" | "error"; data: T | null };
 
@@ -69,6 +72,41 @@ function greeting(): string {
   if (h < 12) return "Good morning";
   if (h < 17) return "Good afternoon";
   return "Good evening";
+}
+
+const LEAVE_SEGMENT_COLORS = ["bg-[var(--wt-brand)]", "bg-emerald-500", "bg-amber-500"] as const;
+
+/** Proportional split bar under the leave-balance numbers — purely visual,
+ *  degrades gracefully (renders nothing) when every bucket is zero. */
+function LeaveSplitBar({ values }: { values: number[] }) {
+  const total = values.reduce((sum, v) => sum + Math.max(0, v), 0);
+  if (total <= 0) return null;
+  return (
+    <div className="mt-3 flex h-1.5 overflow-hidden rounded-full bg-wt-surface-3">
+      {values.map((v, i) =>
+        v > 0 ? (
+          <div
+            key={i}
+            className={LEAVE_SEGMENT_COLORS[i % LEAVE_SEGMENT_COLORS.length]}
+            style={{ width: `${(Math.max(0, v) / total) * 100}%` }}
+          />
+        ) : null
+      )}
+    </div>
+  );
+}
+
+/** Thin completion bar for the Learning card. */
+function ProgressBar({ value, max }: { value: number; max: number }) {
+  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
+  return (
+    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-wt-surface-3">
+      <div
+        className="h-full rounded-full bg-[var(--wt-brand)] transition-[width] duration-500 ease-[var(--wt-ease)]"
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  );
 }
 
 export function HomePageClient() {
@@ -233,42 +271,28 @@ export function HomePageClient() {
 
   return (
     <DashboardPageShell>
-      <div>
-        <h1 className="text-xl font-semibold text-wt-text sm:text-2xl">
-          {greeting()}, {firstName}
-        </h1>
-        <p className="mt-0.5 text-sm text-wt-text-muted">
-          {today.toLocaleDateString(undefined, {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-          })}
-        </p>
-      </div>
+      <PageHero
+        surface
+        raw
+        eyebrow={today.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
+        title={`${greeting()}, ${firstName}`}
+        description="Here's where things stand across your work today."
+        action={
+          <>
+            <Button variant="brand" size="sm" render={<Link href={`${DASHBOARD_ROUTES.leave}?tab=my`} />}>
+              <Plane className="size-4" /> Apply for leave
+            </Button>
+            <Button variant="outline" size="sm" render={<Link href={DASHBOARD_ROUTES.timelog} />}>
+              <CalendarDays className="size-4" /> Log time
+            </Button>
+            <Button variant="outline" size="sm" onClick={openSearch}>
+              <Search className="size-4" /> Search
+            </Button>
+          </>
+        }
+      />
 
-      <div className="flex flex-wrap gap-2">
-        <Link
-          href={`${DASHBOARD_ROUTES.leave}?tab=my`}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm font-medium text-wt-text transition-colors hover:bg-wt-surface-2"
-        >
-          <Plane className="size-4 text-wt-text-muted" /> Apply for leave
-        </Link>
-        <Link
-          href={DASHBOARD_ROUTES.timelog}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm font-medium text-wt-text transition-colors hover:bg-wt-surface-2"
-        >
-          <CalendarDays className="size-4 text-wt-text-muted" /> Log time
-        </Link>
-        <button
-          type="button"
-          onClick={openSearch}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm font-medium text-wt-text transition-colors hover:bg-wt-surface-2"
-        >
-          <Search className="size-4 text-wt-text-muted" /> Search
-        </button>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {canSeeOrgOut ? (
           <AttendanceCard data={attendance.data} status={attendance.status} />
         ) : null}
@@ -279,6 +303,7 @@ export function HomePageClient() {
             icon={<ClipboardCheck className="size-4" />}
             href={DASHBOARD_ROUTES["leave-team"]}
             cta="Review"
+            featured={Boolean(approvals.data)}
           >
             {approvals.status === "loading" ? (
               <CardSkeleton />
@@ -308,19 +333,31 @@ export function HomePageClient() {
           ) : balance.status === "error" || !balance.data ? (
             <CardMessage text="Unavailable" />
           ) : (
-            <div className="flex gap-5">
-              {[
-                { label: "Primary", value: balance.data.leave.primary },
-                { label: "Secondary", value: balance.data.leave.secondary },
-                { label: "Comp-off", value: balance.data.comp_off_balance },
-              ].map((b) => (
-                <div key={b.label}>
-                  <p className="text-2xl font-semibold tabular-nums text-wt-text">
-                    {Number(b.value ?? 0)}
-                  </p>
-                  <p className="text-xs text-wt-text-muted">{b.label}</p>
-                </div>
-              ))}
+            <div>
+              <div className="flex gap-5">
+                {[
+                  { label: "Primary", value: balance.data.leave.primary, dot: LEAVE_SEGMENT_COLORS[0] },
+                  { label: "Secondary", value: balance.data.leave.secondary, dot: LEAVE_SEGMENT_COLORS[1] },
+                  { label: "Comp-off", value: balance.data.comp_off_balance, dot: LEAVE_SEGMENT_COLORS[2] },
+                ].map((b) => (
+                  <div key={b.label}>
+                    <p className="text-2xl font-semibold tabular-nums text-wt-text">
+                      {Number(b.value ?? 0)}
+                    </p>
+                    <p className="mt-0.5 flex items-center gap-1.5 text-xs text-wt-text-muted">
+                      <span className={cn("size-1.5 rounded-full", b.dot)} aria-hidden />
+                      {b.label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <LeaveSplitBar
+                values={[
+                  Number(balance.data.leave.primary ?? 0),
+                  Number(balance.data.leave.secondary ?? 0),
+                  Number(balance.data.comp_off_balance ?? 0),
+                ]}
+              />
             </div>
           )}
         </HomeCard>
@@ -351,6 +388,7 @@ export function HomePageClient() {
                   </div>
                 ))}
               </div>
+              <ProgressBar value={learning.data.completed_count} max={learning.data.enrolled_count} />
               {learning.data.overdue_mandatory_count > 0 ? (
                 <p className="text-xs font-medium text-rose-600 dark:text-rose-400">
                   {learning.data.overdue_mandatory_count} mandatory training
