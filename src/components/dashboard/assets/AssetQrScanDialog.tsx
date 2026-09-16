@@ -51,8 +51,11 @@ export function AssetQrScanDialog({
         setScanError(result);
         return;
       }
-      await stopRef.current();
-      onCloseRef.current();
+      try {
+        await stopRef.current();
+      } finally {
+        onCloseRef.current();
+      }
     })();
   }, []);
 
@@ -66,9 +69,12 @@ export function AssetQrScanDialog({
   const canSwitch = cameras.length > 1 && !busy && !switching;
 
   const handleClose = async () => {
-    if (busy) return;
-    await stopAndWait();
-    onClose();
+    handlingRef.current = true;
+    try {
+      await stopAndWait();
+    } finally {
+      onClose();
+    }
   };
 
   return (
@@ -76,10 +82,15 @@ export function AssetQrScanDialog({
       className={MODAL_OVERLAY_CLASS}
       role="presentation"
       onClick={(e) => {
-        if (e.target === e.currentTarget && !busy && !switching) void handleClose();
+        if (e.target === e.currentTarget && !switching) void handleClose();
       }}
     >
-      <div role="dialog" aria-modal="true" aria-labelledby="asset-qr-scan-title" className={MODAL_PANEL_CLASS}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="asset-qr-scan-title"
+        className={cn(MODAL_PANEL_CLASS, "h-[min(90dvh,880px)] max-w-3xl")}
+      >
         <div className={MODAL_HEADER_CLASS}>
           <h2 id="asset-qr-scan-title" className="text-base font-semibold text-wt-text">
             Scan asset QR
@@ -92,9 +103,10 @@ export function AssetQrScanDialog({
           <div
             id={READER_ID}
             className={cn(
-              "aspect-video w-full min-h-0 overflow-hidden rounded-2xl border border-wt-border bg-black",
-              "[&_video]:h-full [&_video]:w-full [&_video]:object-contain",
-              "[&_img]:h-full [&_img]:w-full [&_img]:object-contain"
+              "relative min-h-0 w-full flex-1 overflow-hidden rounded-2xl border border-wt-border bg-black",
+              "max-sm:[&_video]:!object-cover sm:[&_video]:!object-contain",
+              "[&_video]:!h-full [&_video]:!w-full",
+              "[&_canvas]:!h-full [&_canvas]:!w-full sm:[&_canvas]:!object-contain"
             )}
           />
           {error ? (
@@ -116,7 +128,7 @@ export function AssetQrScanDialog({
               {switching ? "Switching…" : "Switch camera"}
             </Button>
           ) : null}
-          <Button type="button" variant="outline" onClick={() => void handleClose()} disabled={busy || switching}>
+          <Button type="button" variant="outline" onClick={() => void handleClose()} disabled={switching}>
             Cancel
           </Button>
         </div>
