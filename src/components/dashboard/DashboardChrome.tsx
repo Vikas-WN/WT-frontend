@@ -45,10 +45,8 @@ import { AccountMenu } from "@/components/dashboard/AccountMenu";
 import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
 import { useUserPreferences } from "@/context/UserPreferencesContext";
-import {
-  DASHBOARD_HEADER_CLASS,
-  DASHBOARD_HEADER_MENU_BUTTON_CLASS,
-} from "@/components/dashboard/ui/sidebarLayout";
+import { AppChromeHeader } from "@/components/dashboard/ui/AppChromeHeader";
+import { DASHBOARD_HEADER_MENU_BUTTON_CLASS } from "@/components/dashboard/ui/sidebarLayout";
 
 const HEADER_ICON_BUTTON_CLASS =
   "flex size-10 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-1 text-wt-text transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:bg-wt-surface-2 hover:shadow-sm hover:-translate-y-px dark:border-wt-border dark:bg-wt-surface-2 dark:hover:bg-wt-surface-3";
@@ -456,7 +454,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-wt-page-bg dark:bg-black">
-        <header className={DASHBOARD_HEADER_CLASS}>
+        <AppChromeHeader>
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <button
               type="button"
@@ -671,7 +669,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               onLogout={requestLogout}
             />
           </div>
-        </header>
+        </AppChromeHeader>
 
         <div className="wt-page-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
           {/* Cap content width on very large / TV screens so line lengths, forms
