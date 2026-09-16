@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { SwitchCamera } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
-  MODAL_BODY_CLASS,
   MODAL_FOOTER_CLASS,
   MODAL_HEADER_CLASS,
   MODAL_OVERLAY_CLASS,
   MODAL_PANEL_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
+import { useHtml5QrScanner } from "@/hooks/useHtml5QrScanner";
 import { decodeAssetQrPayload } from "@/utils/assetQr";
+import { cn } from "@/lib/utils";
 
 const READER_ID = "asset-qr-scanner";
 
@@ -22,82 +24,59 @@ export function AssetQrScanDialog({
   /** Return an error message to keep scanning; return void/null on success (parent closes). */
   onTagScanned: (tag: string) => Promise<string | null | void>;
 }) {
-  const [error, setError] = useState<string | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const handlingRef = useRef(false);
-  const scannerRef = useRef<{ stop: () => Promise<void> } | null>(null);
   const onTagScannedRef = useRef(onTagScanned);
   onTagScannedRef.current = onTagScanned;
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const stopRef = useRef<() => Promise<void>>(async () => undefined);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const start = async () => {
-      try {
-        const { Html5Qrcode } = await import("html5-qrcode");
-        if (cancelled) return;
-        const scanner = new Html5Qrcode(READER_ID);
-        scannerRef.current = scanner;
-        const onScan = (decodedText: string) => {
-          if (handlingRef.current || cancelled) return;
-          const tag = decodeAssetQrPayload(decodedText);
-          if (!tag) {
-            setError("That QR is not a WebTrak asset tag.");
-            return;
-          }
-          handlingRef.current = true;
-          setError(null);
-          setBusy(true);
-          void (async () => {
-            const result = await onTagScannedRef.current(tag);
-            if (result) {
-              handlingRef.current = false;
-              setBusy(false);
-              setError(result);
-              return;
-            }
-            try {
-              await scanner.stop();
-            } catch {
-              /* already stopped */
-            }
-          })();
-        };
-        const config = { fps: 8, qrbox: { width: 240, height: 240 } };
-        try {
-          await scanner.start({ facingMode: "environment" }, config, onScan, () => undefined);
-        } catch {
-          try {
-            await scanner.stop();
-          } catch {
-            /* not running */
-          }
-          await scanner.start({ facingMode: "user" }, config, onScan, () => undefined);
-        }
-      } catch {
-        if (!cancelled) {
-          setError("Couldn't start the camera. Allow camera access and try again.");
-        }
+  const onDecode = useCallback((text: string) => {
+    if (handlingRef.current) return;
+    const tag = decodeAssetQrPayload(text);
+    if (!tag) {
+      setScanError("That QR is not a WebTrak asset tag.");
+      return;
+    }
+    handlingRef.current = true;
+    setScanError(null);
+    setBusy(true);
+    void (async () => {
+      const result = await onTagScannedRef.current(tag);
+      if (result) {
+        handlingRef.current = false;
+        setBusy(false);
+        setScanError(result);
+        return;
       }
-    };
-
-    void start();
-
-    return () => {
-      cancelled = true;
-      const scanner = scannerRef.current;
-      scannerRef.current = null;
-      if (!scanner) return;
-      void scanner.stop().catch(() => undefined);
-    };
+      await stopRef.current();
+      onCloseRef.current();
+    })();
   }, []);
+
+  const { cameras, error: cameraError, switching, switchCamera, stopAndWait } = useHtml5QrScanner({
+    elementId: READER_ID,
+    onDecode,
+  });
+  stopRef.current = stopAndWait;
+
+  const error = scanError ?? cameraError;
+  const canSwitch = cameras.length > 1 && !busy && !switching;
+
+  const handleClose = async () => {
+    if (busy) return;
+    await stopAndWait();
+    onClose();
+  };
 
   return (
     <div
       className={MODAL_OVERLAY_CLASS}
       role="presentation"
       onClick={(e) => {
-        if (e.target === e.currentTarget && !busy) onClose();
+        if (e.target === e.currentTarget && !busy && !switching) void handleClose();
       }}
     >
       <div role="dialog" aria-modal="true" aria-labelledby="asset-qr-scan-title" className={MODAL_PANEL_CLASS}>
@@ -106,22 +85,38 @@ export function AssetQrScanDialog({
             Scan asset QR
           </h2>
         </div>
-        <div className={MODAL_BODY_CLASS}>
-          <p className="mb-4 text-sm text-wt-text-muted">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-5 sm:px-7">
+          <p className="mb-3 shrink-0 text-sm text-wt-text-muted">
             Point the camera at the asset sticker. Available assets open the assign form.
           </p>
           <div
             id={READER_ID}
-            className="overflow-hidden rounded-2xl border border-wt-border bg-black [&_video]:w-full"
+            className={cn(
+              "aspect-video w-full min-h-0 overflow-hidden rounded-2xl border border-wt-border bg-black",
+              "[&_video]:h-full [&_video]:w-full [&_video]:object-contain",
+              "[&_img]:h-full [&_img]:w-full [&_img]:object-contain"
+            )}
           />
           {error ? (
-            <p className="mt-3 text-sm text-destructive" role="alert">
+            <p className="mt-3 shrink-0 text-sm text-destructive" role="alert">
               {error}
             </p>
           ) : null}
         </div>
         <div className={MODAL_FOOTER_CLASS}>
-          <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
+          {cameras.length > 1 ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="mr-auto"
+              onClick={() => void switchCamera()}
+              disabled={!canSwitch}
+            >
+              <SwitchCamera className="size-4" />
+              {switching ? "Switching…" : "Switch camera"}
+            </Button>
+          ) : null}
+          <Button type="button" variant="outline" onClick={() => void handleClose()} disabled={busy || switching}>
             Cancel
           </Button>
         </div>
