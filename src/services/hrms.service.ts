@@ -1401,6 +1401,12 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<AssetItem>>(endpoints.assets.byId(id));
   },
 
+  getAssetByTag(tag: string) {
+    return apiClient.get<ApiEnvelope<AssetItem>>(endpoints.assets.lookup, {
+      query: { tag: tag.trim() },
+    });
+  },
+
   getAssetHistory(id: number) {
     return apiClient.get<ApiEnvelope<AssetAssignmentHistoryItem[]>>(endpoints.assets.history(id));
   },

@@ -166,6 +166,7 @@ export const endpoints = {
     stats: `${api}/assets/stats`,
     roster: `${api}/assets/roster`,
     mine: `${api}/assets/mine`,
+    lookup: `${api}/assets/lookup`,
     history: (id: number | string) => `${api}/assets/${encodeURIComponent(id)}/history`,
     assign: (id: number | string) => `${api}/assets/${encodeURIComponent(id)}/assign`,
     return: (id: number | string) => `${api}/assets/${encodeURIComponent(id)}/return`,
