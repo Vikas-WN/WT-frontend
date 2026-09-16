@@ -9,7 +9,9 @@ import {
   PackageX,
   Pencil,
   Plus,
+  QrCode,
   RotateCcw,
+  ScanLine,
   Trash2,
   Upload,
   UserPlus,
@@ -56,6 +58,8 @@ import { notifyError, notifySuccess } from "@/lib/notify";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { formatApiDateTimeDisplay } from "@/utils/apiDate";
 import { cn } from "@/lib/utils";
+import { AssetQrDialog } from "@/components/dashboard/assets/AssetQrDialog";
+import { AssetQrScanDialog } from "@/components/dashboard/assets/AssetQrScanDialog";
 
 type Load<T> = { status: "loading" | "done" | "error"; data: T | null };
 
@@ -123,7 +127,6 @@ type FormState = {
   brand: string;
   model: string;
   serialNumber: string;
-  purchaseDate: string;
   notes: string;
   status: string;
 };
@@ -134,7 +137,6 @@ const EMPTY_FORM: FormState = {
   brand: "",
   model: "",
   serialNumber: "",
-  purchaseDate: "",
   notes: "",
   status: "AVAILABLE",
 };
@@ -146,7 +148,6 @@ function formFromAsset(asset: AssetItem): FormState {
     brand: asset.brand ?? "",
     model: asset.model ?? "",
     serialNumber: asset.serial_number ?? "",
-    purchaseDate: asset.purchase_date ?? "",
     notes: asset.notes ?? "",
     status: asset.status,
   };
@@ -202,6 +203,9 @@ export function AssetTrackingPageClient() {
   const [historyItems, setHistoryItems] = useState<AssetAssignmentHistoryItem[] | null>(null);
   const [historyStatus, setHistoryStatus] = useState<"loading" | "done" | "error">("loading");
 
+  const [qrAsset, setQrAsset] = useState<AssetItem | null>(null);
+  const [scanOpen, setScanOpen] = useState(false);
+
   const importInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
 
@@ -252,26 +256,26 @@ export function AssetTrackingPageClient() {
           brand: form.brand.trim() || null,
           model: form.model.trim() || null,
           serial_number: form.serialNumber.trim() || null,
-          purchase_date: form.purchaseDate.trim() || null,
           notes: form.notes.trim() || null,
           ...(dialog.row.status !== "ASSIGNED"
             ? { status: form.status as "AVAILABLE" | "IN_REPAIR" | "RETIRED" | "LOST" }
             : {}),
         });
         notifySuccess("Asset updated.");
+        setDialog(null);
       } else {
-        await hrmsService.createAsset({
+        const created = await hrmsService.createAsset({
           asset_tag: form.assetTag.trim(),
           category: form.category.trim(),
           brand: form.brand.trim() || null,
           model: form.model.trim() || null,
           serial_number: form.serialNumber.trim() || null,
-          purchase_date: form.purchaseDate.trim() || null,
           notes: form.notes.trim() || null,
         });
         notifySuccess("Asset added.");
+        setDialog(null);
+        if (created.data) setQrAsset(created.data);
       }
-      setDialog(null);
       refresh();
     } catch (error) {
       setFormError(
@@ -309,7 +313,7 @@ export function AssetTrackingPageClient() {
     }
   };
 
-  const openAssign = (asset: AssetItem) => {
+  const openAssign = useCallback((asset: AssetItem) => {
     setAssignTarget(asset);
     setAssignSearch("");
     setAssignResults([]);
@@ -317,7 +321,29 @@ export function AssetTrackingPageClient() {
     setAssignCondition("");
     setAssignNotes("");
     setAssignError(null);
-  };
+  }, []);
+
+  const handleScannedTag = useCallback(
+    async (tag: string): Promise<string | null> => {
+      try {
+        const res = await hrmsService.getAssetByTag(tag);
+        const asset = res.data;
+        if (!asset) return "No asset matches that QR.";
+        if (asset.status !== "AVAILABLE") {
+          return `This asset is ${statusLabel(asset.status).toLowerCase()} and can't be assigned.`;
+        }
+        setScanOpen(false);
+        openAssign(asset);
+        return null;
+      } catch (error) {
+        return toUserFriendlyApiErrorMessage(
+          error,
+          error instanceof ApiError ? error.message : "No asset matches that QR."
+        );
+      }
+    },
+    [openAssign]
+  );
 
   const submitAssign = async () => {
     if (!assignTarget) return;
@@ -443,6 +469,9 @@ export function AssetTrackingPageClient() {
             >
               <Upload className="mr-1.5 size-4" /> {importing ? "Importing…" : "Import CSV"}
             </Button>
+            <Button type="button" variant="outline" onClick={() => setScanOpen(true)}>
+              <ScanLine className="mr-1.5 size-4" /> Scan QR
+            </Button>
             <Button type="button" onClick={openAdd}>
               <Plus className="mr-1.5 size-4" /> Add asset
             </Button>
@@ -521,7 +550,6 @@ export function AssetTrackingPageClient() {
                     <TableHead>Tag</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Brand / Model</TableHead>
-                    <TableHead>Purchased</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Holder</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -536,9 +564,6 @@ export function AssetTrackingPageClient() {
                       <TableCell className="whitespace-nowrap">{asset.category}</TableCell>
                       <TableCell className="whitespace-nowrap text-wt-text-muted">
                         {[asset.brand, asset.model].filter(Boolean).join(" ") || "—"}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-wt-text-muted">
-                        {asset.purchase_date || "—"}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <span
@@ -578,6 +603,15 @@ export function AssetTrackingPageClient() {
                             type="button"
                             variant="ghost"
                             size="icon-sm"
+                            onClick={() => setQrAsset(asset)}
+                            aria-label={`View QR for ${asset.asset_tag}`}
+                          >
+                            <QrCode className="size-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
                             onClick={() => openEdit(asset)}
                             aria-label={`Edit ${asset.asset_tag}`}
                           >
@@ -613,6 +647,11 @@ export function AssetTrackingPageClient() {
           )}
         </div>
       </ContentCard>
+
+      {qrAsset ? <AssetQrDialog asset={qrAsset} onClose={() => setQrAsset(null)} /> : null}
+      {scanOpen ? (
+        <AssetQrScanDialog onClose={() => setScanOpen(false)} onTagScanned={handleScannedTag} />
+      ) : null}
 
       {/* Add / edit asset */}
       {dialog ? (
@@ -666,12 +705,6 @@ export function AssetTrackingPageClient() {
                   label="Serial Number"
                   value={form.serialNumber}
                   onChange={(v) => setForm((f) => ({ ...f, serialNumber: v }))}
-                />
-                <InputField
-                  label="Purchase Date"
-                  type="date"
-                  value={form.purchaseDate}
-                  onChange={(v) => setForm((f) => ({ ...f, purchaseDate: v }))}
                 />
                 {dialog.mode === "edit" && dialog.row?.status !== "ASSIGNED" ? (
                   <SelectField
