@@ -8,7 +8,8 @@ import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { hrmsService } from "@/services/hrms.service";
-import type { AssetItem, AssetStatus } from "@/types/asset";
+import type { AssetItem } from "@/types/asset";
+import { ASSET_STATUS_TONE } from "@/utils/assetStatus";
 import { cn } from "@/lib/utils";
 
 type Load<T> = { status: "loading" | "done" | "error"; data: T | null };
@@ -34,14 +35,6 @@ function useLoad<T>(fn: () => Promise<T>, deps: unknown[] = []): Load<T> {
   }, deps);
   return state;
 }
-
-const STATUS_TONE: Record<AssetStatus, string> = {
-  AVAILABLE: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400",
-  ASSIGNED: "bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]",
-  IN_REPAIR: "bg-amber-500/12 text-amber-700 dark:text-amber-400",
-  RETIRED: "bg-wt-surface-3 text-wt-text-muted",
-  LOST: "bg-rose-500/12 text-rose-700 dark:text-rose-400",
-};
 
 /** Every employee's read-only view of what's currently assigned to them —
  *  the self-service side of Asset Tracking (admin-only until now, even
@@ -100,7 +93,7 @@ export function MyAssetsPanel() {
                   <span
                     className={cn(
                       "shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium",
-                      STATUS_TONE[asset.status]
+                      ASSET_STATUS_TONE[asset.status]
                     )}
                   >
                     {asset.status === "ASSIGNED" ? "With you" : asset.status.replace("_", " ")}
