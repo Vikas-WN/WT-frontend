@@ -332,7 +332,6 @@ export function AssetTrackingPageClient() {
         if (asset.status !== "AVAILABLE") {
           return `This asset is ${statusLabel(asset.status).toLowerCase()} and can't be assigned.`;
         }
-        setScanOpen(false);
         openAssign(asset);
         return null;
       } catch (error) {
@@ -440,14 +439,14 @@ export function AssetTrackingPageClient() {
   return (
     <DashboardPageShell className="wt-detail-page">
       <ContentCard>
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-wt-border px-4 py-4 sm:px-6">
+        <div className="flex flex-col gap-3 border-b border-wt-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6">
           <div>
             <h2 className="text-lg font-semibold text-wt-text">Asset Tracking</h2>
             <p className="mt-1 text-sm text-wt-text-muted">
               Laptops, phones, chargers — everything the company owns and who has it.
             </p>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
             <RefreshIconButton onClick={refresh} loading={listQuery.status === "loading"} />
             <input
               ref={importInputRef}
@@ -467,13 +466,19 @@ export function AssetTrackingPageClient() {
               onClick={() => importInputRef.current?.click()}
               disabled={importing}
             >
-              <Upload className="mr-1.5 size-4" /> {importing ? "Importing…" : "Import CSV"}
+              <Upload className="mr-1.5 size-4" />
+              <span className="sm:hidden">{importing ? "…" : "CSV"}</span>
+              <span className="hidden sm:inline">{importing ? "Importing…" : "Import CSV"}</span>
             </Button>
             <Button type="button" variant="outline" onClick={() => setScanOpen(true)}>
-              <ScanLine className="mr-1.5 size-4" /> Scan QR
+              <ScanLine className="mr-1.5 size-4" />
+              <span className="sm:hidden">Scan</span>
+              <span className="hidden sm:inline">Scan QR</span>
             </Button>
             <Button type="button" onClick={openAdd}>
-              <Plus className="mr-1.5 size-4" /> Add asset
+              <Plus className="mr-1.5 size-4" />
+              <span className="sm:hidden">Add</span>
+              <span className="hidden sm:inline">Add asset</span>
             </Button>
           </div>
         </div>
