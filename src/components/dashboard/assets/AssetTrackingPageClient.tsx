@@ -59,7 +59,9 @@ import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { formatApiDateTimeDisplay } from "@/utils/apiDate";
 import { cn } from "@/lib/utils";
 import { AssetQrDialog } from "@/components/dashboard/assets/AssetQrDialog";
-import { AssetQrScanDialog } from "@/components/dashboard/assets/AssetQrScanDialog";
+import { AssetQrScanDialog, type AssetQrScanCloseReason } from "@/components/dashboard/assets/AssetQrScanDialog";
+import { AssetScanResultDialog } from "@/components/dashboard/assets/AssetScanResultDialog";
+import { ASSET_STATUS_LABELS, ASSET_STATUS_ORDER, ASSET_STATUS_TONE, statusLabel } from "@/utils/assetStatus";
 
 type Load<T> = { status: "loading" | "done" | "error"; data: T | null };
 
@@ -87,11 +89,7 @@ function useLoad<T>(fn: () => Promise<T>, deps: unknown[] = []): Load<T> {
 
 const STATUS_OPTIONS: { value: AssetStatus | ""; label: string }[] = [
   { value: "", label: "All statuses" },
-  { value: "AVAILABLE", label: "Available" },
-  { value: "ASSIGNED", label: "Assigned" },
-  { value: "IN_REPAIR", label: "In Repair" },
-  { value: "RETIRED", label: "Retired" },
-  { value: "LOST", label: "Lost" },
+  ...ASSET_STATUS_ORDER.map((value) => ({ value, label: ASSET_STATUS_LABELS[value] })),
 ];
 
 const NEXT_STATUS_OPTIONS = [
@@ -108,18 +106,6 @@ const EDITABLE_STATUS_OPTIONS = [
   { value: "RETIRED", label: "Retired" },
   { value: "LOST", label: "Lost" },
 ];
-
-const STATUS_TONE: Record<AssetStatus, string> = {
-  AVAILABLE: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400",
-  ASSIGNED: "bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]",
-  IN_REPAIR: "bg-amber-500/12 text-amber-700 dark:text-amber-400",
-  RETIRED: "bg-wt-surface-3 text-wt-text-muted",
-  LOST: "bg-rose-500/12 text-rose-700 dark:text-rose-400",
-};
-
-function statusLabel(status: AssetStatus): string {
-  return STATUS_OPTIONS.find((s) => s.value === status)?.label ?? status;
-}
 
 type FormState = {
   assetTag: string;
@@ -205,6 +191,9 @@ export function AssetTrackingPageClient() {
 
   const [qrAsset, setQrAsset] = useState<AssetItem | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
+  const [scanResult, setScanResult] = useState<AssetItem | null>(null);
+  const pendingScanResultRef = useRef<AssetItem | null>(null);
+  const scanSessionRef = useRef(0);
 
   const importInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
@@ -323,26 +312,39 @@ export function AssetTrackingPageClient() {
     setAssignError(null);
   }, []);
 
-  const handleScannedTag = useCallback(
-    async (tag: string): Promise<string | null> => {
-      try {
-        const res = await hrmsService.getAssetByTag(tag);
-        const asset = res.data;
-        if (!asset) return "No asset matches that QR.";
-        if (asset.status !== "AVAILABLE") {
-          return `This asset is ${statusLabel(asset.status).toLowerCase()} and can't be assigned.`;
-        }
-        openAssign(asset);
-        return null;
-      } catch (error) {
-        return toUserFriendlyApiErrorMessage(
-          error,
-          error instanceof ApiError ? error.message : "No asset matches that QR."
-        );
-      }
-    },
-    [openAssign]
-  );
+  const handleScannedTag = useCallback(async (tag: string): Promise<string | null> => {
+    const session = scanSessionRef.current;
+    try {
+      const res = await hrmsService.getAssetByTag(tag);
+      if (session !== scanSessionRef.current) return null;
+      const asset = res.data;
+      if (!asset) return "No asset matches that QR.";
+      pendingScanResultRef.current = asset;
+      return null;
+    } catch (error) {
+      if (session !== scanSessionRef.current) return null;
+      return toUserFriendlyApiErrorMessage(
+        error,
+        error instanceof ApiError ? error.message : "No asset matches that QR."
+      );
+    }
+  }, []);
+
+  const openScan = () => {
+    pendingScanResultRef.current = null;
+    scanSessionRef.current += 1;
+    setScanOpen(true);
+  };
+
+  const closeScanDialog = (reason: AssetQrScanCloseReason) => {
+    scanSessionRef.current += 1;
+    const next = pendingScanResultRef.current;
+    pendingScanResultRef.current = null;
+    setScanOpen(false);
+    if (reason === "commit" && next) setScanResult(next);
+  };
+
+  const dismissScanResult = () => setScanResult(null);
 
   const submitAssign = async () => {
     if (!assignTarget) return;
@@ -470,7 +472,7 @@ export function AssetTrackingPageClient() {
               <span className="sm:hidden">{importing ? "…" : "CSV"}</span>
               <span className="hidden sm:inline">{importing ? "Importing…" : "Import CSV"}</span>
             </Button>
-            <Button type="button" variant="outline" onClick={() => setScanOpen(true)}>
+            <Button type="button" variant="outline" onClick={openScan}>
               <ScanLine className="mr-1.5 size-4" />
               <span className="sm:hidden">Scan</span>
               <span className="hidden sm:inline">Scan QR</span>
@@ -574,7 +576,7 @@ export function AssetTrackingPageClient() {
                         <span
                           className={cn(
                             "rounded-md px-1.5 py-0.5 text-[11px] font-medium",
-                            STATUS_TONE[asset.status]
+                            ASSET_STATUS_TONE[asset.status]
                           )}
                         >
                           {statusLabel(asset.status)}
@@ -655,7 +657,33 @@ export function AssetTrackingPageClient() {
 
       {qrAsset ? <AssetQrDialog asset={qrAsset} onClose={() => setQrAsset(null)} /> : null}
       {scanOpen ? (
-        <AssetQrScanDialog onClose={() => setScanOpen(false)} onTagScanned={handleScannedTag} />
+        <AssetQrScanDialog onClose={closeScanDialog} onTagScanned={handleScannedTag} />
+      ) : null}
+      {scanResult ? (
+        <AssetScanResultDialog
+          asset={scanResult}
+          onClose={dismissScanResult}
+          onAssign={() => {
+            const asset = scanResult;
+            dismissScanResult();
+            openAssign(asset);
+          }}
+          onReturn={() => {
+            const asset = scanResult;
+            dismissScanResult();
+            openReturn(asset);
+          }}
+          onEdit={() => {
+            const asset = scanResult;
+            dismissScanResult();
+            openEdit(asset);
+          }}
+          onHistory={() => {
+            const asset = scanResult;
+            dismissScanResult();
+            void openHistory(asset);
+          }}
+        />
       ) : null}
 
       {/* Add / edit asset */}

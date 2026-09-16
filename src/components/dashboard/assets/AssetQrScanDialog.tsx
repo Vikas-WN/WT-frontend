@@ -16,25 +16,39 @@ import { cn } from "@/lib/utils";
 
 const READER_ID = "asset-qr-scanner";
 
+export type AssetQrScanCloseReason = "commit" | "dismiss";
+
 export function AssetQrScanDialog({
   onClose,
   onTagScanned,
 }: {
-  onClose: () => void;
+  onClose: (reason: AssetQrScanCloseReason) => void;
   /** Return an error message to keep scanning; return void/null on success (parent closes). */
   onTagScanned: (tag: string) => Promise<string | null | void>;
 }) {
   const [scanError, setScanError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const handlingRef = useRef(false);
+  const dismissedRef = useRef(false);
   const onTagScannedRef = useRef(onTagScanned);
   onTagScannedRef.current = onTagScanned;
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const stopRef = useRef<() => Promise<void>>(async () => undefined);
 
+  const finish = async (reason: AssetQrScanCloseReason) => {
+    if (dismissedRef.current) return;
+    dismissedRef.current = true;
+    handlingRef.current = true;
+    try {
+      await stopRef.current();
+    } finally {
+      onCloseRef.current(reason);
+    }
+  };
+
   const onDecode = useCallback((text: string) => {
-    if (handlingRef.current) return;
+    if (dismissedRef.current || handlingRef.current) return;
     const tag = decodeAssetQrPayload(text);
     if (!tag) {
       setScanError("That QR is not a WebTrak asset tag.");
@@ -45,17 +59,14 @@ export function AssetQrScanDialog({
     setBusy(true);
     void (async () => {
       const result = await onTagScannedRef.current(tag);
+      if (dismissedRef.current) return;
       if (result) {
         handlingRef.current = false;
         setBusy(false);
         setScanError(result);
         return;
       }
-      try {
-        await stopRef.current();
-      } finally {
-        onCloseRef.current();
-      }
+      await finish("commit");
     })();
   }, []);
 
@@ -68,21 +79,12 @@ export function AssetQrScanDialog({
   const error = scanError ?? cameraError;
   const canSwitch = cameras.length > 1 && !busy && !switching;
 
-  const handleClose = async () => {
-    handlingRef.current = true;
-    try {
-      await stopAndWait();
-    } finally {
-      onClose();
-    }
-  };
-
   return (
     <div
       className={MODAL_OVERLAY_CLASS}
       role="presentation"
       onClick={(e) => {
-        if (e.target === e.currentTarget && !switching) void handleClose();
+        if (e.target === e.currentTarget && !switching) void finish("dismiss");
       }}
     >
       <div
@@ -98,7 +100,7 @@ export function AssetQrScanDialog({
         </div>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-5 sm:px-7">
           <p className="mb-3 shrink-0 text-sm text-wt-text-muted">
-            Point the camera at the asset sticker. Available assets open the assign form.
+            Point the camera at the asset sticker. A match opens the asset details.
           </p>
           <div
             id={READER_ID}
@@ -128,7 +130,7 @@ export function AssetQrScanDialog({
               {switching ? "Switching…" : "Switch camera"}
             </Button>
           ) : null}
-          <Button type="button" variant="outline" onClick={() => void handleClose()} disabled={switching}>
+          <Button type="button" variant="outline" onClick={() => void finish("dismiss")} disabled={switching}>
             Cancel
           </Button>
         </div>
