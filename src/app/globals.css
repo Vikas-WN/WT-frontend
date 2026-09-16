@@ -299,16 +299,22 @@ body::-webkit-scrollbar {
 /* iOS / Android edge-to-edge safe areas                                 */
 /* The viewport is `viewport-fit=cover`, so the page paints under the    */
 /* notch / Dynamic Island, the home indicator and the rounded corners.  */
-/* Without these insets the fixed header and the bottom of every scroll  */
-/* area are clipped by system UI on real devices.                        */
+/*                                                                      */
+/* Contract: `.wt-*` hooks own env(safe-area-inset-*) only. They must  */
+/* not set design spacing (px / py / p-3 / 1rem). Visual padding lives */
+/* on an inner bar (TS layout tokens) or is added with calc() when CSS */
+/* already exclusively owns that padding axis. Never use               */
+/* max(env, 0px) or max(design, env) on a node that also has Tailwind  */
+/* padding — max replaces; it does not add.                            */
 /* ------------------------------------------------------------------ */
 @supports (padding: max(0px)) {
   .wt-app-shell {
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }
+  /* Surface only — inner bar in AppChromeHeader owns py-*. */
   .wt-app-header {
-    padding-top: max(env(safe-area-inset-top), 0px);
+    padding-top: env(safe-area-inset-top, 0px);
   }
   .wt-page-scroll {
     scroll-padding-bottom: env(safe-area-inset-bottom);
@@ -316,24 +322,25 @@ body::-webkit-scrollbar {
   .wt-page-scroll > * {
     padding-bottom: env(safe-area-inset-bottom);
   }
-  /* Dialogs: keep the panel (and its footer buttons) off the home bar. */
+  /* Dialogs: keep the panel (and its footer buttons) off the home bar.
+     Unlayered CSS replaces Tailwind p-4 on this axis, so include 1rem. */
   .wt-modal-overlay {
-    padding-top: max(1rem, env(safe-area-inset-top));
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    padding-top: calc(1rem + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   }
-  /* Sticky bottom action bars inside forms. */
+  /* Sticky bottom action bars — env only; pair with an inner padded row. */
   .wt-safe-bottom {
-    padding-bottom: max(env(safe-area-inset-bottom), 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
 @supports (padding: max(0px)) {
   @media (max-width: 1023.98px) {
-    /* Off-canvas nav drawer — first/last items must clear the status bar
-       and the home indicator. p-3 (0.75rem) stays the floor. */
+    /* Off-canvas nav drawer — CSS replaces p-3 on this axis at this
+       breakpoint, so keep 0.75rem and add the notch / home-indicator inset. */
     .wt-mobile-drawer {
-      padding-top: max(0.75rem, env(safe-area-inset-top));
-      padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+      padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+      padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
     }
   }
 }
