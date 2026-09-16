@@ -8,16 +8,21 @@ import {
   pickPreferredCameraId,
   type CameraDevice,
 } from "@/utils/cameraDevices";
+import { safeStopHtml5Qrcode } from "@/utils/html5QrcodeStop";
 
 function viewfinderQrbox(viewfinderWidth: number, viewfinderHeight: number) {
   const minSide = Math.min(viewfinderWidth, viewfinderHeight);
-  const size = Math.max(80, Math.floor(minSide * 0.7));
+  if (!Number.isFinite(minSide) || minSide < 40) {
+    return { width: 120, height: 120 };
+  }
+  const size = Math.max(96, Math.min(Math.floor(minSide * 0.42), minSide - 16));
   return { width: size, height: size };
 }
 
 const SCAN_CONFIG = {
   fps: 8,
   qrbox: viewfinderQrbox,
+  aspectRatio: 4 / 3,
 };
 
 export function useHtml5QrScanner({
@@ -38,12 +43,7 @@ export function useHtml5QrScanner({
 
   const stopAndWait = useCallback(async () => {
     const scanner = scannerRef.current;
-    if (!scanner) return;
-    try {
-      if (scanner.isScanning) await scanner.stop();
-    } catch {
-      /* not running or already torn down */
-    }
+    await safeStopHtml5Qrcode(scanner);
   }, []);
 
   useEffect(() => {
@@ -68,6 +68,11 @@ export function useHtml5QrScanner({
 
         const scanner = new Html5Qrcode(elementId);
         scannerRef.current = scanner;
+        if (cancelled) {
+          await safeStopHtml5Qrcode(scanner);
+          return;
+        }
+
         const onScan = (decodedText: string) => {
           if (cancelled) return;
           onDecodeRef.current(decodedText);
@@ -88,12 +93,13 @@ export function useHtml5QrScanner({
         } catch {
           const fallback = nextCameraId(devices, preferred);
           if (!fallback || fallback === preferred) throw new Error("start failed");
-          try {
-            await scanner.stop();
-          } catch {
-            /* not running */
-          }
+          await safeStopHtml5Qrcode(scanner, { clear: false });
+          if (cancelled) return;
+          scannerRef.current = scanner;
           await tryStart(fallback);
+        }
+        if (cancelled) {
+          await safeStopHtml5Qrcode(scanner);
         }
       } catch {
         if (!cancelled) {
@@ -108,8 +114,7 @@ export function useHtml5QrScanner({
       cancelled = true;
       const scanner = scannerRef.current;
       scannerRef.current = null;
-      if (!scanner) return;
-      void scanner.stop().catch(() => undefined);
+      void safeStopHtml5Qrcode(scanner);
     };
   }, [elementId]);
 
@@ -121,8 +126,9 @@ export function useHtml5QrScanner({
     setSwitching(true);
     setError(null);
     try {
-      await stopAndWait();
+      await safeStopHtml5Qrcode(scanner, { clear: false });
       currentIdRef.current = next;
+      scannerRef.current = scanner;
       await scanner.start(next, SCAN_CONFIG, (decodedText) => {
         onDecodeRef.current(decodedText);
       }, () => undefined);
@@ -131,7 +137,7 @@ export function useHtml5QrScanner({
     } finally {
       setSwitching(false);
     }
-  }, [stopAndWait]);
+  }, []);
 
   return {
     cameras,
