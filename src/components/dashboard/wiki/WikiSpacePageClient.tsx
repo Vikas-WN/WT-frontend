@@ -371,7 +371,7 @@ export function WikiSpacePageClient({
               value={formContent}
               onChange={setFormContent}
               rows={16}
-              placeholder="Plain text. Start a line with “Section 1:” for a heading, “- ” for a bullet."
+              placeholder="Markdown: ## heading, - list, **bold**, `code`, [text](https://…)"
             />
             {formError ? (
               <p className="text-sm text-destructive" role="alert">
