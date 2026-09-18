@@ -13,6 +13,14 @@ export function wikiUrlTransform(url: string): string {
   return "";
 }
 
+/** Markdown images are URL strings, never Blobs. React 19 types img.src as
+ *  string | Blob; only https URLs are shown. */
+export function httpsImageSrc(src: string | Blob | undefined): string | null {
+  if (typeof src !== "string") return null;
+  if (!/^https:/i.test(src)) return null;
+  return src;
+}
+
 export const wikiMarkdownComponents: Components = {
   h1: ({ children }) => (
     <h1 className="mt-6 text-xl font-semibold text-wt-text first:mt-0">{children}</h1>
@@ -62,11 +70,14 @@ export const wikiMarkdownComponents: Components = {
     ) : (
       <span>{children}</span>
     ),
-  img: ({ src, alt }) =>
-    src && /^https:/i.test(src) ? (
+  img: ({ src, alt }) => {
+    const href = httpsImageSrc(src);
+    if (!href) return null;
+    return (
       // eslint-disable-next-line @next/next/no-img-element -- employee markdown; https only
-      <img src={src} alt={alt ?? ""} className="max-h-80 max-w-full rounded-lg border border-wt-border" />
-    ) : null,
+      <img src={href} alt={alt ?? ""} className="max-h-80 max-w-full rounded-lg border border-wt-border" />
+    );
+  },
   pre: ({ children }) => (
     <pre className="overflow-x-auto rounded-xl border border-wt-border bg-wt-surface-2 p-3 text-[0.8rem] leading-relaxed">
       {children}
