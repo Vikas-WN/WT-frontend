@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Boxes,
   History,
@@ -47,6 +48,9 @@ import {
 } from "@/components/dashboard/ui/uiLayout";
 import { ApiError } from "@/api/error";
 import { hrmsService } from "@/services/hrms.service";
+import { useAuth } from "@/context/AuthContext";
+import { DASHBOARD_ROUTES } from "@/constants/routes";
+import { canManageAssets } from "@/utils/roles";
 import type {
   AssetAssignmentHistoryItem,
   AssetItem,
@@ -140,6 +144,12 @@ function formFromAsset(asset: AssetItem): FormState {
 }
 
 export function AssetTrackingPageClient() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const canManage = canManageAssets(user?.roles);
+  const deniedNoticeRef = useRef(false);
+  const urlTagConsumedRef = useRef(false);
+
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [category, setCategory] = useState("");
@@ -149,16 +159,24 @@ export function AssetTrackingPageClient() {
 
   const listQuery = useLoad(
     () =>
-      hrmsService.listAssets({
-        size: 100,
-        category: category || undefined,
-        status: statusFilter || undefined,
-        search: search || undefined,
-      }),
-    [category, statusFilter, search, listTick]
+      canManage
+        ? hrmsService.listAssets({
+            size: 100,
+            category: category || undefined,
+            status: statusFilter || undefined,
+            search: search || undefined,
+          })
+        : Promise.resolve(null),
+    [canManage, category, statusFilter, search, listTick]
   );
-  const categoriesQuery = useLoad(() => hrmsService.listAssetCategories(), [listTick]);
-  const statsQuery = useLoad(() => hrmsService.getAssetStats(), [listTick]);
+  const categoriesQuery = useLoad(
+    () => (canManage ? hrmsService.listAssetCategories() : Promise.resolve(null)),
+    [canManage, listTick]
+  );
+  const statsQuery = useLoad(
+    () => (canManage ? hrmsService.getAssetStats() : Promise.resolve(null)),
+    [canManage, listTick]
+  );
   const assets: AssetItem[] = listQuery.data?.data?.data ?? [];
   const stats: AssetStats | null = statsQuery.data?.data ?? null;
 
@@ -346,6 +364,49 @@ export function AssetTrackingPageClient() {
 
   const dismissScanResult = () => setScanResult(null);
 
+  useEffect(() => {
+    if (!user || canManage) return;
+    if (deniedNoticeRef.current) return;
+    deniedNoticeRef.current = true;
+    notifyError("You don't have access to Asset Tracking.");
+    router.replace(DASHBOARD_ROUTES.home);
+  }, [user, canManage, router]);
+
+  useEffect(() => {
+    if (!canManage || urlTagConsumedRef.current) return;
+    if (typeof window === "undefined") return;
+    const tag = new URLSearchParams(window.location.search).get("tag")?.trim() ?? "";
+    if (!tag) return;
+    urlTagConsumedRef.current = true;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("tag");
+    const stripped = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState(null, "", stripped);
+    let alive = true;
+    void (async () => {
+      try {
+        const res = await hrmsService.getAssetByTag(tag);
+        if (!alive) return;
+        if (!res.data) {
+          notifyError("No asset matches that QR.");
+          return;
+        }
+        setScanResult(res.data);
+      } catch (error) {
+        if (!alive) return;
+        notifyError(
+          toUserFriendlyApiErrorMessage(
+            error,
+            error instanceof ApiError ? error.message : "No asset matches that QR."
+          )
+        );
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [canManage]);
+
   const submitAssign = async () => {
     if (!assignTarget) return;
     if (!assignSelected) {
@@ -437,6 +498,14 @@ export function AssetTrackingPageClient() {
       setImporting(false);
     }
   };
+
+  if (!canManage) {
+    return (
+      <DashboardPageShell className="wt-detail-page">
+        <SectionLoading label="" />
+      </DashboardPageShell>
+    );
+  }
 
   return (
     <DashboardPageShell className="wt-detail-page">

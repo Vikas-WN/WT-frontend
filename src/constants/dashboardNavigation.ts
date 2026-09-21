@@ -1,5 +1,6 @@
 import type { SidebarIconName } from "@/constants/sidebarIcons";
 import { toTitleCase } from "@/utils/titleCase";
+import { ASSET_ADMIN_ROLES } from "@/utils/roles";
 
 /** External Pulse (RT portal) — sidebar + /dashboard/pulse redirect. */
 export const PULSE_EXTERNAL_URL = "https://rtportal.webknot-dev.in/";
@@ -269,7 +270,7 @@ export const dashboardNavigation: NavItem[] = [
     kind: "link",
     id: "assets",
     label: "Asset Tracking",
-    roles: ["ROLE_OFFICE_ADMIN", "ROLE_HR", "ROLE_ADMIN"],
+    roles: [...ASSET_ADMIN_ROLES],
     icon: "layoutGrid",
   },
   { kind: "link", id: "apps", label: "Apps", roles: ["ROLE_ADMIN"], icon: "code" },

@@ -41,7 +41,12 @@ export default function ProtectedLayout({
     // painted content) where the previous page stays visible/interactive
     // behind the "Session Ended" cover — exactly what must never happen once
     // the session is gone.
-    window.location.replace("/login");
+    const intended = `${window.location.pathname}${window.location.search}`;
+    const login = new URL("/login", window.location.origin);
+    if (intended.startsWith("/dashboard") || intended.startsWith("/onboarding")) {
+      login.searchParams.set("redirect", intended);
+    }
+    window.location.replace(`${login.pathname}${login.search}`);
   }, [status]);
 
   if (status === "loading") {
