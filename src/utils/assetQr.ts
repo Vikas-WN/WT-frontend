@@ -1,16 +1,40 @@
 import type { AssetItem } from "@/types/asset";
+import { DASHBOARD_ROUTES } from "@/constants/routes";
 
 export const ASSET_QR_PREFIX = "webtrak:asset:v1:";
 
+export function assetQrPath(tag: string): string {
+  return `${DASHBOARD_ROUTES.assets}?tag=${encodeURIComponent(tag.trim())}`;
+}
+
 export function encodeAssetQrPayload(assetTag: string): string {
-  return `${ASSET_QR_PREFIX}${assetTag.trim()}`;
+  const tag = assetTag.trim();
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  if (!origin) return `${ASSET_QR_PREFIX}${tag}`;
+  return `${origin}${assetQrPath(tag)}`;
+}
+
+function tagFromAssetTrackingUrl(text: string): string | null {
+  try {
+    const url = text.includes("://")
+      ? new URL(text)
+      : new URL(text, typeof window !== "undefined" ? window.location.origin : "https://webtrak.local");
+    if (url.pathname.replace(/\/$/, "") !== DASHBOARD_ROUTES.assets) return null;
+    const tag = url.searchParams.get("tag")?.trim() ?? "";
+    return tag || null;
+  } catch {
+    return null;
+  }
 }
 
 export function decodeAssetQrPayload(raw: string): string | null {
   const text = raw.trim();
-  if (!text.startsWith(ASSET_QR_PREFIX)) return null;
-  const tag = text.slice(ASSET_QR_PREFIX.length).trim();
-  return tag || null;
+  if (!text) return null;
+  if (text.startsWith(ASSET_QR_PREFIX)) {
+    const tag = text.slice(ASSET_QR_PREFIX.length).trim();
+    return tag || null;
+  }
+  return tagFromAssetTrackingUrl(text);
 }
 
 export function assetQrFilename(assetTag: string): string {

@@ -85,6 +85,14 @@ export function normalizePortalRoles(value: unknown): string[] {
   return normalizeRoles(value.map((role) => String(role).trim()).filter(Boolean));
 }
 
+/** Same roles as GET /api/v1/assets/* admin routes and the Asset Tracking nav item. */
+export const ASSET_ADMIN_ROLES = ["ROLE_OFFICE_ADMIN", "ROLE_HR", "ROLE_ADMIN"] as const;
+
+export function canManageAssets(roles: string[] | null | undefined): boolean {
+  const set = new Set(normalizeRoles(roles ?? []));
+  return ASSET_ADMIN_ROLES.some((role) => set.has(role));
+}
+
 export function pickPrimaryPortalRole(roles: string[]): string {
   const normalized = normalizeRoles(roles);
   for (const role of PORTAL_ROLE_PRIORITY) {
