@@ -85,7 +85,6 @@ import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAc
 
 
 export function OverviewPageClient() {
-      .includes("manager");
   const REQUEST_TYPE_ALIASES: Record<string, string[]> = {
     LEAVE: ["LEAVE"],
     WFH: ["WFH"],
@@ -96,7 +95,6 @@ export function OverviewPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { metrics, loading, refresh } = useOverviewData();
-    const [actionLoading, setActionLoading] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
@@ -807,7 +805,15 @@ export function OverviewPageClient() {
     window.localStorage.setItem("wt-theme", nextTheme);
   }
 
-  const runAction = useActionRunner(setActionLoading, refresh);
+  const { actionLoading, runAction: runDashboardAction } = useDashboardAction();
+  const runAction = useCallback(
+    async (label: string, fn: () => Promise<unknown>) => {
+      const ok = await runDashboardAction(label, fn);
+      if (ok) refresh();
+      return ok;
+    },
+    [runDashboardAction, refresh]
+  );
 
   function normalizeAssignedProjects(rows: Array<Record<string, unknown>>) {
     return rows.map((row) => {
