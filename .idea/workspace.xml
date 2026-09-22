@@ -4,14 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="277eea37-5920-433d-98e6-176d094caf49" name="Changes" comment="feat: added new admin panels for certifications, KPI reports, and Webknot values management">
-      <change beforePath="$PROJECT_DIR$/src/api/endpoints.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/endpoints.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/assets/AssetTrackingPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/assets/AssetTrackingPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/ui/forms.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/ui/forms.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/constants/dashboardNavigation.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/constants/dashboardNavigation.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/constants/routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/constants/routes.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/hrms.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/hrms.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/types/asset.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types/asset.ts" afterDir="false" />
+    <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/(protected)/dashboard/timelog/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/(protected)/dashboard/timelog/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/v1/auth/refresh/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/v1/auth/refresh/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/overview/OverviewPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/overview/OverviewPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/timelog/useDayTimelog.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/timelog/useDayTimelog.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib/serverApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/serverApi.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/notificationNavigation.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/notificationNavigation.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -19,144 +19,43 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="702" />
-    <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
+    <option name="cachedIndexableFilesCount" value="376" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory">{
-  &quot;history&quot;: [
-    {
-      &quot;state&quot;: &quot;OPEN&quot;
-    }
-  ],
-  &quot;lastFilter&quot;: {
-    &quot;state&quot;: &quot;OPEN&quot;
-  }
-}</component>
-  <component name="GitHubPullRequestState">{
-  &quot;prStates&quot;: [
-    {
-      &quot;id&quot;: {
-        &quot;id&quot;: &quot;PR_kwDOSnPUms7m3dTn&quot;,
-        &quot;number&quot;: 13
-      },
-      &quot;lastSeen&quot;: 1781716622788
-    },
-    {
-      &quot;id&quot;: {
-        &quot;id&quot;: &quot;PR_kwDOSnPUms7vnMiU&quot;,
-        &quot;number&quot;: 42
-      },
-      &quot;lastSeen&quot;: 1784623527463
-    }
-  ]
-}</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/Vikas-WN/WT-frontend.git&quot;,
-    &quot;accountId&quot;: &quot;e7b19179-d9f1-4d2a-a76c-3656d168b3f0&quot;
-  }
-}</component>
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
   </component>
-  <component name="NextEditCompletionFeaturesState">
-    <decayedCancelled>
-      <entry key="MS100" value="1.732577663444901" />
-      <entry key="MS500" value="4.581176197271115" />
-      <entry key="S2" value="15.310220823389496" />
-      <entry key="S5" value="26.488266711805082" />
-      <entry key="S10" value="33.30732799041561" />
-      <entry key="S30" value="39.375095680558026" />
-      <entry key="S60" value="41.18642182933409" />
-      <entry key="M2" value="42.28899265605983" />
-      <entry key="M5" value="44.06823159508937" />
-      <entry key="M10" value="55.21386384459577" />
-      <entry key="M15" value="75.09666852780886" />
-      <entry key="M30" value="135.48201420544785" />
-      <entry key="H1" value="205.16107072180722" />
-      <entry key="H2" value="259.34512340220255" />
-      <entry key="H4" value="293.33531503920597" />
-      <entry key="D1" value="325.9552398416973" />
-      <entry key="W1" value="331.9824136260707" />
-    </decayedCancelled>
-    <decayedSelected>
-      <entry key="MS100" value="0.0" />
-      <entry key="MS500" value="0.0" />
-      <entry key="S2" value="0.0" />
-      <entry key="S5" value="0.0" />
-      <entry key="S10" value="0.0" />
-      <entry key="S30" value="0.0" />
-      <entry key="S60" value="0.0" />
-      <entry key="M2" value="0.0" />
-      <entry key="M5" value="0.0" />
-      <entry key="M10" value="0.0" />
-      <entry key="M15" value="0.0" />
-      <entry key="M30" value="0.0" />
-      <entry key="H1" value="0.0" />
-      <entry key="H2" value="0.0" />
-      <entry key="H4" value="0.0" />
-      <entry key="D1" value="0.0" />
-      <entry key="W1" value="0.0" />
-    </decayedSelected>
-    <decayedShown>
-      <entry key="MS100" value="1.6735929631654216" />
-      <entry key="MS500" value="4.550074273491111" />
-      <entry key="S2" value="15.283593365057781" />
-      <entry key="S5" value="26.46952059132707" />
-      <entry key="S10" value="33.295454029265905" />
-      <entry key="S30" value="39.37032522223649" />
-      <entry key="S60" value="41.183366486787726" />
-      <entry key="M2" value="42.2864740879012" />
-      <entry key="M5" value="44.066506198803296" />
-      <entry key="M10" value="55.21267608446886" />
-      <entry key="M15" value="75.0956716405909" />
-      <entry key="M30" value="135.48126525237228" />
-      <entry key="H1" value="205.16056594723284" />
-      <entry key="H2" value="259.3448225578362" />
-      <entry key="H4" value="293.335149734874" />
-      <entry key="D1" value="325.95520994051685" />
-      <entry key="W1" value="331.9824092928351" />
-    </decayedShown>
-  </component>
-  <component name="ProjectColorInfo">{
-  &quot;associatedIndex&quot;: 6,
-  &quot;fromUser&quot;: false
-}</component>
-  <component name="ProjectId" id="3FH0CgzmGnuEz8vdhyDzYbWLYYI" />
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 1,
+  "fromUser": false
+}]]></component>
+  <component name="ProjectId" id="3JgScFHNO8zQ31NTyHJF6UxZxJl" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
-    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;develop&quot;,
-    &quot;git.auto.fetch.suggestion.counter&quot;: &quot;1&quot;,
-    &quot;js.debugger.nextJs.config.created.client&quot;: &quot;true&quot;,
-    &quot;js.debugger.nextJs.config.created.server&quot;: &quot;true&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/likhithrajup/Developer/WT-frontend&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;pnpm&quot;,
-    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;/Users/likhithrajup/Developer/WT-frontend/node_modules/typescript/lib&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "develop",
+    "js.debugger.nextJs.config.created.client": "true",
+    "js.debugger.nextJs.config.created.server": "true",
+    "last_opened_file_path": "/Users/likhithrajup/Developer/WT-frontend",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "pnpm"
   }
-}</component>
+}]]></component>
   <component name="RunManager" selected="npm.Next.js: server-side">
     <configuration name="Next.js: debug client-side" type="JavascriptDebugType" uri="http://localhost:3000/">
       <method v="2" />
@@ -175,106 +74,22 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-WS-261.23567.141" />
+        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-WS-262.10968.77" />
       </set>
     </attachedChunks>
   </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="277eea37-5920-433d-98e6-176d094caf49" name="Changes" comment="" />
-      <created>1781716561904</created>
+      <changelist id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="" />
+      <created>1790081296800</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1781716561904</updated>
-      <workItem from="1781716563016" duration="1730000" />
-      <workItem from="1784525191135" duration="13000" />
-      <workItem from="1784623349362" duration="5667000" />
-      <workItem from="1788794059973" duration="16000" />
-      <workItem from="1789021966328" duration="529000" />
-      <workItem from="1789446026183" duration="640000" />
+      <updated>1790081296800</updated>
+      <workItem from="1790081298044" duration="616000" />
     </task>
-    <task id="LOCAL-00001" summary="updated the responsiveness of the application and added icons to support properly">
-      <option name="closed" value="true" />
-      <created>1789028641939</created>
-      <option name="number" value="00001" />
-      <option name="presentableId" value="LOCAL-00001" />
-      <option name="project" value="LOCAL" />
-      <updated>1789028641939</updated>
-    </task>
-    <task id="LOCAL-00002" summary="updated the responsiveness of the application and added icons to support properly">
-      <option name="closed" value="true" />
-      <created>1789028651361</created>
-      <option name="number" value="00002" />
-      <option name="presentableId" value="LOCAL-00002" />
-      <option name="project" value="LOCAL" />
-      <updated>1789028651361</updated>
-    </task>
-    <task id="LOCAL-00003" summary="added global search functionality">
-      <option name="closed" value="true" />
-      <created>1789037612665</created>
-      <option name="number" value="00003" />
-      <option name="presentableId" value="LOCAL-00003" />
-      <option name="project" value="LOCAL" />
-      <updated>1789037612665</updated>
-    </task>
-    <task id="LOCAL-00004" summary="added some UI updates along with who's out">
-      <option name="closed" value="true" />
-      <created>1789039025152</created>
-      <option name="number" value="00004" />
-      <option name="presentableId" value="LOCAL-00004" />
-      <option name="project" value="LOCAL" />
-      <updated>1789039025152</updated>
-    </task>
-    <task id="LOCAL-00005" summary="enahancing search and who's out feature">
-      <option name="closed" value="true" />
-      <created>1789041319599</created>
-      <option name="number" value="00005" />
-      <option name="presentableId" value="LOCAL-00005" />
-      <option name="project" value="LOCAL" />
-      <updated>1789041319599</updated>
-    </task>
-    <task id="LOCAL-00006" summary="feat: implemented asset tracking page and certificate modal for enhanced resource management">
-      <option name="closed" value="true" />
-      <created>1789446055023</created>
-      <option name="number" value="00006" />
-      <option name="presentableId" value="LOCAL-00006" />
-      <option name="project" value="LOCAL" />
-      <updated>1789446055023</updated>
-    </task>
-    <task id="LOCAL-00007" summary="feat: added My KPI Summary panel with all-time summary and submission history tracking">
-      <option name="closed" value="true" />
-      <created>1789456767311</created>
-      <option name="number" value="00007" />
-      <option name="presentableId" value="LOCAL-00007" />
-      <option name="project" value="LOCAL" />
-      <updated>1789456767311</updated>
-    </task>
-    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
-  </component>
-  <component name="Vcs.Log.Tabs.Properties">
-    <option name="TAB_STATES">
-      <map>
-        <entry key="MAIN">
-          <value>
-            <State />
-          </value>
-        </entry>
-      </map>
-    </option>
-  </component>
-  <component name="VcsManagerConfiguration">
-    <MESSAGE value="changing the responiveness of the application to handle mobile screens" />
-    <MESSAGE value="updated mobile based in-app notifications and then correcting few misplaced things" />
-    <MESSAGE value="added who's out features" />
-    <MESSAGE value="bug fixes 405 error" />
-    <MESSAGE value="enahancing search and who's out feature" />
-    <MESSAGE value="feat: added new features of the checking in-office, added a new wiki page, and tracking of the ratings" />
-    <MESSAGE value="feat: implemented asset tracking page and certificate modal for enhanced resource management" />
-    <MESSAGE value="feat: added My KPI Summary panel with all-time summary and submission history tracking" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat: added My KPI Summary panel with all-time summary and submission history tracking" />
   </component>
 </project>

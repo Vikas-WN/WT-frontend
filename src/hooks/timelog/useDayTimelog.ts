@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { hrmsService } from "@/services/hrms.service";
 import { ApiError } from "@/api/error";
@@ -100,9 +101,20 @@ export { DAYS_OF_WEEK, MONTHS, buildCalendarMonth };
 export function useDayTimelog() {
   const today = useMemo(() => new Date(), []);
   const todayKey = useMemo(() => formatApiDate(today), [today]);
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const [selectedDate, setSelectedDate] = useState<string | null>(todayKey);
+  // A Timelog Approved/Rejected notification deep-links here with ?date=<log
+  // date> (see resolveNotificationHref) so the employee lands on the actual
+  // day the notification is about, not always the current month/today.
+  const searchParams = useSearchParams();
+  const deepLinkedDate = useMemo(() => {
+    const raw = searchParams.get("date");
+    if (!raw) return null;
+    return parseTimelogDate(raw);
+  }, [searchParams]);
+  const [viewYear, setViewYear] = useState(() => (deepLinkedDate ?? today).getFullYear());
+  const [viewMonth, setViewMonth] = useState(() => (deepLinkedDate ?? today).getMonth());
+  const [selectedDate, setSelectedDate] = useState<string | null>(() =>
+    deepLinkedDate ? formatApiDate(deepLinkedDate) : todayKey
+  );
   const [actionLoading, setActionLoading] = useState(false);
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<DayTimelogEntry | null>(null);

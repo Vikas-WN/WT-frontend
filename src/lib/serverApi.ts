@@ -73,10 +73,19 @@ export interface SessionTokens {
   status: string;
   user_type: string;
   session_started_at?: string;
+  /** Backend's own absolute session ceiling (hours), from AuthResponse.session_max_hours. */
+  session_max_hours?: number;
 }
 
 const ACCESS_TOKEN_MINUTES = Number(process.env.ACCESS_TOKEN_MINUTES ?? 30);
-const SESSION_MAX_HOURS = Number(process.env.SESSION_MAX_HOURS ?? 8);
+// Fallback only — used when the backend response carries no session_max_hours
+// (should not happen in practice). Never let this be the source of truth: it
+// is a local, frontend-only env var with no relationship to the backend's own
+// SESSION_MAX_HOURS setting, so a deploy that sets it independently (e.g. to
+// "4", mistaking it for the *inactivity* window) silently caps every cookie —
+// and therefore the whole session — at that value regardless of what the
+// backend actually enforces or how active the user is.
+const FALLBACK_SESSION_MAX_HOURS = Number(process.env.SESSION_MAX_HOURS ?? 8);
 
 function cookieBaseOptions() {
   const secure = process.env.NODE_ENV === "production";
@@ -90,7 +99,11 @@ function cookieBaseOptions() {
 
 export function setAuthCookies(response: NextResponse, session: SessionTokens): void {
   const base = cookieBaseOptions();
-  const sessionMaxAge = SESSION_MAX_HOURS * 3600;
+  const backendMaxHours = Number(session.session_max_hours);
+  const sessionMaxAge =
+    (Number.isFinite(backendMaxHours) && backendMaxHours > 0
+      ? backendMaxHours
+      : FALLBACK_SESSION_MAX_HOURS) * 3600;
 
   response.cookies.set("accessToken", session.accessToken, {
     ...base,

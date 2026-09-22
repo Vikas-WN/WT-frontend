@@ -51,6 +51,16 @@ function timelogTeamHrefForEmployee(employeeEmail: string | null): string {
   return `${base}?employee=${encodeURIComponent(employeeEmail)}`;
 }
 
+/** Extract the log date from a timelog approved/rejected notification message
+ *  (backend sends both "on 2026-05-20" and "on 20/05/2026" depending on which
+ *  code path created it — TimeLogService.update_status_single vs _batch). */
+export function parseTimelogNotificationDeepLink(message: string): { date: string | null } {
+  const match = String(message ?? "").match(
+    /\bon\s+(\d{4}-\d{2}-\d{2}|\d{1,2}[/-]\d{1,2}[/-]\d{4})\b/i
+  );
+  return { date: match?.[1] ?? null };
+}
+
 /** Extract leave/WFH deep-link fields from a notification message. */
 export function parseLeaveNotificationDeepLink(message: string): {
   requestId: string | null;
@@ -324,9 +334,14 @@ export function resolveNotificationHref(
       return timelogTeamHrefForEmployee(notificationSenderEmail(row));
 
     case "NO_TIME_LOGS":
-    case "TIMELOG_APPROVED":
-    case "TIMELOG_REJECTED":
       return DASHBOARD_ROUTES.timelog;
+
+    case "TIMELOG_APPROVED":
+    case "TIMELOG_REJECTED": {
+      const { date } = parseTimelogNotificationDeepLink(readNotificationMessage(row));
+      if (!date) return DASHBOARD_ROUTES.timelog;
+      return `${DASHBOARD_ROUTES.timelog}?date=${encodeURIComponent(date)}`;
+    }
 
     case "TRAINING_MARKS_PUBLISHED":
       return LEARNING_SCORES;
