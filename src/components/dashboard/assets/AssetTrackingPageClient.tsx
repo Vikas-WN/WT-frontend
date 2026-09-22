@@ -366,6 +366,13 @@ export function AssetTrackingPageClient() {
 
   useEffect(() => {
     if (!user || canManage) return;
+    // A QR scan (?tag=...) is a read-only lookup any employee may perform —
+    // don't bounce them home before the tag-lookup effect below gets a chance
+    // to show the scan result.
+    if (typeof window !== "undefined") {
+      const hasTag = new URLSearchParams(window.location.search).get("tag")?.trim();
+      if (hasTag) return;
+    }
     if (deniedNoticeRef.current) return;
     deniedNoticeRef.current = true;
     notifyError("You don't have access to Asset Tracking.");
@@ -373,7 +380,7 @@ export function AssetTrackingPageClient() {
   }, [user, canManage, router]);
 
   useEffect(() => {
-    if (!canManage || urlTagConsumedRef.current) return;
+    if (urlTagConsumedRef.current) return;
     if (typeof window === "undefined") return;
     const tag = new URLSearchParams(window.location.search).get("tag")?.trim() ?? "";
     if (!tag) return;
@@ -405,7 +412,7 @@ export function AssetTrackingPageClient() {
     return () => {
       alive = false;
     };
-  }, [canManage]);
+  }, []);
 
   const submitAssign = async () => {
     if (!assignTarget) return;
@@ -500,9 +507,14 @@ export function AssetTrackingPageClient() {
   };
 
   if (!canManage) {
+    // Still reachable here: an employee without asset-management access who
+    // scanned a QR tag (?tag=...) — show the read-only lookup result instead
+    // of the admin table. No ?tag= means the redirect effect above is about
+    // to send them home; the spinner is just what's on screen in that instant.
     return (
       <DashboardPageShell className="wt-detail-page">
         <SectionLoading label="" />
+        {scanResult ? <AssetScanResultDialog asset={scanResult} onClose={dismissScanResult} /> : null}
       </DashboardPageShell>
     );
   }

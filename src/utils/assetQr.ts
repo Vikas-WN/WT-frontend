@@ -42,14 +42,71 @@ export function assetQrFilename(assetTag: string): string {
   return `${safe}-qr.png`;
 }
 
+const QR_LOGO_SRC = "/webtrak-logo.png";
+// Keep the logo well under the ~30% redundancy "H" error correction gives us —
+// a square this size covers ~6% of the code's area, leaving huge margin for a
+// scanner to still resolve the payload even with a logo punched in the middle.
+const QR_LOGO_SIZE_RATIO = 0.24;
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`Failed to load ${src}`));
+    img.src = src;
+  });
+}
+
+/**
+ * Renders a scannable QR with the WebTrak logo centered on top. Error
+ * correction is bumped to "H" (from the plain-QR default "M") specifically so
+ * covering the middle with a logo doesn't break scans.
+ */
 export async function qrToDataUrl(payload: string): Promise<string> {
   const QRCode = (await import("qrcode")).default;
-  return QRCode.toDataURL(payload, {
-    width: 480,
+  const size = 480;
+  const canvas = document.createElement("canvas");
+  await QRCode.toCanvas(canvas, payload, {
+    width: size,
     margin: 2,
-    errorCorrectionLevel: "M",
+    errorCorrectionLevel: "H",
     color: { dark: "#0f172a", light: "#ffffff" },
   });
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas.toDataURL("image/png");
+
+  try {
+    const logo = await loadImage(QR_LOGO_SRC);
+    const logoBoxSize = canvas.width * QR_LOGO_SIZE_RATIO;
+    const center = canvas.width / 2;
+
+    // White backing so the logo reads cleanly against whatever QR modules sit
+    // beneath it, with a little breathing room (padding) around the artwork.
+    const padding = logoBoxSize * 0.12;
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    const backingHalf = logoBoxSize / 2 + padding;
+    const backingRadius = backingHalf * 0.28;
+    if (typeof ctx.roundRect === "function") {
+      ctx.roundRect(center - backingHalf, center - backingHalf, backingHalf * 2, backingHalf * 2, backingRadius);
+    } else {
+      ctx.rect(center - backingHalf, center - backingHalf, backingHalf * 2, backingHalf * 2);
+    }
+    ctx.fill();
+
+    // Preserve the logo's own aspect ratio inside the square box instead of
+    // stretching it (webtrak-logo.png isn't perfectly square).
+    const scale = Math.min(logoBoxSize / logo.width, logoBoxSize / logo.height);
+    const drawWidth = logo.width * scale;
+    const drawHeight = logo.height * scale;
+    ctx.drawImage(logo, center - drawWidth / 2, center - drawHeight / 2, drawWidth, drawHeight);
+  } catch {
+    // Logo failed to load — still return a perfectly valid plain QR rather
+    // than failing the whole asset-tag flow over a missing decoration.
+  }
+
+  return canvas.toDataURL("image/png");
 }
 
 export function downloadDataUrl(dataUrl: string, filename: string) {

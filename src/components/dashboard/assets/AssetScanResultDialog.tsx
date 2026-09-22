@@ -41,10 +41,12 @@ export function AssetScanResultDialog({
 }: {
   asset: AssetItem;
   onClose: () => void;
-  onAssign: () => void;
-  onReturn: () => void;
-  onEdit: () => void;
-  onHistory: () => void;
+  // Omitted entirely for a read-only viewer (e.g. an employee without asset-
+  // management access who just scanned the tag) — only the info panel shows.
+  onAssign?: () => void;
+  onReturn?: () => void;
+  onEdit?: () => void;
+  onHistory?: () => void;
 }) {
   const brandModel = [asset.brand, asset.model].filter(Boolean).join(" ") || "—";
   const known = isAssetStatus(asset.status);
@@ -112,26 +114,29 @@ export function AssetScanResultDialog({
           ) : null}
         </div>
         <div className={MODAL_FOOTER_CLASS}>
-          <Button type="button" variant="outline" className="mr-auto" onClick={onHistory}>
-            <History className="size-4" />
-            History
-          </Button>
+          {onHistory ? (
+            <Button type="button" variant="outline" className="mr-auto" onClick={onHistory}>
+              <History className="size-4" />
+              History
+            </Button>
+          ) : null}
           <Button type="button" variant="outline" onClick={onClose}>
             Close
           </Button>
-          {asset.status === "AVAILABLE" ? (
+          {onAssign && asset.status === "AVAILABLE" ? (
             <Button type="button" onClick={onAssign}>
               <UserPlus className="size-4" />
               Assign
             </Button>
           ) : null}
-          {asset.status === "ASSIGNED" ? (
+          {onReturn && asset.status === "ASSIGNED" ? (
             <Button type="button" onClick={onReturn}>
               <RotateCcw className="size-4" />
               Return
             </Button>
           ) : null}
-          {asset.status === "IN_REPAIR" || asset.status === "RETIRED" || asset.status === "LOST" ? (
+          {onEdit &&
+          (asset.status === "IN_REPAIR" || asset.status === "RETIRED" || asset.status === "LOST") ? (
             <Button type="button" onClick={onEdit}>
               <Pencil className="size-4" />
               Edit

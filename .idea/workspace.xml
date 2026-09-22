@@ -4,15 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/(protected)/dashboard/timelog/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/(protected)/dashboard/timelog/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/api/v1/auth/refresh/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/v1/auth/refresh/route.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/overview/OverviewPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/overview/OverviewPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/hooks/timelog/useDayTimelog.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/timelog/useDayTimelog.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/lib/serverApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/serverApi.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/notificationNavigation.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/notificationNavigation.ts" afterDir="false" />
-    </list>
+    <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="updated some bugs present in the OverviewPageClient.tsx" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -27,6 +19,65 @@
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.0029036193934269" />
+      <entry key="MS500" value="2.2413046350527157" />
+      <entry key="S2" value="7.130333091039193" />
+      <entry key="S5" value="14.304499376292322" />
+      <entry key="S10" value="22.83998667678766" />
+      <entry key="S30" value="34.99713323874899" />
+      <entry key="S60" value="39.55882892699099" />
+      <entry key="M2" value="42.21667577345859" />
+      <entry key="M5" value="45.589443066676054" />
+      <entry key="M10" value="49.875886835121655" />
+      <entry key="M15" value="52.58367085856917" />
+      <entry key="M30" value="56.44796048885732" />
+      <entry key="H1" value="58.971377163124664" />
+      <entry key="H2" value="60.41643213602764" />
+      <entry key="H4" value="61.19007410666972" />
+      <entry key="D1" value="61.86241913715596" />
+      <entry key="W1" value="61.98028110278434" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="7.79542644436627E-148" />
+      <entry key="S5" value="1.9304533469271113E-59" />
+      <entry key="S10" value="6.06018957181081E-30" />
+      <entry key="S30" value="2.877300981686579E-10" />
+      <entry key="S60" value="2.3971096273319813E-5" />
+      <entry key="M2" value="0.006922754101704174" />
+      <entry key="M5" value="0.20735300974056456" />
+      <entry key="M10" value="0.6439719734506222" />
+      <entry key="M15" value="0.9395515165709051" />
+      <entry key="M30" value="1.3708026675801228" />
+      <entry key="H1" value="1.6557790347268297" />
+      <entry key="H2" value="1.819768592497929" />
+      <entry key="H4" value="1.9077570840633673" />
+      <entry key="D1" value="1.9843221250564278" />
+      <entry key="W1" value="1.9977527424134334" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="0.012186506304272834" />
+      <entry key="MS500" value="1.622941373171617" />
+      <entry key="S2" value="6.87534133771239" />
+      <entry key="S5" value="14.145684062085842" />
+      <entry key="S10" value="22.73043498393198" />
+      <entry key="S30" value="34.94748279104101" />
+      <entry key="S60" value="39.53167267233458" />
+      <entry key="M2" value="42.209311750710164" />
+      <entry key="M5" value="45.79049706566997" />
+      <entry key="M10" value="50.51622725560356" />
+      <entry key="M15" value="53.52059026458453" />
+      <entry key="M30" value="57.81729455713329" />
+      <entry key="H1" value="60.62637174640606" />
+      <entry key="H2" value="62.23579410196646" />
+      <entry key="H4" value="63.09762401757927" />
+      <entry key="D1" value="63.846706173855175" />
+      <entry key="W1" value="63.9780288185585" />
+    </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1,
@@ -87,9 +138,22 @@
       <updated>1790081296800</updated>
       <workItem from="1790081298044" duration="616000" />
     </task>
+    <task id="LOCAL-00001" summary="updated some bugs present in the OverviewPageClient.tsx">
+      <option name="closed" value="true" />
+      <created>1790086541030</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1790086541030</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="updated some bugs present in the OverviewPageClient.tsx" />
+    <option name="LAST_COMMIT_MESSAGE" value="updated some bugs present in the OverviewPageClient.tsx" />
   </component>
 </project>
