@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
         status: data.status ?? "",
         user_type: data.user_type ?? "",
         session_started_at: (data as { session_started_at?: string }).session_started_at,
+        session_max_hours: (data as { session_max_hours?: number }).session_max_hours,
       });
     }
   } catch {

@@ -85,19 +85,6 @@ import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAc
 
 
 export function OverviewPageClient() {
-  const isManagerFlagTruthy = (value: unknown): boolean => {
-    if (typeof value === "boolean") return value;
-    if (typeof value === "number") return value === 1;
-    const normalized = String(value ?? "").trim().toLowerCase();
-    if (!normalized) return false;
-    if (["true", "yes", "y", "1", "manager"].includes(normalized)) return true;
-    if (["false", "no", "n", "0"].includes(normalized)) return false;
-    return false;
-  };
-  const isManagerRoleLabel = (value: unknown): boolean =>
-    String(value ?? "")
-      .trim()
-      .toLowerCase()
       .includes("manager");
   const REQUEST_TYPE_ALIASES: Record<string, string[]> = {
     LEAVE: ["LEAVE"],
