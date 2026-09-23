@@ -11,6 +11,7 @@ import { DataTable, InputField, SelectField } from "@/components/learning-develo
 import { SESSION_SORT_OPTIONS } from "@/utils/listSort";
 import { hrmsService } from "@/services/hrms.service";
 import { createEmptySessionForm } from "@/utils/learningFormState";
+import { notifyError } from "@/lib/notify";
 
 export function SessionsPageClient() {
   const { user } = useAuth();
@@ -73,7 +74,7 @@ export function SessionsPageClient() {
             <InputField label="Venue" value={sessionForm.venue} onChange={(v) => setSessionForm((p) => ({ ...p, venue: v }))} />
             <InputField label="Meeting link" value={sessionForm.meeting_link} onChange={(v) => setSessionForm((p) => ({ ...p, meeting_link: v }))} />
           </div>
-          <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={sessionMut.isPending || !trainingId.trim()} onClick={() => sessionMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
+          <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={sessionMut.isPending || !trainingId.trim()} onClick={() => sessionMut.mutate(undefined, { onError: (e) => notifyError(String(e)) })}
           >
             Add Session
           </Button>

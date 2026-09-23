@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, ChevronRight } from "lucide-react";
+import { CheckCircle2, ChevronRight, Lock } from "lucide-react";
 
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
@@ -46,6 +46,11 @@ function useLoad<T>(fn: () => Promise<T>, deps: unknown[] = []): Load<T> {
 }
 
 export function ManagerTeamReviewPanel() {
+  const windowStatus = useLoad(
+    () => hrmsService.getSubmissionWindowStatus({ scope: "MANAGER" }).then((r) => r.data),
+    []
+  );
+  const isWindowOpen = windowStatus.data?.open ?? false;
   const [reloadTick, setReloadTick] = useState(0);
   const submissions = useLoad<MonthlySubmissionItem[]>(
     () => hrmsService.getManagerTeamSubmissions(),
@@ -54,6 +59,21 @@ export function ManagerTeamReviewPanel() {
   const [reviewing, setReviewing] = useState<MonthlySubmissionItem | null>(null);
 
   const rows = submissions.data ?? [];
+
+  if (windowStatus.status === "loading") return <SectionLoading label="" />;
+
+  if (!isWindowOpen) {
+    return (
+      <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 text-center">
+        <Lock className="mx-auto size-8 text-wt-text-faint" />
+        <h3 className="mt-3 text-base font-semibold text-wt-text">Review window is closed</h3>
+        <p className="mx-auto mt-1.5 max-w-md text-sm text-wt-text-muted">
+          HR opens the manager review window on a schedule. Check back once it&apos;s open — team
+          reviews can only be submitted while it is.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -85,6 +105,11 @@ export function ManagerTeamReviewPanel() {
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
+                {row.review_status === "NEEDS_MANAGER_REVIEW" ? (
+                  <Badge variant="outline" className="border-amber-400 text-amber-700 dark:text-amber-400">
+                    Sent back by HR
+                  </Badge>
+                ) : null}
                 <Badge variant="outline">{row.kpi_ratings.length} KPIs rated</Badge>
                 <ChevronRight className="size-4 text-wt-text-faint" />
               </div>
@@ -134,9 +159,25 @@ function ManagerReviewModal({
     });
   };
 
+  const kpiName = (id: number) => submission.kpi_details.find((k) => k.id === id)?.kpi_name ?? `KPI #${id}`;
+  const valueName = (id: number) => submission.value_details.find((v) => v.id === id)?.name ?? `Value #${id}`;
+  const certName = (id: number) =>
+    submission.certification_details.find((c) => c.id === id)?.name ?? `Certification #${id}`;
+  // Every KPI applicable to the employee must carry a manager rating — the
+  // backend rejects the review otherwise.
+  const allKpisRated = submission.kpi_details.every((k) => kpiRatings.some((r) => r.kpi_id === k.id));
+  const hrSendBack =
+    submission.review_status === "NEEDS_MANAGER_REVIEW" && submission.admin_review?.action === "REJECT_MANAGER"
+      ? submission.admin_review.comments
+      : null;
+
   const submit = async (action: "SUBMIT" | "REJECT") => {
     if (action === "REJECT" && comments.trim().length < 10) {
       notifyError("Add at least 10 characters of feedback before sending this back.");
+      return;
+    }
+    if (action === "SUBMIT" && !allKpisRated) {
+      notifyError("Rate every KPI before submitting your review.");
       return;
     }
     setBusy(action === "SUBMIT" ? "submit" : "reject");
@@ -170,6 +211,19 @@ function ManagerReviewModal({
         </div>
         <div className={MODAL_BODY_CLASS}>
           <div className="space-y-5">
+            {hrSendBack ? (
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
+                <p className="font-semibold text-wt-text">HR sent this back to you</p>
+                <p className="mt-1 text-wt-text-muted">{hrSendBack}</p>
+              </div>
+            ) : null}
+
+            {submission.project_codes.length > 0 ? (
+              <p className="text-xs text-wt-text-muted">
+                Projects: <span className="text-wt-text">{submission.project_codes.join(", ")}</span>
+              </p>
+            ) : null}
+
             <div>
               <h3 className="text-sm font-semibold text-wt-text">Employee self review</h3>
               <p className="mt-1.5 whitespace-pre-wrap rounded-lg border border-wt-border bg-wt-surface-2/40 p-3 text-sm text-wt-text">
@@ -179,19 +233,28 @@ function ManagerReviewModal({
 
             <div>
               <h3 className="text-sm font-semibold text-wt-text">KPIs</h3>
+              <p className="mt-0.5 text-xs text-wt-text-muted">
+                Starts from the employee&apos;s own rating — adjust to your assessment.
+              </p>
               <div className="mt-2 space-y-2">
-                {kpiRatings.map((r) => (
+                {submission.kpi_details.map((kpi) => (
                   <div
-                    key={r.kpi_id}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-wt-border bg-wt-surface-2/40 px-3 py-2"
+                    key={kpi.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-wt-border bg-wt-surface-2/40 px-3 py-2"
                   >
-                    <span className="text-sm text-wt-text">
-                      KPI #{r.kpi_id} · self-rated{" "}
-                      <span className="font-semibold">
-                        {submission.kpi_ratings.find((k) => k.kpi_id === r.kpi_id)?.rating ?? "—"}
-                      </span>
-                    </span>
-                    <RatingButtons value={r.rating} onChange={(v) => setKpiRating(r.kpi_id, v)} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-wt-text">{kpiName(kpi.id)}</p>
+                      <p className="text-xs text-wt-text-muted">
+                        Weight {kpi.weightage}% · self-rated{" "}
+                        <span className="font-semibold text-wt-text">
+                          {submission.kpi_ratings.find((k) => k.kpi_id === kpi.id)?.rating ?? "—"}
+                        </span>
+                      </p>
+                    </div>
+                    <RatingButtons
+                      value={kpiRatings.find((r) => r.kpi_id === kpi.id)?.rating ?? null}
+                      onChange={(v) => setKpiRating(kpi.id, v)}
+                    />
                   </div>
                 ))}
               </div>
@@ -210,7 +273,7 @@ function ManagerReviewModal({
                       >
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-sm text-wt-text">
-                            Value #{v.value_id} · self-rated <span className="font-semibold">{v.rating}</span>
+                            {valueName(v.value_id)} · self-rated <span className="font-semibold">{v.rating}</span>
                           </span>
                           <RatingButtons
                             value={managerRating}
@@ -222,6 +285,23 @@ function ManagerReviewModal({
                     );
                   })}
                 </div>
+              </div>
+            ) : null}
+
+            {submission.certifications.length > 0 || submission.recognitions_count > 0 ? (
+              <div>
+                <h3 className="text-sm font-semibold text-wt-text">Certifications &amp; recognitions</h3>
+                <ul className="mt-1.5 space-y-1 text-sm text-wt-text-muted">
+                  {submission.certifications.map((c) => (
+                    <li key={c.certification_id}>
+                      {certName(c.certification_id)}
+                      {c.proof ? ` — ${c.proof}` : ""}
+                    </li>
+                  ))}
+                  {submission.recognitions_count > 0 ? (
+                    <li>{submission.recognitions_count} recognition(s) this cycle</li>
+                  ) : null}
+                </ul>
               </div>
             ) : null}
 
@@ -253,7 +333,7 @@ function ManagerReviewModal({
           >
             {busy === "reject" ? "Sending…" : "Send Back"}
           </Button>
-          <Button type="button" onClick={() => void submit("SUBMIT")} disabled={busy !== null}>
+          <Button type="button" onClick={() => void submit("SUBMIT")} disabled={busy !== null || !allKpisRated}>
             <CheckCircle2 className="mr-1.5 size-4" />
             {busy === "submit" ? "Submitting…" : "Submit Review"}
           </Button>

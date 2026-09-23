@@ -3076,7 +3076,7 @@ export function LeavePageClient() {
                                         <span className="text-sm text-muted-foreground">
                                           {employeeRequests.length
                                             ? "No requests match your search."
-                                            : "No Data"}
+                                            : "No leave requests found."}
                                         </span>
                                       </div>
                                     </TableCell>

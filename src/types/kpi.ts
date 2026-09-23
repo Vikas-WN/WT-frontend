@@ -125,6 +125,8 @@ export interface MonthlySubmissionDraftPayload {
   certifications: CertificationClaim[];
   project_codes: string[];
   recognitions_count: number;
+  /** HR team only — the Admin who reviews this submission. */
+  reviewer_id?: number | null;
 }
 
 export interface EmployeeSummary {
@@ -153,6 +155,18 @@ export interface AdminReviewDecision extends ReviewDecision {
   tech_showcase: string | null;
 }
 
+export interface SubmissionKpiDetail {
+  id: number;
+  kpi_name: string;
+  evaluation_criteria: string | null;
+  weightage: number;
+}
+
+export interface NamedRef {
+  id: number;
+  name: string;
+}
+
 export interface MonthlySubmissionItem {
   id: number;
   employee: EmployeeSummary;
@@ -168,6 +182,13 @@ export interface MonthlySubmissionItem {
   certifications: CertificationClaim[];
   project_codes: string[];
   recognitions_count: number;
+  /** HR team submissions: the Admin chosen to review it. */
+  reviewer_id: number | null;
+  reviewer: EmployeeSummary | null;
+  /** Names for the ids above — every KPI applicable to the employee plus any rated. */
+  kpi_details: SubmissionKpiDetail[];
+  value_details: NamedRef[];
+  certification_details: NamedRef[];
   manager_evaluation: ManagerEvaluation | null;
   manager_review: ReviewDecision | null;
   admin_review: AdminReviewDecision | null;
@@ -196,6 +217,8 @@ export interface AdminReviewSubmitPayload {
   action: "APPROVE" | "REJECT" | "REJECT_MANAGER";
   comments: string;
   tech_showcase?: string | null;
+  /** APPROVE only — HR's explicit final score (1–6); omitted = computed. */
+  final_score?: number | null;
 }
 
 /** RTP performance score: KPI 90% + WebKnot values 10%, plus certification/

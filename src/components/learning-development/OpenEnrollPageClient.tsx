@@ -7,6 +7,7 @@ import { useOpenTrainingsList } from "@/hooks/learning/useLearningTrainings";
 import { InputField } from "@/components/dashboard/ui/forms";
 import { DataTable } from "@/components/learning-development/ui/forms";
 import { hrmsService } from "@/services/hrms.service";
+import { notifyError } from "@/lib/notify";
 
 /** Shown to employees on the trainings hub — self-enroll into open trainings. */
 export function OpenEnrollPageClient() {
@@ -34,7 +35,7 @@ export function OpenEnrollPageClient() {
           onChange={setTrainingId}
           placeholder="e.g. 12"
         />
-        <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={enrollMut.isPending || !trainingId.trim()} onClick={() => enrollMut.mutate(undefined, { onError: (e) => alert(String(e)) })}>
+        <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={enrollMut.isPending || !trainingId.trim()} onClick={() => enrollMut.mutate(undefined, { onError: (e) => notifyError(String(e)) })}>
           Enroll
         </Button>
       </div>

@@ -198,6 +198,12 @@ export function notificationCategoryLabel(
       return "Profile";
     case "LOP_REPORT_READY":
       return "LOP Report";
+    case "MONTHLY_REVIEW_SUBMITTED":
+    case "MONTHLY_REVIEW_MANAGER_SUBMITTED":
+    case "MONTHLY_REVIEW_NEEDS_CHANGES":
+    case "MONTHLY_REVIEW_NEEDS_MANAGER_REVIEW":
+    case "MONTHLY_REVIEW_APPROVED":
+      return "Pulse";
     default:
       return "—";
   }
@@ -222,6 +228,8 @@ export function notificationGroupLabel(categoryLabel: string): string {
     case "Training":
     case "Training Scores":
       return "Training";
+    case "Pulse":
+      return "Performance";
     case "Onboarding":
     case "Exit Survey":
     case "Internship":
@@ -249,6 +257,7 @@ export const NOTIFICATION_GROUP_ORDER = [
   "Announcements",
   "Employee Lifecycle",
   "Training",
+  "Performance",
   "Admin",
   "Other",
 ];
@@ -390,6 +399,13 @@ export function resolveNotificationHref(
       if (!period) return base;
       return `${base}?year=${period.year}&month=${period.month}`;
     }
+
+    case "MONTHLY_REVIEW_SUBMITTED":
+    case "MONTHLY_REVIEW_MANAGER_SUBMITTED":
+    case "MONTHLY_REVIEW_NEEDS_CHANGES":
+    case "MONTHLY_REVIEW_NEEDS_MANAGER_REVIEW":
+    case "MONTHLY_REVIEW_APPROVED":
+      return DASHBOARD_ROUTES.pulse;
 
     default:
       return null;

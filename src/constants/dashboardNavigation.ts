@@ -198,20 +198,6 @@ export const dashboardNavigation: NavItem[] = [
         icon: "calendarDays",
       },
       {
-        id: "wiki",
-        label: "Company Wiki",
-        roles: [
-          "ROLE_EMPLOYEE",
-          "ROLE_MANAGER",
-          "ROLE_DM",
-          "ROLE_HR",
-          "ROLE_ADMIN",
-          "ROLE_FINANCE",
-          "ROLE_AM",
-        ],
-        icon: "fileText",
-      },
-      {
         id: "policies",
         label: "Company Policies",
         roles: [
@@ -308,8 +294,8 @@ export const dashboardNavigation: NavItem[] = [
     kind: "link",
     id: "pulse",
     label: "Pulse",
-    // Native now (KPI definitions + submission-portal control for HR/Admin;
-    // a coming-soon screen for everyone else) — no longer sends people out to
+    // Native now (self-review for everyone, team reviews for managers, KPI
+    // definitions + submission portal + approval for HR/Admin) — no longer sends people out to
     // the external RT portal. See PULSE_EXTERNAL_URL if that ever needs
     // restoring for a specific rollout.
     roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],

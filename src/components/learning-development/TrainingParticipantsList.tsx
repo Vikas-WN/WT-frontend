@@ -64,7 +64,7 @@ export function TrainingParticipantsList({
                     type="button"
                     variant="outline"
                     size="xs"
-                    className="border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                    className="border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-400 dark:hover:bg-emerald-500/25"
                     disabled={isUpdating}
                     onClick={() => onMarkCompleted(participant.userId)}
                   >
@@ -76,7 +76,7 @@ export function TrainingParticipantsList({
                     type="button"
                     variant="outline"
                     size="xs"
-                    className="border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                    className="border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25"
                     disabled={isUpdating}
                     onClick={() => onMarkWithdrawn(participant.userId)}
                   >

@@ -1,6 +1,8 @@
 "use client";
 
+import { GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -30,6 +32,7 @@ import { createEmptyTrainingForm } from "@/utils/learningFormState";
 import { hrmsService } from "@/services/hrms.service";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmployeeLearningCatalog } from "@/components/learning-development/EmployeeLearningCatalog";
+import { notifyError } from "@/lib/notify";
 
 function TrainingCardsSkeleton({ count = 6 }: { count?: number }) {
   return (
@@ -227,7 +230,11 @@ function HrTrainingsView() {
         {isLoading ? (
           <TrainingCardsSkeleton />
         ) : filtered.length === 0 ? (
-          <p className="text-sm text-wt-text-muted py-8 text-center">No trainings match your filters.</p>
+          <EmptyState
+            title="No trainings match your filters"
+            description="Try adjusting or clearing the filters above."
+            icon={<GraduationCap className="size-5" aria-hidden />}
+          />
         ) : (
           <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -271,7 +278,7 @@ function HrTrainingsView() {
               Cancel
             </Button>
             <Button variant="brand" type="button" className="px-4 py-2" disabled={createMut.isPending || updateMut.isPending} onClick={() =>
-                submitForm().catch((e) => alert(e instanceof Error ? e.message : "Unable to save"))
+                submitForm().catch((e) => notifyError(e instanceof Error ? e.message : "Unable to save"))
               }
             >
               Save

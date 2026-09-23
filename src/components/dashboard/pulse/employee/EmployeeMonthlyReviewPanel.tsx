@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { RatingButtons } from "@/components/dashboard/pulse/employee/RatingButtons";
+import { DropdownSelect } from "@/components/dashboard/ui/DropdownSelect";
+import { useAuth } from "@/context/AuthContext";
+import { normalizeRoles } from "@/utils/roles";
 import { hrmsService } from "@/services/hrms.service";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { notifyError, notifySuccess } from "@/lib/notify";
@@ -17,6 +20,7 @@ import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { ApiError } from "@/api/error";
 import type {
   CertificationItem,
+  EmployeeSummary,
   KpiDefinitionItem,
   MonthlySubmissionDraftPayload,
   MonthlySubmissionItem,
@@ -79,11 +83,86 @@ function draftFromSubmission(row: MonthlySubmissionItem): MonthlySubmissionDraft
     certifications: row.certifications,
     project_codes: row.project_codes,
     recognitions_count: row.recognitions_count,
+    reviewer_id: row.reviewer_id ?? null,
   };
+}
+
+/** The API rejects a value rating below 1 — a value only gets a rating once
+ *  its buttons are clicked, but typing its comment first creates a rating-0
+ *  entry locally. Drop those until rated, so autosave/submit don't 422. */
+function toApiPayload(form: MonthlySubmissionDraftPayload): MonthlySubmissionDraftPayload {
+  return { ...form, value_ratings: form.value_ratings.filter((r) => r.rating >= 1) };
+}
+
+/** Mirrors the backend: the employee can only edit while the submission is
+ *  with them — a fresh draft, or one sent back for changes. */
+function isEditable(row: MonthlySubmissionItem): boolean {
+  const status = row.review_status;
+  return !row.locked && (!status || status === "DRAFT" || status === "NEEDS_REVIEW");
+}
+
+function SubmissionStatusCard({ submission }: { submission: MonthlySubmissionItem }) {
+  const status = submission.review_status;
+  const isApproved = status === "APPROVED";
+  const message = isApproved
+    ? "Your review for this cycle is approved."
+    : status === "MANAGER_SUBMITTED"
+      ? "Your manager has reviewed it — waiting on HR approval."
+      : status === "NEEDS_MANAGER_REVIEW"
+        ? "HR asked your manager to take another look — nothing needed from you."
+        : submission.reviewer
+          ? `Submitted — waiting on ${submission.reviewer.name}'s review.`
+          : "Submitted — waiting on your manager's review.";
+
+  return (
+    <div
+      className={cn(
+        "flex items-start gap-3 rounded-xl border p-4",
+        isApproved ? "border-emerald-500/30 bg-emerald-500/10" : "border-wt-border bg-wt-surface-2/50"
+      )}
+    >
+      <CheckCircle2
+        className={cn(
+          "mt-0.5 size-5 shrink-0",
+          isApproved ? "text-emerald-600 dark:text-emerald-400" : "text-wt-brand"
+        )}
+      />
+      <div>
+        <p className="text-sm font-semibold text-wt-text">{message}</p>
+        <p className="mt-0.5 text-xs text-wt-text-muted">
+          {submission.cycle_label}
+          {submission.reviewer ? ` · Reviewer: ${submission.reviewer.name}` : ""}
+        </p>
+        {submission.manager_review?.comments ? (
+          <p className="mt-1 text-sm text-wt-text-muted">
+            Manager: &ldquo;{submission.manager_review.comments}&rdquo;
+          </p>
+        ) : null}
+        {isApproved && submission.final_score != null ? (
+          <p className="mt-1 text-sm text-wt-text-muted">
+            Final score: <span className="font-semibold text-wt-text">{submission.final_score}</span>
+            {submission.promotion_eligible ? (
+              <span className="ml-2 text-xs text-emerald-600 dark:text-emerald-400">Promotion eligible</span>
+            ) : null}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 export function EmployeeMonthlyReviewPanel() {
   const month = useMemo(() => currentMonthKey(), []);
+  const { user } = useAuth();
+  // HR team members have no reporting-manager review — they pick an Admin.
+  const isHrTeam = useMemo(
+    () => normalizeRoles(user?.roles ?? []).includes("ROLE_HR"),
+    [user?.roles]
+  );
+  const reviewers = useLoad<EmployeeSummary[]>(
+    () => (isHrTeam ? hrmsService.getPulseAdminReviewers() : Promise.resolve([])),
+    [isHrTeam]
+  );
 
   const windowStatus = useLoad(
     () => hrmsService.getSubmissionWindowStatus({ scope: "EMPLOYEE" }).then((r) => r.data),
@@ -103,12 +182,29 @@ export function EmployeeMonthlyReviewPanel() {
   );
 
   const [reloadTick, setReloadTick] = useState(0);
+  // Read-only lookup first (never creates a row): the employee should see
+  // where their review stands even after the window closes.
+  const existing = useLoad<MonthlySubmissionItem | null>(
+    () =>
+      hrmsService
+        .getMyMonthlySubmissions({ month, submissionType: "EMPLOYEE_MONTHLY_SUBMISSION" })
+        .then((rows) => (Array.isArray(rows) ? rows[0] ?? null : null)),
+    [month, reloadTick]
+  );
+  const existingEditable = existing.data ? isEditable(existing.data) : true;
+  // Only fetch (and, if needed, start) the editable draft while the window
+  // is open and the review is actually with the employee.
   const draft = useLoad<MonthlySubmissionItem>(
-    () => (isWindowOpen ? hrmsService.getMonthlySubmissionDraft({ month }) : Promise.reject()),
-    [month, isWindowOpen, reloadTick]
+    () =>
+      isWindowOpen && existingEditable ? hrmsService.getMonthlySubmissionDraft({ month }) : Promise.reject(),
+    [month, isWindowOpen, existingEditable, reloadTick]
   );
 
-  if (windowStatus.status === "loading") return <SectionLoading label="" />;
+  if (windowStatus.status === "loading" || existing.status === "loading") return <SectionLoading label="" />;
+
+  if (existing.data && !existingEditable) {
+    return <SubmissionStatusCard submission={existing.data} />;
+  }
 
   if (!isWindowOpen) {
     return (
@@ -136,54 +232,8 @@ export function EmployeeMonthlyReviewPanel() {
     );
   }
 
-  const isLocked = Boolean(draft.data.locked);
-  const isSubmitted = draft.data.review_status === "SUBMITTED";
-  const isApproved = draft.data.review_status === "APPROVED";
-  const isAwaitingManager = draft.data.review_status === "MANAGER_SUBMITTED";
-  const needsRevision = draft.data.review_status === "NEEDS_REVIEW";
-  const readOnly = isLocked || isSubmitted || isAwaitingManager;
-
-  if (readOnly || isApproved) {
-    return (
-      <div className="space-y-5">
-        <div
-          className={cn(
-            "flex items-start gap-3 rounded-xl border p-4",
-            isApproved ? "border-emerald-500/30 bg-emerald-500/10" : "border-wt-border bg-wt-surface-2/50"
-          )}
-        >
-          {isApproved ? (
-            <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-          ) : (
-            <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-wt-brand" />
-          )}
-          <div>
-            <p className="text-sm font-semibold text-wt-text">
-              {isApproved
-                ? "Your review for this cycle is approved."
-                : isAwaitingManager
-                  ? "Submitted — waiting on your manager's review."
-                  : "Submitted."}
-            </p>
-            {draft.data.manager_review?.comments ? (
-              <p className="mt-1 text-sm text-wt-text-muted">
-                Manager: &ldquo;{draft.data.manager_review.comments}&rdquo;
-              </p>
-            ) : null}
-            {isApproved && draft.data.final_score != null ? (
-              <p className="mt-1 text-sm text-wt-text-muted">
-                Final score: <span className="font-semibold text-wt-text">{draft.data.final_score}</span>
-                {draft.data.promotion_eligible ? (
-                  <span className="ml-2 text-xs text-emerald-600 dark:text-emerald-400">
-                    Promotion eligible
-                  </span>
-                ) : null}
-              </p>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    );
+  if (!isEditable(draft.data)) {
+    return <SubmissionStatusCard submission={draft.data} />;
   }
 
   return (
@@ -198,7 +248,8 @@ export function EmployeeMonthlyReviewPanel() {
       certRows={certifications.data ?? []}
       projectRows={projects.data ?? []}
       projectsLoading={projects.status === "loading"}
-      needsRevision={needsRevision}
+      reviewerOptions={isHrTeam ? reviewers.data ?? [] : null}
+      needsRevision={draft.data.review_status === "NEEDS_REVIEW"}
       onSubmitted={() => setReloadTick((t) => t + 1)}
     />
   );
@@ -211,6 +262,7 @@ function EmployeeReviewForm({
   certRows,
   projectRows,
   projectsLoading,
+  reviewerOptions,
   needsRevision,
   onSubmitted,
 }: {
@@ -220,6 +272,8 @@ function EmployeeReviewForm({
   certRows: CertificationItem[];
   projectRows: ProjectOption[];
   projectsLoading: boolean;
+  /** Admins to choose from — non-null only for HR team members, who must pick one. */
+  reviewerOptions: EmployeeSummary[] | null;
   needsRevision: boolean;
   onSubmitted: () => void;
 }) {
@@ -238,7 +292,7 @@ function EmployeeReviewForm({
     lastSavedRef.current = serialized;
     setSaving(true);
     hrmsService
-      .saveMonthlySubmissionDraft(debouncedForm)
+      .saveMonthlySubmissionDraft(toApiPayload(debouncedForm))
       .catch(() => {
         /* Silent — next edit will retry the save. */
       })
@@ -247,10 +301,12 @@ function EmployeeReviewForm({
 
   const toggleProject = (code: string) => {
     setForm((f) => {
-      const has = f.project_codes.includes(code);
-      if (has) return { ...f, project_codes: f.project_codes.filter((c) => c !== code) };
-      if (f.project_codes.length >= 3) return f;
-      return { ...f, project_codes: [...f.project_codes, code] };
+      // Prune projects the employee is no longer on, so they don't eat into
+      // the 3-project cap invisibly.
+      const current = f.project_codes.filter((c) => projectRows.some((p) => p.code === c));
+      if (current.includes(code)) return { ...f, project_codes: current.filter((c) => c !== code) };
+      if (current.length >= 3) return f;
+      return { ...f, project_codes: [...current, code] };
     });
   };
 
@@ -293,18 +349,35 @@ function EmployeeReviewForm({
   };
 
   const allKpisRated = kpiRows.every((k) => form.kpi_ratings.some((r) => r.kpi_id === k.id));
-  const projectsValid = form.project_codes.length >= 1 && form.project_codes.length <= 3;
+  // Matches the backend: 1–3 of your current projects, or none when you're
+  // not on any (e.g. on the bench — system projects aren't listed).
+  const hasProjects = projectRows.length > 0;
+  // A draft can still hold a project the employee has since left — it isn't
+  // listed, so it can't be unticked; only current projects count and are sent.
+  const selectedProjects = form.project_codes.filter((c) => projectRows.some((p) => p.code === c));
+  const projectsValid = hasProjects
+    ? selectedProjects.length >= 1 && selectedProjects.length <= 3
+    : true;
   const selfReviewValid = form.self_review_text.trim().length > 0;
-  const canSubmit = allKpisRated && projectsValid && selfReviewValid;
+  const requiresReviewer = reviewerOptions !== null;
+  const reviewerValid =
+    reviewerOptions === null || reviewerOptions.some((r) => r.id === form.reviewer_id);
+  const canSubmit = !projectsLoading && allKpisRated && projectsValid && selfReviewValid && reviewerValid;
 
   const handleSubmit = async () => {
     if (!canSubmit) {
-      notifyError("Rate every KPI, pick 1–3 projects, and add your self review before submitting.");
+      notifyError(
+        !reviewerValid
+          ? "Select the Admin who should review your submission."
+          : hasProjects
+            ? "Rate every KPI, pick 1–3 projects, and add your self review before submitting."
+            : "Rate every KPI and add your self review before submitting."
+      );
       return;
     }
     setSubmitting(true);
     try {
-      await hrmsService.submitMonthlySubmission(form);
+      await hrmsService.submitMonthlySubmission({ ...toApiPayload(form), project_codes: selectedProjects });
       notifySuccess("Self review submitted.");
       onSubmitted();
     } catch (error) {
@@ -325,9 +398,13 @@ function EmployeeReviewForm({
         <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
           <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
           <div>
-            <p className="text-sm font-semibold text-wt-text">Sent back for changes</p>
+            <p className="text-sm font-semibold text-wt-text">
+              {initial.admin_review?.action === "REJECT" ? "HR sent this back for changes" : "Sent back for changes"}
+            </p>
             <p className="mt-1 text-sm text-wt-text-muted">
-              {initial.manager_review?.comments || "Your manager asked for changes — update and resubmit."}
+              {(initial.admin_review?.action === "REJECT"
+                ? initial.admin_review.comments
+                : initial.manager_review?.comments) || "Update your review and resubmit."}
             </p>
           </div>
         </div>
@@ -363,7 +440,10 @@ function EmployeeReviewForm({
             {projectsLoading ? (
               <SectionLoading label="" />
             ) : projectRows.length === 0 ? (
-              <EmptyState title="No Active Projects" description="No project allocations found for you." />
+              <EmptyState
+                title="No Active Projects"
+                description="You're not allocated to any project right now — skip this step and continue."
+              />
             ) : (
               <div className="space-y-2">
                 {projectRows.map((p) => (
@@ -374,7 +454,7 @@ function EmployeeReviewForm({
                     <Checkbox
                       checked={form.project_codes.includes(p.code)}
                       onCheckedChange={() => toggleProject(p.code)}
-                      disabled={!form.project_codes.includes(p.code) && form.project_codes.length >= 3}
+                      disabled={!selectedProjects.includes(p.code) && selectedProjects.length >= 3}
                     />
                     <span className="text-sm text-wt-text">{p.name}</span>
                     <span className="ml-auto text-xs text-wt-text-faint">{p.code}</span>
@@ -524,11 +604,34 @@ function EmployeeReviewForm({
               rows={6}
               required
             />
+            {reviewerOptions !== null ? (
+              <div>
+                <p className="mb-1.5 text-sm font-medium text-wt-text">
+                  Reviewer (Admin) <span className="text-rose-600">*</span>
+                </p>
+                <DropdownSelect
+                  value={form.reviewer_id ? String(form.reviewer_id) : ""}
+                  onChange={(v) => setForm((f) => ({ ...f, reviewer_id: v ? Number(v) : null }))}
+                  options={reviewerOptions.map((r) => ({
+                    value: String(r.id),
+                    label: `${r.name}${r.emp_id ? ` (${r.emp_id})` : ""}`,
+                  }))}
+                  placeholder={reviewerOptions.length ? "Select an Admin" : "No Admins available"}
+                  aria-label="Reviewer"
+                />
+                <p className="mt-1 text-xs text-wt-text-muted">
+                  As part of the HR team, your self review goes to the Admin you choose here instead of a
+                  reporting manager.
+                </p>
+              </div>
+            ) : null}
             <div className="rounded-xl border border-wt-border bg-wt-surface-2/40 p-4 text-sm text-wt-text-muted">
               <p className="font-medium text-wt-text">Before you submit</p>
               <ul className="mt-2 space-y-1">
                 <li className="flex items-center gap-2">
-                  <Badge variant={projectsValid ? "default" : "outline"}>{form.project_codes.length}/3</Badge>
+                  <Badge variant={projectsValid ? "default" : "outline"}>
+                    {hasProjects ? `${selectedProjects.length}/3` : "N/A"}
+                  </Badge>
                   Projects selected
                 </li>
                 <li className="flex items-center gap-2">
@@ -541,11 +644,17 @@ function EmployeeReviewForm({
                   <Badge variant={selfReviewValid ? "default" : "outline"}>{selfReviewValid ? "✓" : "—"}</Badge>
                   Self review written
                 </li>
+                {requiresReviewer ? (
+                  <li className="flex items-center gap-2">
+                    <Badge variant={reviewerValid ? "default" : "outline"}>{reviewerValid ? "✓" : "—"}</Badge>
+                    Reviewer selected
+                  </li>
+                ) : null}
               </ul>
             </div>
             <p className="text-xs text-wt-text-faint">
-              Once submitted, this locks until your manager reviews it. You can keep editing freely until
-              then — changes autosave.
+              Changes autosave while you work. Once you submit, the review is locked unless it&apos;s sent
+              back to you for changes.
             </p>
           </div>
         ) : null}

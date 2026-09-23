@@ -64,11 +64,7 @@ export function SummarySection({ summary }: { summary: AllTimeKpiSummary }) {
           value={scoreCell(summary.manager_rating_average)}
           sub={summary.manager_rating_display}
         />
-        <StatTile
-          label="Admin (final) rating"
-          value={scoreCell(summary.admin_rating_average)}
-          sub={summary.admin_rating_display}
-        />
+        <StatTile label="Admin (final) rating" value={scoreCell(summary.admin_rating_average)} />
         <StatTile label="All-time KPI average" value={scoreCell(summary.all_time_kpi_average)} />
         <StatTile
           label="All-time manager KPI average"
@@ -105,7 +101,6 @@ export function SummarySection({ summary }: { summary: AllTimeKpiSummary }) {
                     </td>
                     <td className="px-3 py-2 text-wt-text-muted">
                       {scoreCell(cycle.admin_rating_average)}
-                      {cycle.admin_rating_display ? ` · ${cycle.admin_rating_display}` : ""}
                     </td>
                   </tr>
                 ))}
@@ -117,6 +112,15 @@ export function SummarySection({ summary }: { summary: AllTimeKpiSummary }) {
     </div>
   );
 }
+
+const REVIEW_STATUS_LABELS: Record<string, string> = {
+  DRAFT: "Draft",
+  SUBMITTED: "With manager",
+  NEEDS_REVIEW: "Sent back for changes",
+  MANAGER_SUBMITTED: "Awaiting HR approval",
+  NEEDS_MANAGER_REVIEW: "Back with manager",
+  APPROVED: "Approved",
+};
 
 /** Exported for reuse by KpiReportsPanel.tsx (admin browsing any employee's history). */
 export function HistorySection({ rows }: { rows: MonthlySubmissionItem[] }) {
@@ -136,12 +140,12 @@ export function HistorySection({ rows }: { rows: MonthlySubmissionItem[] }) {
             <p className="text-xs text-wt-text-muted">{row.month}</p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Badge variant="outline">{row.review_status ?? row.status}</Badge>
+            <Badge variant="outline">
+              {REVIEW_STATUS_LABELS[row.review_status ?? ""] ?? row.review_status ?? row.status}
+            </Badge>
             {row.final_score != null ? (
-              <Badge variant="outline">
-                Score {row.final_score}
-                {row.admin_rating_display ? ` · ${row.admin_rating_display}` : ""}
-              </Badge>
+              // admin_rating_display is the same score as a 2-dp string, not a label.
+              <Badge variant="outline">Score {row.admin_rating_display ?? row.final_score}</Badge>
             ) : null}
             {row.promotion_eligible ? (
               <Badge className="border-emerald-300 bg-emerald-50 text-emerald-700">Promotion eligible</Badge>

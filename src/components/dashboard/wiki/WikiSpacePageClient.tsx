@@ -65,9 +65,7 @@ export function WikiSpacePageClient({
   const { user } = useAuth();
   const roles = useMemo(() => normalizeRoles(user?.roles ?? []), [user?.roles]);
   const isHrOrAdmin = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
-  // WIKI: everyone can write. POLICY: HR/Admin only.
-  const canWrite = space === "POLICY" ? isHrOrAdmin : true;
-  const myEmail = (user?.email ?? "").trim().toLowerCase();
+  const canWrite = isHrOrAdmin;
 
   const [view, setView] = useState<View>("list");
   const [search, setSearch] = useState("");
@@ -196,8 +194,7 @@ export function WikiSpacePageClient({
     }
   };
 
-  const canDelete = (page: { author_email: string }) =>
-    isHrOrAdmin || (space === "WIKI" && page.author_email.trim().toLowerCase() === myEmail);
+  const canDelete = () => isHrOrAdmin;
 
   const categoryOptions = [
     { value: "", label: "All categories" },

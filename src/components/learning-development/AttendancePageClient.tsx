@@ -26,6 +26,7 @@ import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUse
 import { toPagedRows } from "@/utils/apiRows";
 import { hrmsService } from "@/services/hrms.service";
 import { EnrollmentStatusBadge } from "@/components/learning-development/EnrollmentStatusBadge";
+import { notifyError } from "@/lib/notify";
 
 type AttendanceStatus = "PRESENT" | "ABSENT";
 
@@ -167,7 +168,7 @@ export function AttendancePageClient({ fixedTrainingId }: { fixedTrainingId?: st
           <h2 className="font-semibold">Trainee Attendance</h2>
           <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={ saveMut.isPending || !trainingId || !sessionId || !traineeRows.length } onClick={() =>
               saveMut.mutate(undefined, {
-                onError: (e) => alert(e instanceof Error ? e.message : String(e)),
+                onError: (e) => notifyError(e instanceof Error ? e.message : String(e)),
               })
             }
           >

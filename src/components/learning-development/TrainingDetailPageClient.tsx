@@ -41,6 +41,7 @@ import {
   isMaterialVisibility,
   MATERIAL_VISIBILITY_OPTIONS,
 } from "@/utils/learning/materialVisibility";
+import { notifyError } from "@/lib/notify";
 import { hrmsService } from "@/services/hrms.service";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { formatApiDateDisplay } from "@/utils/apiDate";
@@ -316,7 +317,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
       </div>
 
       {detailQ.isError ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300">
           {detailQ.error instanceof Error
             ? detailQ.error.message
             : "This training is not available in the open catalog."}
@@ -418,7 +419,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
                 <InputField label="Venue" value={sessionForm.venue} onChange={(v) => setSessionForm((p) => ({ ...p, venue: v }))} />
                 <InputField label="Meeting link" value={sessionForm.meeting_link} onChange={(v) => setSessionForm((p) => ({ ...p, meeting_link: v }))} />
               </div>
-              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={sessionMut.isPending} onClick={() => sessionMut.mutate(undefined, { onError: (e) => alert(e instanceof Error ? e.message : "Failed") })}
+              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={sessionMut.isPending} onClick={() => sessionMut.mutate(undefined, { onError: (e) => notifyError(e instanceof Error ? e.message : "Failed") })}
               >
                 Create session
               </Button>
@@ -483,7 +484,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
               />
               <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0 disabled:opacity-40" disabled={addParticipantMut.isPending || !participantPick} onClick={() =>
                   addParticipantMut.mutate(undefined, {
-                    onError: (e) => alert(e instanceof Error ? e.message : "Failed"),
+                    onError: (e) => notifyError(e instanceof Error ? e.message : "Failed"),
                   })
                 }
               >
@@ -535,7 +536,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
               <div className="min-w-[160px] flex-1">
                 <FileField label="PDF" required accept=".pdf,application/pdf" onPick={setMaterialFile} />
               </div>
-              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={uploadMaterialMut.isPending || !materialFile} onClick={() => uploadMaterialMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
+              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={uploadMaterialMut.isPending || !materialFile} onClick={() => uploadMaterialMut.mutate(undefined, { onError: (e) => notifyError(String(e)) })}
               >
                 Upload
               </Button>
@@ -566,7 +567,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
                 <div className="min-w-[160px] flex-1">
                   <FileField label="Assessment PDF" required accept=".pdf,application/pdf" onPick={setAssessmentFile} />
                 </div>
-                <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={uploadAssessmentMut.isPending || !assessmentFile} onClick={() => uploadAssessmentMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
+                <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={uploadAssessmentMut.isPending || !assessmentFile} onClick={() => uploadAssessmentMut.mutate(undefined, { onError: (e) => notifyError(String(e)) })}
                 >
                   Upload
                 </Button>

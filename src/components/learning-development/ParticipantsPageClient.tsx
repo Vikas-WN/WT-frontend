@@ -14,6 +14,7 @@ import { TrainingScopePicker } from "@/components/learning-development/TrainingS
 import { participantRowUserId } from "@/utils/learning/participants";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
 import { hrmsService } from "@/services/hrms.service";
+import { notifyError } from "@/lib/notify";
 
 export function ParticipantsPageClient() {
   const { user } = useAuth();
@@ -97,7 +98,7 @@ export function ParticipantsPageClient() {
               placeholder="Select trainee"
               options={addTraineeOptions.map((o) => ({ value: o.id, label: o.label }))}
             />
-            <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={addMut.isPending || !traineePick || !trainingId} onClick={() => addMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
+            <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={addMut.isPending || !traineePick || !trainingId} onClick={() => addMut.mutate(undefined, { onError: (e) => notifyError(String(e)) })}
             >
               {addMut.isPending ? "Adding…" : "Add trainee"}
             </Button>
@@ -114,7 +115,7 @@ export function ParticipantsPageClient() {
               trainingId
                 ? (userId) =>
                     void updateParticipantStatus(userId, "COMPLETED").catch((e) =>
-                      alert(e instanceof Error ? e.message : "Failed")
+                      notifyError(e instanceof Error ? e.message : "Failed")
                     )
                 : undefined
             }
@@ -122,7 +123,7 @@ export function ParticipantsPageClient() {
               trainingId
                 ? (userId) =>
                     void updateParticipantStatus(userId, "WITHDRAWN").catch((e) =>
-                      alert(e instanceof Error ? e.message : "Failed")
+                      notifyError(e instanceof Error ? e.message : "Failed")
                     )
                 : undefined
             }

@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Users, Bell, Clock, CalendarDays } from "lucide-react";
-import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { SkillRatingsListInput } from "@/components/dashboard/ui/SkillRatingsListInput";
 import { SkillRating } from "@/types/onboard";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
@@ -2632,7 +2632,7 @@ export function OverviewPageClient() {
     <div className="mt-8 border-t border-wt-border pt-6">
       <h4 className="text-sm font-semibold mb-3">Assigned Projects</h4>
       {profileAssignedProjectsLoading ? (
-        <SectionLoading label="Loading assigned projects…" />
+        <TableRowsSkeleton rows={3} columns={4} />
       ) : (
         <DataTable
           columns={profileAssignedProjectColumns}

@@ -252,6 +252,7 @@ export const endpoints = {
   monthlySubmissions: {
     applicableKpis: `${api}/monthly-submissions/applicable-kpis`,
     webknotValues: `${api}/monthly-submissions/webknot-values`,
+    reviewers: `${api}/monthly-submissions/reviewers`,
     draft: `${api}/monthly-submissions/draft`,
     self: `${api}/monthly-submissions/self`,
     me: `${api}/monthly-submissions/me`,

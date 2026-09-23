@@ -74,21 +74,6 @@ export function KpiReportsPanel() {
 
   const [selected, setSelected] = useState<EmployeeSummary | null>(null);
 
-  const summaryQuery = useLoad<AllTimeKpiSummary>(
-    () =>
-      selected
-        ? hrmsService.getUserKpiSummary(selected.id)
-        : Promise.reject(new Error("no selection")),
-    [selected?.id]
-  );
-  const historyQuery = useLoad<MonthlySubmissionItem[]>(
-    () =>
-      selected
-        ? hrmsService.getUserMonthlySubmissions(selected.id)
-        : Promise.reject(new Error("no selection")),
-    [selected?.id]
-  );
-
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]">
       <div className="space-y-3">
@@ -148,32 +133,47 @@ export function KpiReportsPanel() {
             className="py-16"
           />
         ) : (
-          <div className="space-y-6">
-            <h3 className="text-sm font-semibold text-wt-text">{selected.name}</h3>
-            {summaryQuery.status === "loading" ? (
-              <SectionLoading label="" />
-            ) : summaryQuery.status === "error" || !summaryQuery.data ? (
-              <EmptyState title="Couldn't load summary" className="py-8" />
-            ) : summaryQuery.data.total_submissions === 0 ? (
-              <EmptyState title="No submissions yet" className="py-8" />
-            ) : (
-              <SummarySection summary={summaryQuery.data} />
-            )}
-
-            <div>
-              <h4 className="text-sm font-semibold text-wt-text">Submission history</h4>
-              <div className="mt-3">
-                {historyQuery.status === "loading" ? (
-                  <SectionLoading label="" />
-                ) : historyQuery.status === "error" ? (
-                  <EmptyState title="Couldn't load history" className="py-8" />
-                ) : (
-                  <HistorySection rows={historyQuery.data ?? []} />
-                )}
-              </div>
-            </div>
-          </div>
+          // Keyed by employee so switching remounts with a fresh loading
+          // state — otherwise the previous person's numbers show under the
+          // new name until the next fetch lands.
+          <EmployeeReport key={selected.id} employee={selected} />
         )}
+      </div>
+    </div>
+  );
+}
+
+function EmployeeReport({ employee }: { employee: EmployeeSummary }) {
+  const summaryQuery = useLoad<AllTimeKpiSummary>(() => hrmsService.getUserKpiSummary(employee.id));
+  const historyQuery = useLoad<MonthlySubmissionItem[]>(() =>
+    hrmsService.getUserMonthlySubmissions(employee.id, { submissionType: "EMPLOYEE_MONTHLY_SUBMISSION" })
+  );
+  const history = (historyQuery.data ?? []).filter((row) => row.review_status !== "DRAFT");
+
+  return (
+    <div className="space-y-6">
+      <h3 className="text-sm font-semibold text-wt-text">{employee.name}</h3>
+      {summaryQuery.status === "loading" ? (
+        <SectionLoading label="" />
+      ) : summaryQuery.status === "error" || !summaryQuery.data ? (
+        <EmptyState title="Couldn't load summary" className="py-8" />
+      ) : summaryQuery.data.total_submissions === 0 ? (
+        <EmptyState title="No submissions yet" className="py-8" />
+      ) : (
+        <SummarySection summary={summaryQuery.data} />
+      )}
+
+      <div>
+        <h4 className="text-sm font-semibold text-wt-text">Submission history</h4>
+        <div className="mt-3">
+          {historyQuery.status === "loading" ? (
+            <SectionLoading label="" />
+          ) : historyQuery.status === "error" ? (
+            <EmptyState title="Couldn't load history" className="py-8" />
+          ) : (
+            <HistorySection rows={history} />
+          )}
+        </div>
       </div>
     </div>
   );

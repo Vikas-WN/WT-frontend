@@ -25,6 +25,7 @@ import type {
   WebknotValueWritePayload,
   PaginatedWebknotValues,
   MonthlySubmissionItem,
+  EmployeeSummary,
   MonthlySubmissionDraftPayload,
   MonthlySubmissionType,
   ManagerReviewSubmitPayload,
@@ -1315,7 +1316,7 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<AttendanceSnapshot>>(endpoints.attendanceToday);
   },
 
-  /** Company Wiki + Policies & Handbook — one API, two spaces ("WIKI" | "POLICY"). */
+  /** Company Policies & Handbook. "space" stays on the wire for API parity with the backend. */
   listWikiPages(params: {
     space: WikiSpace;
     page?: number;
@@ -1642,6 +1643,11 @@ export const hrmsService = {
 
   getActiveWebknotValues() {
     return apiClient.get<WebknotValueItem[]>(endpoints.monthlySubmissions.webknotValues);
+  },
+
+  /** Admins an HR team member can choose to review their own self-review. */
+  getPulseAdminReviewers() {
+    return apiClient.get<EmployeeSummary[]>(endpoints.monthlySubmissions.reviewers);
   },
 
   getMonthlySubmissionDraft(params: { month: string; submissionType?: MonthlySubmissionType }) {

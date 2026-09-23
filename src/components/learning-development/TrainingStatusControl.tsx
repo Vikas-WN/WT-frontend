@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useUpdateTraining } from "@/hooks/learning/useLearningTrainings";
 import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
 import { StatusBadge } from "@/components/learning-development/ui/forms";
+import { notifyError } from "@/lib/notify";
 
 export const TRAINING_STATUS_OPTIONS = [
   "DRAFT",
@@ -63,7 +64,7 @@ export function TrainingStatusControl({
           }))}
           aria-label="Training status"
         />
-        <Button variant="brand" size="sm" type="button" className="mt-2 w-full px-3 py-2 text-sm" disabled={updateMut.isPending || draft === normalized} onClick={() => applyStatus().catch((e) => alert(e instanceof Error ? e.message : "Unable to update status"))}
+        <Button variant="brand" size="sm" type="button" className="mt-2 w-full px-3 py-2 text-sm" disabled={updateMut.isPending || draft === normalized} onClick={() => applyStatus().catch((e) => notifyError(e instanceof Error ? e.message : "Unable to update status"))}
         >
           {updateMut.isPending ? "Saving…" : "Apply"}
         </Button>

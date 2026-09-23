@@ -20,6 +20,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMyTrainingMarks } from "@/hooks/learning/useLearningTrainings";
 import { ApiError } from "@/api/error";
 import { hrmsService } from "@/services/hrms.service";
+import { notifyError } from "@/lib/notify";
 
 function myMarksErrorMessage(error: unknown): {
   message: string;
@@ -108,7 +109,7 @@ export function EmployeeTrainingMyMarks({
         {showEnroll ? (
           <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm" disabled={enrollMut.isPending} onClick={() =>
               enrollMut.mutate(undefined, {
-                onError: (e) => alert(e instanceof Error ? e.message : String(e)),
+                onError: (e) => notifyError(e instanceof Error ? e.message : String(e)),
               })
             }
           >
@@ -170,7 +171,9 @@ export function EmployeeTrainingMyMarks({
           </p>
           <p
             className={`text-lg font-semibold mt-1 ${
-              marks.allAssessmentsPublished ? "text-emerald-700" : "text-amber-700"
+              marks.allAssessmentsPublished
+                ? "text-emerald-700 dark:text-emerald-400"
+                : "text-amber-700 dark:text-amber-300"
             }`}
           >
             {marks.allAssessmentsPublished ? "All published" : "Partially published"}
