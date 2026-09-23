@@ -2835,28 +2835,28 @@ export function UploadsPageClient() {
                                 label="Leave Upload"
                                 file={uploadFiles.leave}
                                 onPick={(f) => setUploadFiles((p) => ({ ...p, leave: f }))}
-                                onUpload={() => uploadFiles.leave ? runAction("Upload leave file", () => hrmsService.uploadFile(endpoints.upload.leave, uploadFiles.leave!)) : Promise.resolve()}
+                                onUpload={async () => { if (uploadFiles.leave) await runAction("Upload leave file", () => hrmsService.uploadFile(endpoints.upload.leave, uploadFiles.leave!)); }}
                                 loading={actionLoading}
                               />
                               <UploadTile
                                 label="Allocation Upload"
                                 file={uploadFiles.allocation}
                                 onPick={(f) => setUploadFiles((p) => ({ ...p, allocation: f }))}
-                                onUpload={() => uploadFiles.allocation ? runAction("Upload allocation file", () => hrmsService.uploadFile(endpoints.upload.allocation, uploadFiles.allocation!)) : Promise.resolve()}
+                                onUpload={async () => { if (uploadFiles.allocation) await runAction("Upload allocation file", () => hrmsService.uploadFile(endpoints.upload.allocation, uploadFiles.allocation!)); }}
                                 loading={actionLoading}
                               />
                               <UploadTile
                                 label="User Data Upload"
                                 file={uploadFiles.userData}
                                 onPick={(f) => setUploadFiles((p) => ({ ...p, userData: f }))}
-                                onUpload={() => uploadFiles.userData ? runAction("Upload user-data file", () => hrmsService.uploadFile(endpoints.upload.userData, uploadFiles.userData!)) : Promise.resolve()}
+                                onUpload={async () => { if (uploadFiles.userData) await runAction("Upload user-data file", () => hrmsService.uploadFile(endpoints.upload.userData, uploadFiles.userData!)); }}
                                 loading={actionLoading}
                               />
                               <UploadTile
                                 label="User Batch Upload"
                                 file={uploadFiles.batch}
                                 onPick={(f) => setUploadFiles((p) => ({ ...p, batch: f }))}
-                                onUpload={() => uploadFiles.batch ? runAction("Upload user-batch file", () => hrmsService.uploadFile(endpoints.user.batch, uploadFiles.batch!)) : Promise.resolve()}
+                                onUpload={async () => { if (uploadFiles.batch) await runAction("Upload user-batch file", () => hrmsService.uploadFile(endpoints.user.batch, uploadFiles.batch!)); }}
                                 loading={actionLoading}
                               />
                             </div>

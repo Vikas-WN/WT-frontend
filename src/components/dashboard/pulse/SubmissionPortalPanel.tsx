@@ -130,9 +130,12 @@ function WindowCard({
     start: apiDateTimeToInputValue(row?.window_start_at),
     end: apiDateTimeToInputValue(row?.window_end_at),
   }));
+  // Read the clock once per mount (render must stay pure); the parent
+  // remounts this card whenever the saved window changes.
+  const [mountedAt] = useState(() => Date.now());
   const startsAt = parseApiDateTime(row?.window_start_at);
   const scheduled =
-    !effectiveOpen && !!row && !row.manual_closed && startsAt !== null && startsAt.getTime() > Date.now();
+    !effectiveOpen && !!row && !row.manual_closed && startsAt !== null && startsAt.getTime() > mountedAt;
 
   return (
     <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-4">

@@ -335,7 +335,7 @@ export function WikiSpacePageClient({
                         <Pencil className="mr-1.5 size-3.5" /> Edit
                       </Button>
                     ) : null}
-                    {canDelete(selected) ? (
+                    {canDelete() ? (
                       <Button
                         type="button"
                         variant="outline"
