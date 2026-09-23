@@ -180,34 +180,54 @@ async function fetchProjectApprovedTotals(params: {
   );
 }
 
+const DEEP_LINK_PARAMS = ["employee", "from", "to", "project"] as const;
+
+function readDeepLink(searchParams: URLSearchParams | { get(name: string): string | null }) {
+  const employee = (searchParams.get("employee") ?? "").trim().toLowerCase() || null;
+  const project = (searchParams.get("project") ?? "").trim().toUpperCase() || null;
+  const range = rangeFromDates(searchParams.get("from") ?? "", searchParams.get("to") ?? "");
+  const key = [employee ?? "", range?.startIso ?? "", range?.endIso ?? "", project ?? ""].join("|");
+  return { employee, project, range, key };
+}
+
 export function useProjectTimelogs(enabled: boolean) {
   const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const appliedEmployeeParam = useRef<string | null>(null);
   const viewerRoles = useMemo(
     () => timelogViewerRoles(user?.roles ?? []),
     [user?.roles]
   );
 
-  const [fromDate, setFromDateState] = useState(() => fullDataRange().startDmy);
-  const [toDate, setToDateState] = useState(() => fullDataRange().endDmy);
+  // Deep link from a "Timelog submitted" notification:
+  //   ?employee=<email>&from=<dd/mm/yyyy>&to=<dd/mm/yyyy>[&project=<CODE>]
+  // (built by the backend — app/domain/timelog_links.py — and stored on the
+  // notification). It opens that employee's submitted entries for exactly those
+  // dates / that project. Applied whenever the link changes — not only on first
+  // mount — so clicking a notification while already on this page works too.
+  const link = readDeepLink(searchParams);
+  const [appliedLinkKey, setAppliedLinkKey] = useState<string | null>(null);
+  const [fromDate, setFromDateState] = useState(() => link.range?.startDmy ?? fullDataRange().startDmy);
+  const [toDate, setToDateState] = useState(() => link.range?.endDmy ?? fullDataRange().endDmy);
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
+  // Project the deep link is about. Kept separate from the accordion's
+  // `expandedProject`, which collapses when that project isn't on the current
+  // page of the list (and would clear the employee along with it).
+  const [focusProject, setFocusProject] = useState<string | null>(null);
 
-  // Deep-link from timelog approval notifications: ?employee=email
-  useEffect(() => {
-    if (!enabled) return;
-    const email = (searchParams.get("employee") ?? "").trim().toLowerCase();
-    if (!email) {
-      appliedEmployeeParam.current = null;
-      return;
+  if (enabled && link.employee && link.key !== appliedLinkKey) {
+    // "Adjust state while rendering" — React's recommended way to react to a
+    // changed input without an effect.
+    setAppliedLinkKey(link.key);
+    setSelectedEmployee(link.employee);
+    setFocusProject(link.project);
+    if (link.range) {
+      setFromDateState(link.range.startDmy);
+      setToDateState(link.range.endDmy);
     }
-    if (appliedEmployeeParam.current === email) return;
-    appliedEmployeeParam.current = email;
-    setSelectedEmployee(email);
-  }, [enabled, searchParams]);
+  }
 
   const filterRange = useMemo(() => rangeFromDates(fromDate, toDate), [fromDate, toDate]);
   const hasDateFilter = filterRange != null;
@@ -302,10 +322,10 @@ export function useProjectTimelogs(enabled: boolean) {
     [employeeDetailQuery.data]
   );
 
-  const clearEmployeeQueryParam = useCallback(() => {
-    if (!searchParams.has("employee")) return;
+  const clearDeepLinkParams = useCallback(() => {
+    if (!DEEP_LINK_PARAMS.some((key) => searchParams.has(key))) return;
     const next = new URLSearchParams(searchParams.toString());
-    next.delete("employee");
+    for (const key of DEEP_LINK_PARAMS) next.delete(key);
     const qs = next.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }, [pathname, router, searchParams]);
@@ -315,11 +335,14 @@ export function useProjectTimelogs(enabled: boolean) {
       const next = email ? email.trim().toLowerCase() : null;
       setSelectedEmployee(next);
       if (!next) {
-        appliedEmployeeParam.current = null;
-        clearEmployeeQueryParam();
+        // Leaving the linked view: drop the link so the same notification can
+        // be opened again later, and stop filtering to its project.
+        setFocusProject(null);
+        setAppliedLinkKey(null);
+        clearDeepLinkParams();
       }
     },
-    [clearEmployeeQueryParam]
+    [clearDeepLinkParams]
   );
 
   const toggleProject = useCallback(
@@ -362,6 +385,7 @@ export function useProjectTimelogs(enabled: boolean) {
     weekTotals,
     weekTotalsLoading: approvedTotalsQuery.isLoading || approvedTotalsQuery.isFetching,
     expandedProject,
+    focusProject,
     selectedEmployee,
     fromDate,
     toDate,

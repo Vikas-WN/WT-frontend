@@ -244,10 +244,12 @@ export function EmployeeProfilePageClient() {
   );
   // Technical employees must keep at least one primary + one secondary skill;
   // HR / Finance / other non-tech employees may be saved with none.
+  // Judge by what is being SAVED: while editing, the department / designation
+  // in the form (a band change forces a new designation), not the stored ones —
+  // the backend classifies the same way (EmployeeService.update_employee_profile).
   const skillsRequiredForProfile = !isNonTechProfile(
-    department,
-    employeeRole,
-    pickProfileField(profileRecord, ["role", "designation"]),
+    editForm ? editForm.department : department,
+    editForm ? editForm.role : employeeRole,
     pickProfileField(profileRecord, ["user_type", "userType"])
   );
   const currentProfileStatus = String(

@@ -234,6 +234,7 @@ export const endpoints = {
     webknotValueById: (rowId: string) =>
       `${api}/masters/webknot-values/${encodeURIComponent(rowId)}`,
     submissionCycles: `${api}/masters/submission-cycles`,
+    pulseScoreSettings: `${api}/masters/pulse-score-settings`,
     submissionCycleByKey: `${api}/masters/submission-cycles/by-key`,
     submissionCycleStatus: `${api}/masters/submission-cycles/is-open`,
     submissionCycleById: (cycleId: string | number) =>

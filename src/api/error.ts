@@ -1,4 +1,5 @@
 import { parsePydanticValidationPayload } from "@/utils/userFriendlyApiError";
+import { toSafeErrorMessage } from "@/utils/safeErrorMessage";
 
 export interface ApiErrorPayload {
   detail?: unknown;
@@ -37,7 +38,13 @@ function isHtmlErrorBody(text: string): boolean {
   );
 }
 
-export function parseApiErrorMessage(
+/** The user-facing message for an API error — always plain language (technical
+ *  details stay in the response's `error` field; see utils/safeErrorMessage). */
+export function parseApiErrorMessage(payload: unknown, fallback: string): string {
+  return toSafeErrorMessage(parseRawApiErrorMessage(payload, fallback), fallback);
+}
+
+function parseRawApiErrorMessage(
   payload: unknown,
   fallback: string
 ): string {

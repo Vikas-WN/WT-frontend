@@ -273,7 +273,7 @@ Four conventions apply to every module: notifications never block a save, backgr
 - `EmailService` uses SMTP behind a circuit breaker. Outside prod it redirects every recipient to `SMTP_DEV_REDIRECT_EMAIL`. HR-triggered resends are rate-limited (`HR_EMAIL_COOLDOWN_MINUTES`, `HR_EMAIL_DAILY_CAP`).
 - A notification failure is logged and swallowed; it never rolls back the business action.
 
-**Scheduled jobs:** 22 APScheduler jobs start with the app (`ENABLE_SCHEDULER`, timezone `SCHEDULER_TIMEZONE`, default UTC). They can also be triggered manually through the `scheduler` router.
+**Scheduled jobs:** 22 APScheduler jobs start with the app (`ENABLE_SCHEDULER`; timezone `SCHEDULER_TIMEZONE`, default `APP_TIMEZONE` = Asia/Kolkata, so job hours are IST). Each job gets a 1-hour misfire grace window, and every run logs `[scheduler] job=<id> STARTING` → `COMPLETED … result=…` or `FAILED` (startup logs each job's next run). They can also be triggered manually through the `scheduler` router.
 
 | Area | Jobs |
 | --- | --- |
@@ -338,7 +338,7 @@ The biggest risk is that nothing checks a change before it reaches a Docker buil
 | No CI pipeline | Type and test failures found at deploy time | Add CI: `tsc --noEmit`, `eslint`, `pnpm build`; `pytest` on Python 3.12 against a throwaway Postgres |
 | Shared DB with legacy Java backend | Schema or JSON-shape changes can break the other app | Record the shared tables and JSON contracts; retire the Java writers per module |
 | Pulse ratings stored as JSON text | KPI ids aren't foreign keys; weights are resolved at read time | Move to `submission_kpi_ratings` tables once Java no longer writes the row |
-| Scheduler runs in the API process | Jobs run on every replica if scaled out; default timezone UTC while business rules use IST | Run jobs in one worker (or add a lock); set `SCHEDULER_TIMEZONE=Asia/Kolkata` deliberately |
+| Scheduler runs in the API process | Jobs run on every replica if scaled out | Run jobs in one worker (or add a lock); check that only one `[scheduler] STARTED` line appears per deploy |
 | Very large page clients (e.g. `UploadsPageClient.tsx` ~2,800+ lines) | Hard to change safely | Continue the documented extraction into `sections/`, hooks and utils |
 | Stale docs | `README.md` still says only company-domain accounts may sign in; `CODEBASE.md` lists a removed `tools/` layer | Update both from this doc |
 | Dockerfile port mismatch | `EXPOSE 8000` vs uvicorn 8080 | Align on 8080 |

@@ -272,6 +272,27 @@ export interface AllTimeKpiSummary {
   cycles: CycleKpiSummary[];
 }
 
+/** HR/Admin-tunable Pulse scoring (Settings → Pulse scoring). Percentages. */
+export interface PulseScoreSettingsWrite {
+  kpi_weight_percent: number;
+  values_weight_percent: number;
+  certification_low_rate_percent: number;
+  certification_high_rate_percent: number;
+  certification_low_max: number;
+  recognition_low_rate_percent: number;
+  recognition_high_rate_percent: number;
+  recognition_low_max: number;
+  promotion_min_score: number;
+}
+
+export interface PulseScoreSettings extends PulseScoreSettingsWrite {
+  /** Highest reachable final score — the cap for HR's manual override. */
+  max_score: number;
+  is_default: boolean;
+  updated_by: string | null;
+  updated_at: string | null;
+}
+
 export interface AdminMonthlyOverview {
   month: string;
   cycle_key: string;
