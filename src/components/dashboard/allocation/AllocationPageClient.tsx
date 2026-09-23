@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
+import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import { SkillRatingsListInput } from "@/components/dashboard/ui/SkillRatingsListInput";
@@ -3626,7 +3627,10 @@ export function AllocationPageClient() {
                                     />
                                     </>
                                   ) : (
-                                    <p className="text-sm text-wt-text-muted">No projects match current filters.</p>
+                                    <EmptyState
+                                      title="No projects match current filters"
+                                      description="Try adjusting or clearing the filters above."
+                                    />
                                   )}
                                 </div>
                               </div>
@@ -4212,15 +4216,23 @@ export function AllocationPageClient() {
                                     ) : null}
                                     </>
                                   ) : allocations.length ? (
-                                    <p className="text-sm text-wt-text-muted">
-                                      No allocations match your search.
-                                    </p>
+                                    <EmptyState
+                                      title="No allocations match your search"
+                                      description="Try a different search term."
+                                    />
                                   ) : (
-                                    <p className="text-sm text-wt-text-muted">
-                                      {allocationsLoadError
-                                        ? "Allocation list could not be loaded."
-                                        : "No allocations found. Create one under Project Allocation."}
-                                    </p>
+                                    <EmptyState
+                                      title={
+                                        allocationsLoadError
+                                          ? "Allocation list could not be loaded"
+                                          : "No allocations found"
+                                      }
+                                      description={
+                                        allocationsLoadError
+                                          ? "Please try refreshing the page."
+                                          : "Create one under Project Allocation."
+                                      }
+                                    />
                                   )}
                                 </div>
 

@@ -33,12 +33,6 @@ export const LazyPulsePageClient = lazyPage(
   "Loading Pulse…"
 );
 
-export const LazyCompanyWikiPageClient = lazyPage(
-  () => import("@/components/dashboard/wiki/CompanyWikiPageClient"),
-  "CompanyWikiPageClient",
-  "Loading wiki…"
-);
-
 export const LazyCompanyPoliciesPageClient = lazyPage(
   () => import("@/components/dashboard/wiki/CompanyPoliciesPageClient"),
   "CompanyPoliciesPageClient",

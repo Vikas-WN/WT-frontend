@@ -21,6 +21,7 @@ import { hrmsService } from "@/services/hrms.service";
 import { notifyError, notifySuccess } from "@/lib/notify";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { ApiError } from "@/api/error";
+import { cn } from "@/lib/utils";
 import type {
   AdminMonthlyOverview,
   MonthlySubmissionItem,
@@ -195,7 +196,10 @@ export function SubmissionsReviewPanel() {
               >
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-wt-text">{row.employee.name}</p>
-                  <p className="text-xs text-wt-text-muted">{row.cycle_label}</p>
+                  <p className="text-xs text-wt-text-muted">
+                    {row.month} · {row.cycle_label}
+                    {row.employee.emp_id ? ` · ${row.employee.emp_id}` : ""}
+                  </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Badge variant="outline">{statusLabel(row.review_status)}</Badge>
@@ -266,6 +270,7 @@ function AdminReviewModal({
 
   const [comments, setComments] = useState("");
   const [techShowcase, setTechShowcase] = useState("");
+  const [scoreOverride, setScoreOverride] = useState("");
   const [busy, setBusy] = useState<"approve" | "reject" | "reject-manager" | null>(null);
 
   const submit = useCallback(
@@ -274,12 +279,18 @@ function AdminReviewModal({
         notifyError("Add at least 10 characters of feedback before rejecting.");
         return;
       }
+      const override = scoreOverride.trim() ? Number(scoreOverride) : null;
+      if (action === "APPROVE" && override !== null && !(override >= 1 && override <= 6)) {
+        notifyError("Final score override must be a number between 1 and 6.");
+        return;
+      }
       setBusy(action === "APPROVE" ? "approve" : action === "REJECT" ? "reject" : "reject-manager");
       try {
         await hrmsService.submitAdminReview(submission.id, {
           action,
           comments,
           tech_showcase: techShowcase || null,
+          ...(action === "APPROVE" && override !== null ? { final_score: override } : {}),
         });
         notifySuccess(
           action === "APPROVE"
@@ -300,7 +311,7 @@ function AdminReviewModal({
         setBusy(null);
       }
     },
-    [comments, techShowcase, submission.id, onDone]
+    [comments, techShowcase, scoreOverride, submission.id, onDone]
   );
 
   return (
@@ -361,6 +372,8 @@ function AdminReviewModal({
               </p>
             </div>
 
+            <RatingsComparison submission={submission} />
+
             {submission.manager_evaluation ? (
               <div>
                 <h3 className="text-sm font-semibold text-wt-text">Manager evaluation</h3>
@@ -376,7 +389,9 @@ function AdminReviewModal({
                 <ul className="mt-1.5 space-y-1 text-sm text-wt-text-muted">
                   {submission.certifications.map((c) => (
                     <li key={c.certification_id}>
-                      #{c.certification_id} {c.proof ? `— ${c.proof}` : ""}
+                      {submission.certification_details.find((d) => d.id === c.certification_id)?.name ??
+                        `Certification #${c.certification_id}`}
+                      {c.proof ? ` — ${c.proof}` : ""}
                     </li>
                   ))}
                 </ul>
@@ -395,6 +410,24 @@ function AdminReviewModal({
                     value={techShowcase}
                     onChange={(e) => setTechShowcase(e.target.value)}
                     placeholder="A notable technical contribution this cycle"
+                    className="mt-1.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-wt-text" htmlFor="score-override">
+                    Final score override (optional)
+                  </label>
+                  <input
+                    id="score-override"
+                    type="number"
+                    min={1}
+                    max={6}
+                    step={0.01}
+                    value={scoreOverride}
+                    onChange={(e) => setScoreOverride(e.target.value)}
+                    placeholder={
+                      breakdown.data ? `Leave blank to use ${breakdown.data.total_score.toFixed(2)}` : "Leave blank to use the computed score"
+                    }
                     className="mt-1.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
                   />
                 </div>
@@ -448,6 +481,74 @@ function AdminReviewModal({
           ) : null}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Employee self-rating vs manager rating, side by side, per KPI and value. */
+function RatingsComparison({ submission }: { submission: MonthlySubmissionItem }) {
+  const selfKpi = new Map(submission.kpi_ratings.map((r) => [r.kpi_id, r.rating]));
+  const mgrKpi = submission.manager_evaluation?.kpi_ratings ?? {};
+  const selfValue = new Map(submission.value_ratings.map((r) => [r.value_id, r.rating]));
+  const mgrValue = submission.manager_evaluation?.value_ratings ?? {};
+  const rows = [
+    ...submission.kpi_details.map((k) => ({
+      key: `k${k.id}`,
+      label: k.kpi_name,
+      meta: `KPI · ${k.weightage}%`,
+      self: selfKpi.get(k.id),
+      manager: mgrKpi[String(k.id)],
+    })),
+    ...submission.value_details.map((v) => ({
+      key: `v${v.id}`,
+      label: v.name,
+      meta: "Value",
+      self: selfValue.get(v.id),
+      manager: mgrValue[String(v.id)],
+    })),
+  ];
+  if (rows.length === 0) return null;
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-wt-text">Ratings</h3>
+      <div className="mt-2 overflow-x-auto rounded-lg border border-wt-border">
+        <table className="w-full text-sm">
+          <thead className="bg-wt-surface-2/60 text-left text-[11px] uppercase tracking-wide text-wt-text-muted">
+            <tr>
+              <th className="px-3 py-2 font-medium">Item</th>
+              <th className="px-3 py-2 text-center font-medium">Self</th>
+              <th className="px-3 py-2 text-center font-medium">Manager</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.key} className="border-t border-wt-border">
+                <td className="px-3 py-2">
+                  <p className="text-wt-text">{r.label}</p>
+                  <p className="text-xs text-wt-text-faint">{r.meta}</p>
+                </td>
+                <td className="px-3 py-2 text-center text-wt-text">{r.self ?? "—"}</td>
+                <td
+                  className={cn(
+                    "px-3 py-2 text-center font-semibold",
+                    r.manager != null && r.self != null && r.manager !== r.self
+                      ? "text-amber-700 dark:text-amber-400"
+                      : "text-wt-text"
+                  )}
+                >
+                  {r.manager ?? "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {submission.recognitions_count > 0 ? (
+        <p className="mt-1.5 text-xs text-wt-text-muted">
+          {submission.recognitions_count} recognition(s) claimed this cycle.
+        </p>
+      ) : null}
     </div>
   );
 }

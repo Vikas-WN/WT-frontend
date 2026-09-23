@@ -52,9 +52,12 @@ function scopeTitle(scope: SubmissionCycleScope): string {
   return SCOPES.find((s) => s.scope === scope)?.title ?? scope;
 }
 
+function monthKeyOf(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
 function currentMonthKey(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  return monthKeyOf(new Date());
 }
 
 /** The row that best represents "the window" for a scope right now: the open
@@ -127,6 +130,9 @@ function WindowCard({
     start: apiDateTimeToInputValue(row?.window_start_at),
     end: apiDateTimeToInputValue(row?.window_end_at),
   }));
+  const startsAt = parseApiDateTime(row?.window_start_at);
+  const scheduled =
+    !effectiveOpen && !!row && !row.manual_closed && startsAt !== null && startsAt.getTime() > Date.now();
 
   return (
     <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-4">
@@ -140,12 +146,20 @@ function WindowCard({
             "ml-auto rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
             effectiveOpen
               ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-              : "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-400"
+              : scheduled
+                ? "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                : "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-400"
           )}
         >
-          {effectiveOpen ? "Active" : "Inactive"}
+          {effectiveOpen ? "Active" : scheduled ? "Scheduled" : "Inactive"}
         </span>
       </div>
+
+      {scheduled ? (
+        <p className="mb-3 text-[11px] text-amber-700 dark:text-amber-400">
+          Opens {row?.window_start_at}
+        </p>
+      ) : null}
 
       {effectiveOpen && !isOpen ? (
         <p className="mb-3 text-[11px] text-emerald-700 dark:text-emerald-400">Open via Global window</p>
@@ -236,14 +250,21 @@ export function SubmissionPortalPanel() {
   const empEffectiveOpen = globalOpen || empOwnOpen;
   const mgrEffectiveOpen = globalOpen || mgrOwnOpen;
 
-  const upsertScope = useCallback(
-    async (scope: SubmissionCycleScope, changes: Partial<SubmissionCycleWritePayload>) => {
-      const row = pickCurrentRow(rows, scope);
+  /** Rows are unique per (cycle_key, scope) — write to that exact row rather
+   *  than whichever row the card happens to show, which may belong to another
+   *  month and would trip the backend's duplicate-key check. */
+  const upsertCycle = useCallback(
+    async (
+      scope: SubmissionCycleScope,
+      cycleKey: string,
+      changes: Partial<SubmissionCycleWritePayload>
+    ) => {
+      const row = rows.find((r) => r.scope === scope && r.cycle_key === cycleKey);
       if (row) {
         return hrmsService.updateSubmissionCycle(row.id, changes);
       }
       return hrmsService.createSubmissionCycle({
-        cycle_key: currentMonthKey(),
+        cycle_key: cycleKey,
         scope,
         window_start_at: changes.window_start_at ?? formatApiDateTime(new Date()),
         window_end_at: changes.window_end_at ?? null,
@@ -257,27 +278,27 @@ export function SubmissionPortalPanel() {
     setBusyScope(scope);
     try {
       if (isOpen) {
-        await upsertScope(scope, { manual_closed: true });
+        // Any open row keeps the portal open (the backend's is-open check
+        // looks at every month), so close all of them, not just the one shown.
+        const openRows = rows.filter((r) => r.scope === scope && r.is_open);
+        await Promise.all(
+          openRows.map((r) => hrmsService.updateSubmissionCycle(r.id, { manual_closed: true }))
+        );
         notifySuccess(`${scopeTitle(scope)} window closed.`);
       } else {
-        const row = pickCurrentRow(rows, scope);
+        const cycleKey = currentMonthKey();
+        const row = rows.find((r) => r.scope === scope && r.cycle_key === cycleKey);
         const currentEnd = parseApiDateTime(row?.window_end_at);
         const changes: Partial<SubmissionCycleWritePayload> = {
           window_start_at: formatApiDateTime(new Date()),
           manual_closed: false,
-          // `/submission-cycles/is-open` (what employees' Pulse gate actually
-          // checks) requires the row's cycle_key to match the current month —
-          // a stale cycle_key from a prior month would leave this card
-          // showing "Active" while the employee-facing check still says
-          // closed. Keep it current whenever the window is (re)started.
-          cycle_key: currentMonthKey(),
         };
         // A stale end date in the past would leave the window closed right
         // after "opening" it — clear it so Start actually opens the window.
         if (currentEnd && currentEnd.getTime() <= Date.now()) {
           changes.window_end_at = null;
         }
-        await upsertScope(scope, changes);
+        await upsertCycle(scope, cycleKey, changes);
         notifySuccess(`${scopeTitle(scope)} window opened.`);
       }
       refresh();
@@ -300,9 +321,24 @@ export function SubmissionPortalPanel() {
       return;
     }
     const windowEnd = form.end ? inputValueToApiDateTime(form.end) : null;
+    if (form.end && !windowEnd) {
+      notifyError("Pick a valid close date and time.");
+      return;
+    }
+    if (windowEnd && new Date(form.end).getTime() <= new Date(form.start).getTime()) {
+      notifyError("Close time must be after the open time.");
+      return;
+    }
     setBusyScope(scope);
     try {
-      await upsertScope(scope, { window_start_at: windowStart, window_end_at: windowEnd });
+      // The window belongs to the month it opens in, and scheduling re-arms
+      // it — a row left `manual_closed` by an earlier Stop would otherwise
+      // never open at the scheduled time.
+      await upsertCycle(scope, monthKeyOf(new Date(form.start)), {
+        window_start_at: windowStart,
+        window_end_at: windowEnd,
+        manual_closed: false,
+      });
       notifySuccess(`${scopeTitle(scope)} window scheduled.`);
       refresh();
     } catch (error) {

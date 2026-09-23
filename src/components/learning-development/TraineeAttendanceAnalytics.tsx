@@ -119,7 +119,7 @@ export function TraineeAttendanceAnalytics({
               <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
                 Attended
               </p>
-              <p className="text-2xl font-semibold mt-1 text-emerald-700">{attended}</p>
+              <p className="text-2xl font-semibold mt-1 text-emerald-700 dark:text-emerald-400">{attended}</p>
             </article>
             <article className="rounded-xl border border-wt-border bg-wt-surface-2 p-4">
               <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">
@@ -158,9 +158,9 @@ export function TraineeAttendanceAnalytics({
                       <span
                         className={
                           isPresentStatus(row.status)
-                            ? "text-emerald-700 font-medium"
+                            ? "text-emerald-700 dark:text-emerald-400 font-medium"
                             : isAbsentStatus(row.status)
-                              ? "text-rose-700 font-medium"
+                              ? "text-rose-700 dark:text-rose-400 font-medium"
                               : "text-wt-text-muted"
                         }
                       >

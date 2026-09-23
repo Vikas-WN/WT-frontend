@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import { SkillRatingsListInput } from "@/components/dashboard/ui/SkillRatingsListInput";
 import { SkillRating } from "@/types/onboard";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
@@ -85,11 +85,6 @@ import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAc
 
 
 export function UploadsPageClient() {
-  const isManagerRoleLabel = (value: unknown): boolean =>
-    String(value ?? "")
-      .trim()
-      .toLowerCase()
-      .includes("manager");
   const REQUEST_TYPE_ALIASES: Record<string, string[]> = {
     LEAVE: ["LEAVE"],
     WFH: ["WFH"],
@@ -100,7 +95,6 @@ export function UploadsPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { metrics, loading, refresh } = useOverviewData();
-    const [actionLoading, setActionLoading] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<Record<string, unknown> | null>(null);
   const [inviteOnboardingRows, setInviteOnboardingRows] = useState<Array<Record<string, unknown>>>([]);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
@@ -150,7 +144,6 @@ export function UploadsPageClient() {
     /** HR/Admin: optional — submit timelog for this employee when the API accepts it */
     subject_employee_email: "",
   });
-  const [myLeaveRequests, setMyLeaveRequests] = useState<Array<Record<string, unknown>>>([]);
   const [employeeRequests, setEmployeeRequests] = useState<Array<Record<string, unknown>>>([]);
   const [kpis, setKpis] = useState<Array<Record<string, unknown>>>([]);
   const [headcountBreakdown, setHeadcountBreakdown] = useState<Array<Record<string, unknown>>>([]);
@@ -801,25 +794,6 @@ export function UploadsPageClient() {
     }, 0);
     return () => window.clearTimeout(id);
   }, [ timelogSubTab, hasManagerAccess, selectedManagerProjectCode]);
-  useEffect(() => {
-        const id = window.setTimeout(() => {
-      void (async () => {
-        try {
-          await loadMyLeaveRequests();
-        } catch {
-          setMyLeaveRequests([]);
-        }
-      })();
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [ user]);  useEffect(() => {
-        const timer = window.setInterval(() => {
-      void loadMyLeaveRequests().catch(() => {
-        /* ignore periodic refresh errors */
-      });
-    }, 15000);
-    return () => window.clearInterval(timer);
-  }, [ user]);
   function applyTheme(nextTheme: "light" | "dark" | "system") {
     const root = document.documentElement;
     if (nextTheme === "system") {
@@ -831,187 +805,7 @@ export function UploadsPageClient() {
     window.localStorage.setItem("wt-theme", nextTheme);
   }
 
-  async function runAction(label: string, fn: () => Promise<unknown>) {
-    setActionLoading(true);
-    try {
-      await fn();
-      showSuccessToast(formatActionSuccessMessage(label));
-    } catch (error) {
-      const backendMessage =
-        error instanceof ApiError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "";
-      showErrorToast(formatActionErrorMessage(label, backendMessage));
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  function buildUserIdToNameMap(users: Array<Record<string, unknown>>) {
-    const map: Record<string, string> = {};
-    for (const u of users) {
-      const name = String(u.name ?? "").trim();
-      if (!name) continue;
-      for (const key of ["id", "user_id", "userId", "userID", "emp_id"] as const) {
-        const v = u[key];
-        if (v != null && v !== "") map[String(v)] = name;
-      }
-    }
-    return map;
-  }
-
-  function buildEmailToNameMap(users: Array<Record<string, unknown>>) {
-    const map: Record<string, string> = {};
-    for (const u of users) {
-      const email = String(u.email ?? "").trim().toLowerCase();
-      const name = String(u.name ?? "").trim();
-      if (email && name) map[email] = name;
-    }
-    return map;
-  }
-
-  function allocationRowEmail(row: Record<string, unknown>) {
-    return String(
-      row.employee_email ??
-        row.employeeEmail ??
-        row.user_email ??
-        row.userEmail ??
-        row.email ??
-        ""
-    )
-      .trim()
-      .toLowerCase();
-  }
-
-  /** Raw project code from allocation row (may be empty). */
-  function allocationProjectCode(row: Record<string, unknown>): string {
-    const direct =
-      row.project_code ??
-      row.projectCode ??
-      row.project_id ??
-      row.projectId ??
-      row.proj_code ??
-      row.projCode;
-    if (direct != null && direct !== "") return String(direct).trim();
-    for (const key of Object.keys(row)) {
-      const norm = key.toLowerCase().replace(/-/g, "_");
-      if (
-        norm === "project_code" ||
-        norm === "project_id" ||
-        norm === "projectcode" ||
-        norm === "projectid"
-      ) {
-        const v = row[key];
-        if (v != null && v !== "") return String(v).trim();
-      }
-    }
-    return "";
-  }
-
-  function allocationProjectTitleFromRow(row: Record<string, unknown>) {
-    return String(
-      row.project_name ?? row.projectName ?? row.project_title ?? row.projectTitle ?? ""
-    ).trim();
-  }
-
-  function buildProjectCodeDisplayMap(projectRows: Array<Record<string, unknown>>) {
-    const map: Record<string, string> = {};
-    for (const p of projectRows) {
-      const code = String(p.project_code ?? p.projectCode ?? "").trim();
-      if (!code) continue;
-      const name = String(p.project_name ?? p.projectName ?? "").trim();
-      map[code] = name || "—";
-    }
-    return map;
-  }
-
-  function enrichAllocationRowsForDisplay(
-    rows: Array<Record<string, unknown>>,
-    ctx: {
-      userIdToName: Record<string, string>;
-      emailToName: Record<string, string>;
-      projectDisplayByCode: Record<string, string>;
-    }
-  ) {
-    const { userIdToName, emailToName, projectDisplayByCode } = ctx;
-    return rows.map((row) => {
-      const uidRaw = row.user_id ?? row.userId ?? row.userID;
-      const uid = uidRaw != null && uidRaw !== "" ? String(uidRaw).trim() : "";
-      const email = allocationRowEmail(row);
-
-      const fromRow = String(
-        row.employee_name ??
-          row.employeeName ??
-          row.user_name ??
-          row.userName ??
-          ""
-      ).trim();
-
-      let employee_name =
-        (uid && userIdToName[uid]) || (email && emailToName[email]) || fromRow;
-      if (!employee_name && email) employee_name = email;
-      if (!employee_name && uid) employee_name = `Employee #${uid}`;
-      if (!employee_name) employee_name = "Employee (unresolved)";
-
-      const code = allocationProjectCode(row);
-      const titleOnRow = allocationProjectTitleFromRow(row);
-      let allocated_project = "";
-      if (code) {
-        allocated_project =
-          projectDisplayByCode[code] ?? (titleOnRow || "—");
-      } else if (titleOnRow) {
-        allocated_project = titleOnRow;
-      } else {
-        allocated_project = "Project (no code on record)";
-      }
-
-      return { ...row, employee_name, allocated_project };
-    });
-  }
-
-  function normalizeForecastRows(
-    rows: Array<Record<string, unknown>>,
-    ctx: {
-      emailToName: Record<string, string>;
-      projectDisplayByCode: Record<string, string>;
-    }
-  ) {
-    const { emailToName, projectDisplayByCode } = ctx;
-    return rows.map((row) => {
-      const email = allocationRowEmail(row);
-      const employeeName = String(
-        row.employee_name ??
-          row.employeeName ??
-          row.user_name ??
-          row.userName ??
-          (email ? emailToName[email] : "") ??
-          ""
-      ).trim();
-
-      const code = allocationProjectCode(row) || String(row.project_code ?? row.projectCode ?? "").trim();
-      const titleOnRow = allocationProjectTitleFromRow(row);
-      const mapped = code ? projectDisplayByCode[code] ?? "" : "";
-      const mappedName = mapped.includes("—")
-        ? mapped.split("—").slice(1).join("—").trim()
-        : mapped.trim();
-      const projectName = String(
-        row.project_name ?? row.projectName ?? titleOnRow ?? mappedName ?? ""
-      ).trim();
-
-      return {
-        ...row,
-        project_code: code || "—",
-        project_name: projectName || "—",
-        employee_name: employeeName || "—",
-        employee_email: email || "—",
-        role: String(row.role ?? row.project_role ?? row.projectRole ?? row.designation ?? "—").trim() || "—",
-        billing_status: String(row.billing_status ?? row.billingStatus ?? "—").trim() || "—",
-        end_date: String(row.end_date ?? row.endDate ?? "—").trim() || "—",
-      } as Record<string, unknown>;
-    });
-  }
+  const { actionLoading, runAction } = useDashboardAction();
 
   function normalizeAssignedProjects(rows: Array<Record<string, unknown>>) {
     return rows.map((row) => {
@@ -1857,81 +1651,6 @@ export function UploadsPageClient() {
     setTimelogs(normalizedRows);
     return normalizedRows;
   }, [hasHrAccess, hasManagerAccess, loadManagerData]);
-  async function loadMyLeaveRequests() {
-    const email = String((user as { email?: string } | null)?.email ?? "").trim();
-    if (!email) {
-      setMyLeaveRequests([]);
-      return;
-    }
-    const today = new Date();
-    const future = new Date(today);
-    future.setFullYear(future.getFullYear() + 2);
-    const from = "2000-01-01";
-    const to = future.toISOString().slice(0, 10);
-    const types = [
-      ...REQUEST_TYPE_ALIASES.LEAVE,
-      ...REQUEST_TYPE_ALIASES.WFH,
-      ...REQUEST_TYPE_ALIASES.COMP_OFF,
-    ] as const;
-    let merged: Array<Record<string, unknown>> = [];
-    const requestTs = Date.now();
-    const responses = await Promise.allSettled(
-      types.map((type) =>
-        apiClient.get(endpoints.userRequest.getByEmployees(email, from, to, type), {
-          query: { page: "0", size: "200", _ts: requestTs },
-        })
-      )
-    );
-    merged = responses
-      .filter((r): r is PromiseFulfilledResult<unknown> => r.status === "fulfilled")
-      .flatMap((r) => toPagedRows((r.value as { data?: unknown }).data ?? r.value));
-
-    // If employee-specific endpoint yields nothing (or fails), fall back to range + filter.
-    if (!merged.length) {
-      const rangeResponses = await Promise.allSettled(
-        types.map((type) =>
-          apiClient.get(endpoints.userRequest.getRange(from, to, type), {
-            query: { page: "0", size: "200", _ts: requestTs },
-          })
-        )
-      );
-      const rows = rangeResponses
-        .filter((r): r is PromiseFulfilledResult<unknown> => r.status === "fulfilled")
-        .flatMap((r) => toPagedRows((r.value as { data?: unknown }).data ?? r.value));
-      merged = rows.filter((row) => {
-        const rowEmail = String(
-          row.email ??
-            row.user_email ??
-            row.userEmail ??
-            row.emp_email ??
-            row.empEmail ??
-            row.employee_email ??
-            row.employeeEmail ??
-            row.requester_email ??
-            row.requesterEmail ??
-            row.requested_by_email ??
-            row.requestedByEmail ??
-            row.created_by_email ??
-            row.createdByEmail ??
-            row.requested_by ??
-            row.requestedBy ??
-            ""
-        )
-          .trim()
-          .toLowerCase();
-        return rowEmail === email.toLowerCase();
-      });
-    }
-    const deduped = Array.from(
-      new Map(
-        merged.map((row) => {
-          const key = String(row.user_request_id ?? row.userRequestId ?? row.id ?? Math.random());
-          return [key, row] as const;
-        })
-      ).values()
-    );
-    setMyLeaveRequests(deduped);
-  }
   const loadEmployeeRequestsForApprover = useCallback(async () => {
     const today = new Date();
     const future = new Date(today);
@@ -2905,7 +2624,7 @@ export function UploadsPageClient() {
     <div className="mt-8 border-t border-wt-border pt-6">
       <h4 className="text-sm font-semibold mb-3">Assigned Projects</h4>
       {profileAssignedProjectsLoading ? (
-        <SectionLoading label="Loading assigned projects…" />
+        <TableRowsSkeleton rows={3} columns={4} />
       ) : (
         <DataTable
           columns={profileAssignedProjectColumns}

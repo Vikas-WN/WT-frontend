@@ -51,7 +51,11 @@ export function EmployeeUserTypeSelect({
   const currentBandLabel = String(bandName ?? "").trim();
   const currentDepartment = String(department ?? "").trim();
   const currentBandIsInternOnly = isInternOnlyBand(currentBandLabel);
-  const needsFulltimeBand = currentBandIsInternOnly;
+  // Full-time needs a full-time band + a designation valid for it whenever
+  // the employee doesn't already have one: intern band (B8), or no band at
+  // all — consultants never have a band, so Consultant → Full-time must ask.
+  const needsFulltimeBand =
+    currentBandIsInternOnly || currentType === "CONSULTANT" || !currentBandLabel;
   const needsInternBand = !currentBandIsInternOnly;
   const displayValue = draftType !== null ? draftType : currentType;
 
@@ -240,7 +244,9 @@ export function EmployeeUserTypeSelect({
       : pendingType === "INTERN"
         ? "Interns must use band B8 (or B8 - Intern). Select the Intern band and designation here to complete the conversion."
         : pendingType === "FULLTIME" && needsFulltimeBand
-          ? "This employee is on an intern band (B8). Select a full-time band and the designation that applies to that band."
+          ? currentBandIsInternOnly
+            ? "This employee is on an intern band (B8). Select a full-time band and the designation that applies to that band."
+            : "This employee has no band yet (consultants don't have one). Select a full-time band and the designation that applies to that band."
           : undefined;
   const dateHelperText =
     pendingType === "FULLTIME"

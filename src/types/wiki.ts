@@ -1,4 +1,6 @@
-export type WikiSpace = "WIKI" | "POLICY";
+// "WIKI" (the open, any-employee-editable Company Wiki space) was removed —
+// POLICY (Company Policies / Employee Handbook) is the only space left.
+export type WikiSpace = "POLICY";
 
 export interface WikiPageSummary {
   id: number;

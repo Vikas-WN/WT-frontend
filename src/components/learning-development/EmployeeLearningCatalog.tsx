@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { TrainingCard } from "@/components/learning-development/TrainingCard";
 import { useOpenTrainingsList } from "@/hooks/learning/useLearningTrainings";
 import { hrmsService } from "@/services/hrms.service";
+import { notifyError } from "@/lib/notify";
 
 const ENROLLED_STORAGE_KEY = "wt-learning-enrolled-ids";
 
@@ -62,7 +63,7 @@ export function EmployeeLearningCatalog() {
     setEnrollingId(trainingId);
     enrollMut.mutate(trainingId, {
       onSettled: () => setEnrollingId(null),
-      onError: (e) => alert(e instanceof Error ? e.message : String(e)),
+      onError: (e) => notifyError(e instanceof Error ? e.message : String(e)),
     });
   };
 
@@ -110,7 +111,7 @@ export function EmployeeLearningCatalog() {
                 <TrainingCard row={row} href={trainingDetailHref(id)} />
                 <div className="mt-2 flex justify-end px-1">
                   {enrolled ? (
-                    <span className="text-xs font-medium text-emerald-700">Enrolled</span>
+                    <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">Enrolled</span>
                   ) : (
                     <Button variant="brand" size="xs" type="button" className="px-3 py-1.5 text-xs" disabled={enrollMut.isPending && enrollingId === id} onClick={() => enroll(id)}
                     >

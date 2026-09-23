@@ -11,6 +11,7 @@ import { DataTable, FileField, InputField } from "@/components/learning-developm
 import { TITLE_SORT_OPTIONS } from "@/utils/listSort";
 import { hrmsService } from "@/services/hrms.service";
 import { createEmptyAssessmentForm } from "@/utils/learningFormState";
+import { notifyError } from "@/lib/notify";
 
 export function AssessmentsPageClient() {
   const { user } = useAuth();
@@ -69,7 +70,7 @@ export function AssessmentsPageClient() {
               <div className="min-w-[160px] flex-1">
                 <FileField label="Assessment PDF" required accept=".pdf,application/pdf" onPick={setFile} />
               </div>
-              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={uploadMut.isPending || !trainingId || !file} onClick={() => uploadMut.mutate(undefined, { onError: (e) => alert(String(e)) })}
+              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={uploadMut.isPending || !trainingId || !file} onClick={() => uploadMut.mutate(undefined, { onError: (e) => notifyError(String(e)) })}
               >
                 Upload
               </Button>
