@@ -122,6 +122,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
     weekTotals,
     weekTotalsLoading,
     expandedProject,
+    focusProject,
     selectedEmployee,
     fromDate,
     toDate,
@@ -153,12 +154,14 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
   // Employee detail always shows every project for that person (not only the
   // accordion project they were opened from).
   const filteredAllEntries = useMemo(() => {
-    if (!expandedProject) return employeeEntries;
-    const code = expandedProject.trim().toUpperCase();
+    // The accordion project, or the project a notification deep-linked to.
+    const project = expandedProject ?? focusProject;
+    if (!project) return employeeEntries;
+    const code = project.trim().toUpperCase();
     return employeeEntries.filter(
       (entry) => entry.project_code.trim().toUpperCase() === code
     );
-  }, [employeeEntries, expandedProject]);
+  }, [employeeEntries, expandedProject, focusProject]);
 
   const projectsPagination = useClientPagination(projects, {
     pageSize: TEAM_TIMELOG_PAGE_SIZE,
@@ -170,7 +173,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
   });
   const entriesPagination = useClientPagination(filteredAllEntries, {
     pageSize: TEAM_TIMELOG_PAGE_SIZE,
-    resetKeys: [selectedEmployee, fromDate, toDate, expandedProject],
+    resetKeys: [selectedEmployee, fromDate, toDate, expandedProject, focusProject],
   });
 
   // Keep accordion expansion on the visible page only.

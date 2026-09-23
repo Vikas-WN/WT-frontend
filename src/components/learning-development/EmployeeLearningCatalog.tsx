@@ -8,6 +8,7 @@ import { TrainingCard } from "@/components/learning-development/TrainingCard";
 import { useOpenTrainingsList } from "@/hooks/learning/useLearningTrainings";
 import { hrmsService } from "@/services/hrms.service";
 import { notifyError } from "@/lib/notify";
+import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 
 const ENROLLED_STORAGE_KEY = "wt-learning-enrolled-ids";
 
@@ -38,6 +39,9 @@ export function EmployeeLearningCatalog() {
   const openQ = useOpenTrainingsList();
   const [enrolledIds, setEnrolledIds] = useState<Set<string>>(() => new Set());
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
+  // Business rule: during the notice period an employee keeps their assigned
+  // trainings but can't enrol in new ones (the backend enforces it too).
+  const { isServingNotice } = useDashboardAccess();
 
   useEffect(() => {
     setEnrolledIds(loadEnrolledIds());
@@ -97,6 +101,11 @@ export function EmployeeLearningCatalog() {
             </div>
           ))}
         </div>
+      ) : isServingNotice ? (
+        <p className="text-sm text-wt-text-muted">
+          You&apos;re serving your notice period, so you can&apos;t enrol in new trainings. Trainings already
+          assigned to you are unaffected.
+        </p>
       ) : sortedOpen.length === 0 ? (
         <p className="text-sm text-wt-text-muted">
           No open trainings right now. HR must set type Optional or Hybrid and status Scheduled.

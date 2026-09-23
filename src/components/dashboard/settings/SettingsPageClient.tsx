@@ -18,6 +18,9 @@ import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { Button } from "@/components/ui/button";
 import { SelectField } from "@/components/dashboard/ui/forms";
 import { useUserPreferences } from "@/context/UserPreferencesContext";
+import { useAuth } from "@/context/AuthContext";
+import { normalizeRoles } from "@/utils/roles";
+import { PulseScoreSettingsSection } from "@/components/dashboard/settings/PulseScoreSettingsSection";
 import {
   COMMON_TIMEZONES,
   type DateFormatPreference,
@@ -104,6 +107,7 @@ function PreferenceToggle({
 
 export function SettingsPageClient() {
   const { preferences, updatePreferences, isSaving, isLoading } = useUserPreferences();
+  const { user } = useAuth();
   const [timezone, setTimezone] = useState(preferences.timezone);
   const [theme, setTheme] = useState(preferences.theme);
   const [density, setDensity] = useState(preferences.density);
@@ -179,6 +183,11 @@ export function SettingsPageClient() {
     setWeekStartsOn(preferences.week_starts_on);
     setDateFormat(preferences.date_format);
   };
+
+  const canManagePulseScoring = useMemo(() => {
+    const roles = normalizeRoles(user?.roles ?? []);
+    return roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
+  }, [user?.roles]);
 
   const handleUseDetectedTimezone = () => {
     setTimezone(detectBrowserTimezone());
@@ -405,6 +414,8 @@ export function SettingsPageClient() {
               Used for local time previews in your account menu. Saved to your profile.
             </p>
           </section>
+
+          {canManagePulseScoring ? <PulseScoreSettingsSection /> : null}
 
           <div className="sticky bottom-4 z-10 flex justify-end">
             <div className="flex items-center gap-2 rounded-2xl border border-wt-border bg-wt-surface-1/95 p-2 shadow-lg backdrop-blur-md dark:bg-wt-surface-2/95">

@@ -1,3 +1,4 @@
+import { toSafeErrorMessage } from "@/utils/safeErrorMessage";
 import { toast } from "sonner";
 
 export const TOAST_DURATION_MS = 3600;
@@ -21,7 +22,9 @@ export function showSuccessToast(message: string, id?: string) {
   toast.success(message, { ...sharedToastOptions, id: id ?? dedupeId("success", message) });
 }
 
-export function showErrorToast(message: string, id?: string) {
+export function showErrorToast(rawMessage: string, id?: string) {
+  // Never show DB / SQL / exception text to users — see utils/safeErrorMessage.
+  const message = toSafeErrorMessage(rawMessage);
   toast.error(message, { ...sharedToastOptions, id: id ?? dedupeId("error", message) });
 }
 

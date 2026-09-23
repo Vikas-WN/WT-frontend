@@ -26,6 +26,8 @@ import type {
   PaginatedWebknotValues,
   MonthlySubmissionItem,
   EmployeeSummary,
+  PulseScoreSettings,
+  PulseScoreSettingsWrite,
   MonthlySubmissionDraftPayload,
   MonthlySubmissionType,
   ManagerReviewSubmitPayload,
@@ -1643,6 +1645,21 @@ export const hrmsService = {
 
   getActiveWebknotValues() {
     return apiClient.get<WebknotValueItem[]>(endpoints.monthlySubmissions.webknotValues);
+  },
+
+  getPulseScoreSettings() {
+    return apiClient.get<PulseScoreSettings>(endpoints.masters.pulseScoreSettings);
+  },
+
+  updatePulseScoreSettings(payload: PulseScoreSettingsWrite) {
+    return apiClient.put<PulseScoreSettings>(endpoints.masters.pulseScoreSettings, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  resetPulseScoreSettings() {
+    return apiClient.delete<PulseScoreSettings>(endpoints.masters.pulseScoreSettings);
   },
 
   /** Admins an HR team member can choose to review their own self-review. */

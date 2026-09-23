@@ -14,6 +14,7 @@
 
 import { showActionSplash } from "@/lib/actionSplash";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { toSafeErrorMessage } from "@/utils/safeErrorMessage";
 
 function isTouchViewport(): boolean {
   if (typeof window === "undefined") return false;
@@ -27,7 +28,8 @@ function isTouchViewport(): boolean {
   }
 }
 
-export function notifyError(message: string): void {
+export function notifyError(rawMessage: string): void {
+  const message = toSafeErrorMessage(rawMessage);
   if (isTouchViewport()) {
     showActionSplash(message, { variant: "error", durationMs: 2400 });
   } else {

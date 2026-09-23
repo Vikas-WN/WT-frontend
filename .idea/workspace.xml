@@ -4,49 +4,19 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="updating the codebase in the pulse other UI changes">
+    <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="fixed some issues causing deployment failure">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/api/endpoints.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/endpoints.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/(protected)/dashboard/pulse/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/(protected)/dashboard/pulse/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/(protected)/dashboard/referral/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/(protected)/dashboard/referral/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/(protected)/dashboard/wiki/page.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/allocation/AllocationPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/allocation/AllocationPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/background-verification/BackgroundVerificationPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/background-verification/BackgroundVerificationPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/lazyPages.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/lazyPages.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/leave/LeavePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/leave/LeavePageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/masters/MastersPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/masters/MastersPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/overview/OverviewPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/overview/OverviewPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/pulse/KpiReportsPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/pulse/KpiReportsPanel.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/pulse/PulsePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/pulse/PulsePageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/pulse/SubmissionPortalPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/pulse/SubmissionPortalPanel.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/error.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/error.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/dashboard/pulse/SubmissionsReviewPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/pulse/SubmissionsReviewPanel.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/pulse/employee/EmployeeMonthlyReviewPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/pulse/employee/EmployeeMonthlyReviewPanel.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/pulse/employee/MyKpiSummaryPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/pulse/employee/MyKpiSummaryPanel.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/pulse/manager/ManagerTeamReviewPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/pulse/manager/ManagerTeamReviewPanel.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/reports/ReportsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/reports/ReportsPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/uploads/UploadsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/uploads/UploadsPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/wiki/CompanyWikiPageClient.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/wiki/WikiSpacePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/wiki/WikiSpacePageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/employee-directory/EmployeeUserTypeSelect.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/employee-directory/EmployeeUserTypeSelect.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/learning-development/AssessmentsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/AssessmentsPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/learning-development/AttendancePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/AttendancePageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/learning-development/EmployeeLearningCatalog.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/EmployeeLearningCatalog.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/learning-development/EmployeeTrainingMyMarks.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/EmployeeTrainingMyMarks.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/learning-development/MaterialsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/MaterialsPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/learning-development/OpenEnrollPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/OpenEnrollPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/learning-development/ParticipantsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/ParticipantsPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/learning-development/SessionsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/SessionsPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/learning-development/TraineeAttendanceAnalytics.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/TraineeAttendanceAnalytics.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/learning-development/TrainingDetailPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/TrainingDetailPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/learning-development/TrainingParticipantsList.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/TrainingParticipantsList.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/learning-development/TrainingStatusControl.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/TrainingStatusControl.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/learning-development/TrainingsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/TrainingsPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/constants/dashboardNavigation.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/constants/dashboardNavigation.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/constants/routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/constants/routes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/settings/SettingsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/settings/SettingsPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/employee-directory/EmployeeProfilePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/employee-directory/EmployeeProfilePageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib/notify.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/notify.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib/toast.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/toast.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/services/hrms.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/hrms.service.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/types/kpi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types/kpi.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/types/wiki.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types/wiki.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/notificationNavigation.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/notificationNavigation.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/roles.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/roles.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -65,61 +35,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.0038485334681668" />
-      <entry key="MS500" value="1.658889657725296" />
-      <entry key="S2" value="4.92125161227114" />
-      <entry key="S5" value="8.493214152541945" />
-      <entry key="S10" value="10.739955957524637" />
-      <entry key="S30" value="12.771633027441567" />
-      <entry key="S60" value="13.365869676281198" />
-      <entry key="M2" value="13.677761632547513" />
-      <entry key="M5" value="13.86983834759844" />
-      <entry key="M10" value="13.934706024382635" />
-      <entry key="M15" value="13.956423159592811" />
-      <entry key="M30" value="13.978187805485769" />
-      <entry key="H1" value="13.990590133700811" />
-      <entry key="H2" value="14.351637277985102" />
-      <entry key="H4" value="19.505684676063595" />
-      <entry key="D1" value="67.86904915625004" />
-      <entry key="W1" value="93.63825702127598" />
+      <entry key="MS100" value="9.134079217973654E-4" />
+      <entry key="MS500" value="0.9932382321423552" />
+      <entry key="S2" value="5.652250336988206" />
+      <entry key="S5" value="11.915742730145848" />
+      <entry key="S10" value="19.895646498101264" />
+      <entry key="S30" value="33.665842830649076" />
+      <entry key="S60" value="40.02946857184939" />
+      <entry key="M2" value="44.94433932822804" />
+      <entry key="M5" value="54.341112634411324" />
+      <entry key="M10" value="63.73710937730752" />
+      <entry key="M15" value="68.66393858957744" />
+      <entry key="M30" value="74.95008058153637" />
+      <entry key="H1" value="78.72625727691972" />
+      <entry key="H2" value="81.13023081855923" />
+      <entry key="H4" value="87.21140644819175" />
+      <entry key="D1" value="136.38691445694144" />
+      <entry key="W1" value="162.54911141422036" />
     </decayedCancelled>
     <decayedSelected>
-      <entry key="MS100" value="0.0" />
-      <entry key="MS500" value="0.0" />
-      <entry key="S2" value="0.0" />
-      <entry key="S5" value="0.0" />
-      <entry key="S10" value="0.0" />
-      <entry key="S30" value="0.0" />
-      <entry key="S60" value="1.4322084698421773E-289" />
-      <entry key="M2" value="5.351038509166852E-145" />
-      <entry key="M5" value="2.9646539797181233E-58" />
-      <entry key="M10" value="2.434999076481593E-29" />
-      <entry key="M15" value="1.0584617149505991E-19" />
-      <entry key="M30" value="4.600999848332841E-10" />
-      <entry key="H1" value="3.033479178488902E-5" />
-      <entry key="H2" value="0.007789067810414163" />
-      <entry key="H4" value="0.12481240011273216" />
-      <entry key="D1" value="1.25960570233888" />
-      <entry key="W1" value="1.8721685341197807" />
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.0000000073427455" />
+      <entry key="S2" value="1.0119700301646568" />
+      <entry key="S5" value="1.2478519808930038" />
+      <entry key="S10" value="1.6989401066880925" />
+      <entry key="S30" value="2.406432651586884" />
+      <entry key="S60" value="2.6768140132669256" />
+      <entry key="M2" value="2.831196897247479" />
+      <entry key="M5" value="2.9306637308951786" />
+      <entry key="M10" value="2.9650220167339896" />
+      <entry key="M15" value="2.9766119343686586" />
+      <entry key="M30" value="2.988271122704048" />
+      <entry key="H1" value="2.994153429563496" />
+      <entry key="H2" value="3.004355866300704" />
+      <entry key="H4" value="3.1193161728935865" />
+      <entry key="D1" value="4.252495556711405" />
+      <entry key="W1" value="4.870672440982215" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.9763724148902247" />
-      <entry key="MS500" value="1.6484584245341392" />
-      <entry key="S2" value="4.903352541932956" />
-      <entry key="S5" value="8.477562156072079" />
-      <entry key="S10" value="10.729508553232098" />
-      <entry key="S30" value="12.767378495943893" />
-      <entry key="S60" value="13.3636310616968" />
-      <entry key="M2" value="13.67661323861697" />
-      <entry key="M5" value="13.869371842989674" />
-      <entry key="M10" value="13.934471566779685" />
-      <entry key="M15" value="13.956266585623831" />
-      <entry key="M30" value="13.978109384245505" />
-      <entry key="H1" value="13.990581204548933" />
-      <entry key="H2" value="14.359404391607722" />
-      <entry key="H4" value="19.630469250437514" />
-      <entry key="D1" value="69.1286237475055" />
-      <entry key="W1" value="95.5104190922557" />
+      <entry key="MS100" value="0.004142424193166664" />
+      <entry key="MS500" value="1.3008484284771304" />
+      <entry key="S2" value="6.367288265239422" />
+      <entry key="S5" value="12.973952550077996" />
+      <entry key="S10" value="21.459347317381674" />
+      <entry key="S30" value="36.00877444325148" />
+      <entry key="S60" value="42.67111655568309" />
+      <entry key="M2" value="47.75678520622176" />
+      <entry key="M5" value="57.26328678940725" />
+      <entry key="M10" value="66.69736045507148" />
+      <entry key="M15" value="71.63718354413663" />
+      <entry key="M30" value="77.93654872803621" />
+      <entry key="H1" value="81.71947321552712" />
+      <entry key="H2" value="84.13410588788017" />
+      <entry key="H4" value="90.33046329260677" />
+      <entry key="D1" value="140.63934001249916" />
+      <entry key="W1" value="167.41977180904624" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -189,7 +159,23 @@
       <option name="project" value="LOCAL" />
       <updated>1790086541030</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="updating the codebase in the pulse other UI changes">
+      <option name="closed" value="true" />
+      <created>1790144839397</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1790144839397</updated>
+    </task>
+    <task id="LOCAL-00003" summary="fixed some issues causing deployment failure">
+      <option name="closed" value="true" />
+      <created>1790145526876</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1790145526876</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -198,6 +184,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="updated some bugs present in the OverviewPageClient.tsx" />
     <MESSAGE value="updating the codebase in the pulse other UI changes" />
-    <option name="LAST_COMMIT_MESSAGE" value="updating the codebase in the pulse other UI changes" />
+    <MESSAGE value="fixed some issues causing deployment failure" />
+    <option name="LAST_COMMIT_MESSAGE" value="fixed some issues causing deployment failure" />
   </component>
 </project>

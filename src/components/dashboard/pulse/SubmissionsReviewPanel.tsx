@@ -280,8 +280,10 @@ function AdminReviewModal({
         return;
       }
       const override = scoreOverride.trim() ? Number(scoreOverride) : null;
-      if (action === "APPROVE" && override !== null && !(override >= 1 && override <= 6)) {
-        notifyError("Final score override must be a number between 1 and 6.");
+      // The real ceiling depends on Settings → Pulse scoring; the server
+      // rejects anything above it with the exact limit.
+      if (action === "APPROVE" && override !== null && !(override >= 1 && override <= 10)) {
+        notifyError("Final score override must be a number between 1 and 10.");
         return;
       }
       setBusy(action === "APPROVE" ? "approve" : action === "REJECT" ? "reject" : "reject-manager");
@@ -421,7 +423,7 @@ function AdminReviewModal({
                     id="score-override"
                     type="number"
                     min={1}
-                    max={6}
+                    max={10}
                     step={0.01}
                     value={scoreOverride}
                     onChange={(e) => setScoreOverride(e.target.value)}
