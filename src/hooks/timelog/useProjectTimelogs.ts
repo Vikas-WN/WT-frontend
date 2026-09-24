@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { hrmsService } from "@/services/hrms.service";
 import { formatApiDate as formatApiDateDmy, parseApiDate } from "@/utils/apiDate";

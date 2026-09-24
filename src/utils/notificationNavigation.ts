@@ -21,6 +21,18 @@ function readNotificationMessage(row: NotificationItem | Record<string, unknown>
   );
 }
 
+/** COMP_OFF_REQUEST/COMP_OFF_APPROVED/COMP_OFF_REJECTED cover both earning
+ *  comp-off (crediting a worked weekend) and spending it (usage) — the
+ *  backend sends the same notification_type for both, so the only signal
+ *  distinguishing them is the "credit" wording the earn flow always includes
+ *  in its title/message (see comp_off_earn_service.py), which the usage flow
+ *  never uses. */
+function isCompOffEarnNotification(row: NotificationItem | Record<string, unknown>): boolean {
+  const title = String((row as NotificationItem).title ?? (row as Record<string, unknown>).title ?? "");
+  const message = readNotificationMessage(row);
+  return /credit/i.test(title) || /credit/i.test(message);
+}
+
 function hasAnyRole(roles: string[], candidates: string[]): boolean {
   const normalized = normalizeRoles(roles);
   return candidates.some((role) => normalized.includes(role));
@@ -45,10 +57,54 @@ function notificationSenderEmail(
   return email || null;
 }
 
-function timelogTeamHrefForEmployee(employeeEmail: string | null): string {
+/** The page link the backend stored on the notification, when it is a safe
+ *  in-app dashboard path (never an external URL). */
+function storedActionUrl(row: NotificationItem | Record<string, unknown>): string | null {
+  const raw = String(
+    (row as NotificationItem).action_url ?? (row as Record<string, unknown>).actionUrl ?? ""
+  ).trim();
+  return raw.startsWith("/dashboard/") && !raw.startsWith("//") ? raw : null;
+}
+
+/** "(week of 21/09/2026)" or "(21/09/2026)" in a timelog-submitted message →
+ *  the submitted date range (a week is Mon–Fri, as the backend submits it). */
+export function parseTimelogSubmittedPeriod(message: string): { from: string; to: string } | null {
+  const text = String(message ?? "");
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const dmy = (d: Date) => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+  const toDate = (s: string) => {
+    const [dd, mm, yyyy] = s.split("/").map(Number);
+    const d = new Date(yyyy, mm - 1, dd);
+    return Number.isNaN(d.getTime()) ? null : d;
+  };
+  const week = text.match(/\(week of (\d{1,2}\/\d{1,2}\/\d{4})\)/i);
+  if (week) {
+    const start = toDate(week[1]);
+    if (!start) return null;
+    const end = new Date(start);
+    end.setDate(end.getDate() + 4);
+    return { from: dmy(start), to: dmy(end) };
+  }
+  const day = text.match(/\((\d{1,2}\/\d{1,2}\/\d{4})\)/);
+  if (day) {
+    const d = toDate(day[1]);
+    return d ? { from: dmy(d), to: dmy(d) } : null;
+  }
+  return null;
+}
+
+function timelogTeamHrefForEmployee(
+  employeeEmail: string | null,
+  period: { from: string; to: string } | null = null
+): string {
   const base = DASHBOARD_ROUTES["timelog-team"];
   if (!employeeEmail) return base;
-  return `${base}?employee=${encodeURIComponent(employeeEmail)}`;
+  const params = new URLSearchParams({ employee: employeeEmail });
+  if (period) {
+    params.set("from", period.from);
+    params.set("to", period.to);
+  }
+  return `${base}?${params.toString()}`;
 }
 
 /** Extract the log date from a timelog approved/rejected notification message
@@ -290,6 +346,11 @@ export function resolveNotificationHref(
   row: NotificationItem | Record<string, unknown>,
   context: NotificationRouteContext = {}
 ): string | null {
+  // The backend stores the exact page when it knows the record (e.g. the
+  // submitted week of one employee's time logs) — always prefer it.
+  const stored = storedActionUrl(row);
+  if (stored) return stored;
+
   const type = readNotificationType(row);
   const roles = context.userRoles ?? [];
 
@@ -320,7 +381,12 @@ export function resolveNotificationHref(
 
     case "COMP_OFF_REQUEST":
       return isRequestApprover(roles)
-        ? withLeaveDeepLink(DASHBOARD_ROUTES["leave-team"], row, "team", "COMP_OFF_EARN")
+        ? withLeaveDeepLink(
+            DASHBOARD_ROUTES["leave-team"],
+            row,
+            "team",
+            isCompOffEarnNotification(row) ? "COMP_OFF_EARN" : "COMP_OFF"
+          )
         : COMP_OFF_SELF;
 
     case "COMP_OFF_APPROVED":
@@ -339,8 +405,12 @@ export function resolveNotificationHref(
 
     case "TIMELOG_SUBMITTED":
     case "TIMELOG_REQUEST":
-      // Open Team Time Logs for the employee who submitted (sender).
-      return timelogTeamHrefForEmployee(notificationSenderEmail(row));
+      // Older notifications (no stored link): the employee who submitted
+      // (sender) and the period named in the message.
+      return timelogTeamHrefForEmployee(
+        notificationSenderEmail(row),
+        parseTimelogSubmittedPeriod(readNotificationMessage(row))
+      );
 
     case "NO_TIME_LOGS":
       return DASHBOARD_ROUTES.timelog;

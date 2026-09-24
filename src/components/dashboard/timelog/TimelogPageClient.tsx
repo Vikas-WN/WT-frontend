@@ -273,7 +273,10 @@ export function TimelogPageClient() {
   useEffect(() => {
     // /team is legacy; primary-manager inbox lives on /projects (GET /timelog/projects).
     if (isTeamView && !isHrTeamView) {
-      router.replace("/dashboard/timelog/projects");
+      // Keep the query string: a notification deep link (?employee=&from=&to=)
+      // must survive this legacy redirect.
+      const search = typeof window !== "undefined" ? window.location.search : "";
+      router.replace(`/dashboard/timelog/projects${search}`);
     }
   }, [isTeamView, isHrTeamView, router]);
 

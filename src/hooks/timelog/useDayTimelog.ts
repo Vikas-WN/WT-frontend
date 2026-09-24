@@ -115,6 +115,17 @@ export function useDayTimelog() {
   const [selectedDate, setSelectedDate] = useState<string | null>(() =>
     deepLinkedDate ? formatApiDate(deepLinkedDate) : todayKey
   );
+  // Re-apply when the linked date changes while this page is already open
+  // (Next.js keeps the component mounted across same-page navigations, so the
+  // initial-state defaults above only ever saw the first link).
+  const deepLinkedKey = deepLinkedDate ? formatApiDate(deepLinkedDate) : null;
+  const [appliedLinkKey, setAppliedLinkKey] = useState<string | null>(deepLinkedKey);
+  if (deepLinkedDate && deepLinkedKey !== appliedLinkKey) {
+    setAppliedLinkKey(deepLinkedKey);
+    setViewYear(deepLinkedDate.getFullYear());
+    setViewMonth(deepLinkedDate.getMonth());
+    setSelectedDate(deepLinkedKey);
+  }
   const [actionLoading, setActionLoading] = useState(false);
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<DayTimelogEntry | null>(null);
