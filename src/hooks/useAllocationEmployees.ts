@@ -14,27 +14,21 @@ import {
 } from "@/utils/allocationEmployees";
 
 async function fetchActiveOnboardEmployees(): Promise<AllocationEmployeeOption[]> {
+  // No onboardingStatus filter here: the backend turns that into a literal
+  // `User.status == "ACTIVE"` match, which would drop Serving Notice employees
+  // before isEligibleForProjectAllocation below (which already allows both
+  // ACTIVE and SERVING_NOTICE) ever gets to see them.
   const onboardRes = await hrmsService.getOnboardList({
     page: ALLOCATION_EMPLOYEES_PAGE,
     size: ALLOCATION_EMPLOYEES_SIZE,
-    onboardingStatus: "ACTIVE",
   });
-  let rows = toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes).filter((row) =>
+  const rows = toPagedRows((onboardRes as { data?: unknown }).data ?? onboardRes).filter((row) =>
     isEligibleForProjectAllocation(row.status)
   );
-  if (!rows.length) {
-    const fallback = await hrmsService.getOnboardList({
-      page: ALLOCATION_EMPLOYEES_PAGE,
-      size: ALLOCATION_EMPLOYEES_SIZE,
-    });
-    rows = toPagedRows((fallback as { data?: unknown }).data ?? fallback).filter((row) =>
-      isEligibleForProjectAllocation(row.status)
-    );
-  }
   return parseActiveOnboardEmployees(rows);
 }
 
-/** ACTIVE employees from GET /api/v1/user/onboard — allocate-form employee directory */
+/** Active + Serving Notice employees from GET /api/v1/user/onboard — allocate-form employee directory */
 export function useAllocationEmployees(enabled = true) {
   return useQuery({
     queryKey: [
