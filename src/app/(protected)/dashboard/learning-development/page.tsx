@@ -11,6 +11,7 @@ import { EmployeeLearningCatalog } from "@/components/learning-development/Emplo
 import { TeamTrainingCompletionPanel } from "@/components/learning-development/TeamTrainingCompletionPanel";
 import { TrainingCard } from "@/components/learning-development/TrainingCard";
 import { useHrTrainingsList } from "@/hooks/learning/useLearningTrainings";
+import { LearningPageShell } from "@/components/learning-development/LearningPageShell";
 
 function EmployeeLearningDashboard({ showTeamCompletion = false }: { showTeamCompletion?: boolean }) {
   return (
@@ -104,9 +105,13 @@ export default function LearningDevelopmentDashboardPage() {
   const hasHrAccess = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
   const isManager = roles.includes("ROLE_MANAGER") || roles.includes("ROLE_DM");
 
-  return hasHrAccess ? (
-    <HrLearningDashboard />
-  ) : (
-    <EmployeeLearningDashboard showTeamCompletion={isManager} />
+  return (
+    <LearningPageShell>
+      {hasHrAccess ? (
+        <HrLearningDashboard />
+      ) : (
+        <EmployeeLearningDashboard showTeamCompletion={isManager} />
+      )}
+    </LearningPageShell>
   );
 }

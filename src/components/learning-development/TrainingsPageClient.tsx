@@ -32,6 +32,7 @@ import { createEmptyTrainingForm } from "@/utils/learningFormState";
 import { hrmsService } from "@/services/hrms.service";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmployeeLearningCatalog } from "@/components/learning-development/EmployeeLearningCatalog";
+import { LearningPageShell } from "@/components/learning-development/LearningPageShell";
 import { notifyError } from "@/lib/notify";
 
 function TrainingCardsSkeleton({ count = 6 }: { count?: number }) {
@@ -373,5 +374,9 @@ export function TrainingsPageClient() {
   const roles = user?.roles ?? [];
   const hasHrAccess = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
 
-  return hasHrAccess ? <HrTrainingsView /> : <EmployeeTrainingsView />;
+  return (
+    <LearningPageShell>
+      {hasHrAccess ? <HrTrainingsView /> : <EmployeeTrainingsView />}
+    </LearningPageShell>
+  );
 }

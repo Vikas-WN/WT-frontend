@@ -4,6 +4,7 @@ import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useMemo, useState } from "react";
 import { useTrainingAnalytics } from "@/hooks/learning/useLearningTrainings";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
+import { LearningPageShell } from "@/components/learning-development/LearningPageShell";
 
 const METRIC_LABELS: Record<string, string> = {
   training_id: "Training ID",
@@ -24,7 +25,7 @@ export function AnalyticsPageClient({ fixedTrainingId }: { fixedTrainingId?: str
     return Object.entries(a).filter(([, value]) => value !== null && value !== undefined);
   }, [analyticsQ.data]);
 
-  return (
+  const content = (
     <div className="space-y-6">
       {!embedded ? (
         <>
@@ -65,4 +66,5 @@ export function AnalyticsPageClient({ fixedTrainingId }: { fixedTrainingId?: str
       </div>
     </div>
   );
+  return embedded ? content : <LearningPageShell>{content}</LearningPageShell>;
 }

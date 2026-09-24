@@ -18,6 +18,7 @@ import {
   useTrainingTrainers,
 } from "@/hooks/learning/useLearningTrainings";
 import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainerDirectory";
+import { LearningPageShell } from "@/components/learning-development/LearningPageShell";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { EmployeeTrainingMyMarks } from "@/components/learning-development/EmployeeTrainingMyMarks";
 import { ScoresPageClient } from "@/components/learning-development/ScoresPageClient";
@@ -267,7 +268,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
   );
 
   return (
-    <>
+    <LearningPageShell>
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
@@ -605,6 +606,6 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
       </div>
       </section>
     </div>
-    </>
+    </LearningPageShell>
   );
 }

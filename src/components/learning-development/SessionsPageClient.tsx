@@ -11,6 +11,7 @@ import { DataTable, InputField, SelectField } from "@/components/learning-develo
 import { SESSION_SORT_OPTIONS } from "@/utils/listSort";
 import { hrmsService } from "@/services/hrms.service";
 import { createEmptySessionForm } from "@/utils/learningFormState";
+import { LearningPageShell } from "@/components/learning-development/LearningPageShell";
 import { notifyError } from "@/lib/notify";
 
 export function SessionsPageClient() {
@@ -38,6 +39,7 @@ export function SessionsPageClient() {
   });
 
   return (
+    <LearningPageShell>
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -93,5 +95,6 @@ export function SessionsPageClient() {
         />
       </section>
     </div>
+    </LearningPageShell>
   );
 }

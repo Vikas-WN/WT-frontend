@@ -26,6 +26,7 @@ import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUse
 import { toPagedRows } from "@/utils/apiRows";
 import { hrmsService } from "@/services/hrms.service";
 import { EnrollmentStatusBadge } from "@/components/learning-development/EnrollmentStatusBadge";
+import { LearningPageShell } from "@/components/learning-development/LearningPageShell";
 import { notifyError } from "@/lib/notify";
 
 type AttendanceStatus = "PRESENT" | "ABSENT";
@@ -125,7 +126,7 @@ export function AttendancePageClient({ fixedTrainingId }: { fixedTrainingId?: st
     },
   });
 
-  return (
+  const content = (
     <div className="space-y-6">
       {!embedded ? (
         <>
@@ -237,4 +238,5 @@ export function AttendancePageClient({ fixedTrainingId }: { fixedTrainingId?: st
       </section>
     </div>
   );
+  return embedded ? content : <LearningPageShell>{content}</LearningPageShell>;
 }

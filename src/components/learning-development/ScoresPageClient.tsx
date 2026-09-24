@@ -13,6 +13,7 @@ import {
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { LearningPageShell } from "@/components/learning-development/LearningPageShell";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -156,7 +157,7 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
       await qc.invalidateQueries({ queryKey: ["learning", "my-marks", trainingId] });
     });
 
-  return (
+  const content = (
     <>
     <div className="space-y-6">
       {!embedded ? (
@@ -304,4 +305,5 @@ export function ScoresPageClient({ fixedTrainingId }: { fixedTrainingId?: string
     </div>
     </>
   );
+  return embedded ? content : <LearningPageShell>{content}</LearningPageShell>;
 }
