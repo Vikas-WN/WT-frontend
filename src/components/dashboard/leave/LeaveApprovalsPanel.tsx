@@ -28,6 +28,7 @@ import { useNonOptionalHolidayDates } from "@/hooks/leave/useNonOptionalHolidayD
 import { useClientPagination } from "@/hooks/useClientPagination";
 import { formatUserRequestTypeLabel, userRequestActionLabel } from "@/utils/actionToast";
 import { formatLeaveDateRange, formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
+import { fireConfetti } from "@/lib/confetti";
 import {
   canAssignedLeaveManagerActOnLeave,
   canPrimaryManagerApproveOnLeave,
@@ -384,6 +385,7 @@ export function LeaveApprovalsPanel({
                                       setStatusUpdatingId(requestId);
                                       try {
                                         await submitDecision(requestId, "APPROVED");
+                                        fireConfetti();
                                       } finally {
                                         setStatusUpdatingId(null);
                                       }
