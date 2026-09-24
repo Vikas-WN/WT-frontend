@@ -14,6 +14,7 @@ import { TrainingScopePicker } from "@/components/learning-development/TrainingS
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
 import { hrmsService } from "@/services/hrms.service";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
+import { LearningPageShell } from "@/components/learning-development/LearningPageShell";
 
 export function TrainersPageClient() {
   const { user } = useAuth();
@@ -78,7 +79,7 @@ export function TrainersPageClient() {
     });
 
   return (
-    <>
+    <LearningPageShell>
       <div className="space-y-6">
         <div className="flex flex-wrap justify-between gap-4">
           <div>
@@ -134,6 +135,6 @@ export function TrainersPageClient() {
           <p className="text-sm text-wt-text-muted">Trainer assignment requires HR/Admin.</p>
         )}
       </div>
-    </>
+    </LearningPageShell>
   );
 }

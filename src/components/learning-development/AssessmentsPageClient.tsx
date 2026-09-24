@@ -11,6 +11,7 @@ import { DataTable, FileField, InputField } from "@/components/learning-developm
 import { TITLE_SORT_OPTIONS } from "@/utils/listSort";
 import { hrmsService } from "@/services/hrms.service";
 import { createEmptyAssessmentForm } from "@/utils/learningFormState";
+import { LearningPageShell } from "@/components/learning-development/LearningPageShell";
 import { notifyError } from "@/lib/notify";
 
 export function AssessmentsPageClient() {
@@ -42,6 +43,7 @@ export function AssessmentsPageClient() {
   });
 
   return (
+    <LearningPageShell>
     <div className="space-y-6">
       <div className="flex flex-wrap justify-between gap-4">
         <div>
@@ -92,5 +94,6 @@ export function AssessmentsPageClient() {
         />
       </section>
     </div>
+    </LearningPageShell>
   );
 }

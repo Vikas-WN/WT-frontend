@@ -14,6 +14,7 @@ import { TrainingScopePicker } from "@/components/learning-development/TrainingS
 import { participantRowUserId } from "@/utils/learning/participants";
 import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
 import { hrmsService } from "@/services/hrms.service";
+import { LearningPageShell } from "@/components/learning-development/LearningPageShell";
 import { notifyError } from "@/lib/notify";
 
 export function ParticipantsPageClient() {
@@ -68,6 +69,7 @@ export function ParticipantsPageClient() {
   };
 
   return (
+    <LearningPageShell>
     <div className="space-y-6">
       <div className="flex flex-wrap justify-between gap-4">
         <div>
@@ -133,5 +135,6 @@ export function ParticipantsPageClient() {
         <p className="text-sm text-wt-text-muted">Trainee management requires HR/Admin.</p>
       )}
     </div>
+    </LearningPageShell>
   );
 }

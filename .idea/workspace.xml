@@ -4,16 +4,20 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="fixed some issues causing deployment failure">
+    <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="update: new bugs">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/allocation/OpportunityMultiSelect.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/allocation/OpportunityMultiSelect.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/leave/LeavePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/leave/LeavePageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/sections/AllocationExtensionPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/sections/AllocationExtensionPanel.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/settings/SettingsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/settings/SettingsPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/ui/SearchableSelectCombobox.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/ui/SearchableSelectCombobox.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/ui/combobox.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ui/combobox.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/ui/date-picker.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ui/date-picker.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/ui/popover.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ui/popover.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/(protected)/dashboard/learning-development/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/(protected)/dashboard/learning-development/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/learning-development/AnalyticsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/AnalyticsPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/learning-development/AssessmentsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/AssessmentsPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/learning-development/AttendancePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/AttendancePageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/learning-development/LearningPageShell.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/LearningPageShell.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/learning-development/MaterialsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/MaterialsPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/learning-development/ParticipantsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/ParticipantsPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/learning-development/ScoresPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/ScoresPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/learning-development/SessionsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/SessionsPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/learning-development/TrainersPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/TrainersPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/learning-development/TrainingDetailPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/TrainingDetailPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/learning-development/TrainingsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/TrainingsPageClient.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -32,61 +36,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
+      <entry key="MS100" value="0.003102732033133209" />
+      <entry key="MS500" value="1.3323845382794843" />
+      <entry key="S2" value="5.728940029296109" />
+      <entry key="S5" value="7.955987670873705" />
+      <entry key="S10" value="8.910277993913894" />
+      <entry key="S30" value="9.620387465315822" />
+      <entry key="S60" value="9.808488472523626" />
+      <entry key="M2" value="9.939445796420584" />
+      <entry key="M5" value="10.620483089323974" />
+      <entry key="M10" value="14.915688522081256" />
+      <entry key="M15" value="22.650106618590836" />
+      <entry key="M30" value="45.34003722456315" />
+      <entry key="H1" value="70.31649524175135" />
+      <entry key="H2" value="89.36884712689566" />
+      <entry key="H4" value="105.36581565222731" />
+      <entry key="D1" value="164.08294049737287" />
+      <entry key="W1" value="192.9924579295044" />
+    </decayedCancelled>
+    <decayedSelected>
       <entry key="MS100" value="1.0" />
       <entry key="MS500" value="1.0" />
       <entry key="S2" value="1.0" />
       <entry key="S5" value="1.0" />
       <entry key="S10" value="1.0" />
-      <entry key="S30" value="1.0000000669119895" />
-      <entry key="S60" value="1.000447764864493" />
-      <entry key="M2" value="1.036657599657189" />
-      <entry key="M5" value="1.6643194720953431" />
-      <entry key="M10" value="5.9541341889314845" />
-      <entry key="M15" value="13.695614475761271" />
-      <entry key="M30" value="36.39194177562322" />
-      <entry key="H1" value="61.358486693999154" />
-      <entry key="H2" value="80.39595917560109" />
-      <entry key="H4" value="96.38193954631029" />
-      <entry key="D1" value="155.08719910769585" />
-      <entry key="W1" value="183.99317682564958" />
-    </decayedCancelled>
-    <decayedSelected>
-      <entry key="MS100" value="0.0" />
-      <entry key="MS500" value="0.0" />
-      <entry key="S2" value="0.0" />
-      <entry key="S5" value="1.0674337775434011E-160" />
-      <entry key="S10" value="1.3791253329976919E-80" />
-      <entry key="S30" value="5.292617813225816E-27" />
-      <entry key="S60" value="1.4307066395645334E-13" />
-      <entry key="M2" value="7.534202380970565E-7" />
-      <entry key="M5" value="0.008158998514285053" />
-      <entry key="M10" value="0.18062603920767584" />
-      <entry key="M15" value="0.5072147219844028" />
-      <entry key="M30" value="1.4243555535637134" />
-      <entry key="H1" value="2.3869329448121284" />
-      <entry key="H2" value="3.095562964532113" />
-      <entry key="H4" value="3.6218077390930494" />
-      <entry key="D1" value="5.140970195636806" />
-      <entry key="W1" value="5.8526980150792065" />
+      <entry key="S30" value="1.0" />
+      <entry key="S60" value="1.0000000000001377" />
+      <entry key="M2" value="1.0000007390411965" />
+      <entry key="M5" value="1.0080963523549664" />
+      <entry key="M10" value="1.1799312644734403" />
+      <entry key="M15" value="1.5059132253343208" />
+      <entry key="M30" value="2.42252695452747" />
+      <entry key="H1" value="3.3854002709497086" />
+      <entry key="H2" value="4.094568958747159" />
+      <entry key="H4" value="4.621226199170243" />
+      <entry key="D1" value="6.140832608752805" />
+      <entry key="W1" value="6.8526756384324266" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.23004691265621877" />
-      <entry key="MS500" value="0.7453551933994602" />
-      <entry key="S2" value="0.9291606742509133" />
-      <entry key="S5" value="0.9710382292507957" />
-      <entry key="S10" value="0.9854127202602957" />
-      <entry key="S30" value="0.9951138034079549" />
-      <entry key="S60" value="0.9980008228768619" />
-      <entry key="M2" value="1.035400923845847" />
-      <entry key="M5" value="1.6717734287644526" />
-      <entry key="M10" value="6.133977341051839" />
-      <entry key="M15" value="14.201859924788172" />
-      <entry key="M30" value="37.81519322512425" />
-      <entry key="H1" value="63.74453690676165" />
-      <entry key="H2" value="83.49095641473271" />
-      <entry key="H4" value="100.00341243909406" />
-      <entry key="D1" value="160.22808145782682" />
-      <entry key="W1" value="189.84586003025177" />
+      <entry key="MS100" value="0.016604134432631593" />
+      <entry key="MS500" value="1.7418174721142743" />
+      <entry key="S2" value="6.500595393446518" />
+      <entry key="S5" value="8.848438728719701" />
+      <entry key="S10" value="9.852773915581771" />
+      <entry key="S30" value="10.60025828113891" />
+      <entry key="S60" value="10.798293481807614" />
+      <entry key="M2" value="10.934283294123263" />
+      <entry key="M5" value="11.626305593040714" />
+      <entry key="M10" value="16.09405241730514" />
+      <entry key="M15" value="24.15452797715288" />
+      <entry key="M30" value="47.76119890937519" />
+      <entry key="H1" value="73.70088204524461" />
+      <entry key="H2" value="93.46278488812546" />
+      <entry key="H4" value="109.98667423129922" />
+      <entry key="D1" value="170.22367979161928" />
+      <entry key="W1" value="199.8451179758926" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -98,28 +102,28 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "develop",
-    "js.debugger.nextJs.config.created.client": "true",
-    "js.debugger.nextJs.config.created.server": "true",
-    "last_opened_file_path": "/Users/likhithrajup/Developer/WT-frontend",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_interpreter_path": "/Users/likhithrajup/Library/Application Support/JetBrains/WebStorm2026.2/node/versions/24.21.0/bin/node",
-    "nodejs_package_manager_path": "pnpm",
-    "settings.editor.selected.configurable": "configurable.tailwindcss",
-    "ts.external.directory.path": "/Users/likhithrajup/Developer/WT-frontend/node_modules/typescript/lib"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;develop&quot;,
+    &quot;js.debugger.nextJs.config.created.client&quot;: &quot;true&quot;,
+    &quot;js.debugger.nextJs.config.created.server&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/likhithrajup/Developer/WT-frontend&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_interpreter_path&quot;: &quot;/Users/likhithrajup/Library/Application Support/JetBrains/WebStorm2026.2/node/versions/24.21.0/bin/node&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;pnpm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;configurable.tailwindcss&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;/Users/likhithrajup/Developer/WT-frontend/node_modules/typescript/lib&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="npm.Next.js: server-side">
     <configuration name="Next.js: debug client-side" type="JavascriptDebugType" uri="http://localhost:3000/">
       <method v="2" />
@@ -175,7 +179,15 @@
       <option name="project" value="LOCAL" />
       <updated>1790145526876</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="update: new bugs">
+      <option name="closed" value="true" />
+      <created>1790236347009</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1790236347009</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -196,6 +208,7 @@
     <MESSAGE value="updated some bugs present in the OverviewPageClient.tsx" />
     <MESSAGE value="updating the codebase in the pulse other UI changes" />
     <MESSAGE value="fixed some issues causing deployment failure" />
-    <option name="LAST_COMMIT_MESSAGE" value="fixed some issues causing deployment failure" />
+    <MESSAGE value="update: new bugs" />
+    <option name="LAST_COMMIT_MESSAGE" value="update: new bugs" />
   </component>
 </project>

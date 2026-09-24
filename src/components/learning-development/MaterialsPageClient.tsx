@@ -16,6 +16,7 @@ import {
 } from "@/utils/learning/materialVisibility";
 import { hrmsService } from "@/services/hrms.service";
 import { createEmptyMaterialForm } from "@/utils/learningFormState";
+import { LearningPageShell } from "@/components/learning-development/LearningPageShell";
 import { notifyError } from "@/lib/notify";
 
 export function MaterialsPageClient() {
@@ -56,6 +57,7 @@ export function MaterialsPageClient() {
   });
 
   return (
+    <LearningPageShell>
     <div className="space-y-6">
       <div className="flex flex-wrap justify-between gap-4">
         <div>
@@ -116,5 +118,6 @@ export function MaterialsPageClient() {
         />
       </section>
     </div>
+    </LearningPageShell>
   );
 }
