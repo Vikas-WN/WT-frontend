@@ -13,7 +13,7 @@ import { toApiDateParam } from "@/utils/apiDate";
  *  today and that date, not just the current snapshot. */
 export function LeaveBalanceForecastWidget() {
   const [targetDate, setTargetDate] = useState("");
-  const normalized = targetDate ? toApiDateParam(targetDate) : "";
+  const normalized = targetDate ? (toApiDateParam(targetDate) ?? "") : "";
 
   const forecastQ = useQuery({
     queryKey: ["leave", "my-balance-forecast", normalized],
