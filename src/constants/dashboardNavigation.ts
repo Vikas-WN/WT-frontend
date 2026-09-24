@@ -57,6 +57,13 @@ export const dashboardNavigation: NavItem[] = [
     icon: "layoutGrid",
   },
   {
+    kind: "link",
+    id: "action-center",
+    label: "Action Center",
+    roles: ["ROLE_HR", "ROLE_ADMIN"],
+    icon: "inbox",
+  },
+  {
     kind: "group",
     id: "employee",
     label: "Employee",
@@ -85,6 +92,12 @@ export const dashboardNavigation: NavItem[] = [
         label: "Offboarding",
         roles: ["ROLE_HR"],
         icon: "userMinus",
+      },
+      {
+        id: "compliance",
+        label: "Compliance",
+        roles: ["ROLE_HR", "ROLE_ADMIN"],
+        icon: "shield",
       },
       {
         id: "leave-team",

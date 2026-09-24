@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { Cake, Check, Lock, Pencil } from "lucide-react";
+import { Cake } from "lucide-react";
 import { DatePickerField } from "@/components/dashboard/ui/forms";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { showErrorToast } from "@/lib/toast";
 import { formatApiDate, parseApiDate, toApiDateParam } from "@/utils/apiDate";
@@ -21,27 +20,24 @@ function ageFromDob(isoDate: string, today = new Date()): number | null {
 
 export type DateOfBirthConfirmFieldProps = {
   value: string;
-  confirmed: boolean;
-  locked?: boolean;
   required?: boolean;
   disabled?: boolean;
   className?: string;
   onChange: (value: string) => void;
-  onConfirmChange: (confirmed: boolean) => void;
 };
 
+/** Plain, always-editable Date of Birth field with an age readout. Used to
+ *  lock once a value had ever been set (confirm-then-lock workflow) — that
+ *  restriction was removed on both frontend and backend, so this is now an
+ *  ordinary required field like any other. */
 export function DateOfBirthConfirmField({
   value,
-  confirmed,
-  locked = false,
   required = true,
   disabled = false,
   className,
   onChange,
-  onConfirmChange,
 }: DateOfBirthConfirmFieldProps) {
   const age = useMemo(() => (value ? ageFromDob(value) : null), [value]);
-  const isLocked = locked || (confirmed && Boolean(value));
   const ageValid = age !== null && age >= 18;
   const invalidToastShownRef = useRef(false);
 
@@ -67,38 +63,23 @@ export function DateOfBirthConfirmField({
         className
       )}
     >
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-[var(--wt-brand)] text-white shadow-sm">
-            <Cake className="size-4" />
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-wt-text">Date of Birth</p>
-            <p className="text-xs text-wt-text-muted">
-              {isLocked
-                ? "Confirmed and locked for your profile"
-                : "Enter your DOB, confirm the calculated age, then it locks"}
-            </p>
-          </div>
+      <div className="mb-3 flex items-center gap-2">
+        <span className="flex size-9 items-center justify-center rounded-xl bg-[var(--wt-brand)] text-white shadow-sm">
+          <Cake className="size-4" />
+        </span>
+        <div>
+          <p className="text-sm font-semibold text-wt-text">Date of Birth</p>
+          <p className="text-xs text-wt-text-muted">Enter your date of birth.</p>
         </div>
-        {isLocked ? (
-          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
-            <Lock className="size-3" />
-            Locked
-          </span>
-        ) : null}
       </div>
 
       <DatePickerField
         label="Date of Birth"
         required={required}
-        disabled={disabled || isLocked}
+        disabled={disabled}
         max={formatApiDate(new Date())}
         value={value}
-        onChange={(v) => {
-          onChange(v);
-          onConfirmChange(false);
-        }}
+        onChange={onChange}
       />
 
       {value && age !== null && ageValid ? (
@@ -112,47 +93,14 @@ export function DateOfBirthConfirmField({
             Based on this date, your age is{" "}
             <span className="font-semibold text-[var(--wt-brand)]">{age} years</span>.
           </p>
-          {!isLocked ? (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => onConfirmChange(true)}
-                disabled={confirmed}
-              >
-                <Check className="size-3.5" />
-                Yes, lock this date
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="gap-1.5"
-                onClick={() => {
-                  onConfirmChange(false);
-                  onChange("");
-                }}
-              >
-                <Pencil className="size-3.5" />
-                No, edit date
-              </Button>
-              {confirmed ? (
-                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  Age confirmed — ready to save
-                </span>
-              ) : null}
-            </div>
-          ) : null}
         </div>
       ) : null}
     </div>
   );
 }
 
-export function isDobReadyToSave(value: string, confirmed: boolean, locked: boolean): boolean {
-  if (locked && parseApiDate(value)) return true;
+export function isDobReadyToSave(value: string): boolean {
   if (!value.trim()) return false;
   const age = ageFromDob(value);
-  return Boolean(confirmed && age !== null && age >= 18);
+  return age !== null && age >= 18;
 }

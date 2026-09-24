@@ -3,6 +3,7 @@
 export const DASHBOARD_ROUTES: Record<string, string> = {
   home: "/dashboard/home",
   overview: "/dashboard/overview",
+  "action-center": "/dashboard/action-center",
   "employee-directory": "/dashboard/employee-directory",
   resumes: "/dashboard/resumes",
   "employee-assign-am": "/dashboard/employee/assign-account-manager",
@@ -15,6 +16,7 @@ export const DASHBOARD_ROUTES: Record<string, string> = {
   "my-assets": "/dashboard/my-assets",
   colleague: "/dashboard/colleague",
   offboarding: "/dashboard/offboarding",
+  compliance: "/dashboard/compliance",
   "background-verification": "/dashboard/background-verification",
   timelog: "/dashboard/timelog",
   "timelog-team": "/dashboard/timelog/projects",

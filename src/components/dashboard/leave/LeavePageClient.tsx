@@ -162,6 +162,7 @@ import { useSelfProfile } from "@/hooks/useSelfProfile";
 import { buildUserRequestBody } from "@/utils/leaveRequestPayload";
 import { activeAllocationsRequireClientApproval, isTalentPoolLeaveRouting } from "@/utils/leaveAllocations";
 import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSummary";
+import { LeaveBalanceForecastWidget } from "@/components/dashboard/leave/LeaveBalanceForecastWidget";
 import { HrLeaveBalancesPanel } from "@/components/dashboard/leave/HrLeaveBalancesPanel";
 import { useMyLeaveBalance } from "@/hooks/leave/useMyLeaveBalance";
 import { CONTENT_CARD_CLASS, FILTER_BAR_CLASS } from "@/components/dashboard/ui/uiLayout";
@@ -2168,6 +2169,7 @@ export function LeavePageClient() {
                             <>
                               {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
                               <div className="mb-6"><LeaveBalanceSummary selectedType={normalizeUserRequestType(leaveRequestForm.request_type)} /></div>
+                              <LeaveBalanceForecastWidget />
                               <Tabs value={requestViewTab} onValueChange={(v) => setRequestViewTab(v as "request" | "view")} orientation="horizontal">
                                 <TabsList variant="line" className="w-full justify-start border-b border-wt-border/80">
                                   <TabsTrigger value="request">Apply for Leave</TabsTrigger>
