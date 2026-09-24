@@ -48,6 +48,7 @@ import { useOnboardOptions } from "@/hooks/useOnboardOptions";
 import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { ProfileEmployeeTrainingsSection } from "@/components/dashboard/profile/ProfileEmployeeTrainingsSection";
+import { MyDocumentsSection } from "@/components/dashboard/profile/MyDocumentsSection";
 import { ProfileAssignedProjectsSection } from "@/components/dashboard/profile/ProfileAssignedProjectsSection";
 import {
   ProfileDetailsSkeleton,
@@ -131,7 +132,6 @@ export function ProfilePageLeanClient() {
   });
   const [selfProfilePic, setSelfProfilePic] = useState<File | null>(null);
   const [isEditingOwnProfile, setIsEditingOwnProfile] = useState(false);
-  const [dobConfirmed, setDobConfirmed] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -252,9 +252,6 @@ export function ProfilePageLeanClient() {
     const profileDob = String(
       pickProfileField(profile, ["date_of_birth", "dob", "dateOfBirth"]) ?? "",
     ).trim();
-    const dobLocked = Boolean(
-      profile.date_of_birth_locked ?? profile.dateOfBirthLocked ?? profileDob
-    );
     const pickStr = (keys: string[]) =>
       String(pickProfileField(profile, keys) ?? "").trim();
     setSelfProfileForm({
@@ -289,7 +286,6 @@ export function ProfilePageLeanClient() {
         "emergencyContactNumber",
       ]),
     });
-    setDobConfirmed(dobLocked);
     setSelfProfileEmploymentFiles({
       reliving_letter: null,
       salary_slips: null,
@@ -453,10 +449,7 @@ export function ProfilePageLeanClient() {
         />
         <DateOfBirthConfirmField
           value={selfProfileForm.date_of_birth}
-          confirmed={dobConfirmed}
-          locked={Boolean(employeeProfile?.date_of_birth_locked ?? employeeProfile?.dateOfBirthLocked)}
           onChange={(v) => setSelfProfileForm((p) => ({ ...p, date_of_birth: v }))}
-          onConfirmChange={setDobConfirmed}
         />
       </div>
 
@@ -605,15 +598,8 @@ export function ProfilePageLeanClient() {
               if (skillsRequired && !secondarySkills.length) {
                 throw new Error("At least one secondary skill is required.");
               }
-              const dobLocked = Boolean(
-                employeeProfile?.date_of_birth_locked ?? employeeProfile?.dateOfBirthLocked
-              );
-              if (!isDobReadyToSave(selfProfileForm.date_of_birth, dobConfirmed, dobLocked)) {
-                throw new Error(
-                  dobLocked
-                    ? "Date of birth is required."
-                    : "Confirm your calculated age to lock your date of birth before saving."
-                );
+              if (!isDobReadyToSave(selfProfileForm.date_of_birth)) {
+                throw new Error("Employees must be at least 18 years old. Please check the date.");
               }
               const selectedPhoneCountry = selfProfileForm.phone_country?.trim();
               if (!selectedPhoneCountry) {
@@ -728,9 +714,6 @@ export function ProfilePageLeanClient() {
                 throw new Error(dobResult.error);
               }
               profilePayload.date_of_birth = dobResult.date;
-              if (!dobLocked) {
-                profilePayload.date_of_birth_confirmed = true;
-              }
               // Personal details — always send (empty string clears the field).
               profilePayload.local_address = selfProfileForm.local_address.trim();
               profilePayload.permanent_address =
@@ -823,10 +806,6 @@ export function ProfilePageLeanClient() {
                   "dateOfBirth",
                 ]) ?? "",
               ).trim()}
-              dateOfBirthLocked={Boolean(
-                employeeProfile?.date_of_birth_locked ??
-                  employeeProfile?.dateOfBirthLocked,
-              )}
               actionLoading={actionLoading}
               runAction={(label, fn) => {
                 void runAction(label, fn);
@@ -911,6 +890,7 @@ export function ProfilePageLeanClient() {
                         ) || null
                       }
                     />
+                    <MyDocumentsSection profile={employeeProfile ?? {}} />
                     {!requiresSelfOnboarding ? (
                       <ProfileAssignedProjectsSection
                         rows={profileAssignedProjects}

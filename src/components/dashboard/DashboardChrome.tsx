@@ -35,7 +35,7 @@ import { cleanEmployeeName } from "@/utils/employeeDirectory";
 import { shouldSkipSelfProfileFetch } from "@/utils/selfProfile";
 import { selfProfileQueryKey } from "@/hooks/useSelfProfile";
 import { dashboardHref, isDashboardNavChildActive } from "@/constants/routes";
-import { learningSubNav } from "@/constants/learningNav";
+import { learningSubNav, LEARNING_BASE } from "@/constants/learningNav";
 import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
 
 import { applyResolvedTheme } from "@/utils/dashboard/theme";
@@ -394,8 +394,16 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   ]);
 
   const learningSectionTitle = useMemo(() => {
-    const hit = learningSubNav.find((l) => pathname === l.href || pathname.startsWith(`${l.href}/`));
-    return hit?.label ?? "Learning & Development";
+    // Exact match first: checking "Overview" (whose href is the shared base
+    // path) with a plain startsWith before "Trainings" made every Learning
+    // route — including the Trainings list page itself — resolve to
+    // "Overview", since the base path is a string-prefix of every sub-route.
+    const exact = learningSubNav.find((l) => pathname === l.href);
+    if (exact) return exact.label;
+    // Training detail pages (/trainings/<id>) have no nav item of their own —
+    // same fallback the sidebar highlight uses for them.
+    if (pathname.startsWith(`${LEARNING_BASE}/`)) return "Overview";
+    return "Learning & Development";
   }, [pathname]);
 
   const sidebarDisplayName = useMemo(() => {

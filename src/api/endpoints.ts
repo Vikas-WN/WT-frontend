@@ -28,6 +28,7 @@ export const endpoints = {
     self: `${api}/profile`,
     preferences: `${api}/profile/preferences`,
     myBalances: `${api}/profile/balances`,
+    myBalancesForecast: `${api}/profile/balances/forecast`,
     employeeById: (empId: string) => `${api}/employee-profile/${encodeURIComponent(empId)}`,
     employeeUserType: (empId: string) =>
       `${api}/employee-profile/${encodeURIComponent(empId)}/user-type`,
@@ -153,6 +154,8 @@ export const endpoints = {
   whosOut: `${api}/whos-out`,
   celebrations: `${api}/celebrations`,
   attendanceToday: `${api}/attendance-today`,
+  complianceNudges: `${api}/compliance/nudges`,
+  actionCenter: `${api}/action-center`,
   wiki: {
     pages: `${api}/wiki/pages`,
     pageById: (id: number | string) => `${api}/wiki/pages/${encodeURIComponent(id)}`,

@@ -81,6 +81,15 @@ export interface EmployeeLeaveBalancesData {
   comp_off_balance: number;
 }
 
+export interface LeaveBalanceForecastData {
+  as_of_date: string;
+  target_date: string;
+  current_total: number;
+  approved_days: number;
+  pending_days: number;
+  projected_total: number;
+}
+
 export interface LeaveBalancesListItem {
   emp_id: string;
   leave: EmployeeLeaveBalanceBreakdown;
@@ -207,6 +216,39 @@ export interface AttendanceSnapshot {
   office: AttendanceBucket;
   work_from_home: AttendanceBucket;
   on_leave: AttendanceBucket;
+}
+
+export interface ComplianceFlagItem {
+  emp_id: string | null;
+  name: string;
+  email: string;
+  status: string;
+  flags: string[];
+  last_working_day?: string | null;
+}
+
+export interface ComplianceNudgesData {
+  missing_documents: ComplianceFlagItem[];
+  missing_personal_info: ComplianceFlagItem[];
+  exit_survey_pending: ComplianceFlagItem[];
+  total_flagged: number;
+}
+
+export interface ActionCenterItem {
+  kind: "LEAVE_REQUEST" | "COMP_OFF" | "ALLOCATION_EXTENSION" | "EXIT_SURVEY";
+  title: string;
+  employee_name: string;
+  employee_email: string;
+  detail: string;
+  request_id: number | null;
+  created_at: string | null;
+  action_url: string | null;
+}
+
+export interface ActionCenterData {
+  items: ActionCenterItem[];
+  total: number;
+  by_kind: Record<string, number>;
 }
 
 export interface NotificationItem {
@@ -522,6 +564,13 @@ export const hrmsService = {
 
   getMyLeaveBalance() {
     return apiClient.get<ApiEnvelope<EmployeeLeaveBalancesData>>(endpoints.profile.myBalances);
+  },
+
+  getMyLeaveBalanceForecast(targetDate: string) {
+    return apiClient.get<ApiEnvelope<LeaveBalanceForecastData>>(
+      endpoints.profile.myBalancesForecast,
+      { query: applyApiDateQuery({ targetDate }, ["targetDate"]) }
+    );
   },
 
   getEmployeeLeaveBalances(empId: string) {
@@ -1318,6 +1367,18 @@ export const hrmsService = {
   /** Today's office / WFH / on-leave headcount + employee lists (HR/Admin). */
   getAttendanceToday() {
     return apiClient.get<ApiEnvelope<AttendanceSnapshot>>(endpoints.attendanceToday);
+  },
+
+  /** Proactive compliance flags: missing documents, missing DOB/personal email,
+   *  Serving Notice employees nearing LWD with no exit survey (HR/Admin). */
+  getComplianceNudges() {
+    return apiClient.get<ApiEnvelope<ComplianceNudgesData>>(endpoints.complianceNudges);
+  },
+
+  /** Every pending-action queue combined into one newest-first list
+   *  (leave/WFH/comp-off approvals, allocation extensions, exit surveys). */
+  getActionCenterItems() {
+    return apiClient.get<ApiEnvelope<ActionCenterData>>(endpoints.actionCenter);
   },
 
   /** Company Policies & Handbook. "space" stays on the wire for API parity with the backend. */

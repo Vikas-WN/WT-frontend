@@ -556,7 +556,11 @@ export function DashboardSidebar({
                               (link.href === LEARNING_BASE
                                 ? pathname === LEARNING_BASE ||
                                   pathname === `${LEARNING_BASE}/` ||
-                                  pathname.startsWith(`${LEARNING_BASE}/trainings`)
+                                  // Training *detail* pages (/trainings/<id>) have no nav item
+                                  // of their own, so Overview stands in for them — but the
+                                  // trainings *list* page (exactly /trainings) already has its
+                                  // own item above and must not also light up here.
+                                  pathname.startsWith(`${LEARNING_BASE}/trainings/`)
                                 : pathname.startsWith(`${link.href}/`) || pathname.startsWith(link.href));
                             return (
                               <Link
@@ -583,7 +587,9 @@ export function DashboardSidebar({
                               (link.href === LEARNING_BASE
                                 ? pathname === LEARNING_BASE ||
                                   pathname === `${LEARNING_BASE}/` ||
-                                  pathname.startsWith(`${LEARNING_BASE}/trainings`)
+                                  // See the flyout variant above for why this needs a
+                                  // trailing slash (detail pages only, not the list page).
+                                  pathname.startsWith(`${LEARNING_BASE}/trainings/`)
                                 : pathname.startsWith(`${link.href}/`) || pathname.startsWith(link.href));
                             return (
                               <Link

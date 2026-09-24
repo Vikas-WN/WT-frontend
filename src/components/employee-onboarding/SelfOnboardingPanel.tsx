@@ -6,6 +6,10 @@ import {
   DateOfBirthConfirmField,
   isDobReadyToSave,
 } from "@/components/dashboard/ui/DateOfBirthConfirmField";
+import {
+  OnboardingProgressChecklist,
+  computeOnboardingChecklist,
+} from "@/components/employee-onboarding/OnboardingProgressChecklist";
 import { useEffect, useMemo, useState } from "react";
 import { hrmsService } from "@/services/hrms.service";
 import { MAX_ONBOARD_FILE_BYTES, MAX_ONBOARD_TOTAL_BYTES } from "@/constants/dashboard";
@@ -59,7 +63,6 @@ export function SelfOnboardingPanel({
   initialPersonalEmail = "",
   initialResumeShareLink = "",
   initialDateOfBirth = "",
-  dateOfBirthLocked = false,
   actionLoading,
   runAction,
   onSuccess,
@@ -69,8 +72,6 @@ export function SelfOnboardingPanel({
   initialResumeShareLink?: string;
   /** Pre-fill DOB from the profile so a resumed onboarding doesn't ask again. */
   initialDateOfBirth?: string;
-  /** True once DOB is confirmed & saved — field is read-only and not re-sent. */
-  dateOfBirthLocked?: boolean;
   actionLoading: boolean;
   runAction: (label: string, fn: () => Promise<void>) => void;
   onSuccess: () => Promise<void>;
@@ -78,8 +79,6 @@ export function SelfOnboardingPanel({
   const [formKey, setFormKey] = useState(0);
   const [form, setForm] = useState(() => loadSavedOnboardForm() ?? createEmptySelfOnboardForm());
   const [files, setFiles] = useState<OnboardFiles>(EMPTY_FILES);
-  // A locked DOB is, by definition, already confirmed.
-  const [dobConfirmed, setDobConfirmed] = useState(() => dateOfBirthLocked);
   const onboardOptionsQ = useOnboardOptions();
   const options = onboardOptionsQ.data ?? FALLBACK_ONBOARD_OPTIONS;
 
@@ -153,11 +152,8 @@ export function SelfOnboardingPanel({
             : "Date of birth is required. Use DD/MM/YYYY."
         );
       }
-      if (
-        !dateOfBirthLocked &&
-        !isDobReadyToSave(form.date_of_birth, dobConfirmed, false)
-      ) {
-        throw new Error("Confirm your calculated age to lock your date of birth before submitting.");
+      if (!isDobReadyToSave(form.date_of_birth)) {
+        throw new Error("Employees must be at least 18 years old. Please check the date.");
       }
 
       const yoeRaw = form.yoe.trim();
@@ -267,11 +263,7 @@ export function SelfOnboardingPanel({
         name: legalName,
         phone_number: apiPhoneNumber,
         resume_share_link: resumeShareLink,
-        // Once DOB is locked, never re-send it — the backend rejects any value
-        // (even the identical one after a format round-trip) as an edit attempt.
-        ...(dateOfBirthLocked
-          ? {}
-          : { date_of_birth: dateOfBirth, date_of_birth_confirmed: true }),
+        date_of_birth: dateOfBirth,
       };
 
       if (yoeValue !== null)       userData.yoe = yoeValue;
@@ -314,6 +306,9 @@ export function SelfOnboardingPanel({
       <p className="mb-5 mt-1 text-sm text-wt-text-muted">
         Submit your onboarding survey to activate full portal access. Fields marked with * are required.
       </p>
+      <OnboardingProgressChecklist
+        items={computeOnboardingChecklist(form, files, priorEmploymentDocsRequired)}
+      />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <FieldLabel label="Work Email" />
@@ -357,10 +352,7 @@ export function SelfOnboardingPanel({
         />
         <DateOfBirthConfirmField
           value={form.date_of_birth}
-          confirmed={dobConfirmed}
-          locked={dateOfBirthLocked}
           onChange={(v) => setForm((p) => ({ ...p, date_of_birth: v }))}
-          onConfirmChange={setDobConfirmed}
         />
         <InputField
           label="Years of Experience (excluding internship)"

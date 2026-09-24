@@ -580,31 +580,34 @@ export function AllocationExtensionPanel() {
                                 }))}
                             />
 
-                            <div
-                                className="flex h-10 w-full items-center rounded-xl border border-wt-border bg-wt-surface-2 px-3 text-sm"
-                                aria-live="polite"
-                            >
-                                <span
-                                    className={
-                                        allocationContext?.current_end_date
-                                            ? "text-wt-text"
-                                            : "text-wt-text/50"
-                                    }
+                            <div className="flex flex-col gap-2">
+                                <FieldLabel label="Current End Date" />
+                                <div
+                                    className="flex h-11 w-full items-center rounded-xl border border-wt-border bg-wt-surface-2 px-3.5 text-sm"
+                                    aria-live="polite"
                                 >
-                                        {loadingContext && primarySelectedEmail && createForm.projectCode
-                                            ? "Loading…"
-                                            : allocationContext?.current_end_date
-                                                ? asDateDisplayValue(allocationContext.current_end_date)
-                                                : primarySelectedEmail && createForm.projectCode
-                                                    ? "—"
-                                                    : "Select employees and project"}
-                                </span>
+                                    <span
+                                        className={
+                                            allocationContext?.current_end_date
+                                                ? "text-wt-text"
+                                                : "text-wt-text/50"
+                                        }
+                                    >
+                                            {loadingContext && primarySelectedEmail && createForm.projectCode
+                                                ? "Loading…"
+                                                : allocationContext?.current_end_date
+                                                    ? asDateDisplayValue(allocationContext.current_end_date)
+                                                    : primarySelectedEmail && createForm.projectCode
+                                                        ? "—"
+                                                        : "Select employees and project"}
+                                    </span>
+                                </div>
+                                {allocationContext && !allocationContext.extension_allowed ? (
+                                    <p className="text-xs text-amber-700">
+                                        This allocation has no end date. Extensions require a current end date.
+                                    </p>
+                                ) : null}
                             </div>
-                            {allocationContext && !allocationContext.extension_allowed ? (
-                                <p className="mt-1 text-xs text-amber-700">
-                                    This allocation has no end date. Extensions require a current end date.
-                                </p>
-                            ) : null}
 
                         <ApiDateField
                             label="Requested end date"
