@@ -104,6 +104,7 @@ import {
   compOffEmployeeDisplayName,
   resolveEmployeeNamesByEmail,
 } from "@/utils/compOff/resolveEmployeeDisplayNames";
+import { fireConfetti } from "@/lib/confetti";
 
 function todayYmd(): string {
   return formatApiDate(new Date());
@@ -1550,6 +1551,7 @@ export function CompOffPageClient({
                                         compOffTeamReviewActionLabel(flow, "approve"),
                                         async () => {
                                           await decideTeamRequest(id, flow, "APPROVED");
+                                          fireConfetti();
                                           await loadTeamRequests({ force: true });
                                         }
                                       )

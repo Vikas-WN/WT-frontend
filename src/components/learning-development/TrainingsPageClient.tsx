@@ -13,7 +13,9 @@ import {
 } from "@/hooks/learning/useLearningTrainings";
 import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainerDirectory";
 import { TrainingCard } from "@/components/learning-development/TrainingCard";
-import { InputField, SelectField, Sheet } from "@/components/learning-development/ui/forms";
+import { FieldLabel, InputField, SelectField, Sheet } from "@/components/learning-development/ui/forms";
+import { Field } from "@/components/ui/field";
+import { FORM_FIELD_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
@@ -206,25 +208,32 @@ function HrTrainingsView() {
               onChange={setStatusFilter}
             />
           </div>
-          <div className="flex flex-wrap items-center gap-3 pb-2">
-            <TableSortHeader
-              label="Date"
-              activeDirection={activeSortDirectionForColumn(
-                "start_date",
-                sortId,
-                TRAINING_SORT_OPTIONS
-              )}
-              sortable
-              onSort={() =>
-                setSortId(toggleColumnSort("start_date", sortId, TRAINING_SORT_OPTIONS))
-              }
-            />
-            <TableSortHeader
-              label="Name"
-              activeDirection={activeSortDirectionForColumn("name", sortId, TRAINING_SORT_OPTIONS)}
-              sortable
-              onSort={() => setSortId(toggleColumnSort("name", sortId, TRAINING_SORT_OPTIONS))}
-            />
+          <div className="w-full sm:w-auto sm:flex-shrink-0">
+            <Field className={FORM_FIELD_CLASS}>
+              <FieldLabel label="Sort by" />
+              <div className="flex flex-wrap items-center gap-1 rounded-lg border border-wt-border bg-wt-surface-2/40 p-1">
+                <TableSortHeader
+                  label="Date"
+                  activeDirection={activeSortDirectionForColumn(
+                    "start_date",
+                    sortId,
+                    TRAINING_SORT_OPTIONS
+                  )}
+                  sortable
+                  onSort={() =>
+                    setSortId(toggleColumnSort("start_date", sortId, TRAINING_SORT_OPTIONS))
+                  }
+                  className="ml-0"
+                />
+                <TableSortHeader
+                  label="Name"
+                  activeDirection={activeSortDirectionForColumn("name", sortId, TRAINING_SORT_OPTIONS)}
+                  sortable
+                  onSort={() => setSortId(toggleColumnSort("name", sortId, TRAINING_SORT_OPTIONS))}
+                  className="ml-0"
+                />
+              </div>
+            </Field>
           </div>
         </div>
 

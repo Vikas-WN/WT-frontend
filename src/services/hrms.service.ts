@@ -182,20 +182,50 @@ export interface GlobalSearchResults {
   total: number;
 }
 
+export type CelebrationKind = "birthday" | "anniversary";
+
+export interface CelebrationReactionCount {
+  emoji: string;
+  count: number;
+}
+
 export interface CelebrationEntry {
+  user_id: number;
   emp_id: string | null;
   name: string;
+  email: string;
   month: number; // 1-12
   day: number;
   next_date: string; // ISO date, next occurrence from today
   days_until: number;
   /** Years of service as of next_date — set for anniversaries only. */
   years: number | null;
+  /** Calendar year of next_date — the key reactions are stored against. */
+  occurrence_year: number;
+  reactions: CelebrationReactionCount[];
+  my_reaction: string | null;
 }
 
 export interface CelebrationsData {
   birthdays: CelebrationEntry[];
   anniversaries: CelebrationEntry[];
+}
+
+export interface PollOptionResult {
+  id: number;
+  label: string;
+  votes: number;
+}
+
+export interface PollSummary {
+  id: number;
+  question: string;
+  status: "ACTIVE" | "CLOSED";
+  created_at: string;
+  created_by_name: string;
+  options: PollOptionResult[];
+  total_votes: number;
+  my_option_id: number | null;
 }
 
 export interface AttendanceEmployee {
@@ -227,28 +257,22 @@ export interface ComplianceFlagItem {
   last_working_day?: string | null;
 }
 
-export interface ComplianceNudgesData {
-  missing_documents: ComplianceFlagItem[];
-  missing_personal_info: ComplianceFlagItem[];
-  exit_survey_pending: ComplianceFlagItem[];
+export type ComplianceCategory = "missing_documents" | "missing_personal_info" | "exit_survey_pending";
+
+export interface ComplianceCounts {
+  missing_documents: number;
+  missing_personal_info: number;
+  exit_survey_pending: number;
   total_flagged: number;
 }
 
-export interface ActionCenterItem {
-  kind: "LEAVE_REQUEST" | "COMP_OFF" | "ALLOCATION_EXTENSION" | "EXIT_SURVEY";
-  title: string;
-  employee_name: string;
-  employee_email: string;
-  detail: string;
-  request_id: number | null;
-  created_at: string | null;
-  action_url: string | null;
-}
-
-export interface ActionCenterData {
-  items: ActionCenterItem[];
+export interface ComplianceNudgesData {
+  items: ComplianceFlagItem[];
+  counts: ComplianceCounts;
+  page: number;
+  page_size: number;
   total: number;
-  by_kind: Record<string, number>;
+  total_pages: number;
 }
 
 export interface NotificationItem {
@@ -1364,21 +1388,66 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<CelebrationsData>>(endpoints.celebrations);
   },
 
+  /** Toggle an emoji reaction on a today's birthday/anniversary entry. */
+  reactToCelebration(payload: {
+    celebrant_user_id: number;
+    kind: CelebrationKind;
+    occurrence_year: number;
+    emoji: string;
+  }) {
+    return apiClient.post<ApiEnvelope<null>>(endpoints.celebrationReact, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /** The single currently-active Quick Poll, if any, with live tallies. */
+  getCurrentPoll() {
+    return apiClient.get<ApiEnvelope<PollSummary | null>>(endpoints.polls.current);
+  },
+
+  /** Start a new Quick Poll. Fails if one is already active (HR/Admin). */
+  createPoll(payload: { question: string; options: string[] }) {
+    return apiClient.post<ApiEnvelope<PollSummary>>(endpoints.polls.create, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /** Cast or change the caller's vote on an active poll. */
+  voteOnPoll(pollId: number, optionId: number) {
+    return apiClient.post<ApiEnvelope<PollSummary>>(endpoints.polls.vote(pollId), {
+      contentType: "application/json",
+      body: JSON.stringify({ option_id: optionId }),
+    });
+  },
+
+  /** End voting on a poll so a new one can be started (HR/Admin). */
+  closePoll(pollId: number) {
+    return apiClient.post<ApiEnvelope<PollSummary>>(endpoints.polls.close(pollId));
+  },
+
   /** Today's office / WFH / on-leave headcount + employee lists (HR/Admin). */
   getAttendanceToday() {
     return apiClient.get<ApiEnvelope<AttendanceSnapshot>>(endpoints.attendanceToday);
   },
 
   /** Proactive compliance flags: missing documents, missing DOB/personal email,
-   *  Serving Notice employees nearing LWD with no exit survey (HR/Admin). */
-  getComplianceNudges() {
-    return apiClient.get<ApiEnvelope<ComplianceNudgesData>>(endpoints.complianceNudges);
-  },
-
-  /** Every pending-action queue combined into one newest-first list
-   *  (leave/WFH/comp-off approvals, allocation extensions, exit surveys). */
-  getActionCenterItems() {
-    return apiClient.get<ApiEnvelope<ActionCenterData>>(endpoints.actionCenter);
+   *  Serving Notice employees nearing LWD with no exit survey (HR/Admin).
+   *  Paginated per category. */
+  getComplianceNudges(params: {
+    category: ComplianceCategory;
+    page?: number;
+    pageSize?: number;
+    q?: string;
+  }) {
+    const query: Record<string, string> = {
+      category: params.category,
+      page: String(params.page ?? 0),
+      page_size: String(params.pageSize ?? 10),
+    };
+    if (params.q?.trim()) query.q = params.q.trim();
+    return apiClient.get<ApiEnvelope<ComplianceNudgesData>>(endpoints.complianceNudges, { query });
   },
 
   /** Company Policies & Handbook. "space" stays on the wire for API parity with the backend. */

@@ -41,6 +41,7 @@ import { SkillRating } from "@/types/onboard";
 import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
 import { useOnboardOptions } from "@/hooks/useOnboardOptions";
 import { toApiDateParam } from "@/utils/apiDate";
+import { fireConfetti } from "@/lib/confetti";
 
 type OnboardFiles = {
   profile_photo: File | null;
@@ -294,6 +295,7 @@ export function SelfOnboardingPanel({
       }
 
       await hrmsService.completeMyOnboarding(fd);
+      fireConfetti();
       resetForm();
       await onSuccess();
     });

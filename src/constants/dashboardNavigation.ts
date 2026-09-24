@@ -57,13 +57,6 @@ export const dashboardNavigation: NavItem[] = [
     icon: "layoutGrid",
   },
   {
-    kind: "link",
-    id: "action-center",
-    label: "Action Center",
-    roles: ["ROLE_HR", "ROLE_ADMIN"],
-    icon: "inbox",
-  },
-  {
     kind: "group",
     id: "employee",
     label: "Employee",

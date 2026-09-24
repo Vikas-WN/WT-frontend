@@ -3,7 +3,6 @@
 export const DASHBOARD_ROUTES: Record<string, string> = {
   home: "/dashboard/home",
   overview: "/dashboard/overview",
-  "action-center": "/dashboard/action-center",
   "employee-directory": "/dashboard/employee-directory",
   resumes: "/dashboard/resumes",
   "employee-assign-am": "/dashboard/employee/assign-account-manager",

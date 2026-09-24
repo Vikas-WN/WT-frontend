@@ -5,11 +5,13 @@ import Link from "next/link";
 import {
   CalendarDays,
   CalendarRange,
+  Check,
   ClipboardCheck,
   GraduationCap,
   LayoutGrid,
   Plane,
   Search,
+  Settings2,
 } from "lucide-react";
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
@@ -17,7 +19,12 @@ import { PageHero } from "@/components/dashboard/ui/PageHero";
 import { useCommandPalette } from "@/components/dashboard/CommandPalette";
 import { HomeCard, CardMessage, CardSkeleton } from "@/components/dashboard/home/HomeCard";
 import { CelebrationsCard } from "@/components/dashboard/home/CelebrationsCard";
+import { TodaysCelebrationsBanner } from "@/components/dashboard/home/TodaysCelebrationsBanner";
+import { QuickPollCard } from "@/components/dashboard/home/QuickPollCard";
 import { AttendanceCard } from "@/components/dashboard/home/AttendanceCard";
+import { DashboardWidgetFrame } from "@/components/dashboard/home/DashboardWidgetFrame";
+import { AddWidgetMenu } from "@/components/dashboard/home/AddWidgetMenu";
+import { useHomeDashboardLayout } from "@/hooks/dashboard/useHomeDashboardLayout";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -76,6 +83,30 @@ function greeting(): string {
 
 const LEAVE_SEGMENT_COLORS = ["bg-[var(--wt-brand)]", "bg-emerald-500", "bg-amber-500"] as const;
 
+const HOME_WIDGET_IDS = [
+  "attendance",
+  "approvals",
+  "leave-balance",
+  "learning",
+  "whos-out",
+  "projects",
+  "holidays",
+  "celebrations",
+  "quick-poll",
+] as const;
+
+const HOME_WIDGET_TITLES: Record<string, string> = {
+  attendance: "Today's Attendance",
+  approvals: "Pending Approvals",
+  "leave-balance": "My Leave Balance",
+  learning: "My Learning",
+  "whos-out": "Who's Out Today",
+  projects: "My Projects",
+  holidays: "Upcoming Holidays",
+  celebrations: "Celebrations",
+  "quick-poll": "Quick Poll",
+};
+
 /** Proportional split bar under the leave-balance numbers — purely visual,
  *  degrades gracefully (renders nothing) when every bucket is zero. */
 function LeaveSplitBar({ values }: { values: number[] }) {
@@ -119,6 +150,9 @@ export function HomePageClient() {
     roles.includes("ROLE_HR") ||
     roles.includes("ROLE_ADMIN");
   const canSeeOrgOut = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
+  const [editMode, setEditMode] = useState(false);
+  const [draggedWidgetId, setDraggedWidgetId] = useState<string | null>(null);
+  const { layout, reorder, toggleSize, setHidden, resetLayout } = useHomeDashboardLayout(HOME_WIDGET_IDS);
   const firstName = (user?.name ?? "").trim().split(/\s+/)[0] || "there";
 
   const today = useMemo(() => new Date(), []);
@@ -269,59 +303,41 @@ export function HomePageClient() {
       .filter((p) => p.name && p.name.toUpperCase() !== "BENCH");
   }, [allocations.data]);
 
-  return (
-    <DashboardPageShell>
-      <PageHero
-        surface
-        raw
-        eyebrow={today.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
-        title={`${greeting()}, ${firstName}`}
-        description="Here's where things stand across your work today."
-        action={
-          <>
-            <Button variant="brand" size="sm" render={<Link href={`${DASHBOARD_ROUTES.leave}?tab=my`} />}>
-              <Plane className="size-4" /> Apply for leave
-            </Button>
-            <Button variant="outline" size="sm" render={<Link href={DASHBOARD_ROUTES.timelog} />}>
-              <CalendarDays className="size-4" /> Log time
-            </Button>
-            <Button variant="outline" size="sm" onClick={openSearch}>
-              <Search className="size-4" /> Search
-            </Button>
-          </>
-        }
-      />
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {canSeeOrgOut ? (
-          <AttendanceCard data={attendance.data} status={attendance.status} />
-        ) : null}
-
-        {isApprover ? (
-          <HomeCard
-            title="Pending approvals"
-            icon={<ClipboardCheck className="size-4" />}
-            href={DASHBOARD_ROUTES["leave-team"]}
-            cta="Review"
-            featured={Boolean(approvals.data)}
-          >
-            {approvals.status === "loading" ? (
-              <CardSkeleton />
-            ) : approvals.status === "error" || approvals.data == null ? (
-              <p className="text-sm text-wt-text-muted">Open your team requests to review.</p>
-            ) : approvals.data === 0 ? (
-              <p className="text-sm text-wt-text-muted">Nothing waiting on you. 🎉</p>
-            ) : (
-              <p className="text-3xl font-semibold tabular-nums text-wt-text">
-                {approvals.data}
-                <span className="ml-2 align-middle text-sm font-normal text-wt-text-muted">
-                  awaiting your review
-                </span>
-              </p>
-            )}
-          </HomeCard>
-        ) : null}
-
+  const widgetRegistry: Record<string, { eligible: boolean; node: React.ReactNode }> = {
+    attendance: {
+      eligible: canSeeOrgOut,
+      node: <AttendanceCard data={attendance.data} status={attendance.status} />,
+    },
+    approvals: {
+      eligible: isApprover,
+      node: (
+        <HomeCard
+          title="Pending approvals"
+          icon={<ClipboardCheck className="size-4" />}
+          href={DASHBOARD_ROUTES["leave-team"]}
+          cta="Review"
+          featured={Boolean(approvals.data)}
+        >
+          {approvals.status === "loading" ? (
+            <CardSkeleton />
+          ) : approvals.status === "error" || approvals.data == null ? (
+            <p className="text-sm text-wt-text-muted">Open your team requests to review.</p>
+          ) : approvals.data === 0 ? (
+            <p className="text-sm text-wt-text-muted">Nothing waiting on you. 🎉</p>
+          ) : (
+            <p className="text-3xl font-semibold tabular-nums text-wt-text">
+              {approvals.data}
+              <span className="ml-2 align-middle text-sm font-normal text-wt-text-muted">
+                awaiting your review
+              </span>
+            </p>
+          )}
+        </HomeCard>
+      ),
+    },
+    "leave-balance": {
+      eligible: true,
+      node: (
         <HomeCard
           title="My leave balance"
           icon={<Plane className="size-4" />}
@@ -361,7 +377,11 @@ export function HomePageClient() {
             </div>
           )}
         </HomeCard>
-
+      ),
+    },
+    learning: {
+      eligible: true,
+      node: (
         <HomeCard
           title="My learning"
           icon={<GraduationCap className="size-4" />}
@@ -402,8 +422,11 @@ export function HomePageClient() {
             </div>
           )}
         </HomeCard>
-
-        {isApprover ? (
+      ),
+    },
+    "whos-out": {
+      eligible: isApprover,
+      node: (
         <HomeCard
           title="Who's out today"
           icon={<CalendarRange className="size-4" />}
@@ -434,8 +457,11 @@ export function HomePageClient() {
             </div>
           )}
         </HomeCard>
-        ) : null}
-
+      ),
+    },
+    projects: {
+      eligible: true,
+      node: (
         <HomeCard
           title="My projects"
           icon={<LayoutGrid className="size-4" />}
@@ -464,7 +490,11 @@ export function HomePageClient() {
             </ul>
           )}
         </HomeCard>
-
+      ),
+    },
+    holidays: {
+      eligible: true,
+      node: (
         <HomeCard
           title="Upcoming holidays"
           icon={<CalendarDays className="size-4" />}
@@ -493,9 +523,94 @@ export function HomePageClient() {
             </ul>
           )}
         </HomeCard>
+      ),
+    },
+    celebrations: {
+      eligible: true,
+      node: <CelebrationsCard data={celebrations.data} status={celebrations.status} />,
+    },
+    "quick-poll": {
+      eligible: true,
+      node: <QuickPollCard />,
+    },
+  };
 
-        <CelebrationsCard data={celebrations.data} status={celebrations.status} />
+  const visibleLayout = layout.filter((w) => widgetRegistry[w.id]?.eligible && !w.hidden);
+  const hiddenWidgets = layout
+    .filter((w) => widgetRegistry[w.id]?.eligible && w.hidden)
+    .map((w) => ({ id: w.id, title: HOME_WIDGET_TITLES[w.id] ?? w.id }));
+
+  return (
+    <DashboardPageShell>
+      <PageHero
+        surface
+        raw
+        eyebrow={today.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
+        title={`${greeting()}, ${firstName}`}
+        description="Here's where things stand across your work today."
+        action={
+          <>
+            <Button variant="brand" size="sm" render={<Link href={`${DASHBOARD_ROUTES.leave}?tab=my`} />}>
+              <Plane className="size-4" /> Apply for leave
+            </Button>
+            <Button variant="outline" size="sm" render={<Link href={DASHBOARD_ROUTES.timelog} />}>
+              <CalendarDays className="size-4" /> Log time
+            </Button>
+            <Button variant="outline" size="sm" onClick={openSearch}>
+              <Search className="size-4" /> Search
+            </Button>
+          </>
+        }
+      />
+
+      <TodaysCelebrationsBanner />
+
+      <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+        {editMode ? (
+          <>
+            <AddWidgetMenu hiddenWidgets={hiddenWidgets} onShow={(id) => setHidden(id, false)} />
+            <Button variant="outline" size="sm" onClick={resetLayout}>
+              Reset layout
+            </Button>
+            <Button variant="brand" size="sm" onClick={() => setEditMode(false)}>
+              <Check className="size-4" /> Done
+            </Button>
+          </>
+        ) : (
+          <Button variant="outline" size="sm" onClick={() => setEditMode(true)}>
+            <Settings2 className="size-4" /> Customize
+          </Button>
+        )}
       </div>
+
+      {visibleLayout.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-wt-border p-8 text-center text-sm text-wt-text-muted">
+          All widgets are hidden.{" "}
+          {editMode ? "Use “Add widget” above to bring one back." : "Click “Customize” to add one back."}
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {visibleLayout.map((w) => (
+            <DashboardWidgetFrame
+              key={w.id}
+              id={w.id}
+              size={w.size}
+              editing={editMode}
+              draggedId={draggedWidgetId}
+              onDragStart={setDraggedWidgetId}
+              onDrop={(targetId) => {
+                if (draggedWidgetId) reorder(draggedWidgetId, targetId);
+                setDraggedWidgetId(null);
+              }}
+              onDragEnd={() => setDraggedWidgetId(null)}
+              onToggleSize={toggleSize}
+              onHide={(id) => setHidden(id, true)}
+            >
+              {widgetRegistry[w.id]?.node}
+            </DashboardWidgetFrame>
+          ))}
+        </div>
+      )}
     </DashboardPageShell>
   );
 }
