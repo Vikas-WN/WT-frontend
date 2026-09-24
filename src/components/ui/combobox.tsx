@@ -95,12 +95,18 @@ function ComboboxContent({
   container,
   collisionPadding = 8,
   collisionAvoidance = {
-    // Anchored, scrollable listbox — flip top/bottom and shift into view, but do
-    // not fall back to a perpendicular (left/right) side of the anchor, which
-    // pushes right-aligned dropdowns past the viewport edge. Height is clamped to
-    // --available-height below so a tight fit scrolls instead of overflowing.
+    // Anchored, scrollable listbox — flip top/bottom, and flip start/end
+    // alignment (not shift) to stay on-screen horizontally: align:"shift"
+    // only takes effect via the underlying shift() middleware's cross-axis
+    // correction when side is ALSO "shift" (see useAnchorPositioning's
+    // crossAxisShiftEnabled), so pairing it with side:"flip" was a no-op and
+    // right-aligned dropdowns still overflowed. align:"flip" instead uses
+    // flip()'s unconditional crossAxis:"alignment" handling. Never fall back
+    // to a perpendicular (left/right) side of the anchor. Height is clamped
+    // to --available-height below so a tight fit scrolls instead of
+    // overflowing.
     side: "flip",
-    align: "shift",
+    align: "flip",
     fallbackAxisSide: "none",
   },
   positionMethod = "fixed",

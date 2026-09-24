@@ -25,7 +25,7 @@ function PopoverTrigger({ className, ...props }: PopoverPrimitive.Trigger.Props)
 
 function PopoverPositioner({
   collisionPadding = 12,
-  collisionAvoidance = { side: "flip", align: "shift", fallbackAxisSide: "end" },
+  collisionAvoidance = { side: "flip", align: "flip", fallbackAxisSide: "end" },
   positionMethod = "fixed",
   className,
   ...props
@@ -33,12 +33,22 @@ function PopoverPositioner({
   return (
     // Flip/shift back into view by default. Without these, a popup anchored near the
     // right edge renders past the viewport and its content becomes unreachable.
+    // align:"flip" (not "shift") for the cross axis: shift's cross-axis correction
+    // only engages when side is ALSO "shift" (see useAnchorPositioning's
+    // crossAxisShiftEnabled), so pairing align:"shift" with side:"flip" was a
+    // no-op and this was exactly the "anchored near the right edge" case the
+    // comment above describes.
     <PopoverPrimitive.Positioner
       data-slot="popover-positioner"
       collisionPadding={collisionPadding}
       collisionAvoidance={collisionAvoidance}
       positionMethod={positionMethod}
-      className={cn("z-[250] outline-none", className)}
+      // `isolate` forces its own stacking context, same as combobox.tsx / select.tsx's
+      // positioners — without it, this z-index is only compared within whatever
+      // stacking context its portalled position happens to land in, which let some
+      // pages' headers (backdrop-blur creates its own stacking context) paint over
+      // an open date picker despite the higher z-index value.
+      className={cn("isolate z-[250] outline-none", className)}
       {...props}
     />
   )

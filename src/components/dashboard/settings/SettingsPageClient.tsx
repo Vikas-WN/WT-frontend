@@ -417,7 +417,7 @@ export function SettingsPageClient() {
 
           {canManagePulseScoring ? <PulseScoreSettingsSection /> : null}
 
-          <div className="sticky bottom-4 z-10 flex justify-end">
+          <div className="sticky bottom-6 right-6 z-10 flex justify-end">
             <div className="flex items-center gap-2 rounded-2xl border border-wt-border bg-wt-surface-1/95 p-2 shadow-lg backdrop-blur-md dark:bg-wt-surface-2/95">
               <Button type="button" variant="ghost" disabled={!dirty || isSaving} onClick={handleReset}>
                 Reset

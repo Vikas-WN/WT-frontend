@@ -218,6 +218,8 @@ export interface NotificationItem {
   created_at: string;
   sender_id?: number | null;
   sender_email?: string | null;
+  /** Exact in-app page to open, set by the backend when it knows the record. */
+  action_url?: string | null;
 }
 
 export interface LopReportRow {
