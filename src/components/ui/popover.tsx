@@ -25,7 +25,7 @@ function PopoverTrigger({ className, ...props }: PopoverPrimitive.Trigger.Props)
 
 function PopoverPositioner({
   collisionPadding = 12,
-  collisionAvoidance = { side: "flip", align: "shift", fallbackAxisSide: "end" },
+  collisionAvoidance = { side: "flip", align: "flip", fallbackAxisSide: "end" },
   positionMethod = "fixed",
   className,
   ...props
@@ -33,6 +33,11 @@ function PopoverPositioner({
   return (
     // Flip/shift back into view by default. Without these, a popup anchored near the
     // right edge renders past the viewport and its content becomes unreachable.
+    // align:"flip" (not "shift") for the cross axis: shift's cross-axis correction
+    // only engages when side is ALSO "shift" (see useAnchorPositioning's
+    // crossAxisShiftEnabled), so pairing align:"shift" with side:"flip" was a
+    // no-op and this was exactly the "anchored near the right edge" case the
+    // comment above describes.
     <PopoverPrimitive.Positioner
       data-slot="popover-positioner"
       collisionPadding={collisionPadding}

@@ -144,8 +144,12 @@ export function OpportunityMultiSelect({
               align="start"
               collisionPadding={12}
               collisionAvoidance={{
+                // align:"flip" (not "shift"): shift's cross-axis correction only
+                // engages when side is ALSO "shift", so pairing align:"shift"
+                // with side:"flip" left right-anchored triggers overflowing the
+                // viewport edge.
                 side: "flip",
-                align: "shift",
+                align: "flip",
                 fallbackAxisSide: "end",
               }}
               positionMethod={modalPanel ? "absolute" : "fixed"}

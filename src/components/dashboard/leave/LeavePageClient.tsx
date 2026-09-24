@@ -582,11 +582,14 @@ export function LeavePageClient() {
 
     // Always use a wide unfiltered range so every leave request stays visible for review.
     // Legacy URLs may still carry from/to; ignore them for filtering once a requestId is present.
+    // Also reset the Request Type filter to ALL unless the notification names one: a
+    // Team Requests filter left over from an earlier visit (e.g. "Comp Off Credit")
+    // would otherwise silently filter the deep-linked row straight out of the table.
     setEmployeeRequestFilters((prev) => ({
       ...prev,
       fromDate: "",
       toDate: "",
-      ...(deepLinkRequestType ? { requestType: deepLinkRequestType } : {}),
+      requestType: deepLinkRequestType || "ALL",
     }));
     setMyRequestsFromDate("");
     setMyRequestsToDate("");
