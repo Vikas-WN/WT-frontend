@@ -118,7 +118,6 @@ export function SelfOnboardingPanel({
     clearOnboardFormDraft();
     setForm(createEmptySelfOnboardForm());
     setFiles(EMPTY_FILES);
-    setDobConfirmed(false);
     setFormKey((key) => key + 1);
   };
 
