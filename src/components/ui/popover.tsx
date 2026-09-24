@@ -38,7 +38,12 @@ function PopoverPositioner({
       collisionPadding={collisionPadding}
       collisionAvoidance={collisionAvoidance}
       positionMethod={positionMethod}
-      className={cn("z-[250] outline-none", className)}
+      // `isolate` forces its own stacking context, same as combobox.tsx / select.tsx's
+      // positioners — without it, this z-index is only compared within whatever
+      // stacking context its portalled position happens to land in, which let some
+      // pages' headers (backdrop-blur creates its own stacking context) paint over
+      // an open date picker despite the higher z-index value.
+      className={cn("isolate z-[250] outline-none", className)}
       {...props}
     />
   )
