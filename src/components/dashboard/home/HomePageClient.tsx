@@ -20,7 +20,6 @@ import { useCommandPalette } from "@/components/dashboard/CommandPalette";
 import { HomeCard, CardMessage, CardSkeleton } from "@/components/dashboard/home/HomeCard";
 import { CelebrationsCard } from "@/components/dashboard/home/CelebrationsCard";
 import { TodaysCelebrationsBanner } from "@/components/dashboard/home/TodaysCelebrationsBanner";
-import { QuickPollCard } from "@/components/dashboard/home/QuickPollCard";
 import { AttendanceCard } from "@/components/dashboard/home/AttendanceCard";
 import { DashboardWidgetFrame } from "@/components/dashboard/home/DashboardWidgetFrame";
 import { AddWidgetMenu } from "@/components/dashboard/home/AddWidgetMenu";
@@ -92,7 +91,6 @@ const HOME_WIDGET_IDS = [
   "projects",
   "holidays",
   "celebrations",
-  "quick-poll",
 ] as const;
 
 const HOME_WIDGET_TITLES: Record<string, string> = {
@@ -104,7 +102,6 @@ const HOME_WIDGET_TITLES: Record<string, string> = {
   projects: "My Projects",
   holidays: "Upcoming Holidays",
   celebrations: "Celebrations",
-  "quick-poll": "Quick Poll",
 };
 
 /** Proportional split bar under the leave-balance numbers — purely visual,
@@ -528,10 +525,6 @@ export function HomePageClient() {
     celebrations: {
       eligible: true,
       node: <CelebrationsCard data={celebrations.data} status={celebrations.status} />,
-    },
-    "quick-poll": {
-      eligible: true,
-      node: <QuickPollCard />,
     },
   };
 

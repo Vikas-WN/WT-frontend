@@ -4,8 +4,19 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="linting fix">
+    <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="fix: enforce SERVING_NOTICE eligibility, close stale-session auth gap, repair KPI/training schema drift&#10;&#10;Auth / session:&#10;- hydrate_request_actor_roles now fails closed (marks the account&#10;  inactive) if the live DB status/role lookup errors, instead of&#10;  silently falling back to the stale JWT claim — closes a gap where a&#10;  transient DB hiccup could let an actor keep acting on a status that&#10;  changed after their token was issued.&#10;- Gate leave_request, wfh, comp_off, optional_leave, and timelog&#10;  routers behind require_onboarding_complete so INVITED/ONBOARDING&#10;  users can't bypass the frontend's OnboardingGate via a direct API call.&#10;&#10;Employment status coverage (ACTIVE-only checks missing SERVING_NOTICE):&#10;- allocation_repository: manager/approver/unallocated-user lookups now&#10;  include SERVING_NOTICE alongside ACTIVE.&#10;- timelog_categories: manager picker includes SERVING_NOTICE.&#10;- scheduled_jobs_service: auto-approver selection includes SERVING_NOTICE.&#10;&#10;Other correctness fixes:&#10;- work_profile: technical-role regex now matches &quot;analyst&quot; roles.&#10;- timelog_service: use format_display_date instead of raw isoformat()&#10;  for CSV/XLSX export and submission messages.&#10;- wk_business_http: map upstream 404s to a clear &quot;not recognized&quot; 404&#10;  instead of a generic 502.&#10;- employee_service: import_user_data and bulk_upload_users now run the&#10;  exit-status/date validation and exit-survey dispatch on status&#10;  changes, matching the single-update path.&#10;&#10;Schema drift repair (guarded migrations for legacy Java-seeded tables):&#10;- Recreate missing training_* enum types when the tables predate this&#10;  app's own migrations.&#10;- Add kpi_definitions.evaluation_criteria, which no migration ever&#10;  actually created despite the model assuming it existed.&#10;- Add B4L/B4H/B5L/B5H bands, mirroring the existing B6L/B6H/B7L/B7H split.&#10;&#10;Also adds app/core/upload_limits.py to raise Starlette's undocumented&#10;1MB multipart part-size cap, wired in on startup.">
+      <change afterPath="$PROJECT_DIR$/.claude/launch.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/COMPLIANCE_NUDGES.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/EMPLOYEE_ENGAGEMENT_FEATURES.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/HOME_DASHBOARD_CUSTOMIZATION.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/ARCHITECTURE.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/ARCHITECTURE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/middleware.ts" beforeDir="false" afterPath="$PROJECT_DIR$/middleware.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/endpoints.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/endpoints.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/home/HomePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/home/HomePageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/home/QuickPollCard.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/polls/useQuickPoll.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/hrms.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/hrms.service.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -24,61 +35,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.0091965572075896" />
-      <entry key="MS500" value="2.6034335873148815" />
-      <entry key="S2" value="7.593805005777782" />
-      <entry key="S5" value="14.718830807874815" />
-      <entry key="S10" value="23.196784697493097" />
-      <entry key="S30" value="35.19429298153813" />
-      <entry key="S60" value="39.73074057741261" />
-      <entry key="M2" value="44.09602266894629" />
-      <entry key="M5" value="60.75232320686923" />
-      <entry key="M10" value="85.04723855259654" />
-      <entry key="M15" value="103.29823532885082" />
-      <entry key="M30" value="141.50834407843092" />
-      <entry key="H1" value="181.7372645161026" />
-      <entry key="H2" value="213.6907674864274" />
-      <entry key="H4" value="238.17787032657438" />
-      <entry key="D1" value="305.50971257210546" />
-      <entry key="W1" value="336.5765183830672" />
+      <entry key="MS100" value="1.0026043092546268" />
+      <entry key="MS500" value="2.237812765439992" />
+      <entry key="S2" value="7.102381057925431" />
+      <entry key="S5" value="12.289823159120512" />
+      <entry key="S10" value="20.77854071495523" />
+      <entry key="S30" value="42.307879185423516" />
+      <entry key="S60" value="53.79782880135997" />
+      <entry key="M2" value="62.81809819592616" />
+      <entry key="M5" value="82.36681721494313" />
+      <entry key="M10" value="107.7538805109865" />
+      <entry key="M15" value="126.47127619393567" />
+      <entry key="M30" value="165.2843103380066" />
+      <entry key="H1" value="205.96212517117516" />
+      <entry key="H2" value="238.2384461509779" />
+      <entry key="H4" value="262.926921565228" />
+      <entry key="D1" value="330.4565574146606" />
+      <entry key="W1" value="361.56817850974494" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
       <entry key="MS500" value="0.0" />
-      <entry key="S2" value="1.0205544861869762E-87" />
-      <entry key="S5" value="1.8636515569827835E-35" />
-      <entry key="S10" value="5.641611846564034E-18" />
-      <entry key="S30" value="2.768386127220267E-6" />
-      <entry key="S60" value="0.002346954695067941" />
-      <entry key="M2" value="0.06909161379169652" />
-      <entry key="M5" value="0.5981519942995842" />
-      <entry key="M10" value="1.4519419759973449" />
-      <entry key="M15" value="2.1281424986548947" />
-      <entry key="M30" value="3.5915744438863584" />
-      <entry key="H1" value="5.1339029678138495" />
-      <entry key="H2" value="6.340782478608655" />
-      <entry key="H4" value="7.198121583612312" />
-      <entry key="D1" value="9.05137685557104" />
-      <entry key="W1" value="9.83868895764481" />
+      <entry key="S2" value="7.182895803941937E-91" />
+      <entry key="S5" value="1.0217627474389484E-36" />
+      <entry key="S10" value="1.3209788877553324E-18" />
+      <entry key="S30" value="1.7063085054877693E-6" />
+      <entry key="S60" value="0.0018425536912022454" />
+      <entry key="M2" value="0.06121855292256655" />
+      <entry key="M5" value="0.5698947342777683" />
+      <entry key="M10" value="1.4172315292704283" />
+      <entry key="M15" value="2.0940886727764894" />
+      <entry key="M30" value="3.5627229728505907" />
+      <entry key="H1" value="5.11324081492459" />
+      <entry key="H2" value="6.328009905256586" />
+      <entry key="H4" value="7.190868150610337" />
+      <entry key="D1" value="9.049856062086358" />
+      <entry key="W1" value="9.838452786920449" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.02765230877783925" />
-      <entry key="MS500" value="2.038390269234942" />
-      <entry key="S2" value="7.351414504961293" />
-      <entry key="S5" value="14.553956391269338" />
-      <entry key="S10" value="23.081903874255225" />
-      <entry key="S30" value="35.14322048207377" />
-      <entry key="S60" value="39.70532815246554" />
-      <entry key="M2" value="44.14982561470361" />
-      <entry key="M5" value="61.34159855052356" />
-      <entry key="M10" value="86.49264080742921" />
-      <entry key="M15" value="105.42095479891802" />
-      <entry key="M30" value="145.0961129872217" />
-      <entry key="H1" value="186.86870481175674" />
-      <entry key="H2" value="220.03010038048214" />
-      <entry key="H4" value="245.3751847432525" />
-      <entry key="D1" value="314.5609177853401" />
-      <entry key="W1" value="346.41518038149553" />
+      <entry key="MS100" value="0.017406836099153934" />
+      <entry key="MS500" value="1.656317485078253" />
+      <entry key="S2" value="6.894552206111387" />
+      <entry key="S5" value="12.179110809020221" />
+      <entry key="S10" value="20.68679152376681" />
+      <entry key="S30" value="42.24684798736809" />
+      <entry key="S60" value="53.76149562759823" />
+      <entry key="M2" value="62.85711100237095" />
+      <entry key="M5" value="82.92466893544001" />
+      <entry key="M10" value="109.162914613123" />
+      <entry key="M15" value="128.55881447628022" />
+      <entry key="M30" value="168.8426488720605" />
+      <entry key="H1" value="211.07260788416087" />
+      <entry key="H2" value="244.56485656962866" />
+      <entry key="H4" value="270.1169069133502" />
+      <entry key="D1" value="339.506229116493" />
+      <entry key="W1" value="371.4066025170018" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -90,28 +101,28 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "develop",
-    "js.debugger.nextJs.config.created.client": "true",
-    "js.debugger.nextJs.config.created.server": "true",
-    "last_opened_file_path": "/Users/likhithrajup/Developer/WT-frontend",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_interpreter_path": "/Users/likhithrajup/Library/Application Support/JetBrains/WebStorm2026.2/node/versions/24.21.0/bin/node",
-    "nodejs_package_manager_path": "pnpm",
-    "settings.editor.selected.configurable": "configurable.tailwindcss",
-    "ts.external.directory.path": "/Users/likhithrajup/Developer/WT-frontend/node_modules/typescript/lib"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;develop&quot;,
+    &quot;js.debugger.nextJs.config.created.client&quot;: &quot;true&quot;,
+    &quot;js.debugger.nextJs.config.created.server&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/likhithrajup/Developer/WT-frontend&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_interpreter_path&quot;: &quot;/Users/likhithrajup/Library/Application Support/JetBrains/WebStorm2026.2/node/versions/24.21.0/bin/node&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;pnpm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;configurable.tailwindcss&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;/Users/likhithrajup/Developer/WT-frontend/node_modules/typescript/lib&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="npm.Next.js: server-side">
     <configuration name="Next.js: debug client-side" type="JavascriptDebugType" uri="http://localhost:3000/">
       <method v="2" />
@@ -223,6 +234,7 @@
     <MESSAGE value="update: new bugs" />
     <MESSAGE value="adding new features" />
     <MESSAGE value="linting fix" />
-    <option name="LAST_COMMIT_MESSAGE" value="linting fix" />
+    <MESSAGE value="fix: enforce SERVING_NOTICE eligibility, close stale-session auth gap, repair KPI/training schema drift&#10;&#10;Auth / session:&#10;- hydrate_request_actor_roles now fails closed (marks the account&#10;  inactive) if the live DB status/role lookup errors, instead of&#10;  silently falling back to the stale JWT claim — closes a gap where a&#10;  transient DB hiccup could let an actor keep acting on a status that&#10;  changed after their token was issued.&#10;- Gate leave_request, wfh, comp_off, optional_leave, and timelog&#10;  routers behind require_onboarding_complete so INVITED/ONBOARDING&#10;  users can't bypass the frontend's OnboardingGate via a direct API call.&#10;&#10;Employment status coverage (ACTIVE-only checks missing SERVING_NOTICE):&#10;- allocation_repository: manager/approver/unallocated-user lookups now&#10;  include SERVING_NOTICE alongside ACTIVE.&#10;- timelog_categories: manager picker includes SERVING_NOTICE.&#10;- scheduled_jobs_service: auto-approver selection includes SERVING_NOTICE.&#10;&#10;Other correctness fixes:&#10;- work_profile: technical-role regex now matches &quot;analyst&quot; roles.&#10;- timelog_service: use format_display_date instead of raw isoformat()&#10;  for CSV/XLSX export and submission messages.&#10;- wk_business_http: map upstream 404s to a clear &quot;not recognized&quot; 404&#10;  instead of a generic 502.&#10;- employee_service: import_user_data and bulk_upload_users now run the&#10;  exit-status/date validation and exit-survey dispatch on status&#10;  changes, matching the single-update path.&#10;&#10;Schema drift repair (guarded migrations for legacy Java-seeded tables):&#10;- Recreate missing training_* enum types when the tables predate this&#10;  app's own migrations.&#10;- Add kpi_definitions.evaluation_criteria, which no migration ever&#10;  actually created despite the model assuming it existed.&#10;- Add B4L/B4H/B5L/B5H bands, mirroring the existing B6L/B6H/B7L/B7H split.&#10;&#10;Also adds app/core/upload_limits.py to raise Starlette's undocumented&#10;1MB multipart part-size cap, wired in on startup." />
+    <option name="LAST_COMMIT_MESSAGE" value="fix: enforce SERVING_NOTICE eligibility, close stale-session auth gap, repair KPI/training schema drift&#10;&#10;Auth / session:&#10;- hydrate_request_actor_roles now fails closed (marks the account&#10;  inactive) if the live DB status/role lookup errors, instead of&#10;  silently falling back to the stale JWT claim — closes a gap where a&#10;  transient DB hiccup could let an actor keep acting on a status that&#10;  changed after their token was issued.&#10;- Gate leave_request, wfh, comp_off, optional_leave, and timelog&#10;  routers behind require_onboarding_complete so INVITED/ONBOARDING&#10;  users can't bypass the frontend's OnboardingGate via a direct API call.&#10;&#10;Employment status coverage (ACTIVE-only checks missing SERVING_NOTICE):&#10;- allocation_repository: manager/approver/unallocated-user lookups now&#10;  include SERVING_NOTICE alongside ACTIVE.&#10;- timelog_categories: manager picker includes SERVING_NOTICE.&#10;- scheduled_jobs_service: auto-approver selection includes SERVING_NOTICE.&#10;&#10;Other correctness fixes:&#10;- work_profile: technical-role regex now matches &quot;analyst&quot; roles.&#10;- timelog_service: use format_display_date instead of raw isoformat()&#10;  for CSV/XLSX export and submission messages.&#10;- wk_business_http: map upstream 404s to a clear &quot;not recognized&quot; 404&#10;  instead of a generic 502.&#10;- employee_service: import_user_data and bulk_upload_users now run the&#10;  exit-status/date validation and exit-survey dispatch on status&#10;  changes, matching the single-update path.&#10;&#10;Schema drift repair (guarded migrations for legacy Java-seeded tables):&#10;- Recreate missing training_* enum types when the tables predate this&#10;  app's own migrations.&#10;- Add kpi_definitions.evaluation_criteria, which no migration ever&#10;  actually created despite the model assuming it existed.&#10;- Add B4L/B4H/B5L/B5H bands, mirroring the existing B6L/B6H/B7L/B7H split.&#10;&#10;Also adds app/core/upload_limits.py to raise Starlette's undocumented&#10;1MB multipart part-size cap, wired in on startup." />
   </component>
 </project>
