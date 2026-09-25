@@ -211,23 +211,6 @@ export interface CelebrationsData {
   anniversaries: CelebrationEntry[];
 }
 
-export interface PollOptionResult {
-  id: number;
-  label: string;
-  votes: number;
-}
-
-export interface PollSummary {
-  id: number;
-  question: string;
-  status: "ACTIVE" | "CLOSED";
-  created_at: string;
-  created_by_name: string;
-  options: PollOptionResult[];
-  total_votes: number;
-  my_option_id: number | null;
-}
-
 export interface AttendanceEmployee {
   emp_id: string | null;
   name: string;
@@ -1399,32 +1382,6 @@ export const hrmsService = {
       contentType: "application/json",
       body: JSON.stringify(payload),
     });
-  },
-
-  /** The single currently-active Quick Poll, if any, with live tallies. */
-  getCurrentPoll() {
-    return apiClient.get<ApiEnvelope<PollSummary | null>>(endpoints.polls.current);
-  },
-
-  /** Start a new Quick Poll. Fails if one is already active (HR/Admin). */
-  createPoll(payload: { question: string; options: string[] }) {
-    return apiClient.post<ApiEnvelope<PollSummary>>(endpoints.polls.create, {
-      contentType: "application/json",
-      body: JSON.stringify(payload),
-    });
-  },
-
-  /** Cast or change the caller's vote on an active poll. */
-  voteOnPoll(pollId: number, optionId: number) {
-    return apiClient.post<ApiEnvelope<PollSummary>>(endpoints.polls.vote(pollId), {
-      contentType: "application/json",
-      body: JSON.stringify({ option_id: optionId }),
-    });
-  },
-
-  /** End voting on a poll so a new one can be started (HR/Admin). */
-  closePoll(pollId: number) {
-    return apiClient.post<ApiEnvelope<PollSummary>>(endpoints.polls.close(pollId));
   },
 
   /** Today's office / WFH / on-leave headcount + employee lists (HR/Admin). */

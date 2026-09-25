@@ -156,12 +156,6 @@ export const endpoints = {
   celebrationReact: `${api}/celebrations/react`,
   attendanceToday: `${api}/attendance-today`,
   complianceNudges: `${api}/compliance/nudges`,
-  polls: {
-    current: `${api}/polls/current`,
-    create: `${api}/polls`,
-    vote: (pollId: number) => `${api}/polls/${encodeURIComponent(pollId)}/vote`,
-    close: (pollId: number) => `${api}/polls/${encodeURIComponent(pollId)}/close`,
-  },
   wiki: {
     pages: `${api}/wiki/pages`,
     pageById: (id: number | string) => `${api}/wiki/pages/${encodeURIComponent(id)}`,

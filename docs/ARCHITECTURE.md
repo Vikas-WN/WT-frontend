@@ -1,6 +1,6 @@
 # WebTrak — Architecture & Design
 
-As of 23 Sep 2026. Covers both codebases: **WT-frontend** (Next.js) and **webtrak1.0** (FastAPI). The same file lives at `docs/ARCHITECTURE.md` in each repo — update both together.
+As of 24 Sep 2026. Covers both codebases: **WT-frontend** (Next.js) and **webtrak1.0** (FastAPI). The same file lives at `docs/ARCHITECTURE.md` in each repo — update both together.
 
 ## Overview
 
@@ -182,6 +182,7 @@ Reading it: arrows are foreign keys; the dotted line is a soft reference, becaus
 | Lifecycle | `attrition`, `exit_interview_response`, `exit_survey_token`, `background_verification`, `referral` |
 | Assets and documents | `asset`, `asset_assignment`, `document`, `policy_document`, `policy_recipient`, `wiki_page` |
 | Platform | `notification`, `api_key` |
+| Engagement | `celebration_reaction` — see `docs/EMPLOYEE_ENGAGEMENT_FEATURES.md` |
 
 **Key conventions**
 
@@ -206,6 +207,8 @@ Each business area is a vertical slice: a dashboard route and page client on the
 | Exit and lifecycle | `offboarding`, `exit-interview`, `background-verification`, `referral` | `attrition_reporting`, `exit_interview`, `bgv`, `referral`, `jobs` | Offboarding, exit survey by token link, BGV, referrals |
 | Pulse | `pulse` | `monthly_submissions`, `reference` (masters) | Monthly KPI self-review → manager → HR approval (next section) |
 | Reports | `reports`, `overview`, `home` | `reporting`, `leave_reporting`, `search`, `celebrations` | Utilization, workforce, LOP, skills; dashboard widgets |
+| Compliance | `compliance` | `compliance` | Paginated, categorized nudges for missing documents/personal info and pending exit surveys (HR/Admin) — `docs/COMPLIANCE_NUDGES.md` |
+| Engagement | `home` (widget grid) | `celebrations` | Success confetti, today's-celebration reactions, a movable/resizable/hideable Home dashboard — `docs/EMPLOYEE_ENGAGEMENT_FEATURES.md`, `docs/HOME_DASHBOARD_CUSTOMIZATION.md` |
 | Masters and settings | `masters`, `settings`, `apps` | `reference`, `api_key`, `integrations`, `scheduler` | Bands, designations, departments, API keys, manual job triggers |
 
 The `resumes` module also has its own route (`/dashboard/resumes`), served by the employee router.
