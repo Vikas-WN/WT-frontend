@@ -47,20 +47,15 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 # Set at container runtime (not build time): API_BASE_URL=http://<backend-host>:8080
 
-RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
-
-# Copy only required files
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/pnpm-lock.yaml ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
+# next.config.ts sets `output: "standalone"`: the build traces the actual
+# runtime dependency graph and emits server.js + only the node_modules it
+# needs (~37MB here vs. 700MB+ for the full node_modules this stage used to
+# copy) — this is what was making every UAT push/pull slow. No pnpm needed
+# at runtime either; server.js is a plain Node entrypoint.
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/next.config.ts ./next.config.ts
-
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/middleware.ts ./middleware.ts
-# COPY --from=builder /app/proxy.ts ./proxy.ts
 
 EXPOSE 3000
 
-CMD ["pnpm", "start"]
+CMD ["node", "server.js"]

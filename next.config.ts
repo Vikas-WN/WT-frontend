@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Traces the actual runtime dependency graph and emits a minimal
+  // .next/standalone server bundle + only the node_modules it really needs,
+  // instead of the Dockerfile shipping the full 700MB+ node_modules in the
+  // production image. That's most of why UAT deploys are slow — the image
+  // has to be pushed to the registry and pulled onto the server every time.
+  output: "standalone",
   devIndicators: false,
   // Turbopack is enabled via `pnpm dev` (`next dev --turbopack`).
   experimental: {
