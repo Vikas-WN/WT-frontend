@@ -318,29 +318,6 @@ export const NOTIFICATION_GROUP_ORDER = [
   "Other",
 ];
 
-/** Group notifications by `notificationGroupLabel`, preserving each item's
- *  original relative order within its group, and ordering groups per
- *  `NOTIFICATION_GROUP_ORDER`. */
-export function groupNotificationsByCategory<T extends NotificationItem | Record<string, unknown>>(
-  rows: T[]
-): { label: string; rows: T[] }[] {
-  const buckets = new Map<string, T[]>();
-  for (const row of rows) {
-    const group = notificationGroupLabel(notificationCategoryLabel(row));
-    const list = buckets.get(group) ?? [];
-    list.push(row);
-    buckets.set(group, list);
-  }
-  return [...buckets.entries()]
-    .sort((a, b) => {
-      const ai = NOTIFICATION_GROUP_ORDER.indexOf(a[0]);
-      const bi = NOTIFICATION_GROUP_ORDER.indexOf(b[0]);
-      return (ai === -1 ? NOTIFICATION_GROUP_ORDER.length : ai) -
-        (bi === -1 ? NOTIFICATION_GROUP_ORDER.length : bi);
-    })
-    .map(([label, groupRows]) => ({ label, rows: groupRows }));
-}
-
 /** Resolve the dashboard path a notification should open. */
 export function resolveNotificationHref(
   row: NotificationItem | Record<string, unknown>,

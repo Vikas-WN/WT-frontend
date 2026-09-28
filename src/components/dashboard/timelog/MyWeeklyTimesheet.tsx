@@ -13,7 +13,6 @@ import { useAuth } from "@/context/AuthContext";
 
 export function MyWeeklyTimesheet() {
   const { user } = useAuth();
-  const [viewMode, setViewMode] = useState<"calendar" | "table">("table");
 
   const {
     calendar,
@@ -28,6 +27,7 @@ export function MyWeeklyTimesheet() {
     showEntryForm,
     viewYear,
     viewMonth,
+    hasDeepLinkedDate,
     navigateMonth,
     goToToday,
     goToMonth,
@@ -50,6 +50,14 @@ export function MyWeeklyTimesheet() {
     onTablePageChange,
     reload,
   } = useDayTimelog();
+  // A Timelog Approved/Rejected notification deep-links to a specific date, but
+  // only the calendar view (via TimelogCalendar's selected-cell styling and the
+  // day panel below) actually surfaces that day — the table view ignores it
+  // entirely. Default there so the deep link is visible instead of landing on
+  // an unrelated page of "All Entries".
+  const [viewMode, setViewMode] = useState<"calendar" | "table">(() =>
+    hasDeepLinkedDate ? "calendar" : "table"
+  );
 
   return (
     <Card>

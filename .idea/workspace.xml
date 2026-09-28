@@ -4,8 +4,17 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/next.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/next.config.ts" afterDir="false" />
+    <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="bug fixes">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/comp-off/CompOffPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/comp-off/CompOffPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/DashboardChrome.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/DashboardChrome.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/timelog/MyWeeklyTimesheet.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/timelog/MyWeeklyTimesheet.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/employee-directory/DirectoryStatusSelect.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/employee-directory/DirectoryStatusSelect.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/employee-onboarding/SelfOnboardingPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/employee-onboarding/SelfOnboardingPanel.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/ui/date-picker.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ui/date-picker.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/timelog/useDayTimelog.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/timelog/useDayTimelog.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/notificationNavigation.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/notificationNavigation.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/notifications.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/notifications.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -223,7 +232,15 @@
       <option name="project" value="LOCAL" />
       <updated>1790331033963</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="updating the docker ignore to not to include the binaries">
+      <option name="closed" value="true" />
+      <created>1790592251472</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1790592251472</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -249,6 +266,7 @@
     <MESSAGE value="linting fix" />
     <MESSAGE value="fix: enforce SERVING_NOTICE eligibility, close stale-session auth gap, repair KPI/training schema drift&#10;&#10;Auth / session:&#10;- hydrate_request_actor_roles now fails closed (marks the account&#10;  inactive) if the live DB status/role lookup errors, instead of&#10;  silently falling back to the stale JWT claim — closes a gap where a&#10;  transient DB hiccup could let an actor keep acting on a status that&#10;  changed after their token was issued.&#10;- Gate leave_request, wfh, comp_off, optional_leave, and timelog&#10;  routers behind require_onboarding_complete so INVITED/ONBOARDING&#10;  users can't bypass the frontend's OnboardingGate via a direct API call.&#10;&#10;Employment status coverage (ACTIVE-only checks missing SERVING_NOTICE):&#10;- allocation_repository: manager/approver/unallocated-user lookups now&#10;  include SERVING_NOTICE alongside ACTIVE.&#10;- timelog_categories: manager picker includes SERVING_NOTICE.&#10;- scheduled_jobs_service: auto-approver selection includes SERVING_NOTICE.&#10;&#10;Other correctness fixes:&#10;- work_profile: technical-role regex now matches &quot;analyst&quot; roles.&#10;- timelog_service: use format_display_date instead of raw isoformat()&#10;  for CSV/XLSX export and submission messages.&#10;- wk_business_http: map upstream 404s to a clear &quot;not recognized&quot; 404&#10;  instead of a generic 502.&#10;- employee_service: import_user_data and bulk_upload_users now run the&#10;  exit-status/date validation and exit-survey dispatch on status&#10;  changes, matching the single-update path.&#10;&#10;Schema drift repair (guarded migrations for legacy Java-seeded tables):&#10;- Recreate missing training_* enum types when the tables predate this&#10;  app's own migrations.&#10;- Add kpi_definitions.evaluation_criteria, which no migration ever&#10;  actually created despite the model assuming it existed.&#10;- Add B4L/B4H/B5L/B5H bands, mirroring the existing B6L/B6H/B7L/B7H split.&#10;&#10;Also adds app/core/upload_limits.py to raise Starlette's undocumented&#10;1MB multipart part-size cap, wired in on startup." />
     <MESSAGE value="feat: fixing the reported bugs" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat: fixing the reported bugs" />
+    <MESSAGE value="bug fixes" />
+    <option name="LAST_COMMIT_MESSAGE" value="bug fixes" />
   </component>
 </project>

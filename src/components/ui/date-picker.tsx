@@ -79,6 +79,33 @@ export function DatePicker({
         <PopoverTrigger
           disabled={disabled}
           id={id}
+          onKeyDown={(event) => {
+            // Tabbing off the trigger while the calendar is open must move focus
+            // to the next field, not into the popup's own Previous/Next-month
+            // buttons and day cells — without this, keyboard users tabbing
+            // through the form get pulled into the calendar (forcing it to
+            // scroll/reposition as focus lands on off-screen cells) instead of
+            // reaching the next field, which reads as the dialog flickering and
+            // overflowing. The popup's own focus handling wins the race against
+            // a plain `setOpen(false)` here (its Tab lands inside before our
+            // state update closes it), so this closes AND drives focus itself:
+            // preventDefault to stop that internal handling, then focus the next
+            // (or previous, for Shift+Tab) tabbable element relative to this
+            // trigger in DOM order — same target the browser would have picked.
+            if (event.key !== "Tab" || !open) return
+            event.preventDefault()
+            setOpen(false)
+            const trigger = event.currentTarget
+            const focusable = Array.from(
+              document.querySelectorAll<HTMLElement>(
+                'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+              )
+            ).filter((el) => el.offsetParent !== null && !el.closest('[data-slot="popover-popup"]'))
+            const index = focusable.indexOf(trigger)
+            if (index === -1) return
+            const next = focusable[index + (event.shiftKey ? -1 : 1)]
+            next?.focus()
+          }}
           className={cn(
             FORM_CONTROL_CLASS,
             "flex cursor-pointer items-center gap-2 hover:bg-wt-surface-2/70",
@@ -123,6 +150,15 @@ export function DatePicker({
             className={cn("z-[250]", positionerClassName)}
           >
             <PopoverContent
+              // Base UI's default moves focus onto the first tabbable element
+              // inside the popup (the "Previous month" button) as soon as it
+              // opens. That left the trigger's Tab handler below unreachable —
+              // by the time the user pressed Tab, focus was already inside the
+              // calendar, so Tab just kept walking its own nav buttons and day
+              // cells (scrolling/repositioning the popup as it went) instead of
+              // ever reaching the next field. Keeping focus on the trigger on
+              // open is what makes that handler actually fire.
+              initialFocus={false}
               className={cn(
                 "border-wt-border bg-wt-surface-1 p-0 shadow-lg",
                 // Never exceed the space the positioner reports, so a short viewport

@@ -1097,6 +1097,7 @@ export function CompOffPageClient({
                       required
                       value={earnForm.worked_date}
                       onChange={(v) => setEarnForm((p) => ({ ...p, worked_date: v }))}
+                      max={todayYmd()}
                     />
                   </div>
                 </div>
