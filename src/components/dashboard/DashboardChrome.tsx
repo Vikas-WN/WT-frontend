@@ -231,7 +231,13 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     try {
       const [res, projectsRes] = await Promise.all([
         hrmsService.getNotifications({ page: "0", size: "50" }),
-        hrmsService.getAllProjects({ page: "0", size: "500" }).catch(() => null),
+        // /projects/all is HR/Admin-only on the backend — calling it for every
+        // role guaranteed a 403 on every notification load for every other
+        // employee (console noise, a wasted request, and the project-code ->
+        // name lookup below silently never populating for them either).
+        hasHrAccess
+          ? hrmsService.getAllProjects({ page: "0", size: "500" }).catch(() => null)
+          : Promise.resolve(null),
       ]);
       const items = dedupeLeaveRequestNotifications(
         parseNotificationItems(res.data ?? res)
@@ -276,7 +282,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     } finally {
       setNotificationsLoading(false);
     }
-  }, [queryClient, user?.email]);
+  }, [queryClient, user?.email, hasHrAccess]);
 
   const handleNotificationClick = useCallback(
     async (row: NotificationItem) => {

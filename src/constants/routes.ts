@@ -18,7 +18,7 @@ export const DASHBOARD_ROUTES: Record<string, string> = {
   compliance: "/dashboard/compliance",
   "background-verification": "/dashboard/background-verification",
   timelog: "/dashboard/timelog",
-  "timelog-team": "/dashboard/timelog/projects",
+  "timelog-team": "/dashboard/timelog/team",
   leave: "/dashboard/leave",
   "leave-team": "/dashboard/leave/team",
   "whos-out": "/dashboard/whos-out",

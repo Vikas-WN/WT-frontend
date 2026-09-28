@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
@@ -76,6 +76,7 @@ function entryStatusClass(status: string): string {
 }
 
 export function TimelogPageClient() {
+  const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuth();
@@ -129,6 +130,15 @@ export function TimelogPageClient() {
     weekStart: string;
   } | null>(null);
   const [rejectAction, setRejectAction] = useState<{ entryId: number } | null>(null);
+
+  useEffect(() => {
+    const employee = searchParams.get("employee");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+    if(employee) setTeamEmployeeEmail(employee);
+    if(from) setTeamFromDate(from);
+    if(to) setTeamToDate(to);
+  }, [searchParams]);
 
   const teamDateRange = useMemo(() => {
     if (teamFromDate.trim() && teamToDate.trim()) {

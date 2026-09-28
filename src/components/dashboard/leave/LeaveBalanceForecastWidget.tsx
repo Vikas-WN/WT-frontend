@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarClock } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { hrmsService } from "@/services/hrms.service";
 import { formatBalanceDays } from "@/utils/leaveRequestDisplay";
-import { toApiDateParam } from "@/utils/apiDate";
+import { formatApiDate, toApiDateParam } from "@/utils/apiDate";
+import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 
 /** Projected leave balance on a future date, before booking travel — factors in
  *  already-approved and still-pending leave/optional-leave requests between
@@ -14,6 +15,12 @@ import { toApiDateParam } from "@/utils/apiDate";
 export function LeaveBalanceForecastWidget() {
   const [targetDate, setTargetDate] = useState("");
   const normalized = targetDate ? (toApiDateParam(targetDate) ?? "") : "";
+  // The API rejects a past target_date outright (the forecast only makes sense
+  // going forward from today) — restrict the picker to today onward so that
+  // rejection can't happen from the picker's own default range, rather than
+  // letting the user pick an invalid date and only finding out from a generic
+  // "Could not calculate forecast" after the fact.
+  const todayApiDate = useMemo(() => formatApiDate(new Date()), []);
 
   const forecastQ = useQuery({
     queryKey: ["leave", "my-balance-forecast", normalized],
@@ -35,12 +42,19 @@ export function LeaveBalanceForecastWidget() {
       </div>
       <div className="flex flex-wrap items-end gap-3">
         <div className="w-full max-w-[220px]">
-          <DatePicker label="On this date" value={targetDate} onChange={setTargetDate} />
+          <DatePicker
+            label="On this date"
+            value={targetDate}
+            onChange={setTargetDate}
+            min={todayApiDate}
+          />
         </div>
         {forecastQ.isFetching ? (
           <p className="text-sm text-wt-text-muted">Calculating…</p>
         ) : forecastQ.isError ? (
-          <p className="text-sm text-rose-600 dark:text-rose-400">Could not calculate forecast.</p>
+          <p className="text-sm text-rose-600 dark:text-rose-400">
+            {toUserFriendlyApiErrorMessage(forecastQ.error, "Could not calculate forecast.")}
+          </p>
         ) : forecast ? (
           <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
             <p className="text-sm text-wt-text">

@@ -42,6 +42,7 @@ import { FALLBACK_ONBOARD_OPTIONS } from "@/utils/onboardFormOptions";
 import { useOnboardOptions } from "@/hooks/useOnboardOptions";
 import { toApiDateParam } from "@/utils/apiDate";
 import { fireConfetti } from "@/lib/confetti";
+import { isNonTechProfile } from "@/utils/roles";
 
 type OnboardFiles = {
   profile_photo: File | null;
@@ -60,22 +61,28 @@ const EMPTY_FILES: OnboardFiles = {
 };
 
 export function SelfOnboardingPanel({
-  workEmail,
-  initialPersonalEmail = "",
-  initialResumeShareLink = "",
-  initialDateOfBirth = "",
-  actionLoading,
-  runAction,
-  onSuccess,
-}: {
-  workEmail: string;
-  initialPersonalEmail?: string;
-  initialResumeShareLink?: string;
+                                      workEmail,
+                                      initialPersonalEmail = "",
+                                      initialResumeShareLink = "",
+                                      initialDateOfBirth = "",
+                                      actionLoading,
+                                      runAction,
+                                      onSuccess,
+                                      department,
+                                      role,
+                                      userType
+                                    }: {
+  workEmail: string,
+  initialPersonalEmail?: string,
+  initialResumeShareLink?: string,
   /** Pre-fill DOB from the profile so a resumed onboarding doesn't ask again. */
-  initialDateOfBirth?: string;
-  actionLoading: boolean;
-  runAction: (label: string, fn: () => Promise<void>) => void;
-  onSuccess: () => Promise<void>;
+  initialDateOfBirth?: string,
+  actionLoading: boolean,
+  runAction: (label: string, fn: () => Promise<void>) => void,
+  onSuccess: () => Promise<void>,
+  department?: string,
+  role?: string,
+  userType?: string
 }) {
   const [formKey, setFormKey] = useState(0);
   const [form, setForm] = useState(() => loadSavedOnboardForm() ?? createEmptySelfOnboardForm());
@@ -84,6 +91,10 @@ export function SelfOnboardingPanel({
   const options = onboardOptionsQ.data ?? FALLBACK_ONBOARD_OPTIONS;
 
   const email = useMemo(() => workEmail.trim(), [workEmail]);
+  // Skills are only mandatory for technical roles; HR / Finance / other
+  // non-tech employees can complete onboarding without them (same rule
+  // ProfilePageLeanClient.tsx already applies to the self-profile edit).
+  const skillsRequired = !isNonTechProfile(department, role, userType);
 
   useEffect(() => {
     setForm((prev) => ({
@@ -197,10 +208,10 @@ export function SelfOnboardingPanel({
           primarySkills.push({ ...rawSkill, skill: canonical });
         }
       }
-      if (!primarySkills.length) {
+      if (skillsRequired && !primarySkills.length) {
         throw new Error("At least one primary skill is required.");
       }
-      if (!form.secondary_skills.some((item) => String(item.skill ?? "").trim())) {
+      if (skillsRequired && !form.secondary_skills.some((item) => String(item.skill ?? "").trim())) {
         throw new Error("At least one secondary skill is required.");
       }
       const missingSelfRating = [...form.primary_skills, ...form.secondary_skills].filter(

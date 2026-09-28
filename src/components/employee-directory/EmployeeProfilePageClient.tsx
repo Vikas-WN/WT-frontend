@@ -89,7 +89,7 @@ const WORK_LOCATIONS = ["OFFSHORE", "ONSITE", "HYBRID", "REMOTE"];
 const USER_STATUSES = ["ACTIVE", "INACTIVE", "INVITED", "SERVING_NOTICE"];
 
 /** Validate exit dates when HR moves an employee onto an exit status from the profile editor. */
-function exitDateError(
+export function exitDateError(
   resignationDate: string,
   lastWorkingDay: string,
   userType: string,

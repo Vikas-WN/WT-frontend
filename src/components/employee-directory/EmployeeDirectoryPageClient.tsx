@@ -617,6 +617,7 @@ export function EmployeeDirectoryPageClient() {
                                           display.status ??
                                           ""
                                       )}
+                                      userType={String(record.user_type ?? record.userType ?? "")}
                                       canEdit={
                                         canEditDirectory &&
                                         String(record.email ?? display.email ?? "")

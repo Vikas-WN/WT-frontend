@@ -7,9 +7,15 @@
     <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/dashboard/DashboardChrome.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/DashboardChrome.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/leave/LeavePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/leave/LeavePageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/learning-development/EmployeeLearningCatalog.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/EmployeeLearningCatalog.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/hooks/dashboard/useHomeDashboardLayout.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/dashboard/useHomeDashboardLayout.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/leave/LeaveBalanceForecastWidget.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/leave/LeaveBalanceForecastWidget.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/profile/ProfilePageLeanClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/profile/ProfilePageLeanClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/timelog/TimelogPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/timelog/TimelogPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/employee-directory/DirectoryStatusSelect.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/employee-directory/DirectoryStatusSelect.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/employee-directory/EmployeeDirectoryPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/employee-directory/EmployeeDirectoryPageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/employee-directory/EmployeeProfilePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/employee-directory/EmployeeProfilePageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/employee-onboarding/SelfOnboardingPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/employee-onboarding/SelfOnboardingPanel.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/constants/routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/constants/routes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/useSessionTimeout.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/useSessionTimeout.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -22,6 +28,18 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;likhithr-webknot&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/bhavanarajwk/WT-frontend.git&quot;,
+    &quot;accountId&quot;: &quot;d3d156e9-f1cd-4837-8796-db2c441c9284&quot;
+  }
+}</component>
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
@@ -94,28 +112,31 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "develop",
-    "js.debugger.nextJs.config.created.client": "true",
-    "js.debugger.nextJs.config.created.server": "true",
-    "last_opened_file_path": "/Users/likhithrajup/Developer/WT-frontend",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_interpreter_path": "/Users/likhithrajup/Library/Application Support/JetBrains/WebStorm2026.2/node/versions/24.21.0/bin/node",
-    "nodejs_package_manager_path": "pnpm",
-    "settings.editor.selected.configurable": "configurable.tailwindcss",
-    "ts.external.directory.path": "/snap/webstorm/683/plugins/javascript-plugin/jsLanguageServicesImpl/external"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;develop&quot;,
+    &quot;js.debugger.nextJs.config.created.client&quot;: &quot;true&quot;,
+    &quot;js.debugger.nextJs.config.created.server&quot;: &quot;true&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/likhithrajup/Developer/WT-frontend&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_interpreter_path&quot;: &quot;node&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;pnpm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;configurable.tailwindcss&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;/home/likhithrajup/Developer/WT-frontend/node_modules/typescript/lib&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="npm.Next.js: server-side">
     <configuration name="Next.js: debug client-side" type="JavascriptDebugType" uri="http://localhost:3000/">
       <method v="2" />
@@ -146,6 +167,7 @@
       <option name="presentableId" value="Default" />
       <updated>1790081296800</updated>
       <workItem from="1790081298044" duration="616000" />
+      <workItem from="1790579845850" duration="1977000" />
     </task>
     <task id="LOCAL-00001" summary="updated some bugs present in the OverviewPageClient.tsx">
       <option name="closed" value="true" />

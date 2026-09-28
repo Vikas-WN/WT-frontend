@@ -786,6 +786,9 @@ export function ProfilePageLeanClient() {
                 ).trim(),
               ].join("|")}
               workEmail={user?.email ?? ""}
+              department={String(readProfileField(employeeProfile, "department") ?? "")}
+              role={String(readProfileField(employeeProfile, "role", "designation") ?? "")}
+              userType={String(readProfileField(employeeProfile, "user_type", "userType") ?? "")}
               initialPersonalEmail={String(
                 employeeProfile?.personal_email ?? "",
               ).trim()}

@@ -137,6 +137,32 @@ export function useSessionTimeout(
       window.addEventListener(eventName, onActivity, { passive: true, capture: true });
     }
 
+    // Browsers throttle (or fully suspend) setInterval timers in a
+    // backgrounded tab — Chrome commonly drops a 30s interval to once a
+    // minute or slower after a few minutes hidden. A tester (or any user)
+    // who alt-tabs away to another window/tab for a while and comes back
+    // is still "actively using the app" by any reasonable definition, but
+    // the periodic activity ping below could stay silent well past the
+    // server's inactivity window during that time, so the very next request
+    // after returning gets a stale-session 401 — read by the user as being
+    // logged out while active. Ping immediately on return instead of
+    // waiting for the (possibly still-throttled) interval to catch up.
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      bumpActivity();
+      const now = Date.now();
+      lastPingRef.current = now;
+      void recordSessionActivity().catch(() => undefined);
+      if (now - lastRefreshRef.current >= refreshIntervalMs) {
+        lastRefreshRef.current = now;
+        void import("@/lib/auth").then(({ attemptTokenRefresh }) =>
+          attemptTokenRefresh().catch(() => undefined)
+        );
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+
     const intervalId = window.setInterval(async () => {
       const now = Date.now();
       const sessionStart = readSessionStartMs();
@@ -182,6 +208,8 @@ export function useSessionTimeout(
       for (const eventName of events) {
         window.removeEventListener(eventName, onActivity, { capture: true } as AddEventListenerOptions);
       }
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
       window.clearInterval(intervalId);
     };
   }, [activityPingMs, bumpActivity, enabled, idleWarningMs, inactivityMs, maxMs, refreshIntervalMs]);
