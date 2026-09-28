@@ -164,9 +164,15 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     () => new Map()
   );
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  // Sidebar defaults to collapsed (icon rail) on every load; readSidebarCollapsed
-  // below restores an explicit "expanded" choice if the user made one.
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  // Seeded straight from localStorage (defaults to collapsed/icon-rail when
+  // nothing is stored) so the very first paint already matches the user's
+  // choice. DashboardChrome only ever mounts client-side, after auth status
+  // resolves from "loading", so there is no server-rendered markup to
+  // hydrate against here. The previous approach — default true, then correct
+  // via a post-mount effect — painted the collapsed rail first and then
+  // animated it open on every fresh page load for anyone who had expanded
+  // it, on every dashboard page (this component wraps all of them).
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
   const [actionLoading, setActionLoading] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
@@ -200,10 +206,6 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       setLogoutConfirmOpen(false);
     }
   }, [logout, logoutLoading]);
-
-  useEffect(() => {
-    setSidebarCollapsed(readSidebarCollapsed());
-  }, []);
 
   useEffect(() => {
     const onDocMouseDown = (event: MouseEvent) => {
@@ -300,7 +302,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       }
       router.push(href);
     },
-    [router, userRoles]
+    [router, notificationRoles]
   );
 
   useEffect(() => {

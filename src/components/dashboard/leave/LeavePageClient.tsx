@@ -568,6 +568,7 @@ export function LeavePageClient() {
     if (deepLinkAppliedKeyRef.current === key) return;
     deepLinkAppliedKeyRef.current = key;
 
+    let effectiveSubTab: "my" | "team" | "org" | "wfh" = "my";
     if (
       tabFromQuery === "team" ||
       tabFromQuery === "org" ||
@@ -575,10 +576,21 @@ export function LeavePageClient() {
       tabFromQuery === "wfh" ||
       isTeamLeaveRoute
     ) {
-      if (tabFromQuery === "wfh") setLeaveSubTab("wfh");
-      else if (tabFromQuery === "my") setLeaveSubTab("my");
-      else if (tabFromQuery === "org") setLeaveSubTab("org");
-      else setLeaveSubTab(isTeamLeaveRoute || tabFromQuery === "team" ? "team" : "my");
+      if (tabFromQuery === "wfh") effectiveSubTab = "wfh";
+      else if (tabFromQuery === "my") effectiveSubTab = "my";
+      else if (tabFromQuery === "org") effectiveSubTab = "org";
+      else effectiveSubTab = isTeamLeaveRoute || tabFromQuery === "team" ? "team" : "my";
+      setLeaveSubTab(effectiveSubTab);
+    }
+
+    // The "my"/"wfh" sections have their own inner Apply/History tab, which
+    // defaults to "Apply for Leave". A deep-linked request lives in the
+    // History ("view") tab, so switch to it — otherwise the outer tab/filters
+    // above land correctly but the user still sees a blank Apply form instead
+    // of their highlighted request.
+    if (deepLinkRequestId) {
+      if (effectiveSubTab === "wfh") setWfhRequestViewTab("view");
+      else if (effectiveSubTab === "my") setRequestViewTab("view");
     }
 
     // Always use a wide unfiltered range so every leave request stays visible for review.
@@ -608,6 +620,8 @@ export function LeavePageClient() {
     isTeamLeaveRoute,
     pathname,
     tabFromQuery,
+    setRequestViewTab,
+    setWfhRequestViewTab,
   ]);
 
   const [onboardForm, setOnboardForm] = useState({

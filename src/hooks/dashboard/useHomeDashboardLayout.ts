@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type WidgetSize = "normal" | "wide";
 export type WidgetLayoutItem = { id: string; size: WidgetSize; hidden: boolean };
@@ -60,9 +60,21 @@ function reconcile(defaultOrder: readonly string[], saved: WidgetLayoutItem[] | 
  *  dashboard's widget grid. Persisted to localStorage — a personal device
  *  preference, not shared state, so it doesn't need a backend round-trip. */
 export function useHomeDashboardLayout(defaultOrder: readonly string[]) {
-  const [layout, setLayout] = useState<WidgetLayoutItem[]>(() => defaultLayout(defaultOrder));
+  // Seed straight from localStorage so the first paint already shows the
+  // user's saved widget order/sizes/hidden state — reconciling only after
+  // mount (the previous approach) always painted the untouched default
+  // layout first, then snapped every customized grid to the real one a
+  // moment later.
+  const [layout, setLayout] = useState<WidgetLayoutItem[]>(() =>
+    reconcile(defaultOrder, readStoredLayout())
+  );
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     setLayout(reconcile(defaultOrder, readStoredLayout()));
     // Only re-reconcile if the widget catalog itself changes, not on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps

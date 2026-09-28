@@ -4,17 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="fix: enforce SERVING_NOTICE eligibility, close stale-session auth gap, repair KPI/training schema drift&#10;&#10;Auth / session:&#10;- hydrate_request_actor_roles now fails closed (marks the account&#10;  inactive) if the live DB status/role lookup errors, instead of&#10;  silently falling back to the stale JWT claim — closes a gap where a&#10;  transient DB hiccup could let an actor keep acting on a status that&#10;  changed after their token was issued.&#10;- Gate leave_request, wfh, comp_off, optional_leave, and timelog&#10;  routers behind require_onboarding_complete so INVITED/ONBOARDING&#10;  users can't bypass the frontend's OnboardingGate via a direct API call.&#10;&#10;Employment status coverage (ACTIVE-only checks missing SERVING_NOTICE):&#10;- allocation_repository: manager/approver/unallocated-user lookups now&#10;  include SERVING_NOTICE alongside ACTIVE.&#10;- timelog_categories: manager picker includes SERVING_NOTICE.&#10;- scheduled_jobs_service: auto-approver selection includes SERVING_NOTICE.&#10;&#10;Other correctness fixes:&#10;- work_profile: technical-role regex now matches &quot;analyst&quot; roles.&#10;- timelog_service: use format_display_date instead of raw isoformat()&#10;  for CSV/XLSX export and submission messages.&#10;- wk_business_http: map upstream 404s to a clear &quot;not recognized&quot; 404&#10;  instead of a generic 502.&#10;- employee_service: import_user_data and bulk_upload_users now run the&#10;  exit-status/date validation and exit-survey dispatch on status&#10;  changes, matching the single-update path.&#10;&#10;Schema drift repair (guarded migrations for legacy Java-seeded tables):&#10;- Recreate missing training_* enum types when the tables predate this&#10;  app's own migrations.&#10;- Add kpi_definitions.evaluation_criteria, which no migration ever&#10;  actually created despite the model assuming it existed.&#10;- Add B4L/B4H/B5L/B5H bands, mirroring the existing B6L/B6H/B7L/B7H split.&#10;&#10;Also adds app/core/upload_limits.py to raise Starlette's undocumented&#10;1MB multipart part-size cap, wired in on startup.">
-      <change beforePath="$PROJECT_DIR$/src/app/globals.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/globals.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/clients/ClientDetailDialog.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/clients/ClientDetailDialog.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/home/DashboardWidgetFrame.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/home/DashboardWidgetFrame.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/home/HomeCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/home/HomeCard.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/profile/ProfilePageLeanClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/profile/ProfilePageLeanClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/pulse/employee/EmployeeMonthlyReviewPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/pulse/employee/EmployeeMonthlyReviewPanel.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/ui/ScrollableTable.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/ui/ScrollableTable.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/employee-directory/EmployeeProfilePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/employee-directory/EmployeeProfilePageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/dashboard/projects.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/dashboard/projects.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/roles.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/roles.ts" afterDir="false" />
+    <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/DashboardChrome.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/DashboardChrome.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/leave/LeavePageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/leave/LeavePageClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/learning-development/EmployeeLearningCatalog.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/learning-development/EmployeeLearningCatalog.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/dashboard/useHomeDashboardLayout.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/dashboard/useHomeDashboardLayout.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -99,28 +94,28 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;uat&quot;,
-    &quot;js.debugger.nextJs.config.created.client&quot;: &quot;true&quot;,
-    &quot;js.debugger.nextJs.config.created.server&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/likhithrajup/Developer/WT-frontend&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_interpreter_path&quot;: &quot;/Users/likhithrajup/Library/Application Support/JetBrains/WebStorm2026.2/node/versions/24.21.0/bin/node&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;pnpm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;configurable.tailwindcss&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;/Users/likhithrajup/Developer/WT-frontend/node_modules/typescript/lib&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "develop",
+    "js.debugger.nextJs.config.created.client": "true",
+    "js.debugger.nextJs.config.created.server": "true",
+    "last_opened_file_path": "/Users/likhithrajup/Developer/WT-frontend",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_interpreter_path": "/Users/likhithrajup/Library/Application Support/JetBrains/WebStorm2026.2/node/versions/24.21.0/bin/node",
+    "nodejs_package_manager_path": "pnpm",
+    "settings.editor.selected.configurable": "configurable.tailwindcss",
+    "ts.external.directory.path": "/snap/webstorm/683/plugins/javascript-plugin/jsLanguageServicesImpl/external"
   }
-}</component>
+}]]></component>
   <component name="RunManager" selected="npm.Next.js: server-side">
     <configuration name="Next.js: debug client-side" type="JavascriptDebugType" uri="http://localhost:3000/">
       <method v="2" />

@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { TrainingCard } from "@/components/learning-development/TrainingCard";
 import { useOpenTrainingsList } from "@/hooks/learning/useLearningTrainings";
 import { hrmsService } from "@/services/hrms.service";
@@ -37,15 +37,11 @@ function trainingDetailHref(trainingId: string) {
 export function EmployeeLearningCatalog() {
   const qc = useQueryClient();
   const openQ = useOpenTrainingsList();
-  const [enrolledIds, setEnrolledIds] = useState<Set<string>>(() => new Set());
+  const [enrolledIds, setEnrolledIds] = useState<Set<string>>(loadEnrolledIds);
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
   // Business rule: during the notice period an employee keeps their assigned
   // trainings but can't enrol in new ones (the backend enforces it too).
   const { isServingNotice } = useDashboardAccess();
-
-  useEffect(() => {
-    setEnrolledIds(loadEnrolledIds());
-  }, []);
 
   const openTrainings = openQ.data ?? [];
 
