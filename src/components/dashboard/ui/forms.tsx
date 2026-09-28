@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { FORM_FIELD_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { formatUILabel } from "@/utils/titleCase";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
+import { validateUploadedFile } from "@/utils/fileValidation";
 import {
   API_DATE_PLACEHOLDER,
   apiDateFieldError,
@@ -601,6 +602,7 @@ export function FileField({
   currentFileName,
   currentPreviewSrc,
   onDelete,
+  maxSizeBytes,
 }: {
   label: string;
   accept?: string;
@@ -613,6 +615,8 @@ export function FileField({
   /** Thumbnail of the already-stored file, so the field does not read as empty. */
   currentPreviewSrc?: string;
   onDelete?: () => void;
+  /** Override the default 10MB cap (ID docs, payslips, resumes — not video). */
+  maxSizeBytes?: number;
 }) {
   const fieldId = useId();
   const isMulti = Boolean(multiple);
@@ -621,9 +625,12 @@ export function FileField({
   // (no effect needed).
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const previewFailed = failedSrc != null && failedSrc === currentPreviewSrc;
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const errorId = `${fieldId}-file-error`;
 
   return (
-    <Field className={FORM_FIELD_CLASS}>
+    <Field className={FORM_FIELD_CLASS} data-invalid={fileError ? true : undefined}>
       <FieldLabel label={label} required={required} htmlFor={fieldId} />
       <div className="flex items-center gap-2">
         {currentPreviewSrc && !previewFailed ? (
@@ -649,17 +656,35 @@ export function FileField({
         ) : null}
         <Input
           id={fieldId}
+          ref={inputRef}
           type="file"
           accept={accept}
           multiple={isMulti}
           required={required}
+          aria-invalid={fileError ? true : undefined}
+          aria-describedby={fileError ? errorId : undefined}
           className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-2.5 file:py-1 file:text-sm file:font-medium"
           onChange={(e) => {
-            if (isMulti) {
-              onPickFiles?.(e.target.files?.length ? Array.from(e.target.files) : []);
-            } else {
-              onPick?.(e.target.files?.[0] ?? null);
+            const picked = e.target.files?.length ? Array.from(e.target.files) : [];
+            // The `accept` attribute only filters the OS picker's own dialog — it
+            // never blocks a file chosen via drag-and-drop or "All Files", so an
+            // arbitrary file (an .exe picked for a document upload, confirmed
+            // live) reached the backend unvalidated and however it failed there
+            // surfaced as a generic "Unable to reach the server". Validate here
+            // instead of trusting the browser to have already done it.
+            for (const file of picked) {
+              const message = validateUploadedFile(file, { accept, maxSizeBytes, label });
+              if (message) {
+                setFileError(message);
+                if (inputRef.current) inputRef.current.value = "";
+                if (isMulti) onPickFiles?.([]);
+                else onPick?.(null);
+                return;
+              }
             }
+            setFileError(null);
+            if (isMulti) onPickFiles?.(picked);
+            else onPick?.(picked[0] ?? null);
           }}
         />
         {showDeleteButton && hasFile && onDelete ? (
@@ -674,7 +699,9 @@ export function FileField({
           </Button>
         ) : null}
       </div>
-      {currentFileName ? (
+      {fileError ? (
+        <FieldError id={errorId}>{fileError}</FieldError>
+      ) : currentFileName ? (
         <p className="text-xs text-wt-text-muted mt-1">
           Current: {currentFileName} — kept unless you choose a new file.
         </p>

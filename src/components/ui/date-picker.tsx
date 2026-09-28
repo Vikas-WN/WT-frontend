@@ -3,21 +3,31 @@
 import { useState, useCallback } from "react"
 import { CalendarIcon } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverTrigger, PopoverPortal, PopoverPositioner, PopoverContent } from "@/components/ui/popover"
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverPortal,
+  PopoverPositioner,
+  PopoverContent,
+} from "@/components/ui/popover"
 import { Field, FieldLabel } from "@/components/ui/field"
-import { parseApiDate, formatApiDate, apiDateFieldValue } from "@/utils/apiDate"
+import {
+  parseApiDate,
+  formatApiDate,
+  apiDateFieldValue,
+} from "@/utils/apiDate"
 import { FORM_CONTROL_CLASS } from "@/components/dashboard/ui/uiLayout"
 import { cn } from "@/lib/utils"
 
 function formatDisplayDate(value: string): string {
   const d = parseApiDate(value)
   if (!d) return ""
-  return d.toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  })
+
+  const day = String(d.getDate()).padStart(2, "0")
+  const month = String(d.getMonth() + 1).padStart(2, "0")
+  const year = d.getFullYear()
+
+  return `${day}/${month}/${year}`
 }
 
 export function DatePicker({
@@ -60,6 +70,8 @@ export function DatePicker({
   const handleSelect = useCallback(
     (date: Date | undefined) => {
       if (date) {
+        // Keep the value sent to the API in YYYY-MM-DD format.
+        // Only the UI display uses DD/MM/YYYY.
         onChange(formatApiDate(date))
         setOpen(false)
       }
@@ -72,9 +84,14 @@ export function DatePicker({
       {label ? (
         <FieldLabel>
           {label}
-          {required ? <span className="text-destructive" aria-hidden>*</span> : null}
+          {required ? (
+            <span className="text-destructive" aria-hidden>
+              *
+            </span>
+          ) : null}
         </FieldLabel>
       ) : null}
+
       <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger
           disabled={disabled}
@@ -82,48 +99,55 @@ export function DatePicker({
           onKeyDown={(event) => {
             // Tabbing off the trigger while the calendar is open must move focus
             // to the next field, not into the popup's own Previous/Next-month
-            // buttons and day cells — without this, keyboard users tabbing
-            // through the form get pulled into the calendar (forcing it to
-            // scroll/reposition as focus lands on off-screen cells) instead of
-            // reaching the next field, which reads as the dialog flickering and
-            // overflowing. The popup's own focus handling wins the race against
-            // a plain `setOpen(false)` here (its Tab lands inside before our
-            // state update closes it), so this closes AND drives focus itself:
-            // preventDefault to stop that internal handling, then focus the next
-            // (or previous, for Shift+Tab) tabbable element relative to this
-            // trigger in DOM order — same target the browser would have picked.
+            // buttons and day cells.
             if (event.key !== "Tab" || !open) return
+
             event.preventDefault()
             setOpen(false)
+
             const trigger = event.currentTarget
+
             const focusable = Array.from(
               document.querySelectorAll<HTMLElement>(
                 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
               )
-            ).filter((el) => el.offsetParent !== null && !el.closest('[data-slot="popover-popup"]'))
+            ).filter(
+              (el) =>
+                el.offsetParent !== null &&
+                !el.closest('[data-slot="popover-popup"]')
+            )
+
             const index = focusable.indexOf(trigger)
+
             if (index === -1) return
-            const next = focusable[index + (event.shiftKey ? -1 : 1)]
+
+            const next =
+              focusable[index + (event.shiftKey ? -1 : 1)]
+
             next?.focus()
           }}
           className={cn(
             FORM_CONTROL_CLASS,
             "flex cursor-pointer items-center gap-2 hover:bg-wt-surface-2/70",
             "aria-invalid:border-destructive",
-            displayText ? "text-foreground" : "text-muted-foreground"
+            displayText
+              ? "text-foreground"
+              : "text-muted-foreground"
           )}
         >
           <CalendarIcon className="size-4 shrink-0 text-muted-foreground" />
+
           <span className="flex-1 text-left truncate">
             {displayText || inputValue || "Select date"}
           </span>
         </PopoverTrigger>
+
         <PopoverPortal>
           {/*
-            Collision avoidance stays enabled for as long as the popup is open so it
-            keeps flipping/shifting back into view on scroll and resize. The calendar
-            renders `fixedWeeks`, so its height does not change between months and
-            cannot cause placement jitter.
+            Collision avoidance stays enabled for as long as the popup is open
+            so it keeps flipping/shifting back into view on scroll and resize.
+            The calendar renders fixedWeeks, so its height does not change
+            between months and cannot cause placement jitter.
           */}
           <PopoverPositioner
             side="bottom"
@@ -132,17 +156,7 @@ export function DatePicker({
             positionMethod="fixed"
             collisionPadding={16}
             collisionAvoidance={{
-              // Behave like a dropdown, not a free-floating popup: flip top/bottom,
-              // and flip start/end alignment (not shift) to stay on-screen
-              // horizontally — align:"shift" only engages the underlying shift()
-              // middleware's cross-axis correction when side is ALSO "shift" (see
-              // useAnchorPositioning's crossAxisShiftEnabled), so pairing it with
-              // side:"flip" left it a no-op and the calendar rendered off the
-              // right edge for fields in the right column. align:"flip" uses
-              // flip()'s documented crossAxis:"alignment" instead, which is
-              // unconditional. Never fall back to a left/right side of the field.
-              // When vertical space is tight the calendar scrolls internally (see
-              // max-h below) instead.
+              // Behave like a dropdown, not a free-floating popup.
               side: "flip",
               align: "flip",
               fallbackAxisSide: "none",
@@ -150,20 +164,11 @@ export function DatePicker({
             className={cn("z-[250]", positionerClassName)}
           >
             <PopoverContent
-              // Base UI's default moves focus onto the first tabbable element
-              // inside the popup (the "Previous month" button) as soon as it
-              // opens. That left the trigger's Tab handler below unreachable —
-              // by the time the user pressed Tab, focus was already inside the
-              // calendar, so Tab just kept walking its own nav buttons and day
-              // cells (scrolling/repositioning the popup as it went) instead of
-              // ever reaching the next field. Keeping focus on the trigger on
-              // open is what makes that handler actually fire.
+              // Keep focus on the trigger when the popup opens so keyboard
+              // navigation behaves correctly.
               initialFocus={false}
               className={cn(
                 "border-wt-border bg-wt-surface-1 p-0 shadow-lg",
-                // Never exceed the space the positioner reports, so a short viewport
-                // scrolls the calendar instead of clipping it. collisionPadding on
-                // the positioner keeps the popup off the screen edges.
                 "max-h-[min(var(--available-height,100dvh),22rem)] overflow-y-auto overscroll-contain",
                 "max-w-[min(var(--available-width,100vw),100vw)]"
               )}
