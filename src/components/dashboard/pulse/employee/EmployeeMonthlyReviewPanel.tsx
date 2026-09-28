@@ -359,19 +359,30 @@ function EmployeeReviewForm({
     ? selectedProjects.length >= 1 && selectedProjects.length <= 3
     : true;
   const selfReviewValid = form.self_review_text.trim().length > 0;
+  const allValuesCommented = valueRows.every((v) =>
+    Boolean(form.value_ratings.find((r) => r.value_id === v.id)?.comment?.trim())
+  );
   const requiresReviewer = reviewerOptions !== null;
   const reviewerValid =
     reviewerOptions === null || reviewerOptions.some((r) => r.id === form.reviewer_id);
-  const canSubmit = !projectsLoading && allKpisRated && projectsValid && selfReviewValid && reviewerValid;
+  const canSubmit =
+    !projectsLoading &&
+    allKpisRated &&
+    projectsValid &&
+    allValuesCommented &&
+    selfReviewValid &&
+    reviewerValid;
 
   const handleSubmit = async () => {
     if (!canSubmit) {
       notifyError(
         !reviewerValid
           ? "Select the Admin who should review your submission."
-          : hasProjects
-            ? "Rate every KPI, pick 1–3 projects, and add your self review before submitting."
-            : "Rate every KPI and add your self review before submitting."
+          : !allValuesCommented
+            ? "Add a quick example for every Company Value before submitting."
+            : hasProjects
+              ? "Rate every KPI, pick 1–3 projects, and add your self review before submitting."
+              : "Rate every KPI and add your self review before submitting."
       );
       return;
     }
@@ -505,7 +516,7 @@ function EmployeeReviewForm({
             <div>
               <h3 className="text-sm font-semibold text-wt-text">Company Values</h3>
               <p className="mt-0.5 text-xs text-wt-text-muted">
-                Rate yourself and add a short note for each value.
+                Rate yourself and add a short note for each value — a note is required.
               </p>
             </div>
             <div className="space-y-3">
@@ -529,7 +540,8 @@ function EmployeeReviewForm({
                       type="text"
                       value={row?.comment ?? ""}
                       onChange={(e) => setValueRating(v.id, { comment: e.target.value })}
-                      placeholder="A quick example (optional)"
+                      placeholder="A quick example (required)"
+                      aria-required="true"
                       className="mt-2.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
                     />
                   </div>

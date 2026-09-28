@@ -64,7 +64,6 @@ import {
   buildProfileAssignedProjects,
   buildProfileRowsFromMyAllocationsDetail,
   formatCurrentAllocationSummary,
-  selectProfileAllocationRows,
 } from "@/utils/dashboard/projects";
 import { EmployeeProfileHeaderCard } from "@/components/employee-directory/EmployeeProfileHeaderCard";
 import { ProfileSectionsView } from "@/components/employee-directory/ProfileSectionsView";
@@ -157,10 +156,8 @@ export function ProfilePageLeanClient() {
         ]);
 
         if (detailRes.status === "fulfilled") {
-          const fromDetail = selectProfileAllocationRows(
-            buildProfileRowsFromMyAllocationsDetail(
-              detailRes.value.data ?? detailRes.value,
-            ),
+          const fromDetail = buildProfileRowsFromMyAllocationsDetail(
+            detailRes.value.data ?? detailRes.value,
           );
           if (fromDetail.length) {
             setProfileAssignedProjects(fromDetail);
@@ -177,9 +174,7 @@ export function ProfilePageLeanClient() {
             ? (myAllocationsRes.value.data ?? myAllocationsRes.value)
             : undefined;
         setProfileAssignedProjects(
-          selectProfileAllocationRows(
-            buildProfileAssignedProjects(assignedInput, allocationInput),
-          ),
+          buildProfileAssignedProjects(assignedInput, allocationInput),
         );
       } finally {
         setProfileAssignedProjectsLoading(false);

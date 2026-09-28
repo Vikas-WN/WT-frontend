@@ -219,7 +219,7 @@ export function isAccountManagerEmployeeUser(roles: string[]): boolean {
  * matched `tech\b` here, so non-tech employees were blocked from saving).
  */
 const TECH_ROLE_PATTERN =
-  /(engineer|developer|development|devops|devsecops|sre\b|qa\b|quality assurance|tester|testing|technical|technolog|tech\b|software|ui\/ux|android|ios|backend|frontend|fullstack|full stack|data engineer|data scien|ml engineer|architect|sde\b|programmer|cloud|platform engineer|automation|\bai\b|\bml\b|artificial intelligence|machine learning)/i;
+  /(engineer|developer|development|devops|devsecops|sre\b|qa\b|quality assurance|tester|testing|technical|technolog|tech\b|software|ui\/ux|android|ios|backend|frontend|fullstack|full stack|data engineer|data scien|ml engineer|architect|sde\b|programmer|cloud|platform engineer|automation|\bai\b|\bml\b|artificial intelligence|machine learning|analyst)/i;
 
 /** An explicit "Non-Tech" signal wins over the keyword scan (else "non-tech" matches `tech\b`). */
 const EXPLICIT_NON_TECH_PATTERN = /(non[\s\-_/]*tech|business[\s\-_/]*development)/i;

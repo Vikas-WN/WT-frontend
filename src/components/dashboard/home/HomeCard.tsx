@@ -34,7 +34,7 @@ export function HomeCard({
     <section
       className={cn(
         CONTENT_CARD_CLASS,
-        "flex flex-col p-4 sm:p-5",
+        "flex h-full flex-col p-4 sm:p-5",
         featured &&
           "border-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)] bg-[var(--wt-brand-soft)] dark:bg-[var(--wt-brand-soft)]",
         className

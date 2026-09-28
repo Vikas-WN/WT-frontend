@@ -86,10 +86,13 @@ export function ClientDetailDialog({
   client: ClientRecord | null;
   onClose: () => void;
 }) {
-  const clientId = client ? String(client.id) : null;
+  // WK Business (the external CRM) keys opportunities by its own client id,
+  // not WebTrak's internal numeric id — passing the wrong one either finds
+  // nothing or, for a malformed lookup, surfaces as a hard error here.
+  const clientExternalId = client?.externalId ? String(client.externalId).trim() || null : null;
   const opportunitiesQ = useClientOpportunities({
-    clientId,
-    enabled: open && Boolean(clientId),
+    clientId: clientExternalId,
+    enabled: open && Boolean(clientExternalId),
   });
 
   const opportunities = useMemo(() => opportunitiesQ.data?.items ?? [], [opportunitiesQ.data]);

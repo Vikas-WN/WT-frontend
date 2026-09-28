@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type HTMLAttributes, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type HTMLAttributes, type CSSProperties } from "react";
 import { DEFAULT_TABLE_MAX_HEIGHT } from "@/components/dashboard/ui/uiLayout";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +55,11 @@ export function ScrollableTable({
   ...props
 }: ScrollableTableProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Wide tables scroll sideways on narrow/touch viewports, but nothing about a
+  // plain overflow region signals that — a fade on whichever edge still has
+  // hidden content, updated as the user scrolls/resizes.
+  const [hasMoreRight, setHasMoreRight] = useState(false);
+  const [hasMoreLeft, setHasMoreLeft] = useState(false);
 
   useEffect(() => {
     if (!scrollChain) return;
@@ -73,6 +78,27 @@ export function ScrollableTable({
     return () => el.removeEventListener("wheel", onWheel);
   }, [scrollChain]);
 
+  useEffect(() => {
+    if (axis !== "both") return;
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth);
+      setHasMoreLeft(el.scrollLeft > 1);
+      setHasMoreRight(el.scrollLeft < maxScrollLeft - 1);
+    };
+
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, [axis, children]);
+
   const scrollClass =
     axis === "y"
       ? scrollChain
@@ -86,9 +112,21 @@ export function ScrollableTable({
     ? SCROLLABLE_TABLE_SHELL_CHAIN_CLASS
     : SCROLLABLE_TABLE_SHELL_CLASS;
 
-  const mergedStyle: CSSProperties | undefined = scrollChain
-    ? { overscrollBehaviorY: "auto", ...style }
-    : style;
+  const edgeShadows =
+    axis === "both"
+      ? [
+          hasMoreLeft ? "inset 12px 0 12px -12px rgb(0 0 0 / 0.18)" : null,
+          hasMoreRight ? "inset -12px 0 12px -12px rgb(0 0 0 / 0.18)" : null,
+        ].filter(Boolean)
+      : [];
+
+  const mergedStyle: CSSProperties | undefined = {
+    ...(scrollChain ? { overscrollBehaviorY: "auto" as const } : null),
+    ...style,
+    ...(edgeShadows.length
+      ? { boxShadow: [style?.boxShadow, ...edgeShadows].filter(Boolean).join(", ") }
+      : null),
+  };
 
   return (
     <div

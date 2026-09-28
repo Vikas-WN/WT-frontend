@@ -71,7 +71,7 @@ import { EmployeePortalRoleSelect } from "@/components/employee-directory/Employ
 import { DesignationCombobox } from "@/components/employee-onboarding/DesignationCombobox";
 import type { Designation } from "@/types/masters";
 import { IconPencil } from "@/components/employee-directory/employeeDirectoryIcons";
-import { buildProfileRowsFromEmployeeAllocations, selectProfileAllocationRows } from "@/utils/dashboard/projects";
+import { buildProfileRowsFromEmployeeAllocations } from "@/utils/dashboard/projects";
 import { isSystemProjectAllocationRow } from "@/utils/allocationList";
 import { showErrorToast } from "@/lib/toast";
 import { compareApiDates } from "@/utils/apiDate";
@@ -362,10 +362,8 @@ export function EmployeeProfilePageClient() {
           scope: "all",
         });
         if (cancelled) return;
-        const rows = selectProfileAllocationRows(
-          buildProfileRowsFromEmployeeAllocations(res.data ?? res).filter(
-            (row) => !isSystemProjectAllocationRow(row)
-          )
+        const rows = buildProfileRowsFromEmployeeAllocations(res.data ?? res).filter(
+          (row) => !isSystemProjectAllocationRow(row)
         );
         setAllocationRows(rows);
       } catch {

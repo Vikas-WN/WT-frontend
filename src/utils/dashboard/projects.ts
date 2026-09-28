@@ -181,14 +181,6 @@ export function formatCurrentAllocationSummary(
     .join("; ");
 }
 
-/** Prefer currently active rows for profile Project Details; fall back to all non-bench. */
-export function selectProfileAllocationRows(
-  rows: Array<Record<string, unknown>>
-): Array<Record<string, unknown>> {
-  const active = rows.filter((row) => isCurrentlyActiveAllocationRow(row));
-  return active.length ? active : rows;
-}
-
 export function buildProfileAssignedProjects(
   assignedInput: unknown,
   allocationInput?: unknown

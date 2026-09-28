@@ -34,6 +34,7 @@ export function DashboardWidgetFrame({
   return (
     <div
       className={cn(
+        "h-full",
         size === "wide" && "sm:col-span-2",
         editing && "relative rounded-2xl outline outline-2 outline-transparent transition-[outline-color]",
         editing && isDropTarget && draggedId && draggedId !== id && "outline-[var(--wt-brand)]",
@@ -94,7 +95,7 @@ export function DashboardWidgetFrame({
           </button>
         </div>
       ) : null}
-      <div className={cn(editing && "pointer-events-none select-none")}>{children}</div>
+      <div className={cn("h-full", editing && "pointer-events-none select-none")}>{children}</div>
     </div>
   );
 }

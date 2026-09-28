@@ -484,6 +484,7 @@ body::-webkit-scrollbar {
 .wt-scroll-both {
   overflow: auto;
   overscroll-behavior: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Horizontal scroll with visible scrollbar for wide data tables */
