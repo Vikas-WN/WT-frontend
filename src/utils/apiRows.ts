@@ -25,6 +25,7 @@ export function toRows(input: unknown): Array<Record<string, unknown>> {
     "projectList",
     "manager_projects",
     "managerProjects",
+    "managers",
     "team",
     "team_members",
     "teamMembers",

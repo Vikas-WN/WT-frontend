@@ -28,7 +28,13 @@ export function useEmployeeManagers(search?: string, enabled = true) {
       );
       const items = unwrapLeaveOptionItems<{
         email: string;
-        name: string;
+        name?: string | null;
+        employee_name?: string | null;
+        employeeName?: string | null;
+        emp_name?: string | null;
+        empName?: string | null;
+        full_name?: string | null;
+        fullName?: string | null;
         status?: string | null;
         employee_id?: string | null;
         employeeId?: string | null;
@@ -38,10 +44,18 @@ export function useEmployeeManagers(search?: string, enabled = true) {
         project_name?: string | null;
       }>(res);
       return filterEligibleLeaveManagers(
-        items.map((item) => ({
-          email: item.email,
-          name: item.name,
-          status: item.status ?? null,
+          items.map((item) => ({
+            email: item.email,
+            name:
+                item.name ||
+                item.employee_name ||
+                item.employeeName ||
+                item.full_name ||
+                item.fullName ||
+                item.emp_name ||
+                item.empName ||
+                item.email,
+            status: item.status ?? null,
           employee_id: item.employee_id ?? item.employeeId ?? item.emp_id ?? item.empId ?? null,
           project_code: item.project_code ?? null,
           project_name: item.project_name ?? null,
