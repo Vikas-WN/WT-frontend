@@ -3,6 +3,7 @@ import { parseApiDate } from "@/utils/apiDate";
 import { compareSortValues, type ListSortOption } from "@/utils/listSort";
 import type { OffboardListItem } from "@/types/offboard";
 import { isServingNoticeUserStatus } from "@/utils/userStatus";
+import { isLwdOnlyOffboarding } from "@/utils/offboardingFormState";
 
 export type ExitSurveyFollowUpRow = OffboardListItem & {
   is_serving_notice?: boolean;
@@ -202,15 +203,29 @@ export function isResendableOffboardListRow(row: {
   exit_survey_submitted?: boolean;
   submission_status?: string;
   can_resend_exit_survey?: boolean;
+  user_type?: string | null;
+  exit_type?: string | null;
 }): boolean {
   if (!Boolean(String(row.emp_id ?? "").trim())) return false;
   if (row.exit_survey_submitted === true) return false;
   if (row.submission_status === "SUBMITTED") return false;
+  // Consultant/Intern/Contractual exits have no resignation flow behind them and are
+  // not eligible for an Exit Survey — the list endpoint's can_resend_exit_survey flag
+  // doesn't reliably reflect that, so don't rely on it alone (the resend action itself
+  // rejects these with "Exit survey is not applicable for this employee").
+  if (isLwdOnlyOffboarding({ userType: row.user_type, exitType: row.exit_type })) return false;
   return row.can_resend_exit_survey === true;
 }
 
 export function resendableOffboardEmpIds(
-  rows: Array<{ emp_id?: string | null; exit_survey_submitted?: boolean; submission_status?: string; can_resend_exit_survey?: boolean }>
+    rows: Array<{
+      emp_id?: string | null;
+      exit_survey_submitted?: boolean;
+      submission_status?: string;
+      can_resend_exit_survey?: boolean;
+      user_type?: string | null;
+      exit_type?: string | null;
+    }>
 ): string[] {
   return Array.from(
     new Set(
