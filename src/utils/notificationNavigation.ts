@@ -1,6 +1,7 @@
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import type { NotificationItem } from "@/services/hrms.service";
 import { normalizeRoles } from "@/utils/roles";
+import { normalizeToApiDate } from "@/utils/apiDate";
 
 const COMP_OFF_SELF = "/dashboard/leave?tab=comp-off";
 const LEARNING_SCORES = "/dashboard/learning-development";
@@ -125,13 +126,14 @@ export function parseLeaveNotificationDeepLink(message: string): {
 } {
   const text = String(message ?? "");
   const idMatch = text.match(/request\s*#\s*(\d+)/i);
+  const datePattern = /\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4}/;
   const rangeMatch = text.match(
-    /from\s+(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/i
+      new RegExp(`from\\s+(${datePattern.source})\\s+to\\s+(${datePattern.source})`, "i")
   );
   return {
     requestId: idMatch?.[1] ?? null,
-    from: rangeMatch?.[1] ?? null,
-    to: rangeMatch?.[2] ?? null,
+    from: rangeMatch ? normalizeToApiDate(rangeMatch[1]) || null : null,
+    to: rangeMatch ? normalizeToApiDate(rangeMatch[2]) || null : null,
   };
 }
 
