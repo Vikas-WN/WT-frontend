@@ -20,6 +20,7 @@ import { notifyError, notifySuccess } from "@/lib/notify";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { ApiError } from "@/api/error";
 import type { KpiRating, MonthlySubmissionItem, ValueRating } from "@/types/kpi";
+import { formatWeight, groupKpisByParameter, hasKpiParameters } from "@/utils/kpiParameters";
 
 type Load<T> = { status: "loading" | "done" | "error"; data: T | null };
 
@@ -165,6 +166,7 @@ function ManagerReviewModal({
     submission.certification_details.find((c) => c.id === id)?.name ?? `Certification #${id}`;
   // Every KPI applicable to the employee must carry a manager rating — the
   // backend rejects the review otherwise.
+  const showParameters = hasKpiParameters(submission.kpi_details);
   const allKpisRated = submission.kpi_details.every((k) => kpiRatings.some((r) => r.kpi_id === k.id));
   const hrSendBack =
     submission.review_status === "NEEDS_MANAGER_REVIEW" && submission.admin_review?.action === "REJECT_MANAGER"
@@ -236,25 +238,37 @@ function ManagerReviewModal({
               <p className="mt-0.5 text-xs text-wt-text-muted">
                 Starts from the employee&apos;s own rating — adjust to your assessment.
               </p>
-              <div className="mt-2 space-y-2">
-                {submission.kpi_details.map((kpi) => (
-                  <div
-                    key={kpi.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-wt-border bg-wt-surface-2/40 px-3 py-2"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-wt-text">{kpiName(kpi.id)}</p>
-                      <p className="text-xs text-wt-text-muted">
-                        Weight {kpi.weightage}% · self-rated{" "}
-                        <span className="font-semibold text-wt-text">
-                          {submission.kpi_ratings.find((k) => k.kpi_id === kpi.id)?.rating ?? "—"}
-                        </span>
-                      </p>
-                    </div>
-                    <RatingButtons
-                      value={kpiRatings.find((r) => r.kpi_id === kpi.id)?.rating ?? null}
-                      onChange={(v) => setKpiRating(kpi.id, v)}
-                    />
+              <div className="mt-2 space-y-4">
+                {groupKpisByParameter(submission.kpi_details).map((group) => (
+                  <div key={group.parameter ?? "_none"} className="space-y-2">
+                    {showParameters ? (
+                      <div className="flex items-baseline justify-between gap-3">
+                        <h4 className="text-xs font-semibold tracking-wide text-wt-text-muted uppercase">
+                          {group.parameter ?? "Other"}
+                        </h4>
+                        <span className="text-xs text-wt-text-muted">{formatWeight(group.weight)}</span>
+                      </div>
+                    ) : null}
+                    {group.items.map((kpi) => (
+                      <div
+                        key={kpi.id}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-wt-border bg-wt-surface-2/40 px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-wt-text">{kpiName(kpi.id)}</p>
+                          <p className="text-xs text-wt-text-muted">
+                            {showParameters ? "" : `Weight ${formatWeight(kpi.weightage)} · `}self-rated{" "}
+                            <span className="font-semibold text-wt-text">
+                              {submission.kpi_ratings.find((k) => k.kpi_id === kpi.id)?.rating ?? "—"}
+                            </span>
+                          </p>
+                        </div>
+                        <RatingButtons
+                          value={kpiRatings.find((r) => r.kpi_id === kpi.id)?.rating ?? null}
+                          onChange={(v) => setKpiRating(kpi.id, v)}
+                        />
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>

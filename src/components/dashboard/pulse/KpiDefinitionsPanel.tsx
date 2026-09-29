@@ -27,6 +27,7 @@ import type { BandListItem, DepartmentListItem } from "@/types/masters";
 import type { KpiDefinitionItem, KpiDefinitionWritePayload } from "@/types/kpi";
 import { notifyError, notifySuccess } from "@/lib/notify";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
+import { formatWeight, groupKpisByParameter, hasKpiParameters } from "@/utils/kpiParameters";
 
 type Load<T> = { status: "loading" | "done" | "error"; data: T | null };
 
@@ -57,6 +58,7 @@ type FormState = {
   department: string;
   designation: string;
   kpiName: string;
+  parameter: string;
   evaluationCriteria: string;
   weightage: string;
   active: boolean;
@@ -68,6 +70,7 @@ function emptyForm(defaults: { bandId: string; department: string }): FormState 
     department: defaults.department,
     designation: "",
     kpiName: "",
+    parameter: "",
     evaluationCriteria: "",
     weightage: "20",
     active: true,
@@ -77,7 +80,7 @@ function emptyForm(defaults: { bandId: string; department: string }): FormState 
 function weightageError(raw: string): string | null {
   const n = Number(raw);
   if (raw.trim() === "" || Number.isNaN(n)) return "Enter a weightage.";
-  if (n < 5 || n > 100) return "Weightage must be between 5 and 100.";
+  if (!(n > 0) || n > 100) return "Weightage must be greater than 0 and at most 100.";
   return null;
 }
 
@@ -151,6 +154,7 @@ export function KpiDefinitionsPanel() {
       const bandLabel = bandNameById.get(row.band_id) ?? "";
       return (
         row.kpi_name.toLowerCase().includes(q) ||
+        (row.parameter ?? "").toLowerCase().includes(q) ||
         (row.evaluation_criteria ?? "").toLowerCase().includes(q) ||
         row.designation.toLowerCase().includes(q) ||
         row.department.toLowerCase().includes(q) ||
@@ -159,16 +163,27 @@ export function KpiDefinitionsPanel() {
     });
   }, [allRows, searchQuery, filterBandId, filterDepartment, bandNameById]);
 
+  // One group per designation *per band*: the same designation (e.g. Architect)
+  // can carry a different KPI set in each band it spans. Keyed like weightReport.
   const grouped = useMemo(() => {
-    const map = new Map<string, { key: string; label: string; goals: KpiDefinitionItem[] }>();
+    const map = new Map<
+      string,
+      { key: string; label: string; bandId: number; department: string; goals: KpiDefinitionItem[] }
+    >();
     for (const row of filtered) {
       const label = row.designation.trim() || "Unassigned";
-      const key = normKey(label);
-      if (!map.has(key)) map.set(key, { key, label, goals: [] });
+      const key = `${normKey(label)}||${row.band_id}||${normKey(row.department)}`;
+      if (!map.has(key)) map.set(key, { key, label, bandId: row.band_id, department: row.department, goals: [] });
       map.get(key)?.goals.push(row);
     }
-    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
-  }, [filtered]);
+    const bandLabel = (id: number) => bandNameById.get(id) ?? `Band ${id}`;
+    return Array.from(map.values()).sort(
+      (a, b) =>
+        bandLabel(b.bandId).localeCompare(bandLabel(a.bandId)) ||
+        a.department.localeCompare(b.department) ||
+        a.label.localeCompare(b.label)
+    );
+  }, [filtered, bandNameById]);
 
   // A designation's KPIs for one band + department must not add up past 100% —
   // this is the check HR actually relies on before opening a submission window.
@@ -240,6 +255,7 @@ export function KpiDefinitionsPanel() {
       department: row.department,
       designation: row.designation,
       kpiName: row.kpi_name,
+      parameter: row.parameter ?? "",
       evaluationCriteria: row.evaluation_criteria ?? "",
       weightage: String(row.weightage),
       active: row.active,
@@ -277,6 +293,7 @@ export function KpiDefinitionsPanel() {
       department: form.department,
       designation: form.designation.trim(),
       kpi_name: form.kpiName.trim(),
+      parameter: form.parameter.trim() || null,
       evaluation_criteria: form.evaluationCriteria.trim() || null,
       weightage: Number(form.weightage),
       active: form.active,
@@ -440,71 +457,85 @@ export function KpiDefinitionsPanel() {
       ) : (
         <div className="space-y-4">
           {grouped.map((group) => {
-            const groupOverweight = weightReport.overweight.filter((c) => normKey(c.designation) === group.key);
+            const groupOverweight = weightReport.overweight.some((c) => c.key === group.key);
+            const groupTotal = group.goals.reduce((sum, row) => sum + (Number(row.weightage) || 0), 0);
+            const showParameters = hasKpiParameters(group.goals);
             return (
               <div key={group.key} className="overflow-hidden rounded-xl border border-wt-border">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-wt-border bg-wt-surface-2/50 px-4 py-3">
                   <div>
-                    <h3 className="text-sm font-semibold text-wt-text">{group.label}</h3>
+                    <h3 className="text-sm font-semibold text-wt-text">
+                      {group.label}
+                      <span className="ml-2 font-normal text-wt-text-muted">
+                        {bandNameById.get(group.bandId) ?? `Band ${group.bandId}`} · {group.department}
+                      </span>
+                    </h3>
                     <p className="mt-0.5 text-xs text-wt-text-muted">
-                      {group.goals.length} KPI{group.goals.length === 1 ? "" : "s"}
-                      {groupOverweight.length
-                        ? ` · ${groupOverweight.length} combo${groupOverweight.length === 1 ? "" : "s"} over 100%`
-                        : ""}
+                      {group.goals.length} KPI{group.goals.length === 1 ? "" : "s"} · total {formatWeight(groupTotal)}
                     </p>
                   </div>
-                  {groupOverweight.length ? <Badge variant="destructive">Over 100%</Badge> : null}
+                  {groupOverweight ? <Badge variant="destructive">Over 100%</Badge> : null}
                 </div>
-                <ul className="divide-y divide-wt-border">
-                  {group.goals.map((row) => (
-                    <li
-                      key={row.id}
-                      className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-medium text-wt-text">{row.kpi_name}</p>
-                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                          <Badge variant="outline">{row.department}</Badge>
-                          <Badge variant="outline">
-                            {bandNameById.get(row.band_id) ?? `Band ${row.band_id}`}
-                          </Badge>
-                          <span className="text-xs text-wt-text-muted">
-                            Weight ·{" "}
-                            <span className="font-mono font-semibold text-wt-text">
-                              {Number(row.weightage)}%
-                            </span>
-                          </span>
-                          {!row.active ? <Badge variant="secondary">Inactive</Badge> : null}
-                        </div>
-                        {row.evaluation_criteria ? (
-                          <p className="mt-1 max-w-xl truncate text-xs text-wt-text-faint">
-                            {row.evaluation_criteria}
-                          </p>
-                        ) : null}
+                {groupKpisByParameter(group.goals).map((param) => (
+                  <div key={param.parameter ?? "_none"} className="border-b border-wt-border last:border-b-0">
+                    {showParameters ? (
+                      <div className="flex items-baseline justify-between gap-3 border-b border-wt-border bg-wt-surface-2/30 px-4 py-2">
+                        <span className="text-xs font-semibold tracking-wide text-wt-text-muted uppercase">
+                          {param.parameter ?? "No parameter"}
+                        </span>
+                        <span className="font-mono text-xs font-semibold text-wt-text">
+                          {formatWeight(param.weight)}
+                        </span>
                       </div>
-                      <div className="flex shrink-0 gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => openEdit(row)}
-                          aria-label={`Edit ${row.kpi_name}`}
-                        >
-                          <Pencil className="size-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => setDeleteTarget(row)}
-                          aria-label={`Delete ${row.kpi_name}`}
-                        >
-                          <Trash2 className="size-3.5 text-rose-600" />
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                    ) : null}
+                    <ul className="divide-y divide-wt-border">
+                      {param.items.map((row) => (
+                          <li
+                            key={row.id}
+                            className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                          >
+                            <div className="min-w-0">
+                              <p className="font-medium text-wt-text">{row.kpi_name}</p>
+                              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                <span className="text-xs text-wt-text-muted">
+                                  Weight ·{" "}
+                                  <span className="font-mono font-semibold text-wt-text">
+                                    {formatWeight(row.weightage)}
+                                  </span>
+                                </span>
+                                {!row.active ? <Badge variant="secondary">Inactive</Badge> : null}
+                              </div>
+                              {row.evaluation_criteria ? (
+                                <p className="mt-1 max-w-xl truncate text-xs text-wt-text-faint">
+                                  {row.evaluation_criteria}
+                                </p>
+                              ) : null}
+                            </div>
+                            <div className="flex shrink-0 gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => openEdit(row)}
+                                aria-label={`Edit ${row.kpi_name}`}
+                              >
+                                <Pencil className="size-3.5" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => setDeleteTarget(row)}
+                                aria-label={`Delete ${row.kpi_name}`}
+                              >
+                                <Trash2 className="size-3.5 text-rose-600" />
+                              </Button>
+                            </div>
+                          </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
               </div>
             );
           })}
@@ -561,6 +592,13 @@ export function KpiDefinitionsPanel() {
                   required
                   placeholder="e.g. Code Quality"
                 />
+                <InputField
+                  label="Parameter"
+                  value={form.parameter}
+                  onChange={(v) => setForm((f) => ({ ...f, parameter: v }))}
+                  placeholder="e.g. Technical Excellence"
+                  description="The group this KPI rolls up to. A parameter's weight is the sum of its KPIs' weights."
+                />
                 <TextAreaField
                   label="Evaluation Criteria"
                   value={form.evaluationCriteria}
@@ -574,7 +612,7 @@ export function KpiDefinitionsPanel() {
                   onChange={(v) => setForm((f) => ({ ...f, weightage: v }))}
                   type="number"
                   required
-                  description="Between 5 and 100."
+                  description="This KPI's share of the total: greater than 0, up to 100."
                 />
                 <label className="flex items-center gap-2 text-sm text-wt-text">
                   <Checkbox

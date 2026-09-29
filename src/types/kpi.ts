@@ -4,6 +4,8 @@ export interface KpiDefinitionItem {
   department: string;
   designation: string;
   kpi_name: string;
+  /** Group the KPI rolls up to; its weight is the sum of its KPIs' weightage. */
+  parameter: string | null;
   evaluation_criteria: string | null;
   weightage: number;
   active: boolean;
@@ -16,6 +18,7 @@ export interface KpiDefinitionWritePayload {
   department: string;
   designation: string;
   kpi_name: string;
+  parameter: string | null;
   evaluation_criteria: string | null;
   weightage: number;
   active: boolean;
@@ -158,6 +161,7 @@ export interface AdminReviewDecision extends ReviewDecision {
 export interface SubmissionKpiDetail {
   id: number;
   kpi_name: string;
+  parameter: string | null;
   evaluation_criteria: string | null;
   weightage: number;
 }

@@ -497,7 +497,7 @@ function RatingsComparison({ submission }: { submission: MonthlySubmissionItem }
     ...submission.kpi_details.map((k) => ({
       key: `k${k.id}`,
       label: k.kpi_name,
-      meta: `KPI · ${k.weightage}%`,
+      meta: k.parameter ? `KPI · ${k.parameter}` : `KPI · ${k.weightage}%`,
       self: selfKpi.get(k.id),
       manager: mgrKpi[String(k.id)],
     })),
