@@ -154,6 +154,7 @@ function ManagerReviewModal({
     submission.certification_details.find((c) => c.id === id)?.name ?? `Certification #${id}`;
   const valueName = (id: number) => submission.value_details.find((v) => v.id === id)?.name ?? `Value #${id}`;
   const selfKpi = new Map(submission.kpi_ratings.map((r) => [r.kpi_id, r.rating]));
+  const showParameters = hasKpiParameters(submission.kpi_details);
 
   // Mirrors the backend: every applicable KPI and every value the employee
   // rated needs a manager rating before the review can be submitted.
@@ -237,17 +238,29 @@ function ManagerReviewModal({
                 </span>
               </div>
               <SideBySideHeader />
-              <div className="space-y-2">
-                {submission.kpi_details.map((kpi) => (
-                  <SideBySideRow
-                    key={kpi.id}
-                    title={kpi.kpi_name}
-                    meta={[kpi.parameter, `Weight ${kpi.weightage}%`].filter(Boolean).join(" · ")}
-                    detail={kpi.evaluation_criteria}
-                    selfRating={selfKpi.get(kpi.id) ?? null}
-                    managerRating={kpiRatings[kpi.id] ?? null}
-                    onRate={(v) => setKpiRatings((prev) => ({ ...prev, [kpi.id]: v }))}
-                  />
+              <div className="space-y-4">
+                {groupKpisByParameter(submission.kpi_details).map((group) => (
+                  <div key={group.parameter ?? "_none"} className="space-y-2">
+                    {showParameters ? (
+                      <div className="flex items-baseline justify-between gap-3 px-1">
+                        <h4 className="text-xs font-semibold tracking-wide text-wt-text-muted uppercase">
+                          {group.parameter ?? "Other"}
+                        </h4>
+                        <span className="text-xs text-wt-text-muted">{formatWeight(group.weight)}</span>
+                      </div>
+                    ) : null}
+                    {group.items.map((kpi) => (
+                      <SideBySideRow
+                        key={kpi.id}
+                        title={kpi.kpi_name}
+                        meta={showParameters ? null : `Weight ${formatWeight(kpi.weightage)}`}
+                        detail={kpi.evaluation_criteria}
+                        selfRating={selfKpi.get(kpi.id) ?? null}
+                        managerRating={kpiRatings[kpi.id] ?? null}
+                        onRate={(v) => setKpiRatings((prev) => ({ ...prev, [kpi.id]: v }))}
+                      />
+                    ))}
+                  </div>
                 ))}
               </div>
             </div>
