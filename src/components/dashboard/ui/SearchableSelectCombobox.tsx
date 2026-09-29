@@ -202,33 +202,23 @@ export function SearchableSelectCombobox({
         showClear={clearSelectionOnEmptyInput && Boolean(selected) && !isDisabled}
         className={cn("w-full", inputClassName)}
       />
-      <ComboboxContent
-        side="bottom"
-        sideOffset={4}
-        align={align}
-        collisionPadding={8}
-        collisionAvoidance={{
-          // Anchored, scrollable listbox — behave like a dropdown: flip top/bottom,
-          // and flip start/end alignment (not shift) to stay on-screen
-          // horizontally. align:"shift" only takes effect via the underlying
-          // shift() middleware's cross-axis correction when side is ALSO "shift"
-          // (see useAnchorPositioning's crossAxisShiftEnabled), so pairing it
-          // with side:"flip" was a no-op and right-column dropdowns (e.g.
-          // Designation/Department/Reporting Manager on Employee Onboarding)
-          // still overflowed past the right edge. align:"flip" instead uses
-          // flip()'s unconditional crossAxis:"alignment" handling. Never fall
-          // back to a left/right side of the field. When vertical space is
-          // tight the list scrolls internally instead.
-          side: "flip",
-          align: "flip",
-          fallbackAxisSide: "none",
-        }}
-        // Inside modals: portal into the body host and use absolute positioning so
-        // clipping-ancestors bound height above Cancel/Next. Outside: fixed to body.
-        container={modalPanel}
-        positionMethod={modalPanel ? "absolute" : "fixed"}
-        className={contentClassName}
-      >
+          <ComboboxContent
+              side="bottom"
+              sideOffset={4}
+              align={align}
+              collisionPadding={16}
+              collisionAvoidance={{
+                  side: "flip",
+                  align: "flip",
+                  fallbackAxisSide: "none",
+              }}
+              container={modalPanel}
+              positionMethod={modalPanel ? "absolute" : "fixed"}
+              className={cn(
+                  "max-w-[min(var(--available-width,100vw),calc(100vw-32px))]",
+                  contentClassName
+              )}
+          >
         <ComboboxEmpty>{loading ? loadingLabel : "No matches"}</ComboboxEmpty>
         <ComboboxList>
           {(item) => (
