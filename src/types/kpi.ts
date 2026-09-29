@@ -196,6 +196,8 @@ export interface MonthlySubmissionItem {
   manager_evaluation: ManagerEvaluation | null;
   manager_review: ReviewDecision | null;
   admin_review: AdminReviewDecision | null;
+  /** HR corrections made during this review round, oldest first. */
+  admin_edits: AdminEditRecord[];
   final_score: number | null;
   employee_rating_display: string | null;
   manager_rating_display: string | null;
@@ -208,6 +210,27 @@ export interface MonthlySubmissionItem {
   admin_submitted_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface AdminEditRecord {
+  edited_by: string;
+  edited_at: string | null;
+  reason: string;
+  /** e.g. "self_review", "employee_kpi_ratings", "manager_value_ratings", "final_score". */
+  fields: string[];
+}
+
+/** HR/Admin correction — only the fields sent change; ratings merge by id. */
+export interface AdminEditPayload {
+  reason: string;
+  self_review_text?: string;
+  kpi_ratings?: KpiRating[];
+  value_ratings?: ValueRating[];
+  manager_kpi_ratings?: KpiRating[];
+  manager_value_ratings?: ValueRating[];
+  manager_comments?: string;
+  /** Approved submissions only; omitted = recomputed from the edited ratings. */
+  final_score?: number;
 }
 
 export interface ManagerReviewSubmitPayload {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CheckCircle2, ChevronRight, Trash2, Upload, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronRight, Pencil, Trash2, Upload, XCircle } from "lucide-react";
 
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
@@ -17,6 +17,7 @@ import {
   MODAL_OVERLAY_CLASS,
   MODAL_PANEL_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
+import { AdminEditSubmissionForm } from "@/components/dashboard/pulse/AdminEditSubmissionForm";
 import { hrmsService } from "@/services/hrms.service";
 import { notifyError, notifySuccess } from "@/lib/notify";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
@@ -53,7 +54,10 @@ function useLoad<T>(fn: () => Promise<T>, deps: unknown[] = []): Load<T> {
   return state;
 }
 
+const ALL_STATUSES = "ALL";
+
 const STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: ALL_STATUSES, label: "All statuses" },
   { value: "MANAGER_SUBMITTED", label: "Awaiting HR approval" },
   { value: "NEEDS_REVIEW", label: "Back with employee" },
   { value: "NEEDS_MANAGER_REVIEW", label: "Back with manager" },
@@ -70,7 +74,10 @@ export function SubmissionsReviewPanel() {
   const [reloadTick, setReloadTick] = useState(0);
   const refresh = useCallback(() => setReloadTick((t) => t + 1), []);
   const submissions = useLoad<MonthlySubmissionItem[]>(
-    () => hrmsService.listAllMonthlySubmissions({ reviewStatus: statusFilter || undefined }),
+    () =>
+      hrmsService.listAllMonthlySubmissions({
+        reviewStatus: statusFilter && statusFilter !== ALL_STATUSES ? statusFilter : undefined,
+      }),
     [statusFilter, reloadTick]
   );
   const overview = useLoad<AdminMonthlyOverview>(() => hrmsService.getAdminMonthlyOverview(), [reloadTick]);
@@ -144,7 +151,7 @@ export function SubmissionsReviewPanel() {
         <div>
           <h3 className="text-sm font-semibold text-wt-text">Submissions</h3>
           <p className="mt-0.5 text-xs text-wt-text-muted">
-            Manager-reviewed submissions, weighted score, final approval.
+            Every rating side by side. Approve, send back to the employee or manager, or edit anyone&apos;s part.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -202,6 +209,7 @@ export function SubmissionsReviewPanel() {
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  {row.admin_edits?.length ? <Badge variant="outline">Edited by HR</Badge> : null}
                   <Badge variant="outline">{statusLabel(row.review_status)}</Badge>
                   {row.final_score != null ? <Badge>{row.final_score}</Badge> : null}
                   <ChevronRight className="size-4 text-wt-text-faint" />
@@ -250,8 +258,25 @@ export function SubmissionsReviewPanel() {
   );
 }
 
-function AdminReviewModal({
-  submission,
+// Mirrors the backend's _ADMIN_ACTION_STATUSES: HR can pull a review back to
+// the employee from any reviewer stage (approved ones reopen), and back to the
+// manager once the manager has rated it.
+const SEND_TO_EMPLOYEE_STATUSES = ["SUBMITTED", "NEEDS_MANAGER_REVIEW", "MANAGER_SUBMITTED", "APPROVED"];
+const SEND_TO_MANAGER_STATUSES = ["MANAGER_SUBMITTED", "APPROVED"];
+
+const EDIT_FIELD_LABELS: Record<string, string> = {
+  self_review: "self review",
+  employee_kpi_ratings: "employee KPI ratings",
+  employee_value_ratings: "employee value ratings",
+  manager_kpi_ratings: "manager KPI ratings",
+  manager_value_ratings: "manager value ratings",
+  manager_comments: "manager comments",
+  final_score: "final score",
+};
+
+/** Exported for KpiReportsPanel — HR opens the same review from an employee's report. */
+export function AdminReviewModal({
+  submission: initialSubmission,
   onClose,
   onDone,
 }: {
@@ -259,13 +284,23 @@ function AdminReviewModal({
   onClose: () => void;
   onDone: () => void;
 }) {
-  const canScore = submission.review_status === "MANAGER_SUBMITTED";
+  // Edits return the updated row; keep showing it without closing the modal.
+  const [submission, setSubmission] = useState(initialSubmission);
+  const [editing, setEditing] = useState(false);
+  const [edited, setEdited] = useState(false);
+  const status = submission.review_status ?? "";
+  const canScore = status === "MANAGER_SUBMITTED";
+  const canSendToEmployee = SEND_TO_EMPLOYEE_STATUSES.includes(status);
+  const canSendToManager = SEND_TO_MANAGER_STATUSES.includes(status);
+  const canEdit = Boolean(status) && status !== "DRAFT";
+  const canDecide = canScore || canSendToEmployee || canSendToManager;
+  const close = edited ? onDone : onClose;
   const breakdown = useLoad<ScoreBreakdown>(
     () =>
       canScore
         ? hrmsService.getMonthlySubmissionScoreBreakdown(submission.id)
         : Promise.reject(new Error("not scoreable")),
-    [submission.id, canScore]
+    [submission.id, submission.updated_at, canScore]
   );
 
   const [comments, setComments] = useState("");
@@ -317,15 +352,34 @@ function AdminReviewModal({
   );
 
   return (
-    <div className={MODAL_OVERLAY_CLASS} role="presentation" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" className={MODAL_PANEL_CLASS}>
-        <div className={MODAL_HEADER_CLASS}>
-          <h2 className="text-base font-semibold text-wt-text">{submission.employee.name}</h2>
-          <p className="mt-1 text-xs text-wt-text-muted">
-            {submission.cycle_label} · {statusLabel(submission.review_status)}
-          </p>
+    <div className={MODAL_OVERLAY_CLASS} role="presentation" onClick={(e) => e.target === e.currentTarget && close()}>
+      <div role="dialog" aria-modal="true" className={cn(MODAL_PANEL_CLASS, "max-w-4xl")}>
+        <div className={cn(MODAL_HEADER_CLASS, "flex items-start justify-between gap-3")}>
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-wt-text">{submission.employee.name}</h2>
+            <p className="mt-1 text-xs text-wt-text-muted">
+              {submission.cycle_label} · {statusLabel(submission.review_status)}
+              {submission.manager_review?.reviewed_by ? ` · Manager: ${submission.manager_review.reviewed_by}` : ""}
+            </p>
+          </div>
+          {canEdit && !editing ? (
+            <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>
+              <Pencil className="mr-1.5 size-3.5" /> Edit
+            </Button>
+          ) : null}
         </div>
         <div className={MODAL_BODY_CLASS}>
+          {editing ? (
+            <AdminEditSubmissionForm
+              submission={submission}
+              onCancel={() => setEditing(false)}
+              onSaved={(updated) => {
+                setSubmission(updated);
+                setEdited(true);
+                setEditing(false);
+              }}
+            />
+          ) : (
           <div className="space-y-5">
             {canScore ? (
               <div>
@@ -400,6 +454,22 @@ function AdminReviewModal({
               </div>
             ) : null}
 
+            {submission.admin_edits?.length ? (
+              <div>
+                <h3 className="text-sm font-semibold text-wt-text">HR edits</h3>
+                <ul className="mt-1.5 space-y-1.5 text-xs text-wt-text-muted">
+                  {submission.admin_edits.map((e, i) => (
+                    <li key={i} className="rounded-lg border border-wt-border bg-wt-surface-2/40 px-3 py-2">
+                      <span className="font-medium text-wt-text">{e.edited_by}</span>
+                      {e.edited_at ? ` · ${new Date(e.edited_at).toLocaleString()}` : ""} · changed{" "}
+                      {e.fields.map((f) => EDIT_FIELD_LABELS[f] ?? f).join(", ")}
+                      <p className="mt-0.5">“{e.reason}”</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
             {canScore ? (
               <>
                 <div>
@@ -433,53 +503,63 @@ function AdminReviewModal({
                     className="mt-1.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
                   />
                 </div>
-                <div>
-                  <label className="text-sm font-semibold text-wt-text" htmlFor="admin-comments">
-                    Comments
-                  </label>
-                  <textarea
-                    id="admin-comments"
-                    value={comments}
-                    onChange={(e) => setComments(e.target.value)}
-                    placeholder="Required to reject (min. 10 characters)."
-                    rows={3}
-                    className="mt-1.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
-                  />
-                </div>
               </>
             ) : null}
+
+            {canDecide ? (
+              <div>
+                <label className="text-sm font-semibold text-wt-text" htmlFor="admin-comments">
+                  Comments
+                </label>
+                <textarea
+                  id="admin-comments"
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                  placeholder={
+                    status === "APPROVED"
+                      ? "Required to reopen and send back (min. 10 characters)."
+                      : "Required to send back (min. 10 characters)."
+                  }
+                  rows={3}
+                  className="mt-1.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
+                />
+              </div>
+            ) : null}
           </div>
+          )}
         </div>
         <div className={MODAL_FOOTER_CLASS}>
-          <Button type="button" variant="outline" onClick={onClose} disabled={busy !== null}>
+          <Button type="button" variant="outline" onClick={close} disabled={busy !== null}>
             Close
           </Button>
-          {canScore ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                className="!border-amber-300 !text-amber-700 hover:!bg-amber-50"
-                onClick={() => void submit("REJECT_MANAGER")}
-                disabled={busy !== null}
-              >
-                {busy === "reject-manager" ? "Sending…" : "Back to Manager"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="!border-rose-300 !text-rose-600 hover:!bg-rose-50"
-                onClick={() => void submit("REJECT")}
-                disabled={busy !== null}
-              >
-                <XCircle className="mr-1.5 size-4" />
-                {busy === "reject" ? "Sending…" : "Back to Employee"}
-              </Button>
-              <Button type="button" onClick={() => void submit("APPROVE")} disabled={busy !== null}>
-                <CheckCircle2 className="mr-1.5 size-4" />
-                {busy === "approve" ? "Approving…" : "Approve"}
-              </Button>
-            </>
+          {!editing && canSendToManager ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="!border-amber-300 !text-amber-700 hover:!bg-amber-50"
+              onClick={() => void submit("REJECT_MANAGER")}
+              disabled={busy !== null}
+            >
+              {busy === "reject-manager" ? "Sending…" : "Back to Manager"}
+            </Button>
+          ) : null}
+          {!editing && canSendToEmployee ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="!border-rose-300 !text-rose-600 hover:!bg-rose-50"
+              onClick={() => void submit("REJECT")}
+              disabled={busy !== null}
+            >
+              <XCircle className="mr-1.5 size-4" />
+              {busy === "reject" ? "Sending…" : "Back to Employee"}
+            </Button>
+          ) : null}
+          {!editing && canScore ? (
+            <Button type="button" onClick={() => void submit("APPROVE")} disabled={busy !== null}>
+              <CheckCircle2 className="mr-1.5 size-4" />
+              {busy === "approve" ? "Approving…" : "Approve"}
+            </Button>
           ) : null}
         </div>
       </div>
@@ -487,8 +567,9 @@ function AdminReviewModal({
   );
 }
 
-/** Employee self-rating vs manager rating, side by side, per KPI and value. */
-function RatingsComparison({ submission }: { submission: MonthlySubmissionItem }) {
+/** Employee self-rating vs manager rating, side by side, per KPI and value.
+ *  Exported for KpiReportsPanel's per-submission breakdown. */
+export function RatingsComparison({ submission }: { submission: MonthlySubmissionItem }) {
   const selfKpi = new Map(submission.kpi_ratings.map((r) => [r.kpi_id, r.rating]));
   const mgrKpi = submission.manager_evaluation?.kpi_ratings ?? {};
   const selfValue = new Map(submission.value_ratings.map((r) => [r.value_id, r.rating]));

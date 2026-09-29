@@ -31,6 +31,7 @@ import type {
   MonthlySubmissionDraftPayload,
   MonthlySubmissionType,
   ManagerReviewSubmitPayload,
+  AdminEditPayload,
   AdminReviewSubmitPayload,
   ScoreBreakdown,
   AllTimeKpiSummary,
@@ -1850,6 +1851,14 @@ export const hrmsService = {
   submitAdminReview(submissionId: number, payload: AdminReviewSubmitPayload) {
     return apiClient.put<MonthlySubmissionItem>(
       endpoints.monthlySubmissions.adminReview(submissionId),
+      { contentType: "application/json", body: JSON.stringify(payload) }
+    );
+  },
+
+  /** HR/Admin correction of the employee's or manager's part; status unchanged. */
+  adminEditMonthlySubmission(submissionId: number, payload: AdminEditPayload) {
+    return apiClient.put<MonthlySubmissionItem>(
+      endpoints.monthlySubmissions.adminEdit(submissionId),
       { contentType: "application/json", body: JSON.stringify(payload) }
     );
   },

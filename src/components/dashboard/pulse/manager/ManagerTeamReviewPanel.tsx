@@ -15,11 +15,12 @@ import {
   MODAL_PANEL_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
 import { RatingButtons } from "@/components/dashboard/pulse/employee/RatingButtons";
+import { cn } from "@/lib/utils";
 import { hrmsService } from "@/services/hrms.service";
 import { notifyError, notifySuccess } from "@/lib/notify";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { ApiError } from "@/api/error";
-import type { KpiRating, MonthlySubmissionItem, ValueRating } from "@/types/kpi";
+import type { MonthlySubmissionItem } from "@/types/kpi";
 import { formatWeight, groupKpisByParameter, hasKpiParameters } from "@/utils/kpiParameters";
 
 type Load<T> = { status: "loading" | "done" | "error"; data: T | null };
@@ -81,8 +82,8 @@ export function ManagerTeamReviewPanel() {
       <div>
         <h3 className="text-sm font-semibold text-wt-text">Team reviews awaiting you</h3>
         <p className="mt-0.5 text-xs text-wt-text-muted">
-          Your direct reports&apos; submitted self-reviews. Rate the same KPIs and values, then submit or
-          send back for changes.
+          Your direct reports&apos; submitted self-reviews. Rate each KPI and value yourself next to the
+          employee&apos;s rating, then approve and submit to HR, or reject with comments to send it back.
         </p>
       </div>
 
@@ -142,32 +143,24 @@ function ManagerReviewModal({
   onClose: () => void;
   onDone: () => void;
 }) {
-  const [kpiRatings, setKpiRatings] = useState<KpiRating[]>(submission.kpi_ratings);
-  const [valueRatings, setValueRatings] = useState<ValueRating[]>(submission.value_ratings);
+  // The manager's ratings are their own assessment: they start blank rather
+  // than copied from the employee's, so every score is a deliberate choice.
+  const [kpiRatings, setKpiRatings] = useState<Record<number, number>>({});
+  const [valueRatings, setValueRatings] = useState<Record<number, number>>({});
   const [comments, setComments] = useState("");
   const [busy, setBusy] = useState<"submit" | "reject" | null>(null);
 
-  const setKpiRating = (kpiId: number, rating: number) => {
-    setKpiRatings((prev) => [...prev.filter((r) => r.kpi_id !== kpiId), { kpi_id: kpiId, rating }]);
-  };
-  const setValueRatingValue = (valueId: number, rating: number) => {
-    setValueRatings((prev) => {
-      const existing = prev.find((r) => r.value_id === valueId);
-      return [
-        ...prev.filter((r) => r.value_id !== valueId),
-        { value_id: valueId, rating, comment: existing?.comment ?? "" },
-      ];
-    });
-  };
-
-  const kpiName = (id: number) => submission.kpi_details.find((k) => k.id === id)?.kpi_name ?? `KPI #${id}`;
-  const valueName = (id: number) => submission.value_details.find((v) => v.id === id)?.name ?? `Value #${id}`;
   const certName = (id: number) =>
     submission.certification_details.find((c) => c.id === id)?.name ?? `Certification #${id}`;
-  // Every KPI applicable to the employee must carry a manager rating — the
-  // backend rejects the review otherwise.
-  const showParameters = hasKpiParameters(submission.kpi_details);
-  const allKpisRated = submission.kpi_details.every((k) => kpiRatings.some((r) => r.kpi_id === k.id));
+  const valueName = (id: number) => submission.value_details.find((v) => v.id === id)?.name ?? `Value #${id}`;
+  const selfKpi = new Map(submission.kpi_ratings.map((r) => [r.kpi_id, r.rating]));
+
+  // Mirrors the backend: every applicable KPI and every value the employee
+  // rated needs a manager rating before the review can be submitted.
+  const kpiRated = submission.kpi_details.filter((k) => kpiRatings[k.id] != null).length;
+  const valueRated = submission.value_ratings.filter((v) => valueRatings[v.value_id] != null).length;
+  const allRated =
+    kpiRated === submission.kpi_details.length && valueRated === submission.value_ratings.length;
   const hrSendBack =
     submission.review_status === "NEEDS_MANAGER_REVIEW" && submission.admin_review?.action === "REJECT_MANAGER"
       ? submission.admin_review.comments
@@ -178,19 +171,25 @@ function ManagerReviewModal({
       notifyError("Add at least 10 characters of feedback before sending this back.");
       return;
     }
-    if (action === "SUBMIT" && !allKpisRated) {
-      notifyError("Rate every KPI before submitting your review.");
+    if (action === "SUBMIT" && !allRated) {
+      notifyError("Rate every KPI and Company Value before submitting your review.");
       return;
     }
     setBusy(action === "SUBMIT" ? "submit" : "reject");
     try {
       await hrmsService.submitManagerReview(submission.id, {
         action,
-        kpi_ratings: action === "SUBMIT" ? kpiRatings : [],
-        value_ratings: action === "SUBMIT" ? valueRatings : [],
+        kpi_ratings:
+          action === "SUBMIT"
+            ? Object.entries(kpiRatings).map(([id, rating]) => ({ kpi_id: Number(id), rating }))
+            : [],
+        value_ratings:
+          action === "SUBMIT"
+            ? Object.entries(valueRatings).map(([id, rating]) => ({ value_id: Number(id), rating, comment: "" }))
+            : [],
         comments,
       });
-      notifySuccess(action === "SUBMIT" ? "Review submitted." : "Sent back for changes.");
+      notifySuccess(action === "SUBMIT" ? "Review submitted to HR." : "Sent back to the employee.");
       onDone();
     } catch (error) {
       notifyError(
@@ -206,24 +205,21 @@ function ManagerReviewModal({
 
   return (
     <div className={MODAL_OVERLAY_CLASS} role="presentation" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" className={MODAL_PANEL_CLASS}>
+      <div role="dialog" aria-modal="true" className={cn(MODAL_PANEL_CLASS, "max-w-4xl")}>
         <div className={MODAL_HEADER_CLASS}>
           <h2 className="text-base font-semibold text-wt-text">{submission.employee.name}</h2>
-          <p className="mt-1 text-xs text-wt-text-muted">{submission.cycle_label}</p>
+          <p className="mt-1 text-xs text-wt-text-muted">
+            {submission.cycle_label} · {submission.employee.emp_id ?? submission.employee.email}
+            {submission.project_codes.length > 0 ? ` · Projects: ${submission.project_codes.join(", ")}` : ""}
+          </p>
         </div>
         <div className={MODAL_BODY_CLASS}>
-          <div className="space-y-5">
+          <div className="space-y-6">
             {hrSendBack ? (
               <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
                 <p className="font-semibold text-wt-text">HR sent this back to you</p>
                 <p className="mt-1 text-wt-text-muted">{hrSendBack}</p>
               </div>
-            ) : null}
-
-            {submission.project_codes.length > 0 ? (
-              <p className="text-xs text-wt-text-muted">
-                Projects: <span className="text-wt-text">{submission.project_codes.join(", ")}</span>
-              </p>
             ) : null}
 
             <div>
@@ -234,70 +230,48 @@ function ManagerReviewModal({
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-wt-text">KPIs</h3>
-              <p className="mt-0.5 text-xs text-wt-text-muted">
-                Starts from the employee&apos;s own rating — adjust to your assessment.
-              </p>
-              <div className="mt-2 space-y-4">
-                {groupKpisByParameter(submission.kpi_details).map((group) => (
-                  <div key={group.parameter ?? "_none"} className="space-y-2">
-                    {showParameters ? (
-                      <div className="flex items-baseline justify-between gap-3">
-                        <h4 className="text-xs font-semibold tracking-wide text-wt-text-muted uppercase">
-                          {group.parameter ?? "Other"}
-                        </h4>
-                        <span className="text-xs text-wt-text-muted">{formatWeight(group.weight)}</span>
-                      </div>
-                    ) : null}
-                    {group.items.map((kpi) => (
-                      <div
-                        key={kpi.id}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-wt-border bg-wt-surface-2/40 px-3 py-2"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-wt-text">{kpiName(kpi.id)}</p>
-                          <p className="text-xs text-wt-text-muted">
-                            {showParameters ? "" : `Weight ${formatWeight(kpi.weightage)} · `}self-rated{" "}
-                            <span className="font-semibold text-wt-text">
-                              {submission.kpi_ratings.find((k) => k.kpi_id === kpi.id)?.rating ?? "—"}
-                            </span>
-                          </p>
-                        </div>
-                        <RatingButtons
-                          value={kpiRatings.find((r) => r.kpi_id === kpi.id)?.rating ?? null}
-                          onChange={(v) => setKpiRating(kpi.id, v)}
-                        />
-                      </div>
-                    ))}
-                  </div>
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 className="text-sm font-semibold text-wt-text">KPIs</h3>
+                <span className="text-xs text-wt-text-muted">
+                  {kpiRated}/{submission.kpi_details.length} rated by you
+                </span>
+              </div>
+              <SideBySideHeader />
+              <div className="space-y-2">
+                {submission.kpi_details.map((kpi) => (
+                  <SideBySideRow
+                    key={kpi.id}
+                    title={kpi.kpi_name}
+                    meta={[kpi.parameter, `Weight ${kpi.weightage}%`].filter(Boolean).join(" · ")}
+                    detail={kpi.evaluation_criteria}
+                    selfRating={selfKpi.get(kpi.id) ?? null}
+                    managerRating={kpiRatings[kpi.id] ?? null}
+                    onRate={(v) => setKpiRatings((prev) => ({ ...prev, [kpi.id]: v }))}
+                  />
                 ))}
               </div>
             </div>
 
             {submission.value_ratings.length > 0 ? (
               <div>
-                <h3 className="text-sm font-semibold text-wt-text">Company Values</h3>
-                <div className="mt-2 space-y-2">
-                  {submission.value_ratings.map((v) => {
-                    const managerRating = valueRatings.find((r) => r.value_id === v.value_id)?.rating ?? v.rating;
-                    return (
-                      <div
-                        key={v.value_id}
-                        className="rounded-lg border border-wt-border bg-wt-surface-2/40 px-3 py-2"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-sm text-wt-text">
-                            {valueName(v.value_id)} · self-rated <span className="font-semibold">{v.rating}</span>
-                          </span>
-                          <RatingButtons
-                            value={managerRating}
-                            onChange={(rv) => setValueRatingValue(v.value_id, rv)}
-                          />
-                        </div>
-                        {v.comment ? <p className="mt-1 text-xs text-wt-text-muted">{v.comment}</p> : null}
-                      </div>
-                    );
-                  })}
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-wt-text">Company Values</h3>
+                  <span className="text-xs text-wt-text-muted">
+                    {valueRated}/{submission.value_ratings.length} rated by you
+                  </span>
+                </div>
+                <SideBySideHeader />
+                <div className="space-y-2">
+                  {submission.value_ratings.map((v) => (
+                    <SideBySideRow
+                      key={v.value_id}
+                      title={valueName(v.value_id)}
+                      detail={v.comment ? `Employee: “${v.comment}”` : null}
+                      selfRating={v.rating}
+                      managerRating={valueRatings[v.value_id] ?? null}
+                      onRate={(r) => setValueRatings((prev) => ({ ...prev, [v.value_id]: r }))}
+                    />
+                  ))}
                 </div>
               </div>
             ) : null}
@@ -327,7 +301,7 @@ function ManagerReviewModal({
                 id="manager-comments"
                 value={comments}
                 onChange={(e) => setComments(e.target.value)}
-                placeholder="Required to send back for changes (min. 10 characters)."
+                placeholder="Required to send back for changes (min. 10 characters). Shared with the employee."
                 rows={3}
                 className="mt-1.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
               />
@@ -345,13 +319,81 @@ function ManagerReviewModal({
             onClick={() => void submit("REJECT")}
             disabled={busy !== null}
           >
-            {busy === "reject" ? "Sending…" : "Send Back"}
+            {busy === "reject" ? "Sending…" : "Reject & Send Back"}
           </Button>
-          <Button type="button" onClick={() => void submit("SUBMIT")} disabled={busy !== null || !allKpisRated}>
+          <Button type="button" onClick={() => void submit("SUBMIT")} disabled={busy !== null || !allRated}>
             <CheckCircle2 className="mr-1.5 size-4" />
-            {busy === "submit" ? "Submitting…" : "Submit Review"}
+            {busy === "submit" ? "Submitting…" : "Approve & Submit"}
           </Button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+const SIDE_BY_SIDE_GRID = "grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_5.5rem_auto] sm:items-center sm:gap-4";
+
+function SideBySideHeader() {
+  return (
+    <div
+      className={cn(
+        SIDE_BY_SIDE_GRID,
+        "mt-2 mb-1.5 hidden px-3 text-[11px] font-medium uppercase tracking-wide text-wt-text-muted sm:grid"
+      )}
+    >
+      <span>Item</span>
+      <span className="text-center">Employee</span>
+      <span>Your rating</span>
+    </div>
+  );
+}
+
+/** One KPI/value: the employee's self-rating (read-only) next to the
+ *  manager's own rating, so both are visible at a glance. */
+function SideBySideRow({
+  title,
+  meta,
+  detail,
+  selfRating,
+  managerRating,
+  onRate,
+}: {
+  title: string;
+  meta?: string | null;
+  detail?: string | null;
+  selfRating: number | null;
+  managerRating: number | null;
+  onRate: (rating: number) => void;
+}) {
+  const differs = managerRating != null && selfRating != null && managerRating !== selfRating;
+  return (
+    <div
+      className={cn(
+        SIDE_BY_SIDE_GRID,
+        "rounded-lg border bg-wt-surface-2/40 px-3 py-2.5",
+        managerRating == null ? "border-wt-border" : "border-wt-brand/30"
+      )}
+    >
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-wt-text">{title}</p>
+        {meta ? <p className="text-xs text-wt-text-muted">{meta}</p> : null}
+        {detail ? <p className="mt-0.5 text-xs text-wt-text-faint">{detail}</p> : null}
+      </div>
+      <div className="flex items-center gap-2 sm:justify-center">
+        <span className="text-xs text-wt-text-muted sm:hidden">Employee</span>
+        <span className="flex size-8 items-center justify-center rounded-lg border border-wt-border bg-wt-surface-1 text-sm font-semibold text-wt-text">
+          {selfRating ?? "—"}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-wt-text-muted sm:hidden">You</span>
+        <RatingButtons value={managerRating} onChange={onRate} />
+        {differs ? (
+          <span className="text-xs text-amber-700 dark:text-amber-400" title="Differs from the employee's rating">
+            {managerRating! > selfRating! ? "+" : ""}
+            {managerRating! - selfRating!}
+          </span>
+        ) : null}
       </div>
     </div>
   );

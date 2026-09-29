@@ -275,6 +275,8 @@ export const endpoints = {
       `${api}/monthly-submissions/${encodeURIComponent(String(submissionId))}/score-breakdown`,
     adminReview: (submissionId: string | number) =>
       `${api}/monthly-submissions/${encodeURIComponent(String(submissionId))}/admin-review`,
+    adminEdit: (submissionId: string | number) =>
+      `${api}/monthly-submissions/${encodeURIComponent(String(submissionId))}/admin-edit`,
     byId: (submissionId: string | number) =>
       `${api}/monthly-submissions/${encodeURIComponent(String(submissionId))}`,
     importCsv: `${api}/monthly-submissions/import-csv`,

@@ -261,6 +261,7 @@ export function notificationCategoryLabel(
     case "MONTHLY_REVIEW_NEEDS_CHANGES":
     case "MONTHLY_REVIEW_NEEDS_MANAGER_REVIEW":
     case "MONTHLY_REVIEW_APPROVED":
+    case "MONTHLY_REVIEW_UPDATED":
       return "Pulse";
     default:
       return "—";
@@ -454,6 +455,7 @@ export function resolveNotificationHref(
     case "MONTHLY_REVIEW_NEEDS_CHANGES":
     case "MONTHLY_REVIEW_NEEDS_MANAGER_REVIEW":
     case "MONTHLY_REVIEW_APPROVED":
+    case "MONTHLY_REVIEW_UPDATED":
       return DASHBOARD_ROUTES.pulse;
 
     default:
