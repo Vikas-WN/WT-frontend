@@ -4,9 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="bugs">
+    <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="new changes">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/ui/date-picker.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ui/date-picker.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/pulse/KpiReportsPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/pulse/KpiReportsPanel.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -105,6 +105,7 @@
   </component>
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
+    &quot;Git.Working.Tree.Tab.closed.by.user&quot;: &quot;closed&quot;,
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
@@ -249,7 +250,23 @@
       <option name="project" value="LOCAL" />
       <updated>1790654548681</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="new changes">
+      <option name="closed" value="true" />
+      <created>1790673755920</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1790673755920</updated>
+    </task>
+    <task id="LOCAL-00013" summary="new changes">
+      <option name="closed" value="true" />
+      <created>1790673847565</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1790673847565</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -277,6 +294,7 @@
     <MESSAGE value="feat: fixing the reported bugs" />
     <MESSAGE value="bug fixes" />
     <MESSAGE value="bugs" />
-    <option name="LAST_COMMIT_MESSAGE" value="bugs" />
+    <MESSAGE value="new changes" />
+    <option name="LAST_COMMIT_MESSAGE" value="new changes" />
   </component>
 </project>

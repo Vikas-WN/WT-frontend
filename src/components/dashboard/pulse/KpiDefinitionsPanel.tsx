@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Hash, Layers3, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { AlertTriangle, Hash, Layers3, Pencil, Plus, SlidersHorizontal, Trash2, Upload } from "lucide-react";
 
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
@@ -15,14 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import {
-  MODAL_BODY_CLASS,
-  MODAL_FOOTER_CLASS,
-  MODAL_HEADER_CLASS,
-  MODAL_OVERLAY_CLASS,
-  MODAL_PANEL_CLASS,
-} from "@/components/dashboard/ui/uiLayout";
-import { ModalPortal } from "@/components/dashboard/ui/ModalPortal";
+import { WtFormDialog } from "@/components/allocation/WtFormDialog";
+import { KpiSetEditorDialog } from "@/components/dashboard/pulse/KpiSetEditorDialog";
 import { ApiError } from "@/api/error";
 import { hrmsService } from "@/services/hrms.service";
 import { useClientPagination } from "@/hooks/useClientPagination";
@@ -202,7 +196,8 @@ export function KpiDefinitionsPanel() {
         sum: 0,
         count: 0,
       };
-      prev.sum += Number(row.weightage) || 0;
+      // Inactive KPIs aren't rated, so they don't count toward the 100%.
+      if (row.active) prev.sum += Number(row.weightage) || 0;
       prev.count += 1;
       combos.set(key, prev);
     }
@@ -229,6 +224,11 @@ export function KpiDefinitionsPanel() {
   const [form, setForm] = useState<FormState>(emptyForm({ bandId: "", department: "" }));
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const [editingSet, setEditingSet] = useState<(typeof grouped)[number] | null>(null);
+  const closeDialog = useCallback(() => {
+    if (!saving) setDialog(null);
+  }, [saving]);
 
   const [deleteTarget, setDeleteTarget] = useState<KpiDefinitionItem | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -469,7 +469,10 @@ export function KpiDefinitionsPanel() {
         <div className="space-y-4">
           {groupPages.pageItems.map((group) => {
             const groupOverweight = weightReport.overweight.some((c) => c.key === group.key);
-            const groupTotal = group.goals.reduce((sum, row) => sum + (Number(row.weightage) || 0), 0);
+            const groupTotal = group.goals.reduce(
+              (sum, row) => sum + (row.active ? Number(row.weightage) || 0 : 0),
+              0
+            );
             const showParameters = hasKpiParameters(group.goals);
             return (
               <div key={group.key} className="overflow-hidden rounded-xl border border-wt-border">
@@ -485,7 +488,12 @@ export function KpiDefinitionsPanel() {
                       {group.goals.length} KPI{group.goals.length === 1 ? "" : "s"} · total {formatWeight(groupTotal)}
                     </p>
                   </div>
-                  {groupOverweight ? <Badge variant="destructive">Over 100%</Badge> : null}
+                  <div className="flex items-center gap-2">
+                    {groupOverweight ? <Badge variant="destructive">Over 100%</Badge> : null}
+                    <Button type="button" variant="outline" size="sm" onClick={() => setEditingSet(group)}>
+                      <SlidersHorizontal className="mr-1.5 size-3.5" /> Edit Set
+                    </Button>
+                  </div>
                 </div>
                 {groupKpisByParameter(group.goals).map((param) => (
                   <div key={param.parameter ?? "_none"} className="border-b border-wt-border last:border-b-0">
@@ -494,8 +502,19 @@ export function KpiDefinitionsPanel() {
                         <span className="text-xs font-semibold tracking-wide text-wt-text-muted uppercase">
                           {param.parameter ?? "No parameter"}
                         </span>
-                        <span className="font-mono text-xs font-semibold text-wt-text">
-                          {formatWeight(param.weight)}
+                        <span className="flex items-center gap-1.5">
+                          <span className="font-mono text-xs font-semibold text-wt-text">
+                            {formatWeight(param.weight)}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => setEditingSet(group)}
+                            aria-label={`Edit parameter ${param.parameter ?? "(none)"} and its weights`}
+                          >
+                            <Pencil className="size-3" />
+                          </Button>
                         </span>
                       </div>
                     ) : null}
@@ -564,104 +583,99 @@ export function KpiDefinitionsPanel() {
         </div>
       )}
 
-      {dialog ? (
-        <ModalPortal onEscape={saving ? undefined : () => setDialog(null)}>
-          <div
-            className={MODAL_OVERLAY_CLASS}
-            role="presentation"
-            onClick={(e) => {
-              if (e.target === e.currentTarget && !saving) setDialog(null);
-            }}
-          >
-            <div role="dialog" aria-modal="true" className={MODAL_PANEL_CLASS}>
-              <div className={MODAL_HEADER_CLASS}>
-                <h2 className="text-base font-semibold text-wt-text">
-                  {dialog.mode === "add" ? "Add KPI" : "Edit KPI"}
-                </h2>
-              </div>
-              <div className={MODAL_BODY_CLASS}>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <SelectField
-                      label="Band"
-                      value={form.bandId}
-                      onChange={(v) => setForm((f) => ({ ...f, bandId: v, designation: "" }))}
-                      options={bandOptions}
-                      placeholder="Select band"
-                      required
-                    />
-                    <SelectField
-                      label="Department"
-                      value={form.department}
-                      onChange={(v) => setForm((f) => ({ ...f, department: v, designation: "" }))}
-                      options={departmentOptions}
-                      placeholder="Select department"
-                      required
-                    />
-                  </div>
-                  <DesignationCombobox
-                    bandId={formBandId}
-                    department={form.department}
-                    value={form.designation}
-                    onChange={(v) => setForm((f) => ({ ...f, designation: v }))}
-                    disabled={!formBandId || !form.department}
-                    canCreate
-                    required
-                  />
-                  <InputField
-                    label="KPI Name"
-                    value={form.kpiName}
-                    onChange={(v) => setForm((f) => ({ ...f, kpiName: v }))}
-                    required
-                    placeholder="e.g. Code Quality"
-                  />
-                  <InputField
-                    label="Parameter"
-                    value={form.parameter}
-                    onChange={(v) => setForm((f) => ({ ...f, parameter: v }))}
-                    placeholder="e.g. Technical Excellence"
-                    description="The group this KPI rolls up to. A parameter's weight is the sum of its KPIs' weights."
-                  />
-                  <TextAreaField
-                    label="Evaluation Criteria"
-                    value={form.evaluationCriteria}
-                    onChange={(v) => setForm((f) => ({ ...f, evaluationCriteria: v }))}
-                    placeholder="What meeting this KPI looks like (optional)"
-                    rows={3}
-                  />
-                  <InputField
-                    label="Weightage (%)"
-                    value={form.weightage}
-                    onChange={(v) => setForm((f) => ({ ...f, weightage: v }))}
-                    type="number"
-                    required
-                    description="This KPI's share of the total: greater than 0, up to 100."
-                  />
-                  <label className="flex items-center gap-2 text-sm text-wt-text">
-                    <Checkbox
-                      checked={form.active}
-                      onCheckedChange={(v) => setForm((f) => ({ ...f, active: Boolean(v) }))}
-                    />
-                    Active
-                  </label>
-                  {formError ? (
-                    <p className="text-sm text-destructive" role="alert">
-                      {formError}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-              <div className={MODAL_FOOTER_CLASS}>
-                <Button type="button" variant="outline" onClick={() => setDialog(null)} disabled={saving}>
-                  Cancel
-                </Button>
-                <Button type="button" onClick={() => void submit()} disabled={saving}>
-                  {saving ? "Saving…" : dialog.mode === "add" ? "Add KPI" : "Save changes"}
-                </Button>
-              </div>
-            </div>
+      <WtFormDialog
+        open={Boolean(dialog)}
+        title={dialog?.mode === "edit" ? "Edit KPI" : "Add KPI"}
+        onClose={closeDialog}
+        onSubmit={() => void submit()}
+        submitLabel={dialog?.mode === "edit" ? "Save Changes" : "Add KPI"}
+        loading={saving}
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <SelectField
+              label="Band"
+              value={form.bandId}
+              onChange={(v) => setForm((f) => ({ ...f, bandId: v, designation: "" }))}
+              options={bandOptions}
+              placeholder="Select band"
+              required
+            />
+            <SelectField
+              label="Department"
+              value={form.department}
+              onChange={(v) => setForm((f) => ({ ...f, department: v, designation: "" }))}
+              options={departmentOptions}
+              placeholder="Select department"
+              required
+            />
           </div>
-        </ModalPortal>
+          <DesignationCombobox
+            bandId={formBandId}
+            department={form.department}
+            value={form.designation}
+            onChange={(v) => setForm((f) => ({ ...f, designation: v }))}
+            disabled={!formBandId || !form.department}
+            canCreate
+            required
+          />
+          <InputField
+            label="KPI Name"
+            value={form.kpiName}
+            onChange={(v) => setForm((f) => ({ ...f, kpiName: v }))}
+            required
+            placeholder="e.g. Code Quality"
+          />
+          <InputField
+            label="Parameter"
+            value={form.parameter}
+            onChange={(v) => setForm((f) => ({ ...f, parameter: v }))}
+            placeholder="e.g. Technical Excellence"
+            description="The group this KPI rolls up to. A parameter's weight is the sum of its KPIs' weights."
+          />
+          <TextAreaField
+            label="Evaluation Criteria"
+            value={form.evaluationCriteria}
+            onChange={(v) => setForm((f) => ({ ...f, evaluationCriteria: v }))}
+            placeholder="What meeting this KPI looks like (optional)"
+            rows={3}
+          />
+          <InputField
+            label="Weightage (%)"
+            value={form.weightage}
+            onChange={(v) => setForm((f) => ({ ...f, weightage: v }))}
+            type="number"
+            required
+            description="This KPI's share of the total: greater than 0, up to 100."
+          />
+          <label className="flex items-center gap-2 text-sm text-wt-text">
+            <Checkbox
+              checked={form.active}
+              onCheckedChange={(v) => setForm((f) => ({ ...f, active: Boolean(v) }))}
+            />
+            Active
+          </label>
+          {formError ? (
+            <p className="text-sm text-destructive" role="alert">
+              {formError}
+            </p>
+          ) : null}
+        </div>
+      </WtFormDialog>
+
+      {editingSet ? (
+        <KpiSetEditorDialog
+          key={editingSet.key}
+          open
+          title={`${editingSet.label} · ${bandNameById.get(editingSet.bandId) ?? `Band ${editingSet.bandId}`} · ${editingSet.department}`}
+          designation={editingSet.label}
+          goals={editingSet.goals}
+          onClose={() => setEditingSet(null)}
+          onSaved={() => {
+            setEditingSet(null);
+            refresh();
+          }}
+        />
       ) : null}
 
       <ConfirmDialog
