@@ -6,10 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="bugs">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/sections/OffboardingPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/sections/OffboardingPanel.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/hooks/leave/useEmployeeManagers.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/leave/useEmployeeManagers.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/hooks/timelog/useTimelogManagerOptions.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/timelog/useTimelogManagerOptions.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/apiRows.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/apiRows.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
