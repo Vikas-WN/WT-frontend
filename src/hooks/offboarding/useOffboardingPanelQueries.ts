@@ -361,6 +361,10 @@ export function useOffboardingPanelQueries() {
 
   const refreshOffboardingData = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ["offboarding"] });
+    // A submitted offboarding also changes the employee's status — keep the directory
+    // list and any open profile page in sync instead of requiring a manual reload.
+    await queryClient.invalidateQueries({ queryKey: ["employee-directory", "onboard"] });
+    await queryClient.invalidateQueries({ queryKey: ["employee-profile"] });
   }, [queryClient]);
 
   const resetListFilters = useCallback(() => {

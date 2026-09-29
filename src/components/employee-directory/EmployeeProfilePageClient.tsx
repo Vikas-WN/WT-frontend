@@ -536,6 +536,12 @@ export function EmployeeProfilePageClient() {
                     exit_type: "VOLUNTARY" as const,
                   };
           await hrmsService.offboardEmployee(empId, offboardPayload);
+          // offboardEmployee() bypasses updateMutation (whose onSuccess invalidates these),
+          // so the directory list/offboarding views would otherwise show the old status
+          // until a manual reload.
+          await queryClient.invalidateQueries({ queryKey: ["employee-profile", empId] });
+          await queryClient.invalidateQueries({ queryKey: ["employee-directory", "onboard"] });
+          await queryClient.invalidateQueries({ queryKey: ["offboarding"] });
 
           if (!statusOnlyEdit) {
             if (!isValidPersonName(editForm.name.trim())) {
