@@ -17,12 +17,15 @@ import {
   MODAL_OVERLAY_CLASS,
   MODAL_PANEL_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
+import { ModalPortal } from "@/components/dashboard/ui/ModalPortal";
 import { AdminEditSubmissionForm } from "@/components/dashboard/pulse/AdminEditSubmissionForm";
+import { useSubmissionLink } from "@/components/dashboard/pulse/useSubmissionLink";
 import { hrmsService } from "@/services/hrms.service";
 import { notifyError, notifySuccess } from "@/lib/notify";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { ApiError } from "@/api/error";
 import { cn } from "@/lib/utils";
+import { formatWeight, groupKpisByParameter, hasKpiParameters } from "@/utils/kpiParameters";
 import type {
   AdminMonthlyOverview,
   MonthlySubmissionItem,
@@ -73,15 +76,39 @@ export function SubmissionsReviewPanel() {
   const [statusFilter, setStatusFilter] = useState("MANAGER_SUBMITTED");
   const [reloadTick, setReloadTick] = useState(0);
   const refresh = useCallback(() => setReloadTick((t) => t + 1), []);
-  const submissions = useLoad<MonthlySubmissionItem[]>(
+
+  // Arrived from a notification (`?submission=`): list every status while the
+  // link is active so the submission is found wherever it now stands; it
+  // opens until the review is closed, which drops the link.
+  const { linkedId, clear: clearLink } = useSubmissionLink();
+  const effectiveFilter = linkedId != null ? ALL_STATUSES : statusFilter;
+  const submissions = useLoad<{ filter: string; rows: MonthlySubmissionItem[] }>(
     () =>
-      hrmsService.listAllMonthlySubmissions({
-        reviewStatus: statusFilter && statusFilter !== ALL_STATUSES ? statusFilter : undefined,
-      }),
-    [statusFilter, reloadTick]
+      hrmsService
+        .listAllMonthlySubmissions({
+          reviewStatus: effectiveFilter && effectiveFilter !== ALL_STATUSES ? effectiveFilter : undefined,
+        })
+        .then((rows) => ({ filter: effectiveFilter, rows })),
+    [effectiveFilter, reloadTick]
   );
+  // Rows stay on screen until a refetch lands — only trust them for the link
+  // once they were loaded for the current filter.
+  const listFresh = submissions.status === "done" && submissions.data?.filter === effectiveFilter;
   const overview = useLoad<AdminMonthlyOverview>(() => hrmsService.getAdminMonthlyOverview(), [reloadTick]);
   const [reviewing, setReviewing] = useState<MonthlySubmissionItem | null>(null);
+  const linkedRow =
+    linkedId != null && listFresh ? (submissions.data?.rows.find((row) => row.id === linkedId) ?? null) : null;
+  const open = reviewing ?? linkedRow;
+  const closeReview = () => {
+    setReviewing(null);
+    if (linkedId != null) clearLink();
+  };
+  useEffect(() => {
+    if (linkedId == null || !listFresh || linkedRow) return;
+    notifyError("That submission couldn't be found — it may have been deleted.");
+    clearLink();
+  }, [linkedId, listFresh, linkedRow, clearLink]);
+
 
   const importInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
@@ -125,7 +152,7 @@ export function SubmissionsReviewPanel() {
     }
   };
 
-  const rows = submissions.data ?? [];
+  const rows = submissions.data?.rows ?? [];
 
   return (
     <div className="space-y-5">
@@ -176,8 +203,11 @@ export function SubmissionsReviewPanel() {
             <Upload className="mr-1.5 size-4" /> {importing ? "Importing…" : "Import Ratings CSV"}
           </Button>
           <ToolbarFilterSelect
-            value={statusFilter}
-            onChange={setStatusFilter}
+            value={effectiveFilter}
+            onChange={(value) => {
+              if (linkedId != null) clearLink();
+              setStatusFilter(value);
+            }}
             options={STATUS_OPTIONS}
             placeholder="All statuses"
             aria-label="Filter by status"
@@ -229,12 +259,13 @@ export function SubmissionsReviewPanel() {
         </div>
       )}
 
-      {reviewing ? (
+      {open ? (
         <AdminReviewModal
-          submission={reviewing}
-          onClose={() => setReviewing(null)}
+          key={open.id}
+          submission={open}
+          onClose={closeReview}
           onDone={() => {
-            setReviewing(null);
+            closeReview();
             refresh();
           }}
         />
@@ -352,245 +383,263 @@ export function AdminReviewModal({
   );
 
   return (
-    <div className={MODAL_OVERLAY_CLASS} role="presentation" onClick={(e) => e.target === e.currentTarget && close()}>
-      <div role="dialog" aria-modal="true" className={cn(MODAL_PANEL_CLASS, "max-w-4xl")}>
-        <div className={cn(MODAL_HEADER_CLASS, "flex items-start justify-between gap-3")}>
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold text-wt-text">{submission.employee.name}</h2>
-            <p className="mt-1 text-xs text-wt-text-muted">
-              {submission.cycle_label} · {statusLabel(submission.review_status)}
-              {submission.manager_review?.reviewed_by ? ` · Manager: ${submission.manager_review.reviewed_by}` : ""}
-            </p>
-          </div>
-          {canEdit && !editing ? (
-            <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>
-              <Pencil className="mr-1.5 size-3.5" /> Edit
-            </Button>
-          ) : null}
-        </div>
-        <div className={MODAL_BODY_CLASS}>
-          {editing ? (
-            <AdminEditSubmissionForm
-              submission={submission}
-              onCancel={() => setEditing(false)}
-              onSaved={(updated) => {
-                setSubmission(updated);
-                setEdited(true);
-                setEditing(false);
-              }}
-            />
-          ) : (
-          <div className="space-y-5">
-            {canScore ? (
-              <div>
-                <h3 className="text-sm font-semibold text-wt-text">RTP score</h3>
-                {breakdown.status === "loading" ? (
-                  <SectionLoading label="" />
-                ) : breakdown.data ? (
-                  <>
-                    <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                      <ScoreTile
-                        label={`KPI (${Math.round(breakdown.data.kpi_weight * 100)}%)`}
-                        value={breakdown.data.weighted_kpi_component}
-                      />
-                      <ScoreTile
-                        label={`Values (${Math.round(breakdown.data.values_weight * 100)}%)`}
-                        value={breakdown.data.weighted_values_component}
-                      />
-                      <ScoreTile label="Brownie points" value={breakdown.data.brownie_points} />
-                      <ScoreTile label="Final" value={breakdown.data.total_score} emphasize />
-                    </div>
-                    <p className="mt-2 text-xs text-wt-text-muted">
-                      Normalized KPI {breakdown.data.normalized_kpi_score}/5 · Values{" "}
-                      {breakdown.data.normalized_values_score}/5 · Certification points{" "}
-                      {breakdown.data.certification_points} · Recognition points{" "}
-                      {breakdown.data.recognition_points}
-                      {breakdown.data.promotion_eligible ? " · Promotion eligible (≥ 4.0)" : ""}
-                    </p>
-                  </>
-                ) : null}
-              </div>
-            ) : submission.final_score != null ? (
-              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-wt-text">
-                Final score: <span className="font-semibold">{submission.final_score}</span>
-                {submission.promotion_eligible ? (
-                  <span className="ml-2 text-xs text-emerald-600 dark:text-emerald-400">
-                    Promotion eligible
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
-
-            <div>
-              <h3 className="text-sm font-semibold text-wt-text">Self review</h3>
-              <p className="mt-1.5 whitespace-pre-wrap rounded-lg border border-wt-border bg-wt-surface-2/40 p-3 text-sm text-wt-text">
-                {submission.self_review_text || "—"}
+    <ModalPortal onEscape={busy ? undefined : close}>
+      <div className={MODAL_OVERLAY_CLASS} role="presentation" onClick={(e) => e.target === e.currentTarget && close()}>
+        <div role="dialog" aria-modal="true" className={cn(MODAL_PANEL_CLASS, "max-w-4xl")}>
+          <div className={cn(MODAL_HEADER_CLASS, "flex items-start justify-between gap-3")}>
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-wt-text">{submission.employee.name}</h2>
+              <p className="mt-1 text-xs text-wt-text-muted">
+                {submission.cycle_label} · {statusLabel(submission.review_status)}
+                {submission.manager_review?.reviewed_by ? ` · Manager: ${submission.manager_review.reviewed_by}` : ""}
               </p>
             </div>
-
-            <RatingsComparison submission={submission} />
-
-            {submission.manager_evaluation ? (
-              <div>
-                <h3 className="text-sm font-semibold text-wt-text">Manager evaluation</h3>
-                <p className="mt-1.5 whitespace-pre-wrap rounded-lg border border-wt-border bg-wt-surface-2/40 p-3 text-sm text-wt-text">
-                  {submission.manager_evaluation.comments || "—"}
-                </p>
-              </div>
-            ) : null}
-
-            {submission.certifications.length > 0 ? (
-              <div>
-                <h3 className="text-sm font-semibold text-wt-text">Certifications claimed</h3>
-                <ul className="mt-1.5 space-y-1 text-sm text-wt-text-muted">
-                  {submission.certifications.map((c) => (
-                    <li key={c.certification_id}>
-                      {submission.certification_details.find((d) => d.id === c.certification_id)?.name ??
-                        `Certification #${c.certification_id}`}
-                      {c.proof ? ` — ${c.proof}` : ""}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {submission.admin_edits?.length ? (
-              <div>
-                <h3 className="text-sm font-semibold text-wt-text">HR edits</h3>
-                <ul className="mt-1.5 space-y-1.5 text-xs text-wt-text-muted">
-                  {submission.admin_edits.map((e, i) => (
-                    <li key={i} className="rounded-lg border border-wt-border bg-wt-surface-2/40 px-3 py-2">
-                      <span className="font-medium text-wt-text">{e.edited_by}</span>
-                      {e.edited_at ? ` · ${new Date(e.edited_at).toLocaleString()}` : ""} · changed{" "}
-                      {e.fields.map((f) => EDIT_FIELD_LABELS[f] ?? f).join(", ")}
-                      <p className="mt-0.5">“{e.reason}”</p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {canScore ? (
-              <>
-                <div>
-                  <label className="text-sm font-semibold text-wt-text" htmlFor="tech-showcase">
-                    Tech showcase (optional)
-                  </label>
-                  <input
-                    id="tech-showcase"
-                    type="text"
-                    value={techShowcase}
-                    onChange={(e) => setTechShowcase(e.target.value)}
-                    placeholder="A notable technical contribution this cycle"
-                    className="mt-1.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-wt-text" htmlFor="score-override">
-                    Final score override (optional)
-                  </label>
-                  <input
-                    id="score-override"
-                    type="number"
-                    min={1}
-                    max={10}
-                    step={0.01}
-                    value={scoreOverride}
-                    onChange={(e) => setScoreOverride(e.target.value)}
-                    placeholder={
-                      breakdown.data ? `Leave blank to use ${breakdown.data.total_score.toFixed(2)}` : "Leave blank to use the computed score"
-                    }
-                    className="mt-1.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
-                  />
-                </div>
-              </>
-            ) : null}
-
-            {canDecide ? (
-              <div>
-                <label className="text-sm font-semibold text-wt-text" htmlFor="admin-comments">
-                  Comments
-                </label>
-                <textarea
-                  id="admin-comments"
-                  value={comments}
-                  onChange={(e) => setComments(e.target.value)}
-                  placeholder={
-                    status === "APPROVED"
-                      ? "Required to reopen and send back (min. 10 characters)."
-                      : "Required to send back (min. 10 characters)."
-                  }
-                  rows={3}
-                  className="mt-1.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
-                />
-              </div>
+            {canEdit && !editing ? (
+              <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>
+                <Pencil className="mr-1.5 size-3.5" /> Edit
+              </Button>
             ) : null}
           </div>
-          )}
-        </div>
-        <div className={MODAL_FOOTER_CLASS}>
-          <Button type="button" variant="outline" onClick={close} disabled={busy !== null}>
-            Close
-          </Button>
-          {!editing && canSendToManager ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="!border-amber-300 !text-amber-700 hover:!bg-amber-50"
-              onClick={() => void submit("REJECT_MANAGER")}
-              disabled={busy !== null}
-            >
-              {busy === "reject-manager" ? "Sending…" : "Back to Manager"}
+          <div className={MODAL_BODY_CLASS}>
+            {editing ? (
+              <AdminEditSubmissionForm
+                submission={submission}
+                onCancel={() => setEditing(false)}
+                onSaved={(updated) => {
+                  setSubmission(updated);
+                  setEdited(true);
+                  setEditing(false);
+                }}
+              />
+            ) : (
+            <div className="space-y-5">
+              {canScore ? (
+                <div>
+                  <h3 className="text-sm font-semibold text-wt-text">RTP score</h3>
+                  {breakdown.status === "loading" ? (
+                    <SectionLoading label="" />
+                  ) : breakdown.data ? (
+                    <>
+                      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <ScoreTile
+                          label={`KPI (${Math.round(breakdown.data.kpi_weight * 100)}%)`}
+                          value={breakdown.data.weighted_kpi_component}
+                        />
+                        <ScoreTile
+                          label={`Values (${Math.round(breakdown.data.values_weight * 100)}%)`}
+                          value={breakdown.data.weighted_values_component}
+                        />
+                        <ScoreTile label="Brownie points" value={breakdown.data.brownie_points} />
+                        <ScoreTile label="Final" value={breakdown.data.total_score} emphasize />
+                      </div>
+                      <p className="mt-2 text-xs text-wt-text-muted">
+                        Normalized KPI {breakdown.data.normalized_kpi_score}/5 · Values{" "}
+                        {breakdown.data.normalized_values_score}/5 · Certification points{" "}
+                        {breakdown.data.certification_points} · Recognition points{" "}
+                        {breakdown.data.recognition_points}
+                        {breakdown.data.promotion_eligible ? " · Promotion eligible (≥ 4.0)" : ""}
+                      </p>
+                    </>
+                  ) : null}
+                </div>
+              ) : submission.final_score != null ? (
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-wt-text">
+                  Final score: <span className="font-semibold">{submission.final_score}</span>
+                  {submission.promotion_eligible ? (
+                    <span className="ml-2 text-xs text-emerald-600 dark:text-emerald-400">
+                      Promotion eligible
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div>
+                <h3 className="text-sm font-semibold text-wt-text">Self review</h3>
+                <p className="mt-1.5 whitespace-pre-wrap rounded-lg border border-wt-border bg-wt-surface-2/40 p-3 text-sm text-wt-text">
+                  {submission.self_review_text || "—"}
+                </p>
+              </div>
+
+              <RatingsComparison submission={submission} />
+
+              {submission.manager_evaluation ? (
+                <div>
+                  <h3 className="text-sm font-semibold text-wt-text">Manager evaluation</h3>
+                  <p className="mt-1.5 whitespace-pre-wrap rounded-lg border border-wt-border bg-wt-surface-2/40 p-3 text-sm text-wt-text">
+                    {submission.manager_evaluation.comments || "—"}
+                  </p>
+                </div>
+              ) : null}
+
+              {submission.certifications.length > 0 ? (
+                <div>
+                  <h3 className="text-sm font-semibold text-wt-text">Certifications claimed</h3>
+                  <ul className="mt-1.5 space-y-1 text-sm text-wt-text-muted">
+                    {submission.certifications.map((c) => (
+                      <li key={c.certification_id}>
+                        {submission.certification_details.find((d) => d.id === c.certification_id)?.name ??
+                          `Certification #${c.certification_id}`}
+                        {c.proof ? ` — ${c.proof}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {submission.admin_edits?.length ? (
+                <div>
+                  <h3 className="text-sm font-semibold text-wt-text">HR edits</h3>
+                  <ul className="mt-1.5 space-y-1.5 text-xs text-wt-text-muted">
+                    {submission.admin_edits.map((e, i) => (
+                      <li key={i} className="rounded-lg border border-wt-border bg-wt-surface-2/40 px-3 py-2">
+                        <span className="font-medium text-wt-text">{e.edited_by}</span>
+                        {e.edited_at ? ` · ${new Date(e.edited_at).toLocaleString()}` : ""} · changed{" "}
+                        {e.fields.map((f) => EDIT_FIELD_LABELS[f] ?? f).join(", ")}
+                        <p className="mt-0.5">“{e.reason}”</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {canScore ? (
+                <>
+                  <div>
+                    <label className="text-sm font-semibold text-wt-text" htmlFor="tech-showcase">
+                      Tech showcase (optional)
+                    </label>
+                    <input
+                      id="tech-showcase"
+                      type="text"
+                      value={techShowcase}
+                      onChange={(e) => setTechShowcase(e.target.value)}
+                      placeholder="A notable technical contribution this cycle"
+                      className="mt-1.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-wt-text" htmlFor="score-override">
+                      Final score override (optional)
+                    </label>
+                    <input
+                      id="score-override"
+                      type="number"
+                      min={1}
+                      max={10}
+                      step={0.01}
+                      value={scoreOverride}
+                      onChange={(e) => setScoreOverride(e.target.value)}
+                      placeholder={
+                        breakdown.data ? `Leave blank to use ${breakdown.data.total_score.toFixed(2)}` : "Leave blank to use the computed score"
+                      }
+                      className="mt-1.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
+                    />
+                  </div>
+                </>
+              ) : null}
+
+              {canDecide ? (
+                <div>
+                  <label className="text-sm font-semibold text-wt-text" htmlFor="admin-comments">
+                    Comments
+                  </label>
+                  <textarea
+                    id="admin-comments"
+                    value={comments}
+                    onChange={(e) => setComments(e.target.value)}
+                    placeholder={
+                      status === "APPROVED"
+                        ? "Required to reopen and send back (min. 10 characters)."
+                        : "Required to send back (min. 10 characters)."
+                    }
+                    rows={3}
+                    className="mt-1.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
+                  />
+                </div>
+              ) : null}
+            </div>
+            )}
+          </div>
+          <div className={MODAL_FOOTER_CLASS}>
+            <Button type="button" variant="outline" onClick={close} disabled={busy !== null}>
+              Close
             </Button>
-          ) : null}
-          {!editing && canSendToEmployee ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="!border-rose-300 !text-rose-600 hover:!bg-rose-50"
-              onClick={() => void submit("REJECT")}
-              disabled={busy !== null}
-            >
-              <XCircle className="mr-1.5 size-4" />
-              {busy === "reject" ? "Sending…" : "Back to Employee"}
-            </Button>
-          ) : null}
-          {!editing && canScore ? (
-            <Button type="button" onClick={() => void submit("APPROVE")} disabled={busy !== null}>
-              <CheckCircle2 className="mr-1.5 size-4" />
-              {busy === "approve" ? "Approving…" : "Approve"}
-            </Button>
-          ) : null}
+            {!editing && canSendToManager ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="!border-amber-300 !text-amber-700 hover:!bg-amber-50"
+                onClick={() => void submit("REJECT_MANAGER")}
+                disabled={busy !== null}
+              >
+                {busy === "reject-manager" ? "Sending…" : "Back to Manager"}
+              </Button>
+            ) : null}
+            {!editing && canSendToEmployee ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="!border-rose-300 !text-rose-600 hover:!bg-rose-50"
+                onClick={() => void submit("REJECT")}
+                disabled={busy !== null}
+              >
+                <XCircle className="mr-1.5 size-4" />
+                {busy === "reject" ? "Sending…" : "Back to Employee"}
+              </Button>
+            ) : null}
+            {!editing && canScore ? (
+              <Button type="button" onClick={() => void submit("APPROVE")} disabled={busy !== null}>
+                <CheckCircle2 className="mr-1.5 size-4" />
+                {busy === "approve" ? "Approving…" : "Approve"}
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
-    </div>
+    </ModalPortal>
   );
 }
 
-/** Employee self-rating vs manager rating, side by side, per KPI and value.
+/** Employee self-rating vs manager rating, side by side, per KPI (grouped
+ *  under its parameter, with the parameter's weight and averages) and value.
  *  Exported for KpiReportsPanel's per-submission breakdown. */
 export function RatingsComparison({ submission }: { submission: MonthlySubmissionItem }) {
   const selfKpi = new Map(submission.kpi_ratings.map((r) => [r.kpi_id, r.rating]));
   const mgrKpi = submission.manager_evaluation?.kpi_ratings ?? {};
   const selfValue = new Map(submission.value_ratings.map((r) => [r.value_id, r.rating]));
   const mgrValue = submission.manager_evaluation?.value_ratings ?? {};
-  const rows = [
-    ...submission.kpi_details.map((k) => ({
-      key: `k${k.id}`,
-      label: k.kpi_name,
-      meta: k.parameter ? `KPI · ${k.parameter}` : `KPI · ${k.weightage}%`,
-      self: selfKpi.get(k.id),
-      manager: mgrKpi[String(k.id)],
-    })),
-    ...submission.value_details.map((v) => ({
-      key: `v${v.id}`,
-      label: v.name,
-      meta: "Value",
-      self: selfValue.get(v.id),
-      manager: mgrValue[String(v.id)],
+  const showParameters = hasKpiParameters(submission.kpi_details);
+
+  type Row = { key: string; label: string; meta: string | null; self?: number; manager?: number };
+  const sections: { key: string; title: string | null; weight: number | null; rows: Row[] }[] = [
+    ...groupKpisByParameter(submission.kpi_details).map((group) => ({
+      key: `p-${group.parameter ?? "none"}`,
+      title: showParameters ? (group.parameter ?? "Other") : null,
+      weight: showParameters ? group.weight : null,
+      rows: group.items.map((k) => ({
+        key: `k${k.id}`,
+        label: k.kpi_name,
+        meta: showParameters ? null : `KPI · ${formatWeight(k.weightage)}`,
+        self: selfKpi.get(k.id),
+        manager: mgrKpi[String(k.id)],
+      })),
     })),
   ];
-  if (rows.length === 0) return null;
+  if (submission.value_details.length > 0) {
+    sections.push({
+      key: "values",
+      title: "Company Values",
+      weight: null,
+      rows: submission.value_details.map((v) => ({
+        key: `v${v.id}`,
+        label: v.name,
+        meta: null,
+        self: selfValue.get(v.id),
+        manager: mgrValue[String(v.id)],
+      })),
+    });
+  }
+  if (sections.every((section) => section.rows.length === 0)) return null;
 
   return (
     <div>
@@ -600,31 +649,49 @@ export function RatingsComparison({ submission }: { submission: MonthlySubmissio
           <thead className="bg-wt-surface-2/60 text-left text-[11px] uppercase tracking-wide text-wt-text-muted">
             <tr>
               <th className="px-3 py-2 font-medium">Item</th>
-              <th className="px-3 py-2 text-center font-medium">Self</th>
+              <th className="px-3 py-2 text-center font-medium">Employee</th>
               <th className="px-3 py-2 text-center font-medium">Manager</th>
             </tr>
           </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.key} className="border-t border-wt-border">
-                <td className="px-3 py-2">
-                  <p className="text-wt-text">{r.label}</p>
-                  <p className="text-xs text-wt-text-faint">{r.meta}</p>
-                </td>
-                <td className="px-3 py-2 text-center text-wt-text">{r.self ?? "—"}</td>
-                <td
-                  className={cn(
-                    "px-3 py-2 text-center font-semibold",
-                    r.manager != null && r.self != null && r.manager !== r.self
-                      ? "text-amber-700 dark:text-amber-400"
-                      : "text-wt-text"
-                  )}
-                >
-                  {r.manager ?? "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
+          {sections.map((section) => (
+            <tbody key={section.key}>
+              {section.title ? (
+                <tr className="border-t border-wt-border bg-wt-surface-2/30">
+                  <th scope="rowgroup" className="px-3 py-1.5 text-left text-xs font-semibold text-wt-text">
+                    {section.title}
+                    {section.weight != null ? (
+                      <span className="ml-1.5 font-normal text-wt-text-muted">{formatWeight(section.weight)}</span>
+                    ) : null}
+                  </th>
+                  <td className="px-3 py-1.5 text-center text-xs text-wt-text-muted">
+                    {averageLabel(section.rows.map((r) => r.self))}
+                  </td>
+                  <td className="px-3 py-1.5 text-center text-xs text-wt-text-muted">
+                    {averageLabel(section.rows.map((r) => r.manager))}
+                  </td>
+                </tr>
+              ) : null}
+              {section.rows.map((r) => (
+                <tr key={r.key} className="border-t border-wt-border">
+                  <td className="px-3 py-2">
+                    <p className="text-wt-text">{r.label}</p>
+                    {r.meta ? <p className="text-xs text-wt-text-faint">{r.meta}</p> : null}
+                  </td>
+                  <td className="px-3 py-2 text-center text-wt-text">{r.self ?? "—"}</td>
+                  <td
+                    className={cn(
+                      "px-3 py-2 text-center font-semibold",
+                      r.manager != null && r.self != null && r.manager !== r.self
+                        ? "text-amber-700 dark:text-amber-400"
+                        : "text-wt-text"
+                    )}
+                  >
+                    {r.manager ?? "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          ))}
         </table>
       </div>
       {submission.recognitions_count > 0 ? (
@@ -634,6 +701,13 @@ export function RatingsComparison({ submission }: { submission: MonthlySubmissio
       ) : null}
     </div>
   );
+}
+
+/** "avg 3.5" over the rated entries, or "—" when none are rated yet. */
+function averageLabel(ratings: (number | undefined)[]): string {
+  const rated = ratings.filter((r): r is number => r != null);
+  if (rated.length === 0) return "—";
+  return `avg ${Math.round((rated.reduce((a, b) => a + b, 0) / rated.length) * 10) / 10}`;
 }
 
 function ScoreTile({ label, value, emphasize = false }: { label: string; value: number; emphasize?: boolean }) {

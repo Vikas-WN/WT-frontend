@@ -14,6 +14,7 @@ import {
   MODAL_OVERLAY_CLASS,
   MODAL_PANEL_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
+import { ModalPortal } from "@/components/dashboard/ui/ModalPortal";
 import { RatingButtons } from "@/components/dashboard/pulse/employee/RatingButtons";
 import { cn } from "@/lib/utils";
 import { hrmsService } from "@/services/hrms.service";
@@ -21,6 +22,7 @@ import { notifyError, notifySuccess } from "@/lib/notify";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { ApiError } from "@/api/error";
 import type { MonthlySubmissionItem } from "@/types/kpi";
+import { useSubmissionLink } from "@/components/dashboard/pulse/useSubmissionLink";
 import { formatWeight, groupKpisByParameter, hasKpiParameters } from "@/utils/kpiParameters";
 
 type Load<T> = { status: "loading" | "done" | "error"; data: T | null };
@@ -61,6 +63,21 @@ export function ManagerTeamReviewPanel() {
   const [reviewing, setReviewing] = useState<MonthlySubmissionItem | null>(null);
 
   const rows = submissions.data ?? [];
+
+  // Arrived from a "submitted for your review" notification: that submission
+  // opens until the review is closed (closing drops the link).
+  const { linkedId, clear: clearLink } = useSubmissionLink();
+  const linkedRow = linkedId != null ? (rows.find((row) => row.id === linkedId) ?? null) : null;
+  const open = reviewing ?? linkedRow;
+  const closeReview = () => {
+    setReviewing(null);
+    if (linkedId != null) clearLink();
+  };
+  useEffect(() => {
+    if (linkedId == null || submissions.status !== "done" || linkedRow) return;
+    notifyError("That review isn't waiting on you anymore — it may already have been reviewed.");
+    clearLink();
+  }, [linkedId, submissions.status, linkedRow, clearLink]);
 
   if (windowStatus.status === "loading") return <SectionLoading label="" />;
 
@@ -120,12 +137,13 @@ export function ManagerTeamReviewPanel() {
         </div>
       )}
 
-      {reviewing ? (
+      {open ? (
         <ManagerReviewModal
-          submission={reviewing}
-          onClose={() => setReviewing(null)}
+          key={open.id}
+          submission={open}
+          onClose={closeReview}
           onDone={() => {
-            setReviewing(null);
+            closeReview();
             setReloadTick((t) => t + 1);
           }}
         />
@@ -205,142 +223,144 @@ function ManagerReviewModal({
   };
 
   return (
-    <div className={MODAL_OVERLAY_CLASS} role="presentation" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" className={cn(MODAL_PANEL_CLASS, "max-w-4xl")}>
-        <div className={MODAL_HEADER_CLASS}>
-          <h2 className="text-base font-semibold text-wt-text">{submission.employee.name}</h2>
-          <p className="mt-1 text-xs text-wt-text-muted">
-            {submission.cycle_label} · {submission.employee.emp_id ?? submission.employee.email}
-            {submission.project_codes.length > 0 ? ` · Projects: ${submission.project_codes.join(", ")}` : ""}
-          </p>
-        </div>
-        <div className={MODAL_BODY_CLASS}>
-          <div className="space-y-6">
-            {hrSendBack ? (
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-                <p className="font-semibold text-wt-text">HR sent this back to you</p>
-                <p className="mt-1 text-wt-text-muted">{hrSendBack}</p>
-              </div>
-            ) : null}
+    <ModalPortal onEscape={busy ? undefined : onClose}>
+      <div className={MODAL_OVERLAY_CLASS} role="presentation" onClick={(e) => e.target === e.currentTarget && onClose()}>
+        <div role="dialog" aria-modal="true" className={cn(MODAL_PANEL_CLASS, "max-w-4xl")}>
+          <div className={MODAL_HEADER_CLASS}>
+            <h2 className="text-base font-semibold text-wt-text">{submission.employee.name}</h2>
+            <p className="mt-1 text-xs text-wt-text-muted">
+              {submission.cycle_label} · {submission.employee.emp_id ?? submission.employee.email}
+              {submission.project_codes.length > 0 ? ` · Projects: ${submission.project_codes.join(", ")}` : ""}
+            </p>
+          </div>
+          <div className={MODAL_BODY_CLASS}>
+            <div className="space-y-6">
+              {hrSendBack ? (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
+                  <p className="font-semibold text-wt-text">HR sent this back to you</p>
+                  <p className="mt-1 text-wt-text-muted">{hrSendBack}</p>
+                </div>
+              ) : null}
 
-            <div>
-              <h3 className="text-sm font-semibold text-wt-text">Employee self review</h3>
-              <p className="mt-1.5 whitespace-pre-wrap rounded-lg border border-wt-border bg-wt-surface-2/40 p-3 text-sm text-wt-text">
-                {submission.self_review_text || "—"}
-              </p>
-            </div>
-
-            <div>
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 className="text-sm font-semibold text-wt-text">KPIs</h3>
-                <span className="text-xs text-wt-text-muted">
-                  {kpiRated}/{submission.kpi_details.length} rated by you
-                </span>
+              <div>
+                <h3 className="text-sm font-semibold text-wt-text">Employee self review</h3>
+                <p className="mt-1.5 whitespace-pre-wrap rounded-lg border border-wt-border bg-wt-surface-2/40 p-3 text-sm text-wt-text">
+                  {submission.self_review_text || "—"}
+                </p>
               </div>
-              <SideBySideHeader />
-              <div className="space-y-4">
-                {groupKpisByParameter(submission.kpi_details).map((group) => (
-                  <div key={group.parameter ?? "_none"} className="space-y-2">
-                    {showParameters ? (
-                      <div className="flex items-baseline justify-between gap-3 px-1">
-                        <h4 className="text-xs font-semibold tracking-wide text-wt-text-muted uppercase">
-                          {group.parameter ?? "Other"}
-                        </h4>
-                        <span className="text-xs text-wt-text-muted">{formatWeight(group.weight)}</span>
-                      </div>
-                    ) : null}
-                    {group.items.map((kpi) => (
-                      <SideBySideRow
-                        key={kpi.id}
-                        title={kpi.kpi_name}
-                        meta={showParameters ? null : `Weight ${formatWeight(kpi.weightage)}`}
-                        detail={kpi.evaluation_criteria}
-                        selfRating={selfKpi.get(kpi.id) ?? null}
-                        managerRating={kpiRatings[kpi.id] ?? null}
-                        onRate={(v) => setKpiRatings((prev) => ({ ...prev, [kpi.id]: v }))}
-                      />
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
 
-            {submission.value_ratings.length > 0 ? (
               <div>
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-wt-text">Company Values</h3>
+                  <h3 className="text-sm font-semibold text-wt-text">KPIs</h3>
                   <span className="text-xs text-wt-text-muted">
-                    {valueRated}/{submission.value_ratings.length} rated by you
+                    {kpiRated}/{submission.kpi_details.length} rated by you
                   </span>
                 </div>
                 <SideBySideHeader />
-                <div className="space-y-2">
-                  {submission.value_ratings.map((v) => (
-                    <SideBySideRow
-                      key={v.value_id}
-                      title={valueName(v.value_id)}
-                      detail={v.comment ? `Employee: “${v.comment}”` : null}
-                      selfRating={v.rating}
-                      managerRating={valueRatings[v.value_id] ?? null}
-                      onRate={(r) => setValueRatings((prev) => ({ ...prev, [v.value_id]: r }))}
-                    />
+                <div className="space-y-4">
+                  {groupKpisByParameter(submission.kpi_details).map((group) => (
+                    <div key={group.parameter ?? "_none"} className="space-y-2">
+                      {showParameters ? (
+                        <div className="flex items-baseline justify-between gap-3 px-1">
+                          <h4 className="text-xs font-semibold tracking-wide text-wt-text-muted uppercase">
+                            {group.parameter ?? "Other"}
+                          </h4>
+                          <span className="text-xs text-wt-text-muted">{formatWeight(group.weight)}</span>
+                        </div>
+                      ) : null}
+                      {group.items.map((kpi) => (
+                        <SideBySideRow
+                          key={kpi.id}
+                          title={kpi.kpi_name}
+                          meta={showParameters ? null : `Weight ${formatWeight(kpi.weightage)}`}
+                          detail={kpi.evaluation_criteria}
+                          selfRating={selfKpi.get(kpi.id) ?? null}
+                          managerRating={kpiRatings[kpi.id] ?? null}
+                          onRate={(v) => setKpiRatings((prev) => ({ ...prev, [kpi.id]: v }))}
+                        />
+                      ))}
+                    </div>
                   ))}
                 </div>
               </div>
-            ) : null}
 
-            {submission.certifications.length > 0 || submission.recognitions_count > 0 ? (
+              {submission.value_ratings.length > 0 ? (
+                <div>
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-wt-text">Company Values</h3>
+                    <span className="text-xs text-wt-text-muted">
+                      {valueRated}/{submission.value_ratings.length} rated by you
+                    </span>
+                  </div>
+                  <SideBySideHeader />
+                  <div className="space-y-2">
+                    {submission.value_ratings.map((v) => (
+                      <SideBySideRow
+                        key={v.value_id}
+                        title={valueName(v.value_id)}
+                        detail={v.comment ? `Employee: “${v.comment}”` : null}
+                        selfRating={v.rating}
+                        managerRating={valueRatings[v.value_id] ?? null}
+                        onRate={(r) => setValueRatings((prev) => ({ ...prev, [v.value_id]: r }))}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {submission.certifications.length > 0 || submission.recognitions_count > 0 ? (
+                <div>
+                  <h3 className="text-sm font-semibold text-wt-text">Certifications &amp; recognitions</h3>
+                  <ul className="mt-1.5 space-y-1 text-sm text-wt-text-muted">
+                    {submission.certifications.map((c) => (
+                      <li key={c.certification_id}>
+                        {certName(c.certification_id)}
+                        {c.proof ? ` — ${c.proof}` : ""}
+                      </li>
+                    ))}
+                    {submission.recognitions_count > 0 ? (
+                      <li>{submission.recognitions_count} recognition(s) this cycle</li>
+                    ) : null}
+                  </ul>
+                </div>
+              ) : null}
+
               <div>
-                <h3 className="text-sm font-semibold text-wt-text">Certifications &amp; recognitions</h3>
-                <ul className="mt-1.5 space-y-1 text-sm text-wt-text-muted">
-                  {submission.certifications.map((c) => (
-                    <li key={c.certification_id}>
-                      {certName(c.certification_id)}
-                      {c.proof ? ` — ${c.proof}` : ""}
-                    </li>
-                  ))}
-                  {submission.recognitions_count > 0 ? (
-                    <li>{submission.recognitions_count} recognition(s) this cycle</li>
-                  ) : null}
-                </ul>
+                <label className="text-sm font-semibold text-wt-text" htmlFor="manager-comments">
+                  Your comments
+                </label>
+                <textarea
+                  id="manager-comments"
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                  placeholder="Required to send back for changes (min. 10 characters). Shared with the employee."
+                  rows={3}
+                  className="mt-1.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
+                />
               </div>
-            ) : null}
-
-            <div>
-              <label className="text-sm font-semibold text-wt-text" htmlFor="manager-comments">
-                Your comments
-              </label>
-              <textarea
-                id="manager-comments"
-                value={comments}
-                onChange={(e) => setComments(e.target.value)}
-                placeholder="Required to send back for changes (min. 10 characters). Shared with the employee."
-                rows={3}
-                className="mt-1.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
-              />
             </div>
           </div>
-        </div>
-        <div className={MODAL_FOOTER_CLASS}>
-          <Button type="button" variant="outline" onClick={onClose} disabled={busy !== null}>
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="!border-rose-300 !text-rose-600 hover:!bg-rose-50"
-            onClick={() => void submit("REJECT")}
-            disabled={busy !== null}
-          >
-            {busy === "reject" ? "Sending…" : "Reject & Send Back"}
-          </Button>
-          <Button type="button" onClick={() => void submit("SUBMIT")} disabled={busy !== null || !allRated}>
-            <CheckCircle2 className="mr-1.5 size-4" />
-            {busy === "submit" ? "Submitting…" : "Approve & Submit"}
-          </Button>
+          <div className={MODAL_FOOTER_CLASS}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={busy !== null}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="!border-rose-300 !text-rose-600 hover:!bg-rose-50"
+              onClick={() => void submit("REJECT")}
+              disabled={busy !== null}
+            >
+              {busy === "reject" ? "Sending…" : "Reject & Send Back"}
+            </Button>
+            <Button type="button" onClick={() => void submit("SUBMIT")} disabled={busy !== null || !allRated}>
+              <CheckCircle2 className="mr-1.5 size-4" />
+              {busy === "submit" ? "Submitting…" : "Approve & Submit"}
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </ModalPortal>
   );
 }
 

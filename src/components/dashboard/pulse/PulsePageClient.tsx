@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
@@ -33,19 +34,52 @@ export function PulsePageClient() {
 
 type TabItem<T extends string> = { value: T; label: string };
 
-/** Shared shell for every role's Pulse view: header + tabs + active panel. */
+/** `?tab=` targets used by links into Pulse (notifications). They're
+ *  role-neutral — each role's page maps them onto its own tab, since the
+ *  same step lives under a different tab per role. */
+export type PulseTabLink = "team-reviews" | "my-review" | "submissions";
+
+function resolveTab<T extends string>(
+  raw: string | null,
+  items: readonly TabItem<T>[],
+  links: Partial<Record<PulseTabLink, T>>
+): T | null {
+  if (!raw) return null;
+  const linked = links[raw as PulseTabLink];
+  if (linked) return linked;
+  return items.some((item) => item.value === raw) ? (raw as T) : null;
+}
+
+/** Shared shell for every role's Pulse view: header + tabs + active panel.
+ *  The active tab is mirrored in `?tab=` so links can open a specific one. */
 function PulseTabsPage<T extends string>({
   description,
   items,
+  links,
   initial,
   render,
 }: {
   description: string;
-  items: TabItem<T>[];
+  items: readonly TabItem<T>[];
+  links: Partial<Record<PulseTabLink, T>>;
   initial: T;
   render: (tab: T) => ReactNode;
 }) {
-  const [tab, setTab] = useState<T>(initial);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  // The URL wins: following a notification link while already on Pulse only
+  // changes the query string (no remount), and tab clicks write it too.
+  const requested = resolveTab(searchParams.get("tab"), items, links);
+  const [chosen, setChosen] = useState<T>(initial);
+  const tab = requested ?? chosen;
+
+  const changeTab = (value: T) => {
+    setChosen(value);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", value);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
   return (
     <DashboardPageShell className="wt-detail-page">
       <ContentCard>
@@ -57,7 +91,7 @@ function PulseTabsPage<T extends string>({
           embedded
           aria-label="Pulse tabs"
           value={tab}
-          onValueChange={(value) => setTab(value as T)}
+          onValueChange={(value) => changeTab(value as T)}
           items={items}
         />
         <div className={PAGE_TAB_BODY_CLASS}>{render(tab)}</div>
@@ -68,15 +102,19 @@ function PulseTabsPage<T extends string>({
 
 type EmployeeTab = "review" | "history";
 
+const EMPLOYEE_TABS: readonly TabItem<EmployeeTab>[] = [
+  { value: "review", label: "My Review" },
+  { value: "history", label: "My KPI Summary" },
+];
+const EMPLOYEE_LINKS: Partial<Record<PulseTabLink, EmployeeTab>> = { "my-review": "review" };
+
 function PulseEmployeePageClient() {
   return (
     <PulseTabsPage<EmployeeTab>
       description="Fill in your monthly KPI self-review while the window is open, and track how past reviews were rated."
       initial="review"
-      items={[
-        { value: "review", label: "My Review" },
-        { value: "history", label: "My KPI Summary" },
-      ]}
+      items={EMPLOYEE_TABS}
+      links={EMPLOYEE_LINKS}
       render={(tab) => (tab === "review" ? <EmployeeMonthlyReviewPanel /> : <MyKpiSummaryPanel />)}
     />
   );
@@ -84,16 +122,23 @@ function PulseEmployeePageClient() {
 
 type ManagerTab = "team" | "review" | "history";
 
+const MANAGER_TABS: readonly TabItem<ManagerTab>[] = [
+  { value: "team", label: "Team Reviews" },
+  { value: "review", label: "My Review" },
+  { value: "history", label: "My KPI Summary" },
+];
+const MANAGER_LINKS: Partial<Record<PulseTabLink, ManagerTab>> = {
+  "team-reviews": "team",
+  "my-review": "review",
+};
+
 function PulseManagerPageClient() {
   return (
     <PulseTabsPage<ManagerTab>
       description="Review your team's monthly self-reviews, and submit your own."
       initial="team"
-      items={[
-        { value: "team", label: "Team Reviews" },
-        { value: "review", label: "My Review" },
-        { value: "history", label: "My KPI Summary" },
-      ]}
+      items={MANAGER_TABS}
+      links={MANAGER_LINKS}
       render={(tab) =>
         tab === "team" ? (
           <ManagerTeamReviewPanel />
@@ -117,23 +162,27 @@ type AdminTab =
   | "reports"
   | "portal";
 
+const ADMIN_TABS: readonly TabItem<AdminTab>[] = [
+  { value: "submissions", label: "Submissions" },
+  // HR/Admin can act as reviewer for anyone — this is how submissions
+  // from employees with no manager on record get their manager step.
+  { value: "manager-reviews", label: "Manager Reviews" },
+  { value: "my-review", label: "My Review" },
+  { value: "kpis", label: "KPI Definitions" },
+  { value: "values", label: "WebKnot Values" },
+  { value: "certifications", label: "Certifications" },
+  { value: "reports", label: "KPI Reports" },
+  { value: "portal", label: "Submission Portal" },
+];
+const ADMIN_LINKS: Partial<Record<PulseTabLink, AdminTab>> = { "team-reviews": "manager-reviews" };
+
 function PulseAdminPageClient() {
   return (
     <PulseTabsPage<AdminTab>
       description="Define KPIs and WebKnot values per band and designation, open or close the submission window, give final approval, and review KPI reports."
       initial="submissions"
-      items={[
-        { value: "submissions", label: "Submissions" },
-        // HR/Admin can act as reviewer for anyone — this is how submissions
-        // from employees with no manager on record get their manager step.
-        { value: "manager-reviews", label: "Manager Reviews" },
-        { value: "my-review", label: "My Review" },
-        { value: "kpis", label: "KPI Definitions" },
-        { value: "values", label: "WebKnot Values" },
-        { value: "certifications", label: "Certifications" },
-        { value: "reports", label: "KPI Reports" },
-        { value: "portal", label: "Submission Portal" },
-      ]}
+      items={ADMIN_TABS}
+      links={ADMIN_LINKS}
       render={(tab) =>
         tab === "submissions" ? (
           <SubmissionsReviewPanel />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -41,11 +42,13 @@ export function ConfirmDialog({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, loading, onCancel]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
   const danger = tone === "danger";
 
-  return (
+  // Portaled to <body>: rendered inline, the fixed overlay was positioned
+  // against the nearest transformed/animated ancestor instead of the viewport.
+  return createPortal(
     <div
       className="wt-modal-overlay fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-[2px]"
       role="presentation"
@@ -108,6 +111,7 @@ export function ConfirmDialog({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

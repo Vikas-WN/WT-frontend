@@ -450,13 +450,21 @@ export function resolveNotificationHref(
       return `${base}?year=${period.year}&month=${period.month}`;
     }
 
+    // Open the Pulse tab where the recipient acts on it (see PulseTabLink).
     case "MONTHLY_REVIEW_SUBMITTED":
-    case "MONTHLY_REVIEW_MANAGER_SUBMITTED":
-    case "MONTHLY_REVIEW_NEEDS_CHANGES":
     case "MONTHLY_REVIEW_NEEDS_MANAGER_REVIEW":
+      return `${DASHBOARD_ROUTES.pulse}?tab=team-reviews`;
+    case "MONTHLY_REVIEW_MANAGER_SUBMITTED":
+      return `${DASHBOARD_ROUTES.pulse}?tab=submissions`;
+    case "MONTHLY_REVIEW_NEEDS_CHANGES":
     case "MONTHLY_REVIEW_APPROVED":
+      return `${DASHBOARD_ROUTES.pulse}?tab=my-review`;
     case "MONTHLY_REVIEW_UPDATED":
-      return DASHBOARD_ROUTES.pulse;
+      // Sent to the employee ("HR updated your review for …") and to the
+      // manager whose rating was changed ("… your review of X's self review").
+      return /'s self review/.test(readNotificationMessage(row))
+        ? DASHBOARD_ROUTES.pulse
+        : `${DASHBOARD_ROUTES.pulse}?tab=my-review`;
 
     default:
       return null;
