@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
+import { formatApiDateDisplay } from "@/utils/apiDate";
 import { DatePicker } from "@/components/ui/date-picker";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { ProjectTimelogCardList } from "@/components/dashboard/timelog/ProjectTimelogCardList/ProjectTimelogCardList";
@@ -17,7 +18,7 @@ import { formatUiStatusLabel } from "@/utils/statusLabel";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
 import { resolveTimelogProjectLabel } from "@/utils/timelog/projectLabel";
 import { isManagerTimelogDecisionActionable } from "@/utils/timelog/employeeEditability";
-import { toIsoDateKey } from "@/utils/timelog/weekDates";
+import { formatTimelogTableDate, toIsoDateKey } from "@/utils/timelog/weekDates";
 import type { DayTimelogEntry } from "@/hooks/timelog/useDayTimelog.types";
 import type { ProjectWeekEmployeeTotal } from "@/hooks/timelog/useProjectTimelogs.types";
 import type { ProjectTimelogPanelProps } from "./ProjectTimelogPanel.types";
@@ -322,7 +323,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                             className="border-t border-wt-border hover:bg-wt-surface-2/50"
                           >
                             <td className="px-2 py-2 whitespace-nowrap tabular-nums">
-                              {entry.log_date}
+                              {formatApiDateDisplay(entry.log_date)}
                             </td>
                             <td className="px-2 py-2 whitespace-nowrap">
                               {resolveTimelogProjectLabel(entry, projects)}
@@ -475,7 +476,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                       <td className="px-2 py-2 whitespace-nowrap">
                         {resolveTimelogProjectLabel(item, projects)}
                       </td>
-                      <td className="px-2 py-2 whitespace-nowrap tabular-nums">{item.log_date}</td>
+                      <td className="px-2 py-2 whitespace-nowrap tabular-nums">{formatApiDateDisplay(item.log_date)}</td>
                       <td className="px-2 py-2 text-center tabular-nums">{item.hours}h</td>
                       <td className="px-2 py-2 text-center">
                         <span className={entryStatusClass(item.status)}>

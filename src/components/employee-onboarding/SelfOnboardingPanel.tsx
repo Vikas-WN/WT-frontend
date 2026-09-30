@@ -308,6 +308,14 @@ export function SelfOnboardingPanel({
       await hrmsService.completeMyOnboarding(fd);
       fireConfetti();
       resetForm();
+      // fireConfetti() only kicks off its own ~2.2s animation loop and
+      // returns immediately — it doesn't block. onSuccess() (see
+      // ProfilePageLeanClient's handleOnboardingSuccess) ends the invite
+      // session with a hard `window.location.replace` to the login page,
+      // which was tearing the whole page down (canvas included) within a
+      // frame or two of the burst starting, so the celebration was never
+      // actually visible. Give it time to finish playing before redirecting.
+      await new Promise((resolve) => setTimeout(resolve, 2200));
       await onSuccess();
     });
   };

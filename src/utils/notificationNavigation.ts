@@ -1,6 +1,7 @@
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import type { NotificationItem } from "@/services/hrms.service";
 import { normalizeRoles } from "@/utils/roles";
+import { normalizeToApiDate } from "@/utils/apiDate";
 
 const COMP_OFF_SELF = "/dashboard/leave?tab=comp-off";
 const LEARNING_SCORES = "/dashboard/learning-development";
@@ -125,13 +126,14 @@ export function parseLeaveNotificationDeepLink(message: string): {
 } {
   const text = String(message ?? "");
   const idMatch = text.match(/request\s*#\s*(\d+)/i);
+  const datePattern = /\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4}/;
   const rangeMatch = text.match(
-    /from\s+(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/i
+      new RegExp(`from\\s+(${datePattern.source})\\s+to\\s+(${datePattern.source})`, "i")
   );
   return {
     requestId: idMatch?.[1] ?? null,
-    from: rangeMatch?.[1] ?? null,
-    to: rangeMatch?.[2] ?? null,
+    from: rangeMatch ? normalizeToApiDate(rangeMatch[1]) || null : null,
+    to: rangeMatch ? normalizeToApiDate(rangeMatch[2]) || null : null,
   };
 }
 
@@ -259,6 +261,7 @@ export function notificationCategoryLabel(
     case "MONTHLY_REVIEW_NEEDS_CHANGES":
     case "MONTHLY_REVIEW_NEEDS_MANAGER_REVIEW":
     case "MONTHLY_REVIEW_APPROVED":
+    case "MONTHLY_REVIEW_UPDATED":
       return "Pulse";
     default:
       return "—";
@@ -317,29 +320,6 @@ export const NOTIFICATION_GROUP_ORDER = [
   "Admin",
   "Other",
 ];
-
-/** Group notifications by `notificationGroupLabel`, preserving each item's
- *  original relative order within its group, and ordering groups per
- *  `NOTIFICATION_GROUP_ORDER`. */
-export function groupNotificationsByCategory<T extends NotificationItem | Record<string, unknown>>(
-  rows: T[]
-): { label: string; rows: T[] }[] {
-  const buckets = new Map<string, T[]>();
-  for (const row of rows) {
-    const group = notificationGroupLabel(notificationCategoryLabel(row));
-    const list = buckets.get(group) ?? [];
-    list.push(row);
-    buckets.set(group, list);
-  }
-  return [...buckets.entries()]
-    .sort((a, b) => {
-      const ai = NOTIFICATION_GROUP_ORDER.indexOf(a[0]);
-      const bi = NOTIFICATION_GROUP_ORDER.indexOf(b[0]);
-      return (ai === -1 ? NOTIFICATION_GROUP_ORDER.length : ai) -
-        (bi === -1 ? NOTIFICATION_GROUP_ORDER.length : bi);
-    })
-    .map(([label, groupRows]) => ({ label, rows: groupRows }));
-}
 
 /** Resolve the dashboard path a notification should open. */
 export function resolveNotificationHref(
@@ -470,12 +450,21 @@ export function resolveNotificationHref(
       return `${base}?year=${period.year}&month=${period.month}`;
     }
 
+    // Open the Pulse tab where the recipient acts on it (see PulseTabLink).
     case "MONTHLY_REVIEW_SUBMITTED":
-    case "MONTHLY_REVIEW_MANAGER_SUBMITTED":
-    case "MONTHLY_REVIEW_NEEDS_CHANGES":
     case "MONTHLY_REVIEW_NEEDS_MANAGER_REVIEW":
+      return `${DASHBOARD_ROUTES.pulse}?tab=team-reviews`;
+    case "MONTHLY_REVIEW_MANAGER_SUBMITTED":
+      return `${DASHBOARD_ROUTES.pulse}?tab=submissions`;
+    case "MONTHLY_REVIEW_NEEDS_CHANGES":
     case "MONTHLY_REVIEW_APPROVED":
-      return DASHBOARD_ROUTES.pulse;
+      return `${DASHBOARD_ROUTES.pulse}?tab=my-review`;
+    case "MONTHLY_REVIEW_UPDATED":
+      // Sent to the employee ("HR updated your review for …") and to the
+      // manager whose rating was changed ("… your review of X's self review").
+      return /'s self review/.test(readNotificationMessage(row))
+        ? DASHBOARD_ROUTES.pulse
+        : `${DASHBOARD_ROUTES.pulse}?tab=my-review`;
 
     default:
       return null;

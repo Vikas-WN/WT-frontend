@@ -29,11 +29,19 @@ export function useTimelogManagerOptions(projectCode?: string | null, enabled = 
         const email = String(row.email ?? "").trim().toLowerCase();
         if (!email || seen.has(email)) continue;
         seen.add(email);
+        const name = String(
+            row.name ??
+            row.employee_name ??
+            row.employeeName ??
+            row.full_name ??
+            row.fullName ??
+            email
+        ).trim();
         out.push({
           email,
-          name: String(row.name ?? email).trim() || email,
+          name: name || email,
           employeeId:
-            String(row.employee_id ?? row.employeeId ?? "").trim() || undefined,
+              String(row.employee_id ?? row.employeeId ?? "").trim() || undefined,
         });
       }
       return out.sort((a, b) => a.name.localeCompare(b.name));

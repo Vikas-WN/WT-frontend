@@ -17,6 +17,7 @@ import {
   MODAL_OVERLAY_CLASS,
   MODAL_PANEL_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
+import { ModalPortal } from "@/components/dashboard/ui/ModalPortal";
 import { ApiError } from "@/api/error";
 import { hrmsService } from "@/services/hrms.service";
 import type { WebknotValueItem, WebknotValueWritePayload } from "@/types/kpi";
@@ -224,59 +225,61 @@ export function WebknotValuesPanel() {
       )}
 
       {dialog ? (
-        <div
-          className={MODAL_OVERLAY_CLASS}
-          role="presentation"
-          onClick={(e) => {
-            if (e.target === e.currentTarget && !saving) setDialog(null);
-          }}
-        >
-          <div role="dialog" aria-modal="true" className={MODAL_PANEL_CLASS}>
-            <div className={MODAL_HEADER_CLASS}>
-              <h2 className="text-base font-semibold text-wt-text">
-                {dialog.mode === "add" ? "Add Value" : "Edit Value"}
-              </h2>
-            </div>
-            <div className={MODAL_BODY_CLASS}>
-              <div className="space-y-4">
-                <InputField
-                  label="Title"
-                  value={form.title}
-                  onChange={(v) => setForm((f) => ({ ...f, title: v }))}
-                  required
-                  placeholder="e.g. Ownership"
-                />
-                <TextAreaField
-                  label="Evaluation Criteria"
-                  value={form.evaluationCriteria}
-                  onChange={(v) => setForm((f) => ({ ...f, evaluationCriteria: v }))}
-                  placeholder="What meeting this value looks like (optional)"
-                  rows={3}
-                />
-                <label className="flex items-center gap-2 text-sm text-wt-text">
-                  <Checkbox
-                    checked={form.active}
-                    onCheckedChange={(v) => setForm((f) => ({ ...f, active: Boolean(v) }))}
+        <ModalPortal onEscape={saving ? undefined : () => setDialog(null)}>
+          <div
+            className={MODAL_OVERLAY_CLASS}
+            role="presentation"
+            onClick={(e) => {
+              if (e.target === e.currentTarget && !saving) setDialog(null);
+            }}
+          >
+            <div role="dialog" aria-modal="true" className={MODAL_PANEL_CLASS}>
+              <div className={MODAL_HEADER_CLASS}>
+                <h2 className="text-base font-semibold text-wt-text">
+                  {dialog.mode === "add" ? "Add Value" : "Edit Value"}
+                </h2>
+              </div>
+              <div className={MODAL_BODY_CLASS}>
+                <div className="space-y-4">
+                  <InputField
+                    label="Title"
+                    value={form.title}
+                    onChange={(v) => setForm((f) => ({ ...f, title: v }))}
+                    required
+                    placeholder="e.g. Ownership"
                   />
-                  Active
-                </label>
-                {formError ? (
-                  <p className="text-sm text-destructive" role="alert">
-                    {formError}
-                  </p>
-                ) : null}
+                  <TextAreaField
+                    label="Evaluation Criteria"
+                    value={form.evaluationCriteria}
+                    onChange={(v) => setForm((f) => ({ ...f, evaluationCriteria: v }))}
+                    placeholder="What meeting this value looks like (optional)"
+                    rows={3}
+                  />
+                  <label className="flex items-center gap-2 text-sm text-wt-text">
+                    <Checkbox
+                      checked={form.active}
+                      onCheckedChange={(v) => setForm((f) => ({ ...f, active: Boolean(v) }))}
+                    />
+                    Active
+                  </label>
+                  {formError ? (
+                    <p className="text-sm text-destructive" role="alert">
+                      {formError}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+              <div className={MODAL_FOOTER_CLASS}>
+                <Button type="button" variant="outline" onClick={() => setDialog(null)} disabled={saving}>
+                  Cancel
+                </Button>
+                <Button type="button" onClick={() => void submit()} disabled={saving}>
+                  {saving ? "Saving…" : dialog.mode === "add" ? "Add value" : "Save changes"}
+                </Button>
               </div>
             </div>
-            <div className={MODAL_FOOTER_CLASS}>
-              <Button type="button" variant="outline" onClick={() => setDialog(null)} disabled={saving}>
-                Cancel
-              </Button>
-              <Button type="button" onClick={() => void submit()} disabled={saving}>
-                {saving ? "Saving…" : dialog.mode === "add" ? "Add value" : "Save changes"}
-              </Button>
-            </div>
           </div>
-        </div>
+        </ModalPortal>
       ) : null}
 
       <ConfirmDialog

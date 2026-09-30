@@ -225,8 +225,15 @@ export function notificationTitle(row: NotificationItem | Record<string, unknown
 }
 
 /**
- * Keep one row per leave/WFH request when the same receiver got duplicate
- * manager/HR fan-out copies. Prefer Request # when present; else type+dates+body.
+ * Keep one row per request when the same receiver got duplicate manager/HR
+ * fan-out copies of the identical notification (same type + same underlying
+ * request). Prefer Request # when present; else type+dates+body. Applies to
+ * every notification type — not just leave/WFH — since the same fan-out
+ * pattern (notify every primary + secondary manager) exists for comp-off,
+ * timelog, training-withdrawal and allocation-extension requests too.
+ *
+ * Rows are expected newest-first (the API orders by created_at desc), so
+ * keeping the first occurrence of a key keeps the latest copy.
  */
 export function dedupeLeaveRequestNotifications(
   items: NotificationItem[]
@@ -238,27 +245,20 @@ export function dedupeLeaveRequestNotifications(
     const type = String(row.type ?? "")
       .trim()
       .toUpperCase();
-    const isLeaveFamily =
-      type === "LEAVE_REQUEST" ||
-      type === "WFH_REQUEST" ||
-      type === "LOP_LEAVE_REQUEST";
-    if (!isLeaveFamily) {
-      result.push(row);
-      continue;
-    }
 
     const rawMessage = String(
       row.message ?? (row as unknown as Record<string, unknown>).body ?? ""
     ).trim();
     const idMatch = rawMessage.match(/request\s*#\s*(\d+)/i);
+    // Dates render as either ISO (older rows) or DD/MM/YYYY (format_display_date).
     const rangeMatch = rawMessage.match(
-      /from\s+(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/i
+      /from\s+(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})\s+to\s+(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})/i
     );
     const key = idMatch?.[1]
       ? `${type}:${idMatch[1]}`
       : rangeMatch
         ? `${type}:${rangeMatch[1]}:${rangeMatch[2]}:${stripInternalRequestIds(rawMessage)}`
-        : `${type}:${notificationRowId(row)}`;
+        : `${type}:${stripInternalRequestIds(rawMessage)}`;
     if (seenRequestKeys.has(key)) continue;
     seenRequestKeys.add(key);
     result.push(row);

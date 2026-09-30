@@ -492,6 +492,13 @@ export function useDayTimelog() {
     viewMonth,
     calendar,
     selectedDate,
+    // Whether selectedDate/viewYear/viewMonth came from a notification's
+    // ?date= link — used to default MyWeeklyTimesheet into the calendar view,
+    // which is the only view that actually shows the selected day highlighted.
+    // The table view (the default otherwise) ignores selectedDate entirely, so
+    // without this a Timelog Approved/Rejected notification silently updated
+    // state the user never saw.
+    hasDeepLinkedDate: Boolean(deepLinkedDate),
     selectedDayEntries,
     selectedDateTotal,
     projectOptions,

@@ -361,7 +361,9 @@ export function CompOffPageClient({
       let units: number | null = null;
       if (balanceRes.status === "fulfilled") {
         const b = compOffService.parseBalanceResponse(balanceRes.value);
-        const parsed = Number(b?.available_units ?? b?.availableUnits);
+        // Match resolveAvailableUnits(): prefer usable (post-reservation) units so the
+        // displayed balance never shows credits the submit-time check would reject.
+        const parsed = Number(b?.usable_units ?? b?.usableUnits ?? b?.available_units ?? b?.availableUnits);
         units = Number.isFinite(parsed) ? parsed : null;
         const asOfDate = String(b?.as_of_date ?? b?.asOfDate ?? asOf).trim();
         if (asOfDate) setBalanceAsOf(asOfDate);
@@ -1097,6 +1099,7 @@ export function CompOffPageClient({
                       required
                       value={earnForm.worked_date}
                       onChange={(v) => setEarnForm((p) => ({ ...p, worked_date: v }))}
+                      max={todayYmd()}
                     />
                   </div>
                 </div>

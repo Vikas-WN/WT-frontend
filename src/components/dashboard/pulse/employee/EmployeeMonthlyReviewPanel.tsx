@@ -27,6 +27,7 @@ import type {
   WebknotValueItem,
 } from "@/types/kpi";
 import { cn } from "@/lib/utils";
+import { formatWeight, groupKpisByParameter, hasKpiParameters } from "@/utils/kpiParameters";
 
 type Load<T> = { status: "loading" | "done" | "error"; data: T | null };
 
@@ -348,6 +349,7 @@ function EmployeeReviewForm({
     }));
   };
 
+  const showParameters = hasKpiParameters(kpiRows);
   const allKpisRated = kpiRows.every((k) => form.kpi_ratings.some((r) => r.kpi_id === k.id));
   // Matches the backend: 1–3 of your current projects, or none when you're
   // not on any (e.g. on the bench — system projects aren't listed).
@@ -490,22 +492,39 @@ function EmployeeReviewForm({
                 description="HR hasn't defined KPIs for your band and department yet."
               />
             ) : (
-              <div className="space-y-3">
-                {kpiRows.map((kpi) => {
-                  const rating = form.kpi_ratings.find((r) => r.kpi_id === kpi.id)?.rating ?? null;
-                  return (
-                    <div
-                      key={kpi.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-2/40 px-3.5 py-3"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-wt-text">{kpi.kpi_name}</p>
-                        <p className="text-xs text-wt-text-muted">Weight · {Number(kpi.weightage)}%</p>
+              <div className="space-y-5">
+                {groupKpisByParameter(kpiRows).map((group) => (
+                  <div key={group.parameter ?? "_none"} className="space-y-3">
+                    {showParameters ? (
+                      <div className="flex items-baseline justify-between gap-3">
+                        <h4 className="text-xs font-semibold tracking-wide text-wt-text-muted uppercase">
+                          {group.parameter ?? "Other"}
+                        </h4>
+                        <span className="text-xs text-wt-text-muted">{formatWeight(group.weight)}</span>
                       </div>
-                      <RatingButtons value={rating} onChange={(r) => setKpiRating(kpi.id, r)} />
-                    </div>
-                  );
-                })}
+                    ) : null}
+                    {group.items.map((kpi) => {
+                      const rating = form.kpi_ratings.find((r) => r.kpi_id === kpi.id)?.rating ?? null;
+                      return (
+                        <div
+                          key={kpi.id}
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-2/40 px-3.5 py-3"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-wt-text">{kpi.kpi_name}</p>
+                            {kpi.evaluation_criteria ? (
+                              <p className="text-xs text-wt-text-muted">{kpi.evaluation_criteria}</p>
+                            ) : null}
+                            {showParameters ? null : (
+                              <p className="text-xs text-wt-text-muted">Weight · {formatWeight(kpi.weightage)}</p>
+                            )}
+                          </div>
+                          <RatingButtons value={rating} onChange={(r) => setKpiRating(kpi.id, r)} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             )}
           </div>

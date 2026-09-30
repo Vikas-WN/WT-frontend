@@ -42,7 +42,7 @@ import {
 } from "@/components/dashboard/ui/uiLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { formatApiDateDisplay } from "@/utils/apiDate";
+import { compareApiDates, formatApiDateDisplay, isValidApiDate } from "@/utils/apiDate";
 import {
   useOffboardingPanelQueries,
 } from "@/hooks/offboarding/useOffboardingPanelQueries";
@@ -377,9 +377,7 @@ export function OffboardingPanel() {
     if (!r || !l) {
       return null;
     }
-    const a = new Date(r);
-    const b = new Date(l);
-    if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime()) || b < a) {
+    if (!isValidApiDate(r) || !isValidApiDate(l) || compareApiDates(r, l) > 0) {
       return "Resignation date must be on or before last working day.";
     }
     return null;

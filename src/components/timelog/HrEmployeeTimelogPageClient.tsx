@@ -34,7 +34,7 @@ import { toPagedRows } from "@/utils/apiRows";
 import { cleanEmployeeName, rowEmail } from "@/utils/employeeDirectory";
 import { formatResumeCellValue } from "@/utils/employeeResume";
 import { formatTableColumnHeader, prepareTableForDisplay, sanitizeTableColumns } from "@/utils/tableDisplay";
-import { todayApiDate } from "@/utils/apiDate";
+import { formatApiDateDisplay, todayApiDate } from "@/utils/apiDate";
 
 const LOG_COLUMNS = sanitizeTableColumns([
   "employee_name",
@@ -190,7 +190,7 @@ export function HrEmployeeTimelogPageClient() {
             <>
               <p className="text-sm text-wt-text-muted">
                 {pagination.totalItems} entr{pagination.totalItems === 1 ? "y" : "ies"} for{" "}
-                <strong>{logDate}</strong>
+                <strong>{formatApiDateDisplay(logDate)}</strong>
                 {emailFilter !== "ALL" ? ` — ${emailFilter}` : ""}.
               </p>
               <ScrollableTable maxHeightClass="max-h-[min(65vh,560px)]">

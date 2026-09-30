@@ -75,11 +75,20 @@ export function DirectoryStatusSelect({
 
   useEffect(() => {
     if (!exitDialog) return;
+    // Without this the background directory table (200+ rows) stays scrollable
+    // under the fixed overlay, so scrolling it while the dialog is open repaints
+    // content through the backdrop-blur — reads as the dialog itself flickering
+    // and overflowing. Matches UserTypeTransitionDialog's same fix.
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !dialogSaving) setExitDialog(null);
     };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
   }, [dialogSaving, exitDialog]);
 
   async function invalidateAfterStatusChange() {
