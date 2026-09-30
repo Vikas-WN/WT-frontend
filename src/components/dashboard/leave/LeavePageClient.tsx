@@ -1,8 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
@@ -86,7 +84,7 @@ import {
   managerTeamEmails,
   managerTeamRowsForProject,
 } from "@/utils/dashboard/projects";
-import { InputField, SelectField, TextAreaField, FileField, UploadTile } from "@/components/dashboard/ui/forms";
+import { InputField, SelectField, FileField, UploadTile } from "@/components/dashboard/ui/forms";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   ProfilePhotoAvatar,
@@ -116,7 +114,6 @@ import {
   formatApiDate,
   normalizeToApiDate,
   parseApiDate,
-  todayApiDate,
 } from "@/utils/apiDate";
 import {
   canSecondaryManagerApproveOnLeave,
@@ -170,7 +167,6 @@ import { LEAVE_QUERY_ROOT } from "@/constants/leaveQueryKeys";
 import { CONTENT_CARD_CLASS, FILTER_BAR_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { cn } from "@/lib/utils";
 
-import { LeaveManagerSelector } from "@/components/dashboard/leave/LeaveManagerSelector";
 
 import {
   calendarDaysInclusive,
@@ -189,6 +185,10 @@ import {
 } from "@/components/dashboard/leave/LeaveRequestDetailDialog";
 import { CompOffCreditsDialog } from "@/components/dashboard/leave/CompOffCreditsDialog";
 import { WfhExceptionModal } from "@/components/dashboard/leave/WfhExceptionModal";
+import { WfhRequestSection } from "@/components/dashboard/leave/wfh/WfhRequestSection";
+import { useWfhRequestActions } from "@/components/dashboard/leave/wfh/useWfhRequestActions";
+import { createDefaultLeaveRequestForm } from "@/utils/leaveRequestForm";
+import type { LeaveConfirmState } from "@/types/leaveRequestForm";
 import dynamic from "next/dynamic";
 import { LeaveRequestForm } from "@/components/dashboard/leave/LeaveRequestForm";
 import { MyLeaveRequestsView } from "@/components/dashboard/leave/MyLeaveRequestsView";
@@ -213,18 +213,6 @@ const CompOffPageClient = dynamic(
 
 const LEAVE_REQUESTS_TABLE_MIN_HEIGHT = "min-h-[320px]";
 const MY_LEAVE_TABLE_COL_COUNT = 8;
-
-function createDefaultLeaveRequestForm() {
-  const today = todayApiDate();
-  return {
-    request_from_date: today,
-    request_to_date: today,
-    request_type: "LEAVE",
-    comments: "",
-    is_half_day: false,
-    client_approval: false,
-  };
-}
 
 function leaveRequestMatchesSearch(row: Record<string, unknown>, query: string): boolean {
   const q = query.trim().toLowerCase();
@@ -557,13 +545,7 @@ export function LeavePageClient() {
   const [rejectReason, setRejectReason] = useState("");
   const [teamStatusUpdatingId, setTeamStatusUpdatingId] = useState<string | null>(null);
   const [detailView, setDetailView] = useState<LeaveRequestDetailView | null>(null);
-  const [confirmState, setConfirmState] = useState<{
-    title: string;
-    description?: string;
-    confirmLabel: string;
-    tone?: "default" | "danger";
-    run: () => Promise<unknown> | void;
-  } | null>(null);
+  const [confirmState, setConfirmState] = useState<LeaveConfirmState | null>(null);
 
   // Notification deep-link: open the matching leave request regardless of prior date filters.
   useEffect(() => {
@@ -1006,6 +988,23 @@ export function LeavePageClient() {
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [actionLoading]);
+
+  const wfhActions = useWfhRequestActions({
+    form: leaveRequestForm,
+    setForm: setLeaveRequestForm,
+    editingRequestId: editingLeaveRequestId,
+    setEditingRequestId: setEditingLeaveRequestId,
+    managerEmails: selectedWfhManagerEmails,
+    setManagerEmails: setSelectedWfhManagerEmails,
+    setAdditionalRecipientEmails: setSelectedAdditionalRecipientEmails,
+    setViewTab: setWfhRequestViewTab,
+    requiresClientApproval,
+    routesToHr: routesLeaveWfhToHr,
+    runAction,
+    reloadRequests: loadMyLeaveRequests,
+    invalidateBalance: invalidateLeaveBalance,
+    confirm: setConfirmState,
+  });
 
   function buildUserIdToNameMap(users: Array<Record<string, unknown>>) {
     const map: Record<string, string> = {};
@@ -1911,278 +1910,38 @@ export function LeavePageClient() {
                           {(leaveSubTab === "my" || leaveSubTab === "wfh") ? (
                           <div>
                           {leaveSubTab === "wfh" ? (
-                            <div className="space-y-6">
-                              {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
-                              <Tabs value={wfhRequestViewTab} onValueChange={(v) => setWfhRequestViewTab(v as "request" | "view")} orientation="horizontal">
-                                <TabsList variant="line" className="w-full justify-start border-b border-wt-border/80">
-                                  <TabsTrigger value="request">Apply for WFH</TabsTrigger>
-                                  <TabsTrigger value="view">History</TabsTrigger>
-                                </TabsList>
-                                  <TabsContent value="request" className="pt-6">
-                                  <div className="space-y-6">
-                                    <div className="rounded-xl bg-muted/40 p-6 shadow-sm border border-border/40">
-                                      <div className="flex items-start justify-between mb-5">
-                                        <h3 className="text-sm font-semibold tracking-tight text-foreground">
-                                          Apply for WFH
-                                        </h3>
-                                        <button
-                                          type="button"
-                                          onClick={() => setWfhExceptionOpen(true)}
-                                          className="text-xs text-[var(--wt-brand)] hover:text-[var(--wt-brand)] underline cursor-pointer"
-                                        >
-                                          Need more than 1 WFH day/week? Request a custom exception
-                                        </button>
-                                      </div>
-                                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 max-w-xl">
-                                        <DatePicker
-                                          label="From Date"
-                                          required
-                                          value={leaveRequestForm.request_from_date}
-                                          onChange={(v) =>
-                                            setLeaveRequestForm((p) => ({
-                                              ...p,
-                                              request_from_date: v,
-                                              request_to_date: v,
-                                            }))
-                                          }
-                                          disabled={actionLoading}
-                                        />
-                                        <DatePicker
-                                          label="To Date"
-                                          required
-                                          value={leaveRequestForm.request_from_date}
-                                          onChange={() => undefined}
-                                          disabled
-                                        />
-                                      </div>
-                                      <p className="mt-3 text-xs text-muted-foreground">
-                                        Regular WFH is limited to 1 day per week. Use the custom exception
-                                        link above for additional days.
-                                      </p>
-                                      <div className="mt-4">
-                                        <label className="flex items-center gap-2 text-sm cursor-pointer">
-                                          <Checkbox
-                                            className="cursor-pointer"
-                                            checked={leaveRequestForm.is_half_day}
-                                            onCheckedChange={(checked) =>
-                                              setLeaveRequestForm((p) => ({
-                                                ...p,
-                                                is_half_day: checked === true,
-                                                request_to_date: p.request_from_date,
-                                              }))
-                                            }
-                                            disabled={actionLoading}
-                                          />
-                                          <span className="text-muted-foreground">Half-day (single day only)</span>
-                                        </label>
-                                      </div>
-                                      {requiresClientApproval ? (
-                                        <div className="mt-5">
-                                          <Label className="text-sm flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 font-normal text-amber-900 cursor-pointer">
-                                            <Checkbox
-                                              className="mt-0.5 cursor-pointer"
-                                              checked={leaveRequestForm.client_approval}
-                                              onCheckedChange={(checked) =>
-                                                setLeaveRequestForm((p) => ({
-                                                  ...p,
-                                                  client_approval: checked,
-                                                }))
-                                              }
-                                            />
-                                            <span>
-                                              I confirm client approval for this request (required on active client/staffing projects).
-                                            </span>
-                                          </Label>
-                                        </div>
-                                      ) : null}
-                                    </div>
-                                    <div className="rounded-xl bg-muted/40 p-5 space-y-5 shadow-sm border border-border/40">
-                                      {routesLeaveWfhToHr ? (
-                                        <p className="rounded-lg border border-wt-border/70 bg-wt-surface-2/40 px-3 py-2 text-xs leading-relaxed text-wt-text-muted">
-                                          You are in the talent pool (bench or no client allocation). This WFH
-                                          request will go directly to HR for approval.
-                                        </p>
-                                      ) : (
-                                        <LeaveManagerSelector
-                                          label="Select Managers"
-                                          required
-                                          selectedEmails={selectedWfhManagerEmails}
-                                          onChange={setSelectedWfhManagerEmails}
-                                          disabled={actionLoading || profileAssignedProjectsLoading}
-                                        />
-                                      )}
-                                      <TextAreaField label="Comments" required value={leaveRequestForm.comments} onChange={(v) => setLeaveRequestForm((p) => ({ ...p, comments: v }))} />
-                                      <div className="flex justify-end pt-4 border-t border-border/40 mt-6">
-                                        <div className="flex items-center gap-3">
-                                          <Button variant="brand" type="button" className="px-6 h-10 font-medium" disabled={actionLoading || profileAssignedProjectsLoading} onClick={() =>
-                                              runAction(
-                                                userRequestActionLabel("WFH", editingLeaveRequestId ? "update" : "submit"),
-                                                async () => {
-                                                const fromDate = normalizeToApiDate(
-                                                  leaveRequestForm.request_from_date.trim()
-                                                );
-                                                const toDate = fromDate;
-                                                if (!fromDate || !parseApiDate(fromDate)) {
-                                                  throw new Error("Please provide a valid From date (dd/mm/yyyy).");
-                                                }
-                                                const comments = leaveRequestForm.comments.trim();
-                                                if (!comments) {
-                                                  throw new Error("Comments are required.");
-                                                }
-                                                if (comments.length > 200) {
-                                                  throw new Error("Comments must be 200 characters or less.");
-                                                }
-                                                const needsClientApproval = requiresClientApproval;
-                                                if (needsClientApproval && !leaveRequestForm.client_approval) {
-                                                  throw new Error("Client approval is required for client users.");
-                                                }
-                                                if (!routesLeaveWfhToHr && !selectedWfhManagerEmails.length) {
-                                                  throw new Error("Select at least one manager to notify.");
-                                                }
-                                                const payload = buildUserRequestBody(
-                                                  {
-                                                    request_from_date: fromDate,
-                                                    request_to_date: toDate,
-                                                    request_type: "WFH",
-                                                    comments,
-                                                    is_half_day: leaveRequestForm.is_half_day,
-                                                    client_approval: needsClientApproval
-                                                      ? leaveRequestForm.client_approval
-                                                      : undefined,
-                                                    selected_manager_emails: routesLeaveWfhToHr
-                                                      ? []
-                                                      : selectedWfhManagerEmails,
-                                                  },
-                                                  {
-                                                    ...(editingLeaveRequestId
-                                                      ? { userRequestId: Number(editingLeaveRequestId) }
-                                                      : {}),
-                                                    routesToHr: routesLeaveWfhToHr,
-                                                  }
-                                                );
-                                                if (editingLeaveRequestId) {
-                                                  await updateOwnedUserRequest(payload);
-                                                } else {
-                                                  await apiClient.post(endpoints.userRequest.root, {
-                                                    contentType: "application/json",
-                                                    body: JSON.stringify(payload),
-                                                  });
-                                                }
-                                                setLeaveRequestForm(createDefaultLeaveRequestForm());
-                                                setSelectedWfhManagerEmails([]);
-                                                setSelectedAdditionalRecipientEmails([]);
-                                                setEditingLeaveRequestId("");
-                                                try {
-                                                  await loadMyLeaveRequests();
-                                                } catch {
-                                                  /* submission succeeded; ignore refresh issue */
-                                                }
-                                                invalidateLeaveBalance();
-                                              })
-                                            }
-                                          >
-                                            {actionLoading
-                                              ? editingLeaveRequestId
-                                                ? "Saving…"
-                                                : "Submitting…"
-                                              : editingLeaveRequestId
-                                                ? "Save Changes"
-                                                : "Submit Request"}
-                                          </Button>
-                                          {editingLeaveRequestId ? (
-                                            <Button variant="ghost" type="button" className="px-6 h-10 font-medium" onClick={() => {
-                                                setLeaveRequestForm(createDefaultLeaveRequestForm());
-                                                setEditingLeaveRequestId("");
-                                              }}
-                                              disabled={actionLoading}
-                                            >
-                                              Cancel Edit
-                                            </Button>
-                                          ) : null}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </TabsContent>
-                                <TabsContent value="view" className="pt-3">
-                                  <MyLeaveRequestsView
-                                    rows={filteredWfhTabRequests}
-                                    loading={myLeaveRequestsLoading}
-                                    showRequestType
-                                    sortId={myLeaveSortId}
-                                    onSortChange={setMyLeaveSortId}
-                                    sortOptions={LEAVE_REQUEST_SORT_OPTIONS}
-                                    pagination={myLeavePagination}
-                                    highlightRequestId={highlightRequestId}
-                                    actionLoading={actionLoading}
-                                    onRefresh={() => runAction("Refresh my requests", loadMyLeaveRequests, { splash: false })}
-                                    fromDate={myRequestsFromDate}
-                                    toDate={myRequestsToDate}
-                                    onFromDateChange={setMyRequestsFromDate}
-                                    onToDateChange={setMyRequestsToDate}
-                                    onEdit={(row) => {
-                                      if (!isEmployeeEditableUserRequest(row)) {
-                                        showErrorToast("Only pending requests can be edited.");
-                                        return;
-                                      }
-                                      const rowType = String(
-                                        row.request_type ?? row.requestType ?? "WFH"
-                                      );
-                                      const fromDate = String(row.request_from_date ?? row.requestFromDate ?? "");
-                                      setLeaveRequestForm({
-                                        request_from_date: fromDate,
-                                        request_to_date: fromDate,
-                                        request_type: rowType,
-                                        comments: String(row.comments ?? ""),
-                                        is_half_day: Boolean(row.is_half_day ?? row.isHalfDay ?? false),
-                                        client_approval: false,
-                                      });
-                                      setSelectedWfhManagerEmails(
-                                        pickManagerEmailList(row, "primary")
-                                      );
-                                      const requestId = resolveUserRequestId(row);
-                                      if (!requestId) {
-                                        showErrorToast("Could not resolve request id for editing.");
-                                        return;
-                                      }
-                                      setEditingLeaveRequestId(requestId);
-                                      setWfhRequestViewTab("request");
-                                    }}
-                                    onRevoke={(requestId) =>
-                                      setConfirmState({
-                                        title: "Delete this WFH request?",
-                                        description:
-                                          "The request will be withdrawn and your manager notified. This can't be undone.",
-                                        confirmLabel: "Delete request",
-                                        tone: "danger",
-                                        run: () =>
-                                          runAction(
-                                            userRequestActionLabel("WFH", "revoke"),
-                                            async () => {
-                                        try {
-                                          await revokeOwnedUserRequest(Number(requestId));
-                                        } catch (error) {
-                                          // A reviewer decided it while this list was cached.
-                                          // Refresh so Delete stops being offered.
-                                          if (isAlreadyDecidedUserRequestError(error)) {
-                                            await loadMyLeaveRequests();
-                                          }
-                                          throw error;
-                                        }
-                                        if (editingLeaveRequestId === requestId) {
-                                          setEditingLeaveRequestId("");
-                                          setLeaveRequestForm(createDefaultLeaveRequestForm());
-                                          setSelectedWfhManagerEmails([]);
-                                        }
-                                        await loadMyLeaveRequests();
-                                      }
-                                          ),
-                                      })
-                                    }
-                                  />
-                                </TabsContent>
-                              </Tabs>
-                            </div>
+                            <WfhRequestSection
+                              showHrReviewNotice={submitsToHrForReview}
+                              tab={wfhRequestViewTab}
+                              onTabChange={setWfhRequestViewTab}
+                              actions={wfhActions}
+                              busy={actionLoading}
+                              form={{
+                                form: leaveRequestForm,
+                                onFormChange: setLeaveRequestForm,
+                                managerEmails: selectedWfhManagerEmails,
+                                onManagerEmailsChange: setSelectedWfhManagerEmails,
+                                editing: Boolean(editingLeaveRequestId),
+                                busy: actionLoading,
+                                projectsLoading: profileAssignedProjectsLoading,
+                                requiresClientApproval,
+                                routesToHr: routesLeaveWfhToHr,
+                                onOpenException: () => setWfhExceptionOpen(true),
+                              }}
+                              history={{
+                                rows: filteredWfhTabRequests,
+                                loading: myLeaveRequestsLoading,
+                                sortId: myLeaveSortId,
+                                onSortChange: setMyLeaveSortId,
+                                sortOptions: LEAVE_REQUEST_SORT_OPTIONS,
+                                pagination: myLeavePagination,
+                                highlightRequestId,
+                                fromDate: myRequestsFromDate,
+                                toDate: myRequestsToDate,
+                                onFromDateChange: setMyRequestsFromDate,
+                                onToDateChange: setMyRequestsToDate,
+                              }}
+                            />
                           ) : (
                             <>
                               {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
