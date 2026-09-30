@@ -277,7 +277,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
           <div
             className={cn(
               "wt-modal-overlay fixed inset-0 z-[210] flex items-start justify-center overflow-y-auto",
-              "bg-black/50 p-4 backdrop-blur-sm sm:pt-[10vh]"
+              "bg-black/50 p-4 backdrop-blur-sm sm:pt-[10vh] dark:bg-black/70"
             )}
             role="presentation"
             onClick={(e) => {

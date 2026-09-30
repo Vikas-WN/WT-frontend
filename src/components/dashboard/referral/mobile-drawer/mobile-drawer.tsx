@@ -31,7 +31,7 @@ export function MobileDrawer({ open, onClose, children }: MobileDrawerProps) {
 
   return createPortal(
     <div className="fixed inset-0 z-[100]" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] lg:bg-transparent lg:backdrop-blur-none" />
+      <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] dark:bg-black/70 lg:bg-transparent lg:backdrop-blur-none lg:dark:bg-transparent" />
       <div
         onClick={(e) => e.stopPropagation()}
         className={cn(

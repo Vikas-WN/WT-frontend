@@ -40,7 +40,7 @@ export function ApprovalRemarkModal({
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4 dark:bg-black/60"
       role="presentation"
       onClick={() => {
         if (!loading) onCancel();

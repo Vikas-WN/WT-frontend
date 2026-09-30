@@ -173,7 +173,7 @@ export function KeyboardShortcutsProvider({ children }: { children: ReactNode })
     sheetOpen && typeof document !== "undefined"
       ? createPortal(
           <div
-            className="wt-modal-overlay fixed inset-0 z-[220] flex items-start justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-[2px] sm:pt-[12vh]"
+            className="wt-modal-overlay fixed inset-0 z-[220] flex items-start justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-[2px] sm:pt-[12vh] dark:bg-black/70"
             role="presentation"
             onClick={(e) => {
               if (e.target === e.currentTarget) setSheetOpen(false);

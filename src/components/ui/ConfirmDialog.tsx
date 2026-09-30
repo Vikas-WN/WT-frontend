@@ -50,7 +50,7 @@ export function ConfirmDialog({
   // against the nearest transformed/animated ancestor instead of the viewport.
   return createPortal(
     <div
-      className="wt-modal-overlay fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-[2px]"
+      className="wt-modal-overlay fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-black/55 p-4 backdrop-blur-[2px] dark:bg-black/75"
       role="presentation"
       onClick={loading ? undefined : onCancel}
     >

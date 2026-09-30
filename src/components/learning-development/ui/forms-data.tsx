@@ -25,7 +25,7 @@ export function Sheet({
       <Button
         type="button"
         variant="ghost"
-        className="absolute inset-0 h-full w-full rounded-none bg-black/40 backdrop-blur-[1px] hover:bg-black/40"
+        className="absolute inset-0 h-full w-full rounded-none bg-black/40 backdrop-blur-[1px] hover:bg-black/40 dark:bg-black/60 dark:hover:bg-black/60"
         aria-label="Close panel"
         onClick={onClose}
       />

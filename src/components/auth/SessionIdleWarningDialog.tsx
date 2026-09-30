@@ -17,7 +17,7 @@ export function SessionIdleWarningDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[190] flex items-center justify-center bg-black/40 p-4 backdrop-blur-[1px]"
+      className="fixed inset-0 z-[190] flex items-center justify-center bg-black/40 p-4 backdrop-blur-[1px] dark:bg-black/60"
       role="presentation"
     >
       <div
