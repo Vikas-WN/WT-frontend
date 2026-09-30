@@ -3,9 +3,20 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import { DatePicker } from "@/components/ui/date-picker";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
@@ -14,11 +25,13 @@ import { useProjectTimelogs } from "@/hooks/timelog/useProjectTimelogs";
 import { useClientPagination } from "@/hooks/useClientPagination";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { hrmsService } from "@/services/hrms.service";
+import { cn } from "@/lib/utils";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
 import { TASK_CATEGORY_LABELS } from "@/utils/timelog/categories";
 import { resolveTimelogProjectLabel } from "@/utils/timelog/projectLabel";
 import { isManagerTimelogDecisionActionable } from "@/utils/timelog/employeeEditability";
 import { formatTimelogTableDate, toIsoDateKey } from "@/utils/timelog/weekDates";
+import { timelogStatusBadgeClass } from "@/utils/timelog/statusTone";
 import type { DayTimelogEntry } from "@/hooks/timelog/useDayTimelog.types";
 import type { ProjectWeekEmployeeTotal } from "@/hooks/timelog/useProjectTimelogs.types";
 import type { ProjectTimelogPanelProps } from "./ProjectTimelogPanel.types";
@@ -32,15 +45,9 @@ type EmployeeDetailCache = {
   snapshot: null;
 };
 
-function entryStatusClass(status: string): string {
-  const map: Record<string, string> = {
-    DRAFT: "rounded-md bg-wt-surface-3 px-2 py-0.5 text-xs font-medium text-wt-text-muted",
-    SUBMITTED: "rounded-md bg-[var(--wt-brand-soft)] px-2 py-0.5 text-xs font-medium text-[var(--wt-brand)]",
-    APPROVED: "rounded-md bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-300",
-    REJECTED: "rounded-md bg-rose-500/15 px-2 py-0.5 text-xs font-medium text-rose-300",
-  };
-  return map[status] ?? map.DRAFT;
-}
+/** Approve button — same emerald semantics as the status pill, with a dark variant. */
+const APPROVE_BUTTON_CLASS =
+  "border-emerald-300 px-1.5 py-0.5 text-[10px] text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-400 dark:hover:bg-emerald-500/10";
 
 function patchApprovedTotalsForEntry(
   totals: ProjectWeekEmployeeTotal[] | undefined,
@@ -301,48 +308,43 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
               <p className="py-10 text-center text-sm text-wt-text-muted">No Time Log Entries</p>
             ) : (
               <>
-                <div className="overflow-x-auto rounded-lg border border-wt-border">
-                  <table className="w-full border-collapse text-sm">
-                    <thead className="bg-wt-surface-2 text-wt-text-muted">
-                      <tr>
-                        <th className="px-2 py-2 text-left font-medium whitespace-nowrap">Date</th>
-                        <th className="px-2 py-2 text-left font-medium">Project</th>
-                        <th className="px-2 py-2 text-left font-medium">Task Category</th>
-                        <th className="px-2 py-2 text-left font-medium min-w-[180px]">Description</th>
-                        <th className="px-2 py-2 text-center font-medium">Hours</th>
-                        <th className="px-2 py-2 text-center font-medium">Status</th>
-                        <th className="px-2 py-2 text-center font-medium">Approve / Reject</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                <ScrollableTable maxHeightClass="max-h-[min(60vh,520px)]">
+                  <WtTable>
+                    <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead>Date</TableHead>
+                        <TableHead>Project</TableHead>
+                        <TableHead>Task Category</TableHead>
+                        <TableHead className="min-w-[180px]">Description</TableHead>
+                        <TableHead className="text-center">Hours</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                        <TableHead className="text-center">Approve / Reject</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {entriesPagination.pageItems.map((entry: DayTimelogEntry) => {
                         const isActionable = isManagerTimelogDecisionActionable(entry.status);
                         return (
-                          <tr
-                            key={`${entry.id}-${toIsoDateKey(entry.log_date)}`}
-                            className="border-t border-wt-border hover:bg-wt-surface-2/50"
-                          >
-                            <td className="px-2 py-2 whitespace-nowrap tabular-nums">
+                          <TableRow key={`${entry.id}-${toIsoDateKey(entry.log_date)}`}>
+                            <TableCell className="tabular-nums">
                               {formatApiDateDisplay(entry.log_date)}
-                            </td>
-                            <td className="px-2 py-2 whitespace-nowrap">
-                              {resolveTimelogProjectLabel(entry, projects)}
-                            </td>
-                            <td className="px-2 py-2 whitespace-nowrap">
+                            </TableCell>
+                            <TableCell>{resolveTimelogProjectLabel(entry, projects)}</TableCell>
+                            <TableCell>
                               {TASK_CATEGORY_LABELS[entry.task_category] ?? entry.task_category}
-                            </td>
-                            <td className="px-2 py-2 max-w-[240px]">
-                              <span className="line-clamp-3 whitespace-pre-wrap break-words" title={entry.description || undefined}>
+                            </TableCell>
+                            <TableCell className="max-w-[240px] whitespace-normal">
+                              <span className="line-clamp-3 break-words whitespace-pre-wrap" title={entry.description || undefined}>
                                 {entry.description?.trim() || "—"}
                               </span>
-                            </td>
-                            <td className="px-2 py-2 text-center tabular-nums">{entry.hours}h</td>
-                            <td className="px-2 py-2 text-center">
-                              <span className={entryStatusClass(entry.status)}>
+                            </TableCell>
+                            <TableCell className="text-center tabular-nums">{entry.hours}h</TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className={cn("border", timelogStatusBadgeClass(entry.status))}>
                                 {formatUiStatusLabel(entry.status)}
-                              </span>
-                            </td>
-                            <td className="px-2 py-2 text-center whitespace-nowrap">
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
                               {isActionable && entry.id > 0 ? (
                                 <div className="flex justify-center gap-1">
                                   <Button
@@ -350,7 +352,7 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                                     variant="outline"
                                     size="xs"
                                     disabled={actionLoading}
-                                    className="border-emerald-300 px-1.5 py-0.5 text-[10px] text-emerald-700 hover:bg-emerald-50"
+                                    className={APPROVE_BUTTON_CLASS}
                                     onClick={() => handleApproveEntry(entry.id)}
                                   >
                                     Approve
@@ -369,13 +371,13 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                               ) : (
                                 <span className="text-xs text-wt-text-muted">—</span>
                               )}
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         );
                       })}
-                    </tbody>
-                  </table>
-                </div>
+                    </TableBody>
+                  </WtTable>
+                </ScrollableTable>
                 {entriesPagination.showPagination ? (
                   <ListPagination
                     className="mt-3"
@@ -451,46 +453,41 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                 Submitted time logs waiting for your review
               </span>
             </div>
-            <div className="overflow-x-auto rounded-md border border-wt-border bg-wt-surface-1">
-              <table className="w-full border-collapse text-sm">
-                <thead className="bg-wt-surface-2 text-wt-text-muted">
-                  <tr>
-                    <th className="px-2 py-2 text-left font-medium">Employee</th>
-                    <th className="px-2 py-2 text-left font-medium">Project</th>
-                    <th className="px-2 py-2 text-left font-medium whitespace-nowrap">Date</th>
-                    <th className="px-2 py-2 text-center font-medium">Hours</th>
-                    <th className="px-2 py-2 text-center font-medium">Status</th>
-                    <th className="px-2 py-2 text-center font-medium">Approve / Reject</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <ScrollableTable maxHeightClass="max-h-[min(50vh,420px)]" className="bg-wt-surface-1">
+              <WtTable>
+                <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>Employee</TableHead>
+                    <TableHead>Project</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-center">Hours</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center">Approve / Reject</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {pendingPagination.pageItems.map((item) => (
-                    <tr
-                      key={item.timelog_id}
-                      className="border-t border-wt-border hover:bg-wt-surface-2/50"
-                    >
-                      <td className="px-2 py-2">
+                    <TableRow key={item.timelog_id}>
+                      <TableCell className="whitespace-normal">
                         <div className="font-medium text-wt-text">{item.employee_name}</div>
                         <div className="text-xs text-wt-text-muted">{item.employee_email}</div>
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap">
-                        {resolveTimelogProjectLabel(item, projects)}
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap tabular-nums">{formatApiDateDisplay(item.log_date)}</td>
-                      <td className="px-2 py-2 text-center tabular-nums">{item.hours}h</td>
-                      <td className="px-2 py-2 text-center">
-                        <span className={entryStatusClass(item.status)}>
+                      </TableCell>
+                      <TableCell>{resolveTimelogProjectLabel(item, projects)}</TableCell>
+                      <TableCell className="tabular-nums">{formatApiDateDisplay(item.log_date)}</TableCell>
+                      <TableCell className="text-center tabular-nums">{item.hours}h</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline" className={cn("border", timelogStatusBadgeClass(item.status))}>
                           {formatUiStatusLabel(item.status)}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 text-center whitespace-nowrap">
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
                         <div className="flex justify-center gap-1">
                           <Button
                             type="button"
                             variant="outline"
                             size="xs"
                             disabled={actionLoading}
-                            className="border-emerald-300 px-1.5 py-0.5 text-[10px] text-emerald-700 hover:bg-emerald-50"
+                            className={APPROVE_BUTTON_CLASS}
                             onClick={() => handleApproveEntry(item.timelog_id)}
                           >
                             Approve
@@ -506,12 +503,12 @@ export function ProjectTimelogPanel({ enabled }: ProjectTimelogPanelProps) {
                             Reject
                           </Button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </WtTable>
+            </ScrollableTable>
             {pendingPagination.showPagination ? (
               <ListPagination
                 page={pendingPagination.page}

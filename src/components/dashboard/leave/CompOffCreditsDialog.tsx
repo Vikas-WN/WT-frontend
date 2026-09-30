@@ -2,9 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertTriangle, Info } from "lucide-react";
+import { Loader2, AlertTriangle, Info, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { compOffService } from "@/services/compOff.service";
 import { RequestStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 
 interface CompOffCredit {
   workedDate: string;
@@ -56,7 +67,7 @@ export function CompOffCreditsDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 dark:bg-black/70"
       role="presentation"
       onClick={onClose}
     >
@@ -68,65 +79,72 @@ export function CompOffCreditsDialog({
       >
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-wt-text">My Comp Off Credits</h2>
-          <Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={onClose}>
-            &times;
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <X className="size-4" aria-hidden />
           </Button>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-10">
-            <Loader2 className="size-5 animate-spin text-muted-foreground" />
+            <Loader2 className="size-5 animate-spin text-wt-text-muted" />
           </div>
         ) : credits.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">No comp off credits found.</p>
+          <p className="py-6 text-center text-sm text-wt-text-muted">No comp off credits found.</p>
         ) : (
-          <div className="max-h-[60vh] overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="text-[11px] font-semibold tracking-wider text-muted-foreground bg-muted/40 sticky top-0">
-                <tr>
-                  <th className="px-3 py-2.5 text-left">Worked date</th>
-                  <th className="px-3 py-2.5 text-left">Expiry date</th>
-                  <th className="px-3 py-2.5 text-left">
+          <ScrollableTable maxHeightClass="max-h-[60vh]">
+            <WtTable>
+              <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Worked date</TableHead>
+                  <TableHead>Expiry date</TableHead>
+                  <TableHead>
                     Days left
-                    <span title="Expiry is 60 days from the worked date, not from the submission date." className="inline-flex align-middle ml-1 cursor-help">
-                      <Info className="size-3.5 text-muted-foreground/60" />
+                    <span title="Expiry is 60 days from the worked date, not from the submission date." className="ml-1 inline-flex cursor-help align-middle">
+                      <Info className="size-3.5 text-wt-text-faint" />
                     </span>
-                  </th>
-                  <th className="px-3 py-2.5 text-left">Status</th>
-                  <th className="px-3 py-2.5 text-left">Project</th>
-                </tr>
-              </thead>
-              <tbody>
-                {credits.map((c, i) => {
+                  </TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Project</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {credits.map((c) => {
                   const isExpiring = c.daysUntilExpiry > 0 && c.daysUntilExpiry <= 60;
                   const isExpired = c.daysUntilExpiry <= 0;
                   return (
-                    <tr key={`${c.workedDate}-${c.projectName}`} className={i % 2 === 1 ? "bg-muted/20" : ""}>
-                      <td className="px-3 py-2.5 whitespace-nowrap">{c.workedDate}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">{c.expiryDate}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">
+                    <TableRow key={`${c.workedDate}-${c.projectName}`}>
+                      <TableCell>{c.workedDate}</TableCell>
+                      <TableCell>{c.expiryDate}</TableCell>
+                      <TableCell>
                         {isExpired ? (
-                          <span className="text-red-600 font-medium">Expired</span>
+                          <span className="font-medium text-rose-600 dark:text-rose-400">Expired</span>
                         ) : (
-                          <span className={`tabular-nums ${isExpiring ? "text-amber-600 font-medium" : ""}`}>
-                            {isExpiring ? <AlertTriangle className="size-3.5 inline mr-1 text-amber-500" /> : null}
+                          <span className={cn("tabular-nums", isExpiring && "font-medium text-amber-700 dark:text-amber-400")}>
+                            {isExpiring ? <AlertTriangle className="mr-1 inline size-3.5 text-amber-600 dark:text-amber-400" /> : null}
                             {c.daysUntilExpiry} days
                           </span>
                         )}
-                      </td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell>
                         <RequestStatusBadge status={c.status} />
-                      </td>
-                      <td className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">{c.projectName}</td>
-                    </tr>
+                      </TableCell>
+                      <TableCell className="text-wt-text-muted">{c.projectName}</TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </WtTable>
+          </ScrollableTable>
         )}
 
-        <div className="flex justify-end pt-2 border-t border-border/40">
+        <div className="flex justify-end border-t border-wt-border pt-2">
           <Button type="button" variant="outline" onClick={onClose}>Close</Button>
         </div>
       </div>
