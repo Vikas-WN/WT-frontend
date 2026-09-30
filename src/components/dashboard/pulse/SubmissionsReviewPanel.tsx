@@ -628,12 +628,25 @@ export function AdminReviewModal({
  *  Exported for KpiReportsPanel's per-submission breakdown. */
 export function RatingsComparison({ submission }: { submission: MonthlySubmissionItem }) {
   const selfKpi = new Map(submission.kpi_ratings.map((r) => [r.kpi_id, r.rating]));
+  const selfKpiWhy = new Map(submission.kpi_ratings.map((r) => [r.kpi_id, r.comment]));
   const mgrKpi = submission.manager_evaluation?.kpi_ratings ?? {};
+  const mgrKpiWhy = submission.manager_evaluation?.kpi_comments ?? {};
   const selfValue = new Map(submission.value_ratings.map((r) => [r.value_id, r.rating]));
+  const selfValueWhy = new Map(submission.value_ratings.map((r) => [r.value_id, r.comment]));
   const mgrValue = submission.manager_evaluation?.value_ratings ?? {};
+  const mgrValueWhy = submission.manager_evaluation?.value_comments ?? {};
   const showParameters = hasKpiParameters(submission.kpi_details);
 
-  type Row = { key: string; label: string; meta: string | null; self?: number; manager?: number };
+  type Row = {
+    key: string;
+    label: string;
+    meta: string | null;
+    self?: number;
+    manager?: number;
+    /** Why each side gave that rating. */
+    selfWhy?: string;
+    managerWhy?: string;
+  };
   const sections: { key: string; title: string | null; weight: number | null; rows: Row[] }[] = [
     ...groupKpisByParameter(submission.kpi_details).map((group) => ({
       key: `p-${group.parameter ?? "none"}`,
@@ -645,6 +658,8 @@ export function RatingsComparison({ submission }: { submission: MonthlySubmissio
         meta: showParameters ? null : `KPI · ${formatWeight(k.weightage)}`,
         self: selfKpi.get(k.id),
         manager: mgrKpi[String(k.id)],
+        selfWhy: selfKpiWhy.get(k.id),
+        managerWhy: mgrKpiWhy[String(k.id)],
       })),
     })),
   ];
@@ -659,6 +674,8 @@ export function RatingsComparison({ submission }: { submission: MonthlySubmissio
         meta: null,
         self: selfValue.get(v.id),
         manager: mgrValue[String(v.id)],
+        selfWhy: selfValueWhy.get(v.id),
+        managerWhy: mgrValueWhy[String(v.id)],
       })),
     });
   }
@@ -699,6 +716,18 @@ export function RatingsComparison({ submission }: { submission: MonthlySubmissio
                   <TableCell className="whitespace-normal">
                     <p className="text-wt-text">{r.label}</p>
                     {r.meta ? <p className="text-xs text-wt-text-faint">{r.meta}</p> : null}
+                    {r.selfWhy?.trim() ? (
+                      <p className="mt-1 text-xs text-wt-text-muted">
+                        <span className="font-medium text-wt-text">Employee: </span>
+                        {r.selfWhy}
+                      </p>
+                    ) : null}
+                    {r.managerWhy?.trim() ? (
+                      <p className="mt-0.5 text-xs text-wt-text-muted">
+                        <span className="font-medium text-wt-text">Manager: </span>
+                        {r.managerWhy}
+                      </p>
+                    ) : null}
                   </TableCell>
                   <TableCell className="text-center text-wt-text">{pulseRatingLabel(r.self)}</TableCell>
                   <TableCell

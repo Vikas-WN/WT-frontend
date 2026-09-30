@@ -106,6 +106,8 @@ export type MonthlySubmissionReviewStatus =
 export interface KpiRating {
   kpi_id: number;
   rating: number;
+  /** Why this rating was given — required to submit. */
+  comment: string;
 }
 
 export interface ValueRating {
@@ -142,6 +144,9 @@ export interface EmployeeSummary {
 export interface ManagerEvaluation {
   kpi_ratings: Record<string, number>;
   value_ratings: Record<string, number>;
+  /** Why each rating was given, keyed like the ratings. */
+  kpi_comments: Record<string, string>;
+  value_comments: Record<string, string>;
   comments: string;
   reviewed_at: string | null;
   reviewed_by: string | null;
@@ -241,6 +246,8 @@ export interface AdminEditPayload {
 export interface ManagerReviewDraft {
   kpi_ratings: Record<string, number>;
   value_ratings: Record<string, number>;
+  kpi_comments: Record<string, string>;
+  value_comments: Record<string, string>;
   comments: string;
   /** Bumps on every save, so a poller can tell whether it already has the latest. */
   version: number;
@@ -258,9 +265,17 @@ export interface ManagerReviewDraftState {
 }
 
 /** Only what this manager just changed; the server merges it per KPI/value. */
+export interface ItemComment {
+  id: number;
+  comment: string;
+}
+
 export interface ManagerReviewDraftPatch {
-  kpi_ratings: KpiRating[];
+  kpi_ratings: Array<Pick<KpiRating, "kpi_id" | "rating">>;
   value_ratings: ValueRating[];
+  /** A comment can be saved before its rating is chosen. */
+  kpi_comments?: ItemComment[];
+  value_comments?: ItemComment[];
   comments?: string;
 }
 

@@ -9,7 +9,9 @@ import { TextAreaField } from "@/components/dashboard/ui/forms";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { RatingButtons } from "@/components/dashboard/pulse/employee/RatingButtons";
+import { ExplainedRatingRow, explainedRowDomId } from "@/components/dashboard/pulse/ExplainedRatingRow";
+import { SubmissionChecklist } from "@/components/dashboard/pulse/SubmissionChecklist";
+import { buildChecklist, summarizeChecklist, summarizeGroup, type ChecklistGroup, type ChecklistItem } from "@/utils/pulseChecklist";
 import { PULSE_COPY, PULSE_REVIEWER_PICKER_ROLES } from "@/constants/pulseCopy";
 import { DropdownSelect } from "@/components/dashboard/ui/DropdownSelect";
 import { useAuth } from "@/context/AuthContext";
@@ -74,6 +76,9 @@ function managerNames(managers: EmployeeSummary[]): string {
 
 const STEPS = ["Projects", "KPIs", "Company Values", "Certifications", "Review & Submit"] as const;
 
+/** Which wizard step each checklist group is filled in on (index into STEPS). */
+const CHECKLIST_STEPS = { projects: 0, kpis: 1, values: 2, selfReview: 4, reviewer: 4 } as const;
+
 function draftFromSubmission(row: MonthlySubmissionItem): MonthlySubmissionDraftPayload {
   return {
     month: row.month,
@@ -88,11 +93,15 @@ function draftFromSubmission(row: MonthlySubmissionItem): MonthlySubmissionDraft
   };
 }
 
-/** The API rejects a value rating below 1 — a value only gets a rating once
- *  its buttons are clicked, but typing its comment first creates a rating-0
- *  entry locally. Drop those until rated, so autosave/submit don't 422. */
+/** The API rejects a rating below 1 — a KPI or value only gets a rating once its
+ *  buttons are clicked, but typing its comment first creates a rating-0 entry
+ *  locally. Drop those until rated, so autosave/submit don't 422. */
 function toApiPayload(form: MonthlySubmissionDraftPayload): MonthlySubmissionDraftPayload {
-  return { ...form, value_ratings: form.value_ratings.filter((r) => r.rating >= 1) };
+  return {
+    ...form,
+    kpi_ratings: form.kpi_ratings.filter((r) => r.rating >= 1),
+    value_ratings: form.value_ratings.filter((r) => r.rating >= 1),
+  };
 }
 
 /** Mirrors the backend: the employee can only edit while the submission is
@@ -314,11 +323,18 @@ function EmployeeReviewForm({
     });
   };
 
-  const setKpiRating = (kpiId: number, rating: number) => {
-    setForm((f) => ({
-      ...f,
-      kpi_ratings: [...f.kpi_ratings.filter((r) => r.kpi_id !== kpiId), { kpi_id: kpiId, rating }],
-    }));
+  // A KPI's rating and its reason are one entry; either can be set first, so the other
+  // half is kept (a not-yet-chosen rating is 0 and never leaves the browser — see toApiPayload).
+  const setKpiEntry = (kpiId: number, patch: { rating?: number; comment?: string }) => {
+    setForm((f) => {
+      const existing = f.kpi_ratings.find((r) => r.kpi_id === kpiId);
+      const next = {
+        kpi_id: kpiId,
+        rating: patch.rating ?? existing?.rating ?? 0,
+        comment: patch.comment ?? existing?.comment ?? "",
+      };
+      return { ...f, kpi_ratings: [...f.kpi_ratings.filter((r) => r.kpi_id !== kpiId), next] };
+    });
   };
 
   const setValueRating = (valueId: number, patch: { rating?: number; comment?: string }) => {
@@ -353,7 +369,6 @@ function EmployeeReviewForm({
   };
 
   const showParameters = hasKpiParameters(kpiRows);
-  const allKpisRated = kpiRows.every((k) => form.kpi_ratings.some((r) => r.kpi_id === k.id));
   // Matches the backend: 1–3 of your current projects, or none when you're
   // not on any (e.g. on the bench — system projects aren't listed).
   const hasProjects = projectRows.length > 0;
@@ -368,35 +383,52 @@ function EmployeeReviewForm({
         .map((m) => [m.id, m] as const)
     ).values()
   );
-  const projectsValid = hasProjects
-    ? selectedProjects.length >= 1 && selectedProjects.length <= 3
-    : true;
   const selfReviewValid = form.self_review_text.trim().length > 0;
-  const allValuesCommented = valueRows.every((v) =>
-    Boolean(form.value_ratings.find((r) => r.value_id === v.id)?.comment?.trim())
-  );
   const requiresReviewer = reviewerOptions !== null;
   const reviewerValid =
     reviewerOptions === null || reviewerOptions.some((r) => r.id === form.reviewer_id);
-  const canSubmit =
-    !projectsLoading &&
-    allKpisRated &&
-    projectsValid &&
-    allValuesCommented &&
-    selfReviewValid &&
-    reviewerValid;
+
+  // Everything the API will insist on, worked out live so the employee sees what is left
+  // instead of finding out from an error after pressing Submit.
+  const checklist = buildChecklist(
+    {
+      kpis: kpiRows.map((k) => ({ id: k.id, name: k.kpi_name })),
+      kpiRatings: Object.fromEntries(form.kpi_ratings.map((r) => [r.kpi_id, r.rating])),
+      kpiComments: Object.fromEntries(form.kpi_ratings.map((r) => [r.kpi_id, r.comment])),
+      values: valueRows.map((v) => ({ id: v.id, name: v.title })),
+      valueRatings: Object.fromEntries(form.value_ratings.map((r) => [r.value_id, r.rating])),
+      valueComments: Object.fromEntries(form.value_ratings.map((r) => [r.value_id, r.comment])),
+      projects: { required: hasProjects, selected: selectedProjects.length, max: 3 },
+      selfReviewWritten: selfReviewValid,
+      reviewer: { required: requiresReviewer, chosen: reviewerValid },
+    },
+    CHECKLIST_STEPS
+  );
+  const checklistSummary = summarizeChecklist(checklist);
+  const canSubmit = !projectsLoading && checklistSummary.complete;
+
+  /** Take the employee to the step (and the exact KPI/value row) a checklist item lives on. */
+  const goToItem = (group: ChecklistGroup, item: ChecklistItem) => {
+    if (group.step != null) setStep(group.step);
+    const [kind, id] = item.key.split(":");
+    if (kind === "kpi" || kind === "value") {
+      // The row only exists once its step is showing, so scroll after it renders.
+      window.setTimeout(() => {
+        document.getElementById(explainedRowDomId(kind, Number(id)))?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 60);
+    }
+  };
+  const stepBadge = (idx: number): string => {
+    const groups = checklist.filter((g) => g.step === idx);
+    if (groups.length === 0) return "";
+    const total = groups.reduce((n, g) => n + summarizeGroup(g).total, 0);
+    const done = groups.reduce((n, g) => n + summarizeGroup(g).done, 0);
+    return total > 1 ? ` (${done}/${total})` : done === total ? " ✓" : "";
+  };
 
   const handleSubmit = async () => {
     if (!canSubmit) {
-      notifyError(
-        !reviewerValid
-          ? "Select the HR or Admin who should review your submission."
-          : !allValuesCommented
-            ? "Add a quick example for every Company Value before submitting."
-            : hasProjects
-              ? "Rate every KPI, pick 1–3 projects, and add your self review before submitting."
-              : "Rate every KPI and add your self review before submitting."
-      );
+      notifyError(`${checklistSummary.remaining} item(s) still need attention — see the checklist.`);
       return;
     }
     setSubmitting(true);
@@ -449,10 +481,13 @@ function EmployeeReviewForm({
             )}
           >
             {idx + 1}. {label}
+            {stepBadge(idx)}
           </button>
         ))}
         <span className="ml-auto text-xs text-wt-text-faint">{saving ? "Saving…" : "Saved"}</span>
       </div>
+
+      <SubmissionChecklist groups={checklist} onSelect={goToItem} />
 
       <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
         {step === 0 ? (
@@ -504,7 +539,8 @@ function EmployeeReviewForm({
             <div>
               <h3 className="text-sm font-semibold text-wt-text">Rate your KPIs</h3>
               <p className="mt-0.5 text-xs text-wt-text-muted">
-                Applicable to your band and department. Choose the level that best fits each one.
+                Applicable to your band and department. Choose the level that best fits each one and say
+                why — a short, specific example is what your reviewers are looking for.
               </p>
             </div>
             {kpiRows.length === 0 ? (
@@ -525,23 +561,19 @@ function EmployeeReviewForm({
                       </div>
                     ) : null}
                     {group.items.map((kpi) => {
-                      const rating = form.kpi_ratings.find((r) => r.kpi_id === kpi.id)?.rating ?? null;
+                      const entry = form.kpi_ratings.find((r) => r.kpi_id === kpi.id);
                       return (
-                        <div
+                        <ExplainedRatingRow
                           key={kpi.id}
-                          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-2/40 px-3.5 py-3"
-                        >
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-wt-text">{kpi.kpi_name}</p>
-                            {kpi.evaluation_criteria ? (
-                              <p className="text-xs text-wt-text-muted">{kpi.evaluation_criteria}</p>
-                            ) : null}
-                            {showParameters ? null : (
-                              <p className="text-xs text-wt-text-muted">Weight · {formatWeight(kpi.weightage)}</p>
-                            )}
-                          </div>
-                          <RatingButtons value={rating} onChange={(r) => setKpiRating(kpi.id, r)} />
-                        </div>
+                          domId={explainedRowDomId("kpi", kpi.id)}
+                          title={kpi.kpi_name}
+                          detail={kpi.evaluation_criteria}
+                          meta={showParameters ? null : `Weight · ${formatWeight(kpi.weightage)}`}
+                          rating={entry?.rating ?? null}
+                          comment={entry?.comment ?? ""}
+                          onRating={(r) => setKpiEntry(kpi.id, { rating: r })}
+                          onComment={(c) => setKpiEntry(kpi.id, { comment: c })}
+                        />
                       );
                     })}
                   </div>
@@ -556,35 +588,23 @@ function EmployeeReviewForm({
             <div>
               <h3 className="text-sm font-semibold text-wt-text">Company Values</h3>
               <p className="mt-0.5 text-xs text-wt-text-muted">
-                Rate yourself and add a short note for each value — a note is required.
+                Rate yourself on each value and say why — both are required.
               </p>
             </div>
             <div className="space-y-3">
               {valueRows.map((v) => {
                 const row = form.value_ratings.find((r) => r.value_id === v.id);
                 return (
-                  <div key={v.id} className="rounded-xl border border-wt-border bg-wt-surface-2/40 p-3.5">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-wt-text">{v.title}</p>
-                        {v.evaluation_criteria ? (
-                          <p className="text-xs text-wt-text-muted">{v.evaluation_criteria}</p>
-                        ) : null}
-                      </div>
-                      <RatingButtons
-                        value={row?.rating || null}
-                        onChange={(r) => setValueRating(v.id, { rating: r })}
-                      />
-                    </div>
-                    <input
-                      type="text"
-                      value={row?.comment ?? ""}
-                      onChange={(e) => setValueRating(v.id, { comment: e.target.value })}
-                      placeholder="A quick example (required)"
-                      aria-required="true"
-                      className="mt-2.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
-                    />
-                  </div>
+                  <ExplainedRatingRow
+                    key={v.id}
+                    domId={explainedRowDomId("value", v.id)}
+                    title={v.title}
+                    detail={v.evaluation_criteria}
+                    rating={row?.rating ?? null}
+                    comment={row?.comment ?? ""}
+                    onRating={(r) => setValueRating(v.id, { rating: r })}
+                    onComment={(c) => setValueRating(v.id, { comment: c })}
+                  />
                 );
               })}
             </div>
@@ -674,33 +694,6 @@ function EmployeeReviewForm({
                 <p className="mt-1 text-xs text-wt-text-muted">{PULSE_COPY.reviewerIntro}</p>
               </div>
             ) : null}
-            <div className="rounded-xl border border-wt-border bg-wt-surface-2/40 p-4 text-sm text-wt-text-muted">
-              <p className="font-medium text-wt-text">Before you submit</p>
-              <ul className="mt-2 space-y-1">
-                <li className="flex items-center gap-2">
-                  <Badge variant={projectsValid ? "default" : "outline"}>
-                    {hasProjects ? `${selectedProjects.length}/3` : "N/A"}
-                  </Badge>
-                  Projects selected
-                </li>
-                <li className="flex items-center gap-2">
-                  <Badge variant={allKpisRated ? "default" : "outline"}>
-                    {form.kpi_ratings.length}/{kpiRows.length}
-                  </Badge>
-                  KPIs rated
-                </li>
-                <li className="flex items-center gap-2">
-                  <Badge variant={selfReviewValid ? "default" : "outline"}>{selfReviewValid ? "✓" : "—"}</Badge>
-                  Self review written
-                </li>
-                {requiresReviewer ? (
-                  <li className="flex items-center gap-2">
-                    <Badge variant={reviewerValid ? "default" : "outline"}>{reviewerValid ? "✓" : "—"}</Badge>
-                    {PULSE_COPY.reviewerSelected}
-                  </li>
-                ) : null}
-              </ul>
-            </div>
             <p className="text-xs text-wt-text-faint">
               Changes autosave while you work. Once you submit, the review is locked unless it&apos;s sent
               back to you for changes.

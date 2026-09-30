@@ -33,6 +33,9 @@ export interface ManagerReviewDraftApi {
   fields: ReviewFields;
   rateKpi: (kpiId: number, rating: number) => void;
   rateValue: (valueId: number, rating: number) => void;
+  /** Why this rating — can be written before the rating is chosen. */
+  commentKpi: (kpiId: number, comment: string) => void;
+  commentValue: (valueId: number, comment: string) => void;
   setComments: (comments: string) => void;
   /** Sends any unsaved change now. Call before submitting so the draft is current. */
   flush: () => Promise<void>;
@@ -151,6 +154,22 @@ export function useManagerReviewDraft(
       edit(`v:${valueId}`, { ...fieldsRef.current, values: { ...fieldsRef.current.values, [valueId]: rating } }),
     [edit]
   );
+  const commentKpi = useCallback(
+    (kpiId: number, comment: string) =>
+      edit(`kc:${kpiId}`, {
+        ...fieldsRef.current,
+        kpiComments: { ...fieldsRef.current.kpiComments, [kpiId]: comment },
+      }),
+    [edit]
+  );
+  const commentValue = useCallback(
+    (valueId: number, comment: string) =>
+      edit(`vc:${valueId}`, {
+        ...fieldsRef.current,
+        valueComments: { ...fieldsRef.current.valueComments, [valueId]: comment },
+      }),
+    [edit]
+  );
   const setComments = useCallback(
     (comments: string) => edit("comments", { ...fieldsRef.current, comments }),
     [edit]
@@ -184,5 +203,5 @@ export function useManagerReviewDraft(
       ? { by: status.decided_by, reviewStatus: status.review_status }
       : null;
 
-  return { fields, rateKpi, rateValue, setComments, flush, decided, coEditor, saveState };
+  return { fields, rateKpi, rateValue, commentKpi, commentValue, setComments, flush, decided, coEditor, saveState };
 }

@@ -109,12 +109,12 @@ export function AdminEditSubmissionForm({
     const payload: AdminEditPayload = { reason: reason.trim() };
     if (selfText.trim() !== initial.selfText.trim()) payload.self_review_text = selfText;
     const ek = changed(empKpi, initial.empKpi);
-    if (ek.length) payload.kpi_ratings = ek.map(({ id, rating }) => ({ kpi_id: id, rating }));
+    if (ek.length) payload.kpi_ratings = ek.map(({ id, rating }) => ({ kpi_id: id, rating, comment: "" }));
     const ev = changed(empValue, initial.empValue);
     if (ev.length) payload.value_ratings = ev.map(({ id, rating }) => ({ value_id: id, rating, comment: "" }));
     if (hasManager) {
       const mk = changed(mgrKpi, initial.mgrKpi);
-      if (mk.length) payload.manager_kpi_ratings = mk.map(({ id, rating }) => ({ kpi_id: id, rating }));
+      if (mk.length) payload.manager_kpi_ratings = mk.map(({ id, rating }) => ({ kpi_id: id, rating, comment: "" }));
       const mv = changed(mgrValue, initial.mgrValue);
       if (mv.length)
         payload.manager_value_ratings = mv.map(({ id, rating }) => ({ value_id: id, rating, comment: "" }));

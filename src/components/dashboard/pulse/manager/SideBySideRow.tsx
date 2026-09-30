@@ -1,6 +1,7 @@
 "use client";
 
 import { RatingButtons } from "@/components/dashboard/pulse/employee/RatingButtons";
+import { PULSE_COPY } from "@/constants/pulseCopy";
 import { pulseRatingLabel } from "@/constants/pulseRatings";
 import { cn } from "@/lib/utils";
 
@@ -25,20 +26,29 @@ export function SideBySideHeader() {
 /** One KPI/value: the employee's self-rating (read-only) next to the shared
  *  manager rating, so both are visible at a glance. */
 export function SideBySideRow({
+  domId,
   title,
   meta,
   detail,
   selfRating,
+  selfComment,
   managerRating,
+  managerComment,
   onRate,
+  onComment,
   disabled = false,
 }: {
+  domId: string;
   title: string;
   meta?: string | null;
   detail?: string | null;
   selfRating: number | null;
+  /** Why the employee gave themselves that rating. */
+  selfComment?: string | null;
   managerRating: number | null;
+  managerComment: string;
   onRate: (rating: number) => void;
+  onComment: (comment: string) => void;
   disabled?: boolean;
 }) {
   const direction =
@@ -47,14 +57,16 @@ export function SideBySideRow({
         ? "Higher than the employee"
         : "Lower than the employee"
       : null;
+  const complete = managerRating != null && managerComment.trim().length > 0;
   return (
     <div
+      id={domId}
       className={cn(
-        SIDE_BY_SIDE_GRID,
-        "rounded-lg border bg-wt-surface-2/40 px-3 py-2.5",
-        managerRating == null ? "border-wt-border" : "border-wt-brand/30"
+        "scroll-mt-24 rounded-lg border bg-wt-surface-2/40 px-3 py-2.5",
+        complete ? "border-emerald-500/30" : managerRating == null ? "border-wt-border" : "border-wt-brand/30"
       )}
     >
+    <div className={SIDE_BY_SIDE_GRID}>
       <div className="min-w-0">
         <p className="text-sm font-medium text-wt-text">{title}</p>
         {meta ? <p className="text-xs text-wt-text-muted">{meta}</p> : null}
@@ -70,6 +82,27 @@ export function SideBySideRow({
         <RatingButtons value={managerRating} onChange={onRate} disabled={disabled} />
         {direction ? <p className="text-xs text-amber-700 dark:text-amber-400">{direction}</p> : null}
       </div>
+    </div>
+    {selfComment?.trim() ? (
+      <p className="mt-2 rounded-md bg-wt-surface-1 px-2.5 py-1.5 text-xs text-wt-text-muted">
+        <span className="font-medium text-wt-text">Employee&apos;s reason: </span>
+        {selfComment}
+      </p>
+    ) : null}
+    <textarea
+      value={managerComment}
+      onChange={(event) => onComment(event.target.value)}
+      disabled={disabled}
+      rows={2}
+      maxLength={1000}
+      placeholder={PULSE_COPY.managerRowCommentPlaceholder}
+      aria-label={`Your reason for ${title}`}
+      aria-required="true"
+      className="mt-2 w-full resize-y rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40 disabled:opacity-60"
+    />
+    {managerRating != null && managerComment.trim().length === 0 ? (
+      <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">{PULSE_COPY.rowNeedsComment}</p>
+    ) : null}
     </div>
   );
 }

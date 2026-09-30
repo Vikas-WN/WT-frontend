@@ -13,6 +13,8 @@ import {
   MODAL_PANEL_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
 import { ModalPortal } from "@/components/dashboard/ui/ModalPortal";
+import { explainedRowDomId } from "@/components/dashboard/pulse/ExplainedRatingRow";
+import { SubmissionChecklist } from "@/components/dashboard/pulse/SubmissionChecklist";
 import { SideBySideHeader, SideBySideRow } from "@/components/dashboard/pulse/manager/SideBySideRow";
 import { useManagerReviewDraft } from "@/components/dashboard/pulse/manager/useManagerReviewDraft";
 import { PULSE_COPY } from "@/constants/pulseCopy";
@@ -24,6 +26,7 @@ import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { ApiError } from "@/api/error";
 import type { MonthlySubmissionItem } from "@/types/kpi";
 import { formatWeight, groupKpisByParameter, hasKpiParameters } from "@/utils/kpiParameters";
+import { buildChecklist, summarizeChecklist, type ChecklistGroup, type ChecklistItem } from "@/utils/pulseChecklist";
 
 const SAVE_STATE_LABEL = {
   idle: "",
@@ -60,15 +63,29 @@ export function ManagerReviewModal({
   const certName = (id: number) =>
     submission.certification_details.find((c) => c.id === id)?.name ?? `Certification #${id}`;
   const valueName = (id: number) => submission.value_details.find((v) => v.id === id)?.name ?? `Value #${id}`;
-  const selfKpi = new Map(submission.kpi_ratings.map((r) => [r.kpi_id, r.rating]));
+  const selfKpi = new Map(submission.kpi_ratings.map((r) => [r.kpi_id, r]));
   const showParameters = hasKpiParameters(submission.kpi_details);
 
-  // Mirrors the backend: every applicable KPI and every value the employee
-  // rated needs a rating before the review can be submitted.
+  // Mirrors the backend: every applicable KPI and every value the employee rated needs a rating
+  // AND the reviewer's reason before the review can be submitted. Worked out live, by name.
+  const checklist = buildChecklist({
+    kpis: submission.kpi_details.map((k) => ({ id: k.id, name: k.kpi_name })),
+    kpiRatings: fields.kpi,
+    kpiComments: fields.kpiComments,
+    values: submission.value_ratings.map((v) => ({ id: v.value_id, name: valueName(v.value_id) })),
+    valueRatings: fields.values,
+    valueComments: fields.valueComments,
+  });
+  const checklistSummary = summarizeChecklist(checklist);
+  const allRated = checklistSummary.complete;
   const kpiRated = submission.kpi_details.filter((k) => fields.kpi[k.id] != null).length;
   const valueRated = submission.value_ratings.filter((v) => fields.values[v.value_id] != null).length;
-  const allRated =
-    kpiRated === submission.kpi_details.length && valueRated === submission.value_ratings.length;
+  const goToItem = (_group: ChecklistGroup, item: ChecklistItem) => {
+    const [kind, id] = item.key.split(":");
+    if (kind === "kpi" || kind === "value") {
+      document.getElementById(explainedRowDomId(kind, Number(id)))?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
   const hrSendBack =
     submission.review_status === "NEEDS_MANAGER_REVIEW" && submission.admin_review?.action === "REJECT_MANAGER"
       ? submission.admin_review.comments
@@ -81,7 +98,7 @@ export function ManagerReviewModal({
       return;
     }
     if (action === "SUBMIT" && !allRated) {
-      notifyError("Rate every KPI and Company Value before submitting your review.");
+      notifyError(`${checklistSummary.remaining} item(s) still need a rating and a reason — see the checklist.`);
       return;
     }
     setBusy(action === "SUBMIT" ? "submit" : "reject");
@@ -91,11 +108,19 @@ export function ManagerReviewModal({
         action,
         kpi_ratings:
           action === "SUBMIT"
-            ? Object.entries(fields.kpi).map(([id, rating]) => ({ kpi_id: Number(id), rating }))
+            ? Object.entries(fields.kpi).map(([id, rating]) => ({
+                kpi_id: Number(id),
+                rating,
+                comment: fields.kpiComments[Number(id)] ?? "",
+              }))
             : [],
         value_ratings:
           action === "SUBMIT"
-            ? Object.entries(fields.values).map(([id, rating]) => ({ value_id: Number(id), rating, comment: "" }))
+            ? Object.entries(fields.values).map(([id, rating]) => ({
+                value_id: Number(id),
+                rating,
+                comment: fields.valueComments[Number(id)] ?? "",
+              }))
             : [],
         comments: fields.comments,
       });
@@ -159,6 +184,8 @@ export function ManagerReviewModal({
                 </div>
               ) : null}
 
+              {readOnly ? null : <SubmissionChecklist groups={checklist} onSelect={goToItem} />}
+
               <div>
                 <h3 className="text-sm font-semibold text-wt-text">Employee self review</h3>
                 <p className="mt-1.5 whitespace-pre-wrap rounded-lg border border-wt-border bg-wt-surface-2/40 p-3 text-sm text-wt-text">
@@ -188,12 +215,16 @@ export function ManagerReviewModal({
                       {group.items.map((kpi) => (
                         <SideBySideRow
                           key={kpi.id}
+                          domId={explainedRowDomId("kpi", kpi.id)}
                           title={kpi.kpi_name}
                           meta={showParameters ? null : `Weight ${formatWeight(kpi.weightage)}`}
                           detail={kpi.evaluation_criteria}
-                          selfRating={selfKpi.get(kpi.id) ?? null}
+                          selfRating={selfKpi.get(kpi.id)?.rating ?? null}
+                          selfComment={selfKpi.get(kpi.id)?.comment}
                           managerRating={fields.kpi[kpi.id] ?? null}
+                          managerComment={fields.kpiComments[kpi.id] ?? ""}
                           onRate={(v) => draft.rateKpi(kpi.id, v)}
+                          onComment={(c) => draft.commentKpi(kpi.id, c)}
                           disabled={readOnly}
                         />
                       ))}
@@ -215,11 +246,14 @@ export function ManagerReviewModal({
                     {submission.value_ratings.map((v) => (
                       <SideBySideRow
                         key={v.value_id}
+                        domId={explainedRowDomId("value", v.value_id)}
                         title={valueName(v.value_id)}
-                        detail={v.comment ? `Employee: “${v.comment}”` : null}
                         selfRating={v.rating}
+                        selfComment={v.comment}
                         managerRating={fields.values[v.value_id] ?? null}
+                        managerComment={fields.valueComments[v.value_id] ?? ""}
                         onRate={(r) => draft.rateValue(v.value_id, r)}
+                        onComment={(c) => draft.commentValue(v.value_id, c)}
                         disabled={readOnly}
                       />
                     ))}

@@ -18,6 +18,13 @@ export const PULSE_COPY = {
   reviewerSelected: "Reviewer selected",
   reviewerIntro: "As a manager, HR or Admin you choose who reviews your own submission.",
   noProjectManager: "No project manager on record",
+  checklistTitle: "What's left",
+  checklistDone: "Everything is filled in",
+  rowCommentPlaceholder: "Why this rating? Give a specific example (required)",
+  managerRowCommentPlaceholder: "Your reason for this rating (required)",
+  rowNeedsBoth: "Choose a level and say why.",
+  rowNeedsComment: "Add a comment to complete this one.",
+  rowNeedsRating: "Choose a level to complete this one.",
 } as const;
 
 /** Roles whose own self-review goes to a chosen HR/Admin rather than to project managers. */
