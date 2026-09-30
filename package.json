@@ -6,7 +6,8 @@
     "dev": "pnpm exec next dev --turbopack",
     "build": "pnpm exec next build",
     "start": "pnpm exec next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:unit": "node --experimental-strip-types --no-warnings --test scripts/tests/*.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",
