@@ -56,6 +56,13 @@ import type {
   AssetUpdatePayload,
   PaginatedAssets,
 } from "@/types/asset";
+import type {
+  MeetingRoom,
+  MeetingRoomBooking,
+  MeetingRoomBookingCreatePayload,
+  MeetingRoomCreatePayload,
+  MeetingRoomUpdatePayload,
+} from "@/types/meetingRoom";
 
 export type { OnboardListData, OnboardListItem, OnboardUserResponse } from "@/types/onboard";
 
@@ -1534,6 +1541,60 @@ export const hrmsService = {
       contentType: "application/json",
       body: JSON.stringify(payload),
     });
+  },
+
+  /** Meeting Room Booking. Room registration is Office Admin/HR/Admin;
+   *  booking is every authenticated employee, including those roles. */
+  listMeetingRooms(includeInactive = false) {
+    const query = includeInactive ? { include_inactive: "true" } : undefined;
+    return apiClient.get<ApiEnvelope<MeetingRoom[]>>(endpoints.meetingRooms.root, { query });
+  },
+
+  getMeetingRoom(id: number) {
+    return apiClient.get<ApiEnvelope<MeetingRoom>>(endpoints.meetingRooms.byId(id));
+  },
+
+  createMeetingRoom(payload: MeetingRoomCreatePayload) {
+    return apiClient.post<ApiEnvelope<MeetingRoom>>(endpoints.meetingRooms.root, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateMeetingRoom(id: number, payload: MeetingRoomUpdatePayload) {
+    return apiClient.put<ApiEnvelope<MeetingRoom>>(endpoints.meetingRooms.byId(id), {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deactivateMeetingRoom(id: number) {
+    return apiClient.delete<ApiEnvelope<unknown>>(endpoints.meetingRooms.byId(id));
+  },
+
+  getMeetingRoomBookings(roomId: number, params: { from?: string; to?: string } = {}) {
+    const query: Record<string, string> = {};
+    if (params.from) query.from = params.from;
+    if (params.to) query.to = params.to;
+    return apiClient.get<ApiEnvelope<MeetingRoomBooking[]>>(endpoints.meetingRooms.bookings(roomId), {
+      query,
+    });
+  },
+
+  getMyMeetingRoomBookings(upcomingOnly = false) {
+    const query = upcomingOnly ? { upcoming_only: "true" } : undefined;
+    return apiClient.get<ApiEnvelope<MeetingRoomBooking[]>>(endpoints.meetingRooms.myBookings, { query });
+  },
+
+  createMeetingRoomBooking(payload: MeetingRoomBookingCreatePayload) {
+    return apiClient.post<ApiEnvelope<MeetingRoomBooking>>(endpoints.meetingRooms.bookingsRoot, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  cancelMeetingRoomBooking(id: number) {
+    return apiClient.delete<ApiEnvelope<unknown>>(endpoints.meetingRooms.bookingById(id));
   },
 
   markAllNotificationsRead() {

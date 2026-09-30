@@ -265,6 +265,24 @@ export const dashboardNavigation: NavItem[] = [
     roles: [...ASSET_ADMIN_ROLES],
     icon: "layoutGrid",
   },
+  {
+    kind: "link",
+    id: "meeting-rooms",
+    label: "Meeting Rooms",
+    // Everyone books; Office Admin/HR/Admin additionally get the "Manage
+    // Rooms" tab inside the page itself (not a role gate on the nav item).
+    roles: [
+      "ROLE_EMPLOYEE",
+      "ROLE_AM",
+      "ROLE_MANAGER",
+      "ROLE_DM",
+      "ROLE_OFFICE_ADMIN",
+      "ROLE_HR",
+      "ROLE_ADMIN",
+      "ROLE_FINANCE",
+    ],
+    icon: "calendarCheck",
+  },
   { kind: "link", id: "apps", label: "Apps", roles: ["ROLE_ADMIN"], icon: "code" },
   {
     kind: "link",

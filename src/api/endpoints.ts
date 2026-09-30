@@ -176,6 +176,16 @@ export const endpoints = {
     importCsv: `${api}/assets/import-csv`,
   },
 
+  meetingRooms: {
+    root: `${api}/meeting-rooms`,
+    byId: (id: number | string) => `${api}/meeting-rooms/${encodeURIComponent(id)}`,
+    bookings: (roomId: number | string) =>
+      `${api}/meeting-rooms/${encodeURIComponent(roomId)}/bookings`,
+    bookingsRoot: `${api}/meeting-room-bookings`,
+    bookingById: (id: number | string) => `${api}/meeting-room-bookings/${encodeURIComponent(id)}`,
+    myBookings: `${api}/meeting-room-bookings/mine`,
+  },
+
   learning: {
     trainings: `${api}/trainings`,
     trainingById: (trainingId: string | number) => `${api}/trainings/${encodeURIComponent(String(trainingId))}`,

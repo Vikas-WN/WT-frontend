@@ -45,6 +45,12 @@ export const LazyAssetTrackingPageClient = lazyPage(
   "Loading assets…"
 );
 
+export const LazyMeetingRoomsPageClient = lazyPage(
+  () => import("@/components/dashboard/meeting-rooms/MeetingRoomsPageClient"),
+  "MeetingRoomsPageClient",
+  "Loading meeting rooms…"
+);
+
 export const LazyReportsPageClient = lazyPage(
   () => import("@/components/dashboard/reports/ReportsPageClient"),
   "ReportsPageClient",
