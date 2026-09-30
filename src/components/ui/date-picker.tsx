@@ -135,7 +135,7 @@ export function DatePicker({
               : "text-muted-foreground"
           )}
         >
-          <CalendarIcon className="size-4/6 shrink-0 text-muted-foreground" />
+          <CalendarIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
 
           <span className="flex-1 text-left truncate">
             {displayText || inputValue || "Select date"}
