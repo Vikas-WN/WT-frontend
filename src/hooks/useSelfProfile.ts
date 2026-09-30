@@ -20,7 +20,10 @@ export function useSelfProfile(enabled = true) {
     enabled: shouldFetch,
     staleTime: 5 * 60_000,
     refetchOnMount: false,
-    refetchOnWindowFocus: false,
+    // Poll so a server-side status change (e.g. HR re-inviting an employee) reaches
+    // the onboarding guard without a manual page refresh. Pauses in background tabs.
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: "always",
     refetchOnReconnect: false,
     queryFn: async () => fetchSelfProfile(userRoles),
   });

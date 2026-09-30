@@ -320,7 +320,6 @@ export function ReportsPageClient() {
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) && n > 0;
   }, [selfProfileForm.yoe]);
-  const [isSelfOnboarded, setIsSelfOnboarded] = useState<boolean>(user?.status === "ACTIVE");
   const [projectForm, setProjectForm] = useState({
     project_name: "",
     project_type: "IN_HOUSE" as "IN_HOUSE" | "STAFFING" | "PRODUCT",
@@ -368,7 +367,10 @@ export function ReportsPageClient() {
     userRoles.includes("ROLE_HR") && !hasManagerAccess;
   const canExportTimelog = hasHrAccess || hasManagerAccess;
   const isEmployee = userRoles.includes("ROLE_EMPLOYEE");
-  const requiresSelfOnboarding = !isSelfOnboarded;
+  // Sourced from the shared, polling hook (not local state) so a status change
+  // made elsewhere (e.g. HR re-inviting this employee) is reflected here too,
+  // without requiring a page refresh. See useDashboardAccess/useSelfProfile.
+  const { requiresSelfOnboarding, loadMyProfile: syncOnboardingStatus } = useDashboardAccess();
   /** Self-service profile + onboarding (non-HR employees only) */
   const employeeSelfServeProfile = isEmployee || hasHrAccess;
   const canAccessProfile = Boolean(user);
@@ -427,9 +429,10 @@ export function ReportsPageClient() {
   }, [selfOnboardForm.yoe]);
 
   const loadMyProfile = useCallback(async () => {
-    const { profile, isSelfOnboarded: onboarded } = await loadSelfProfileState(userRoles, user);
+    // Onboarding-gate status now comes from useDashboardAccess (see above); this
+    // fetch is only for populating the profile display fields below.
+    const { profile } = await loadSelfProfileState(userRoles, user);
     setEmployeeProfile(profile);
-    setIsSelfOnboarded(onboarded);
   }, [user, userRoles]);
   useEffect(() => {
     if (!user) return;
@@ -2644,9 +2647,8 @@ export function ReportsPageClient() {
                 reliving_letter: null,
                 salary_slips: null,
               });
-              setIsSelfOnboarded(true);
               await refreshSession();
-              await loadMyProfile();
+              await Promise.all([syncOnboardingStatus(), loadMyProfile()]);
               router.replace("/dashboard", { scroll: false });
               router.replace("/dashboard/overview", { scroll: false });
             })
