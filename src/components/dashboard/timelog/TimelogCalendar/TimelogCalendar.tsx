@@ -34,7 +34,7 @@ function calendarCellClass(day: CalendarDayInfo, isSelected: boolean): string {
   if (hasEntries) {
     return cn(
       "border-emerald-200 bg-emerald-50 hover:bg-emerald-100 dark:border-emerald-500/35 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20",
-      selected && "border-wt-indigo-400 bg-emerald-100 dark:bg-emerald-500/25",
+      selected && "border-[var(--wt-brand)] bg-emerald-100 dark:bg-emerald-500/25",
       day.isToday && "border-2 border-[var(--wt-brand)]"
     );
   }
@@ -42,13 +42,13 @@ function calendarCellClass(day: CalendarDayInfo, isSelected: boolean): string {
   if (hasDrafts) {
     return cn(
       "border-amber-200 bg-amber-50 hover:bg-amber-100 dark:border-amber-600/35 dark:bg-amber-600/10 dark:hover:bg-amber-600/20",
-      selected && "border-wt-indigo-400 bg-amber-100 dark:bg-amber-600/20",
+      selected && "border-[var(--wt-brand)] bg-amber-100 dark:bg-amber-600/20",
       day.isToday && "border-2 border-[var(--wt-brand)]"
     );
   }
 
   if (selected) {
-    return "border-wt-indigo-400 bg-wt-indigo-50 hover:bg-wt-indigo-50 dark:bg-wt-indigo-500/20";
+    return "border-[var(--wt-brand)] bg-[var(--wt-brand-soft)] hover:bg-[var(--wt-brand-soft)] dark:bg-[color-mix(in_srgb,var(--wt-brand)_20%,transparent)]";
   }
 
   if (day.isToday) {

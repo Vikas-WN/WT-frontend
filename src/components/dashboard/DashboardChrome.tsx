@@ -511,15 +511,15 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               <summary className={`relative cursor-pointer list-none ${HEADER_ICON_BUTTON_CLASS} [&::-webkit-details-marker]:hidden`}>
                 <IconBell className="text-wt-text-muted" />
                 {unreadNotificationCount ? (
-                  <span className="absolute -right-1 -top-1 min-w-[18px] rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  <span className="absolute -right-1 -top-1 min-w-[18px] rounded-full bg-rose-600 dark:bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                     {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
                   </span>
                 ) : null}
               </summary>
-              <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-[min(380px,calc(100vw-1rem))] rounded-2xl border border-slate-100 bg-white p-2 shadow-xl shadow-slate-200/60 dark:border-wt-border-md dark:bg-wt-surface-1 dark:shadow-none max-sm:fixed max-sm:inset-x-2 max-sm:top-[calc(3.25rem+env(safe-area-inset-top,0px))] max-sm:w-auto">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 dark:border-wt-border/80 mb-1">
-                  <h3 className="font-semibold text-slate-900 dark:text-wt-text text-base">Notifications</h3>
-                  <button type="button" className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors disabled:opacity-40" onClick={() =>
+              <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-[min(380px,calc(100vw-1rem))] rounded-2xl border border-wt-border bg-wt-surface-1 p-2 shadow-[var(--wt-shadow-lg)] dark:border-wt-border-md dark:shadow-none max-sm:fixed max-sm:inset-x-2 max-sm:top-[calc(3.25rem+env(safe-area-inset-top,0px))] max-sm:w-auto">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-wt-border mb-1">
+                  <h3 className="font-semibold text-wt-text text-base">Notifications</h3>
+                  <button type="button" className="text-xs font-medium text-[var(--wt-brand)] hover:text-[var(--wt-brand-hover)] transition-colors disabled:opacity-40" onClick={() =>
                       runAction("Mark all notifications read", async () => {
                         try {
                           await hrmsService.markAllNotificationsRead();
@@ -544,8 +544,8 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                         className={cn(
                           "shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
                           effectiveNotificationFilter === opt.value
-                            ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-wt-brand/40 dark:bg-wt-surface-3 dark:text-wt-brand"
-                            : "border-transparent bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-wt-surface-2 dark:text-wt-text-muted dark:hover:bg-wt-surface-3"
+                            ? "border-[color-mix(in_srgb,var(--wt-brand)_35%,transparent)] bg-[var(--wt-brand-soft)] text-[var(--wt-brand)] dark:border-wt-brand/40 dark:bg-wt-surface-3 dark:text-wt-brand"
+                            : "border-transparent bg-wt-surface-2 text-wt-text-muted hover:bg-wt-surface-3"
                         )}
                       >
                         {opt.label} {opt.count ? <span className="tabular-nums opacity-70">{opt.count}</span> : null}
@@ -555,9 +555,9 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 ) : null}
                 <div className="max-h-[320px] overflow-auto">
                   {notificationsLoading && !notifications.length ? (
-                    <p className="text-sm text-slate-400 dark:text-wt-text-muted px-3 py-4 text-center">Loading notifications…</p>
+                    <p className="text-sm text-wt-text-muted px-3 py-4 text-center">Loading notifications…</p>
                   ) : notificationsError ? (
-                    <p className="text-sm text-rose-500 px-3 py-4 text-center">{notificationsError}</p>
+                    <p className="text-sm text-rose-600 dark:text-rose-400 px-3 py-4 text-center">{notificationsError}</p>
                   ) : filteredNotificationRows.length ? (
                     filteredNotificationRows.map((row, idx) => {
                       const id = notificationRowId(row);
@@ -576,10 +576,10 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                         /leave|wfh/i.test(roleLabel)
                           ? "bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
                           : /time.?log/i.test(roleLabel)
-                            ? "bg-blue-50 text-blue-700 dark:bg-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)] dark:text-[#b8c7e8]"
+                            ? "bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
                             : /exit|survey/i.test(roleLabel)
                               ? "bg-purple-50 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400"
-                              : "bg-slate-50 text-slate-600 dark:bg-wt-surface-3 dark:text-wt-text-muted";
+                              : "bg-wt-surface-2 text-wt-text-muted dark:bg-wt-surface-3";
 
                       return (
                         <div
@@ -597,8 +597,8 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                             }
                           }}
                           className={cn(
-                            "p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-wt-surface-2 transition-all duration-150 group cursor-pointer border-b border-slate-50 dark:border-wt-border last:border-0",
-                            isNavigable && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 dark:focus-visible:ring-wt-brand"
+                            "p-3 rounded-xl hover:bg-wt-surface-2 transition-all duration-150 group cursor-pointer border-b border-wt-border last:border-0",
+                            isNavigable && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--wt-brand)_35%,transparent)]"
                           )}
                         >
                           <div className="flex items-start justify-between gap-3">
@@ -608,18 +608,18 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                                   {roleLabel}
                                 </span>
                                 {createdAt ? (
-                                  <span className="text-xs text-slate-400 dark:text-wt-text-muted ml-auto">{createdAt}</span>
+                                  <span className="text-xs text-wt-text-muted ml-auto">{createdAt}</span>
                                 ) : null}
                               </div>
                               {title && title !== message ? (
-                                <p className="font-medium text-slate-800 dark:text-wt-text text-sm mt-1">{title}</p>
+                                <p className="font-medium text-wt-text text-sm mt-1">{title}</p>
                               ) : null}
-                              <p className="text-xs text-slate-500 dark:text-wt-text-muted line-clamp-2 mt-0.5 leading-relaxed">{message}</p>
+                              <p className="text-xs text-wt-text-muted line-clamp-2 mt-0.5 leading-relaxed">{message}</p>
                             </div>
                             {!isRead && id ? (
                               <button
                                 type="button"
-                                className="shrink-0 mt-1 size-6 rounded-full flex items-center justify-center text-slate-300 dark:text-wt-text-faint hover:text-blue-600 dark:hover:text-wt-brand hover:bg-blue-50 dark:hover:bg-wt-surface-2 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-0"
+                                className="shrink-0 mt-1 size-6 rounded-full flex items-center justify-center text-wt-text-faint hover:text-[var(--wt-brand)] hover:bg-[var(--wt-brand-soft)] dark:hover:bg-wt-surface-2 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-0"
                                 disabled={actionLoading}
                                  onClick={(event) => {
                                    event.stopPropagation();
@@ -642,7 +642,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                       );
                     })
                   ) : (
-                    <p className="text-sm text-slate-400 dark:text-wt-text-muted px-3 py-4 text-center">
+                    <p className="text-sm text-wt-text-muted px-3 py-4 text-center">
                       {effectiveNotificationFilter === "All"
                         ? "No notifications."
                         : `No ${effectiveNotificationFilter.toLowerCase()} notifications.`}
