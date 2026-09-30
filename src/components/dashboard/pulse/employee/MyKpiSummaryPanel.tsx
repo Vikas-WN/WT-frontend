@@ -7,6 +7,14 @@ import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { hrmsService } from "@/services/hrms.service";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import type { AllTimeKpiSummary, MonthlySubmissionItem } from "@/types/kpi";
 
 type Load<T> = { status: "loading" | "done" | "error"; data: T | null };
@@ -76,36 +84,34 @@ export function SummarySection({ summary }: { summary: AllTimeKpiSummary }) {
         <div>
           <h4 className="text-sm font-semibold text-wt-text">By cycle</h4>
           <div className="mt-2 overflow-x-auto rounded-xl border border-wt-border">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-wt-surface-2/60 text-xs text-wt-text-muted">
-                <tr>
-                  <th className="px-3 py-2 font-medium">Cycle</th>
-                  <th className="px-3 py-2 font-medium">Submissions</th>
-                  <th className="px-3 py-2 font-medium">Your rating</th>
-                  <th className="px-3 py-2 font-medium">Manager rating</th>
-                  <th className="px-3 py-2 font-medium">Admin rating</th>
-                </tr>
-              </thead>
-              <tbody>
+            <WtTable>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Cycle</TableHead>
+                  <TableHead>Submissions</TableHead>
+                  <TableHead>Your rating</TableHead>
+                  <TableHead>Manager rating</TableHead>
+                  <TableHead>Admin rating</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {summary.cycles.map((cycle) => (
-                  <tr key={cycle.cycle_key} className="border-t border-wt-border">
-                    <td className="px-3 py-2 text-wt-text">{cycle.cycle_label}</td>
-                    <td className="px-3 py-2 text-wt-text-muted">{cycle.submissions}</td>
-                    <td className="px-3 py-2 text-wt-text-muted">
+                  <TableRow key={cycle.cycle_key}>
+                    <TableCell className="text-wt-text">{cycle.cycle_label}</TableCell>
+                    <TableCell>{cycle.submissions}</TableCell>
+                    <TableCell>
                       {scoreCell(cycle.employee_rating_average)}
                       {cycle.employee_rating_display ? ` · ${cycle.employee_rating_display}` : ""}
-                    </td>
-                    <td className="px-3 py-2 text-wt-text-muted">
+                    </TableCell>
+                    <TableCell>
                       {scoreCell(cycle.manager_rating_average)}
                       {cycle.manager_rating_display ? ` · ${cycle.manager_rating_display}` : ""}
-                    </td>
-                    <td className="px-3 py-2 text-wt-text-muted">
-                      {scoreCell(cycle.admin_rating_average)}
-                    </td>
-                  </tr>
+                    </TableCell>
+                    <TableCell>{scoreCell(cycle.admin_rating_average)}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </WtTable>
           </div>
         </div>
       ) : null}

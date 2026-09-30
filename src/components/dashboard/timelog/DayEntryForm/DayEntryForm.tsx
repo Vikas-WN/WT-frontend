@@ -10,6 +10,8 @@ import {
   taskCategoriesForProject,
 } from "@/utils/timelog/categories";
 import {
+  FORM_CONTROL_CLASS,
+  FORM_FIELD_CLASS,
   MODAL_BODY_CLASS,
   MODAL_FOOTER_CLASS,
   MODAL_HEADER_CLASS,
@@ -18,7 +20,6 @@ import {
   SECTION_TITLE_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
 import { cn } from "@/lib/utils";
-import "./DayEntryForm.css";
 import type { DayEntryFormProps } from "./DayEntryForm.types";
 import type { DayTimelogEntry, DayTimelogEntryForm } from "@/hooks/timelog/useDayTimelog.types";
 import { projectManagerEmailFromEntry } from "@/utils/timelog/entryManager";
@@ -224,9 +225,9 @@ export function DayEntryForm({
           </h2>
         </div>
 
-        <div className={cn(MODAL_BODY_CLASS, "day-entry-form-body")}>
-          <label className="day-entry-form-field">
-            <FieldLabel label="Project" required className="day-entry-form-label" />
+        <div className={cn(MODAL_BODY_CLASS, "flex flex-col gap-4")}>
+          <label className={FORM_FIELD_CLASS}>
+            <FieldLabel label="Project" required />
             <SearchableSelectCombobox
               value={form.project_code}
               onChange={(project_code) => {
@@ -243,7 +244,6 @@ export function DayEntryForm({
                 label: p.project_name,
               }))}
               placeholder="Search projects…"
-              inputClassName="day-entry-form-select"
               showChevron
             />
           </label>
@@ -262,8 +262,8 @@ export function DayEntryForm({
           ) : null}
 
           {form.project_code ? (
-            <label className="day-entry-form-field">
-              <FieldLabel label="Project Manager" required className="day-entry-form-label" />
+            <label className={FORM_FIELD_CLASS}>
+              <FieldLabel label="Project Manager" required />
               <SearchableSelectCombobox
                 value={form.project_manager}
                 onChange={(project_manager) =>
@@ -294,17 +294,16 @@ export function DayEntryForm({
                       ? "Search project managers…"
                       : "No managers assigned to this project"
                 }
-                inputClassName="day-entry-form-select"
                 showChevron
               />
             </label>
           ) : null}
 
           {form.project_code ? (
-            <label className="day-entry-form-field">
-              <FieldLabel label="Description" required className="day-entry-form-label" />
+            <label className={FORM_FIELD_CLASS}>
+              <FieldLabel label="Description" required />
               <textarea
-                className="day-entry-form-textarea"
+                className={cn(FORM_CONTROL_CLASS, "min-h-20 resize-y py-2.5")}
                 value={form.description}
                 onChange={(e) =>
                   setForm((prev) => ({
@@ -319,12 +318,12 @@ export function DayEntryForm({
           ) : null}
 
           {form.project_code ? (
-            <label className="day-entry-form-field">
-              <FieldLabel label="Hours" required className="day-entry-form-label" />
+            <label className={FORM_FIELD_CLASS}>
+              <FieldLabel label="Hours" required />
               <input
                 type="text"
                 inputMode="decimal"
-                className="day-entry-form-input"
+                className={FORM_CONTROL_CLASS}
                 value={form.hours}
                 onChange={(e) => {
                   const raw = e.target.value;

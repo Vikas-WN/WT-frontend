@@ -11,6 +11,17 @@ import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { ApiError } from "@/api/error";
 import { cn } from "@/lib/utils";
 import { formatWeight } from "@/utils/kpiParameters";
+import { BRAND_FOCUS_RING_CLASS } from "@/components/dashboard/ui/uiLayout";
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import type { KpiDefinitionItem, KpiDefinitionWritePayload } from "@/types/kpi";
 
 type Row = {
@@ -21,8 +32,10 @@ type Row = {
   active: boolean;
 };
 
-const CELL_INPUT =
-  "w-full rounded-md border border-wt-border bg-wt-surface-1 px-2 py-1.5 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40";
+const CELL_INPUT = cn(
+  BRAND_FOCUS_RING_CLASS,
+  "w-full rounded-lg border border-wt-border bg-wt-surface-1 px-2 py-1.5 text-sm text-wt-text placeholder:text-wt-text-faint dark:border-wt-border-md dark:bg-wt-surface-2"
+);
 
 function toRow(k: KpiDefinitionItem): Row {
   return {
@@ -262,17 +275,17 @@ export function KpiSetEditorDialog({
             ))}
         </datalist>
 
-        <div className="overflow-x-auto rounded-lg border border-wt-border">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead className="bg-wt-surface-2/60 text-left text-[11px] uppercase tracking-wide text-wt-text-muted">
-              <tr>
-                <th className="px-3 py-2 font-medium">KPI</th>
-                <th className="w-56 px-3 py-2 font-medium">Parameter</th>
-                <th className="w-28 px-3 py-2 font-medium">Weight %</th>
-                <th className="w-20 px-3 py-2 text-center font-medium">Active</th>
-              </tr>
-            </thead>
-            <tbody>
+        <ScrollableTable maxHeightClass="max-h-[min(55vh,480px)]">
+          <WtTable className="min-w-[640px]">
+            <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>KPI</TableHead>
+                <TableHead className="w-56">Parameter</TableHead>
+                <TableHead className="w-28">Weight %</TableHead>
+                <TableHead className="w-20 text-center">Active</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {rows.map((r) => {
                 const before = initial.find((i) => i.id === r.id);
                 const dirty =
@@ -282,19 +295,19 @@ export function KpiSetEditorDialog({
                     Number(r.weightage) !== Number(before.weightage) ||
                     r.active !== before.active);
                 return (
-                  <tr
+                  <TableRow
                     key={r.id}
-                    className={cn("border-t border-wt-border", dirty && "bg-wt-brand-soft/40", !r.active && "opacity-70")}
+                    className={cn(dirty && "bg-wt-brand-soft/40", !r.active && "opacity-70")}
                   >
-                    <td className="px-3 py-1.5">
+                    <TableCell className="whitespace-normal py-1.5">
                       <input
                         value={r.kpiName}
                         onChange={(e) => patch(r.id, { kpiName: e.target.value })}
                         aria-label="KPI name"
                         className={CELL_INPUT}
                       />
-                    </td>
-                    <td className="px-3 py-1.5">
+                    </TableCell>
+                    <TableCell className="whitespace-normal py-1.5">
                       <input
                         value={r.parameter}
                         onChange={(e) => patch(r.id, { parameter: e.target.value })}
@@ -303,8 +316,8 @@ export function KpiSetEditorDialog({
                         aria-label={`Parameter for ${r.kpiName}`}
                         className={CELL_INPUT}
                       />
-                    </td>
-                    <td className="px-3 py-1.5">
+                    </TableCell>
+                    <TableCell className="whitespace-normal py-1.5">
                       <input
                         type="number"
                         min={0.01}
@@ -315,20 +328,20 @@ export function KpiSetEditorDialog({
                         aria-label={`Weight for ${r.kpiName}`}
                         className={cn(CELL_INPUT, "font-mono")}
                       />
-                    </td>
-                    <td className="px-3 py-1.5 text-center">
+                    </TableCell>
+                    <TableCell className="py-1.5 text-center">
                       <Checkbox
                         checked={r.active}
                         onCheckedChange={(v) => patch(r.id, { active: Boolean(v) })}
                         aria-label={`${r.kpiName} active`}
                       />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </WtTable>
+        </ScrollableTable>
         <p className="text-xs text-wt-text-muted">
           Inactive KPIs aren&apos;t rated and don&apos;t count toward the totals. Use the single-KPI editor for
           evaluation criteria, band or department.

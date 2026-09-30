@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
+  FORM_CONTROL_CLASS,
   MODAL_BODY_CLASS,
   MODAL_FOOTER_CLASS,
   MODAL_HEADER_CLASS,
@@ -18,6 +19,14 @@ import {
   MODAL_PANEL_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
 import { ModalPortal } from "@/components/dashboard/ui/ModalPortal";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import { AdminEditSubmissionForm } from "@/components/dashboard/pulse/AdminEditSubmissionForm";
 import { useSubmissionLink } from "@/components/dashboard/pulse/useSubmissionLink";
 import { hrmsService } from "@/services/hrms.service";
@@ -514,7 +523,7 @@ export function AdminReviewModal({
                       value={techShowcase}
                       onChange={(e) => setTechShowcase(e.target.value)}
                       placeholder="A notable technical contribution this cycle"
-                      className="mt-1.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
+                      className={cn(FORM_CONTROL_CLASS, "mt-1.5")}
                     />
                   </div>
                   <div>
@@ -532,7 +541,7 @@ export function AdminReviewModal({
                       placeholder={
                         breakdown.data ? `Leave blank to use ${breakdown.data.total_score.toFixed(2)}` : "Leave blank to use the computed score"
                       }
-                      className="mt-1.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
+                      className={cn(FORM_CONTROL_CLASS, "mt-1.5")}
                     />
                   </div>
                 </>
@@ -553,7 +562,7 @@ export function AdminReviewModal({
                         : "Required to send back (min. 10 characters)."
                     }
                     rows={3}
-                    className="mt-1.5 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
+                    className={cn(FORM_CONTROL_CLASS, "mt-1.5 min-h-20 resize-y py-2.5")}
                   />
                 </div>
               ) : null}
@@ -644,55 +653,55 @@ export function RatingsComparison({ submission }: { submission: MonthlySubmissio
   return (
     <div>
       <h3 className="text-sm font-semibold text-wt-text">Ratings</h3>
-      <div className="mt-2 overflow-x-auto rounded-lg border border-wt-border">
-        <table className="w-full text-sm">
-          <thead className="bg-wt-surface-2/60 text-left text-[11px] uppercase tracking-wide text-wt-text-muted">
-            <tr>
-              <th className="px-3 py-2 font-medium">Item</th>
-              <th className="px-3 py-2 text-center font-medium">Employee</th>
-              <th className="px-3 py-2 text-center font-medium">Manager</th>
-            </tr>
-          </thead>
+      <div className="mt-2 overflow-x-auto rounded-xl border border-wt-border">
+        <WtTable>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead>Item</TableHead>
+              <TableHead className="text-center">Employee</TableHead>
+              <TableHead className="text-center">Manager</TableHead>
+            </TableRow>
+          </TableHeader>
           {sections.map((section) => (
-            <tbody key={section.key}>
+            <TableBody key={section.key}>
               {section.title ? (
-                <tr className="border-t border-wt-border bg-wt-surface-2/30">
-                  <th scope="rowgroup" className="px-3 py-1.5 text-left text-xs font-semibold text-wt-text">
+                <TableRow className="bg-wt-surface-2/30 hover:bg-wt-surface-2/30">
+                  <TableHead scope="rowgroup" className="text-left text-xs font-semibold text-wt-text">
                     {section.title}
                     {section.weight != null ? (
                       <span className="ml-1.5 font-normal text-wt-text-muted">{formatWeight(section.weight)}</span>
                     ) : null}
-                  </th>
-                  <td className="px-3 py-1.5 text-center text-xs text-wt-text-muted">
+                  </TableHead>
+                  <TableCell className="text-center text-xs text-wt-text-muted">
                     {averageLabel(section.rows.map((r) => r.self))}
-                  </td>
-                  <td className="px-3 py-1.5 text-center text-xs text-wt-text-muted">
+                  </TableCell>
+                  <TableCell className="text-center text-xs text-wt-text-muted">
                     {averageLabel(section.rows.map((r) => r.manager))}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : null}
               {section.rows.map((r) => (
-                <tr key={r.key} className="border-t border-wt-border">
-                  <td className="px-3 py-2">
+                <TableRow key={r.key}>
+                  <TableCell className="whitespace-normal">
                     <p className="text-wt-text">{r.label}</p>
                     {r.meta ? <p className="text-xs text-wt-text-faint">{r.meta}</p> : null}
-                  </td>
-                  <td className="px-3 py-2 text-center text-wt-text">{r.self ?? "—"}</td>
-                  <td
+                  </TableCell>
+                  <TableCell className="text-center text-wt-text">{r.self ?? "—"}</TableCell>
+                  <TableCell
                     className={cn(
-                      "px-3 py-2 text-center font-semibold",
+                      "text-center font-semibold",
                       r.manager != null && r.self != null && r.manager !== r.self
                         ? "text-amber-700 dark:text-amber-400"
                         : "text-wt-text"
                     )}
                   >
                     {r.manager ?? "—"}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
+            </TableBody>
           ))}
-        </table>
+        </WtTable>
       </div>
       {submission.recognitions_count > 0 ? (
         <p className="mt-1.5 text-xs text-wt-text-muted">

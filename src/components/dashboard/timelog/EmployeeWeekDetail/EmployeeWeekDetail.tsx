@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
@@ -7,7 +8,6 @@ import { WeeklyTimelogGrid } from "@/components/dashboard/timelog/WeeklyTimelogG
 import { WeekPickerField } from "@/components/dashboard/timelog/WeekPickerField";
 import { EntryReviewSidePanel } from "@/components/dashboard/timelog/EntryReviewSidePanel/EntryReviewSidePanel";
 import { useState, useCallback } from "react";
-import "./EmployeeWeekDetail.css";
 import type { EmployeeWeekDetailProps } from "./EmployeeWeekDetail.types";
 import type { TimelogGridRow } from "@/utils/timelog/gridState";
 
@@ -53,15 +53,20 @@ export function EmployeeWeekDetail({
   return (
     <>
       <Card>
-        <CardContent className="p-5 employee-week-detail">
-          <div className="detail-header">
-            <div className="detail-title">
-              <button className="back-btn" type="button" onClick={onBack}>
-                ← Back
+        <CardContent className="flex flex-col gap-4 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 text-sm font-semibold text-wt-text">
+              <button
+                type="button"
+                onClick={onBack}
+                className="inline-flex items-center gap-1 rounded-lg border border-wt-border px-2.5 py-1 text-xs font-medium text-wt-text-muted transition-colors hover:bg-wt-surface-2 hover:text-wt-text"
+              >
+                <ArrowLeft className="size-3.5" aria-hidden />
+                Back
               </button>
               <span>{employeeEmail}</span>
             </div>
-            <div className="detail-actions">
+            <div className="flex items-center gap-2">
               <WeekPickerField
                 weekStart={weekStart}
                 onWeekStartChange={onWeekChange}
@@ -73,9 +78,9 @@ export function EmployeeWeekDetail({
           {loading ? (
             <WtLoaderCentered label="" />
           ) : error ? (
-            <p className="loading-state text-rose-400">{error}</p>
+            <p className="py-8 text-center text-sm text-rose-600 dark:text-rose-400">{error}</p>
           ) : gridRows.length === 0 ? (
-            <p className="loading-state">No timelog entries for this week.</p>
+            <p className="py-8 text-center text-sm text-wt-text-muted">No timelog entries for this week.</p>
           ) : (
             <WeeklyTimelogGrid
               rows={gridRows}

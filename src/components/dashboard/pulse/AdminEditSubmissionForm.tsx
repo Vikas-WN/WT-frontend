@@ -9,12 +9,27 @@ import { notifyError, notifySuccess } from "@/lib/notify";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { ApiError } from "@/api/error";
 import { cn } from "@/lib/utils";
+import {
+  BRAND_FOCUS_RING_CLASS,
+  FORM_CONTROL_CLASS,
+  INFO_BANNER_CLASS,
+} from "@/components/dashboard/ui/uiLayout";
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import type { AdminEditPayload, MonthlySubmissionItem } from "@/types/kpi";
 
 type Ratings = Record<number, number | null>;
 
-const FIELD_CLASS =
-  "w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40";
+const FIELD_CLASS = cn(FORM_CONTROL_CLASS, "mt-1.5");
+const TEXTAREA_CLASS = cn(FIELD_CLASS, "min-h-20 resize-y py-2.5");
 
 function toMap<T>(rows: T[], id: (r: T) => number, rating: (r: T) => number): Ratings {
   return Object.fromEntries(rows.map((r) => [id(r), rating(r)]));
@@ -138,7 +153,7 @@ export function AdminEditSubmissionForm({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-lg border border-wt-brand/30 bg-wt-brand-soft p-3 text-xs text-wt-text-muted">
+      <div className={INFO_BANNER_CLASS}>
         Editing as HR. The review stays where it is in the workflow; the change is logged with your reason
         and the employee{hasManager ? " and manager are" : " is"} notified.
       </div>
@@ -152,42 +167,42 @@ export function AdminEditSubmissionForm({
           value={selfText}
           onChange={(e) => setSelfText(e.target.value)}
           rows={4}
-          className={cn(FIELD_CLASS, "mt-1.5")}
+          className={TEXTAREA_CLASS}
         />
       </div>
 
       {rows.length > 0 ? (
-        <div className="overflow-x-auto rounded-lg border border-wt-border">
-          <table className="w-full text-sm">
-            <thead className="bg-wt-surface-2/60 text-left text-[11px] uppercase tracking-wide text-wt-text-muted">
-              <tr>
-                <th className="px-3 py-2 font-medium">Item</th>
-                <th className="px-3 py-2 text-center font-medium">Employee</th>
-                <th className="px-3 py-2 text-center font-medium">Manager</th>
-              </tr>
-            </thead>
-            <tbody>
+        <ScrollableTable maxHeightClass="max-h-[min(50vh,420px)]">
+          <WtTable>
+            <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Item</TableHead>
+                <TableHead className="text-center">Employee</TableHead>
+                <TableHead className="text-center">Manager</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {rows.map((r) => (
-                <tr key={r.key} className="border-t border-wt-border">
-                  <td className="px-3 py-2">
+                <TableRow key={r.key}>
+                  <TableCell className="whitespace-normal">
                     <p className="text-wt-text">{r.label}</p>
                     <p className="text-xs text-wt-text-faint">{r.meta}</p>
-                  </td>
-                  <td className="px-3 py-2 text-center">
+                  </TableCell>
+                  <TableCell className="text-center">
                     <RatingSelect value={r.emp} onChange={r.setEmp} label={`Employee rating for ${r.label}`} />
-                  </td>
-                  <td className="px-3 py-2 text-center">
+                  </TableCell>
+                  <TableCell className="text-center">
                     {hasManager ? (
                       <RatingSelect value={r.mgr} onChange={r.setMgr} label={`Manager rating for ${r.label}`} />
                     ) : (
                       <span className="text-xs text-wt-text-faint">Not rated yet</span>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </WtTable>
+        </ScrollableTable>
       ) : null}
 
       {hasManager ? (
@@ -200,7 +215,7 @@ export function AdminEditSubmissionForm({
             value={mgrComments}
             onChange={(e) => setMgrComments(e.target.value)}
             rows={2}
-            className={cn(FIELD_CLASS, "mt-1.5")}
+            className={TEXTAREA_CLASS}
           />
         </div>
       ) : null}
@@ -219,7 +234,7 @@ export function AdminEditSubmissionForm({
             value={finalScore}
             onChange={(e) => setFinalScore(e.target.value)}
             placeholder={`Currently ${submission.final_score ?? "—"} · blank = recompute from the ratings`}
-            className={cn(FIELD_CLASS, "mt-1.5")}
+            className={FIELD_CLASS}
           />
         </div>
       ) : null}
@@ -234,7 +249,7 @@ export function AdminEditSubmissionForm({
           onChange={(e) => setReason(e.target.value)}
           rows={2}
           placeholder="Shared with the employee (min. 10 characters)."
-          className={cn(FIELD_CLASS, "mt-1.5")}
+          className={TEXTAREA_CLASS}
         />
       </div>
 
@@ -265,7 +280,10 @@ function RatingSelect({
       aria-label={label}
       value={value ?? ""}
       onChange={(e) => onChange(Number(e.target.value))}
-      className="rounded-md border border-wt-border bg-wt-surface-1 px-2 py-1 text-sm text-wt-text focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
+      className={cn(
+        BRAND_FOCUS_RING_CLASS,
+        "rounded-lg border border-wt-border bg-wt-surface-1 px-2 py-1 text-sm text-wt-text dark:border-wt-border-md dark:bg-wt-surface-2"
+      )}
     >
       {value == null ? <option value="">—</option> : null}
       {[1, 2, 3, 4, 5].map((n) => (

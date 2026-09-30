@@ -13,6 +13,16 @@ import { downloadCsvFile } from "@/utils/parseSpreadsheetFile";
 import { cn } from "@/lib/utils";
 import { hrmsService } from "@/services/hrms.service";
 import { SummarySection } from "@/components/dashboard/pulse/employee/MyKpiSummaryPanel";
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import type { AllTimeKpiSummary, EmployeeSummary, MonthlySubmissionItem } from "@/types/kpi";
 
 type Load<T> = { status: "loading" | "done" | "error"; data: T | null };
@@ -197,31 +207,31 @@ function EmployeeReport({ employee }: { employee: EmployeeSummary }) {
           <p className="mt-0.5 text-xs text-wt-text-muted">
             Averages across every submitted cycle. Gap = manager minus employee.
           </p>
-          <div className="mt-2 overflow-x-auto rounded-xl border border-wt-border">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-wt-surface-2/60 text-xs text-wt-text-muted">
-                <tr>
-                  <th className="px-3 py-2 font-medium">Item</th>
-                  <th className="px-3 py-2 text-center font-medium">Employee avg</th>
-                  <th className="px-3 py-2 text-center font-medium">Manager avg</th>
-                  <th className="px-3 py-2 text-center font-medium">Gap</th>
-                  <th className="px-3 py-2 text-center font-medium">Cycles</th>
-                </tr>
-              </thead>
-              <tbody>
+          <ScrollableTable maxHeightClass="max-h-[min(55vh,480px)]" className="mt-2">
+            <WtTable>
+              <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Item</TableHead>
+                  <TableHead className="text-center">Employee avg</TableHead>
+                  <TableHead className="text-center">Manager avg</TableHead>
+                  <TableHead className="text-center">Gap</TableHead>
+                  <TableHead className="text-center">Cycles</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {breakdown.map((item) => {
                   const gap = item.self != null && item.manager != null ? item.manager - item.self : null;
                   return (
-                    <tr key={item.key} className="border-t border-wt-border">
-                      <td className="px-3 py-2">
+                    <TableRow key={item.key}>
+                      <TableCell className="whitespace-normal">
                         <p className="text-wt-text">{item.label}</p>
                         <p className="text-xs text-wt-text-faint">{item.meta}</p>
-                      </td>
-                      <td className="px-3 py-2 text-center text-wt-text">{fmt(item.self)}</td>
-                      <td className="px-3 py-2 text-center font-semibold text-wt-text">{fmt(item.manager)}</td>
-                      <td
+                      </TableCell>
+                      <TableCell className="text-center text-wt-text">{fmt(item.self)}</TableCell>
+                      <TableCell className="text-center font-semibold text-wt-text">{fmt(item.manager)}</TableCell>
+                      <TableCell
                         className={cn(
-                          "px-3 py-2 text-center",
+                          "text-center",
                           gap == null || Math.abs(gap) < 0.5
                             ? "text-wt-text-muted"
                             : gap > 0
@@ -230,14 +240,14 @@ function EmployeeReport({ employee }: { employee: EmployeeSummary }) {
                         )}
                       >
                         {gap == null ? "—" : `${gap > 0 ? "+" : ""}${gap.toFixed(2)}`}
-                      </td>
-                      <td className="px-3 py-2 text-center text-wt-text-muted">{item.count}</td>
-                    </tr>
+                      </TableCell>
+                      <TableCell className="text-center text-wt-text-muted">{item.count}</TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </WtTable>
+          </ScrollableTable>
         </div>
       ) : null}
 

@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useCallback, useId } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { showErrorToast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 import { DAYS_OF_WEEK } from "@/hooks/timelog/useDayTimelog";
-import "./TimelogCalendar.css";
+import type { CalendarDayInfo } from "@/hooks/timelog/useDayTimelog.types";
 import type { TimelogCalendarProps } from "./TimelogCalendar.types";
 import { FieldLabel } from "@/components/dashboard/ui/forms";
 import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
@@ -13,6 +15,48 @@ const MONTH_OPTIONS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
+
+/**
+ * Cell background/border for each (mutually-exclusive-ish) day state. Order
+ * mirrors the legacy CSS's cascade: future overrides everything; otherwise
+ * selected tints combine with the entries/drafts tone; today always keeps a
+ * brand-colored border on top of whatever fill it has.
+ */
+function calendarCellClass(day: CalendarDayInfo, isSelected: boolean): string {
+  const hasEntries = day.entryCount > 0;
+  const hasDrafts = day.draftCount > 0;
+  const selected = isSelected && !day.isFuture;
+
+  if (day.isFuture) {
+    return "cursor-not-allowed border-wt-border-md bg-wt-surface-2 text-wt-text-faint opacity-60";
+  }
+
+  if (hasEntries) {
+    return cn(
+      "border-emerald-200 bg-emerald-50 hover:bg-emerald-100 dark:border-emerald-500/35 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20",
+      selected && "border-wt-indigo-400 bg-emerald-100 dark:bg-emerald-500/25",
+      day.isToday && "border-2 border-[var(--wt-brand)]"
+    );
+  }
+
+  if (hasDrafts) {
+    return cn(
+      "border-amber-200 bg-amber-50 hover:bg-amber-100 dark:border-amber-600/35 dark:bg-amber-600/10 dark:hover:bg-amber-600/20",
+      selected && "border-wt-indigo-400 bg-amber-100 dark:bg-amber-600/20",
+      day.isToday && "border-2 border-[var(--wt-brand)]"
+    );
+  }
+
+  if (selected) {
+    return "border-wt-indigo-400 bg-wt-indigo-50 hover:bg-wt-indigo-50 dark:bg-wt-indigo-500/20";
+  }
+
+  if (day.isToday) {
+    return "border-2 border-[var(--wt-brand)] bg-wt-surface-1 hover:bg-wt-surface-2";
+  }
+
+  return "border-wt-border bg-wt-surface-1 hover:bg-wt-surface-2";
+}
 
 export function TimelogCalendar({
   calendar,
@@ -80,9 +124,9 @@ export function TimelogCalendar({
   );
 
   return (
-    <div className="timelog-calendar">
-      <div className="timelog-calendar-header">
-        <div className="timelog-calendar-nav">
+    <div className="w-full">
+      <div className="mb-4 flex items-center justify-end">
+        <div className="flex flex-wrap items-end gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -91,7 +135,7 @@ export function TimelogCalendar({
             onClick={() => onNavigate(-1)}
             aria-label="Previous month"
           >
-            ←
+            <ChevronLeft className="size-4" aria-hidden />
           </Button>
           <Button
             variant="outline"
@@ -101,9 +145,9 @@ export function TimelogCalendar({
             onClick={() => onNavigate(1)}
             aria-label="Next month"
           >
-            →
+            <ChevronRight className="size-4" aria-hidden />
           </Button>
-          <div className="timelog-calendar-field">
+          <div className="flex min-w-34 flex-col gap-1">
             <FieldLabel label="Month" htmlFor={monthFieldId} />
             <SearchableSelectCombobox
               id={monthFieldId}
@@ -117,13 +161,12 @@ export function TimelogCalendar({
                 label: MONTH_OPTIONS[value],
               }))}
               placeholder="Search months…"
-              inputClassName="timelog-calendar-select"
               aria-label="Month"
               showChevron
               clearSelectionOnEmptyInput={false}
             />
           </div>
-          <div className="timelog-calendar-field">
+          <div className="flex min-w-34 flex-col gap-1">
             <FieldLabel label="Year" htmlFor={yearFieldId} />
             <SearchableSelectCombobox
               id={yearFieldId}
@@ -137,7 +180,6 @@ export function TimelogCalendar({
                 label: String(value),
               }))}
               placeholder="Search years…"
-              inputClassName="timelog-calendar-select"
               aria-label="Year"
               showChevron
               clearSelectionOnEmptyInput={false}
@@ -155,9 +197,9 @@ export function TimelogCalendar({
         </div>
       </div>
 
-      <div className="timelog-calendar-grid">
+      <div className="grid grid-cols-7 gap-[3px]">
         {DAYS_OF_WEEK.map((d) => (
-          <div key={d} className="timelog-calendar-day-header">
+          <div key={d} className="py-1.5 text-center text-xs font-medium text-wt-text-muted">
             {d}
           </div>
         ))}
@@ -165,48 +207,43 @@ export function TimelogCalendar({
           const isSelected = selectedDate === day.dateKey;
           const hasEntries = day.entryCount > 0;
           const hasDrafts = day.draftCount > 0;
-          const classNames = [
-            "timelog-calendar-cell",
-            day.isCurrentMonth ? "" : "timelog-calendar-cell--other-month",
-            day.isToday ? "timelog-calendar-cell--today" : "",
-            isSelected && !day.isFuture ? "timelog-calendar-cell--selected" : "",
-            hasEntries ? "timelog-calendar-cell--has-entries" : "",
-            !hasEntries && hasDrafts ? "timelog-calendar-cell--has-drafts" : "",
-            day.isFuture ? "timelog-calendar-cell--future" : "",
-          ]
-            .filter(Boolean)
-            .join(" ");
           return (
             <div
               key={day.dateKey}
-              className={classNames}
+              className={cn(
+                "relative flex min-h-20 cursor-pointer flex-col rounded-xl border p-1.5 transition-colors",
+                !day.isCurrentMonth && "opacity-35",
+                calendarCellClass(day, isSelected)
+              )}
               onClick={() => handleSelectDate(day.dateKey, day.isFuture)}
             >
-              <div className="timelog-calendar-cell-top">
+              <div className="flex items-center justify-between">
                 <span
-                  className={`timelog-calendar-day-num${hasEntries ? " timelog-calendar-day-num--has-entries" : ""}`}
+                  className={cn(
+                    "text-sm leading-none font-medium text-wt-text",
+                    hasEntries && "font-semibold text-emerald-600 dark:text-emerald-400"
+                  )}
                 >
                   {day.day}
                 </span>
                 {hasEntries ? (
-                  <span className="timelog-calendar-entry-dot" />
+                  <span className="mt-0.5 inline-block size-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400" />
                 ) : null}
               </div>
               {hasEntries || hasDrafts ? (
-                <div className="timelog-calendar-day-info">
+                <div className="mt-1 flex flex-col gap-0.5">
                   {hasEntries ? (
                     <>
-                      <span className="timelog-calendar-hours">
+                      <span className="text-xs leading-tight font-semibold text-emerald-600 dark:text-emerald-400">
                         {day.totalHours}h
                       </span>
-                      <span className="timelog-calendar-entries">
-                        {day.entryCount}{" "}
-                        {day.entryCount === 1 ? "entry" : "entries"}
+                      <span className="text-xs leading-tight font-medium text-wt-text-muted">
+                        {day.entryCount} {day.entryCount === 1 ? "entry" : "entries"}
                       </span>
                     </>
                   ) : null}
                   {hasDrafts ? (
-                    <span className="timelog-calendar-drafts">
+                    <span className="text-xs leading-tight font-semibold text-amber-700 dark:text-amber-400">
                       {day.draftCount} draft{day.draftCount === 1 ? "" : "s"}
                     </span>
                   ) : null}
