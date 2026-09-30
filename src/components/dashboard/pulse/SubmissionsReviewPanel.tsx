@@ -72,8 +72,8 @@ const ALL_STATUSES = "ALL";
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: ALL_STATUSES, label: "All statuses" },
   { value: "SUBMITTED", label: "Awaiting managers" },
-  { value: "NEEDS_REVIEW", label: "Back with employee" },
-  { value: "NEEDS_MANAGER_REVIEW", label: "Back with managers" },
+  { value: "NEEDS_REVIEW", label: "Rejected — with employee" },
+  { value: "NEEDS_MANAGER_REVIEW", label: "Rejected — with managers" },
   { value: "APPROVED", label: "Final" },
   // Only rows from before managers' submissions became final; nothing new lands here.
   { value: "MANAGER_SUBMITTED", label: "Awaiting HR approval (older)" },
@@ -376,8 +376,8 @@ export function AdminReviewModal({
           action === "APPROVE"
             ? "Approved."
             : action === "REJECT"
-              ? "Sent back to the employee."
-              : "Sent back to the manager."
+              ? "Rejected — the employee will redo their submission."
+              : "Manager rejected — only the managers will revise their ratings."
         );
         onDone();
       } catch (error) {
@@ -567,6 +567,17 @@ export function AdminReviewModal({
                     rows={3}
                     className={cn(FORM_CONTROL_CLASS, "mt-1.5 min-h-20 resize-y py-2.5")}
                   />
+                  <ul className="mt-2 space-y-1 text-xs text-wt-text-muted">
+                    <li>
+                      <span className="font-medium text-wt-text">Reject Manager</span> — only the managers revise:
+                      their ratings come back to them to change, and the employee&apos;s submission stays as it is.
+                    </li>
+                    <li>
+                      <span className="font-medium text-wt-text">Reject (Employee Redoes)</span> — the employee
+                      redoes the whole submission; it goes to the project managers again and they rate from
+                      scratch.
+                    </li>
+                  </ul>
                 </div>
               ) : null}
             </div>
@@ -584,7 +595,7 @@ export function AdminReviewModal({
                 onClick={() => void submit("REJECT_MANAGER")}
                 disabled={busy !== null}
               >
-                {busy === "reject-manager" ? "Sending…" : "Back to Manager"}
+                {busy === "reject-manager" ? "Sending…" : "Reject Manager"}
               </Button>
             ) : null}
             {!editing && canSendToEmployee ? (
@@ -596,7 +607,7 @@ export function AdminReviewModal({
                 disabled={busy !== null}
               >
                 <XCircle className="mr-1.5 size-4" />
-                {busy === "reject" ? "Sending…" : "Back to Employee"}
+                {busy === "reject" ? "Sending…" : "Reject (Employee Redoes)"}
               </Button>
             ) : null}
             {!editing && canScore ? (

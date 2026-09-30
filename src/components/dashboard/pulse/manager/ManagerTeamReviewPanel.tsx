@@ -120,7 +120,7 @@ export function ManagerTeamReviewPanel() {
                 ) : null}
                 {row.review_status === "NEEDS_MANAGER_REVIEW" ? (
                   <Badge variant="outline" className="border-amber-400 text-amber-700 dark:text-amber-400">
-                    Sent back by HR
+                    Rejected by HR
                   </Badge>
                 ) : null}
                 <Badge variant="outline">{row.kpi_ratings.length} KPIs rated</Badge>

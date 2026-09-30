@@ -110,7 +110,7 @@ const REVIEW_STATUS_LABELS: Record<string, string> = {
   SUBMITTED: "With manager",
   NEEDS_REVIEW: "Sent back for changes",
   MANAGER_SUBMITTED: "Awaiting HR approval",
-  NEEDS_MANAGER_REVIEW: "Back with manager",
+  NEEDS_MANAGER_REVIEW: "With your managers to revise",
   APPROVED: "Approved",
 };
 

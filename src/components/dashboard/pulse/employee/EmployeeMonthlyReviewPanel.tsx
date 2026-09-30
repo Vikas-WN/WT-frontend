@@ -115,7 +115,7 @@ function SubmissionStatusCard({ submission }: { submission: MonthlySubmissionIte
     : status === "MANAGER_SUBMITTED"
       ? "Your manager has reviewed it — waiting on HR's final check."
       : status === "NEEDS_MANAGER_REVIEW"
-        ? "HR asked your manager to take another look — nothing needed from you."
+        ? "HR asked your managers to revise their review — nothing needed from you."
         : waitingOn
           ? `Submitted — waiting on ${waitingOn}.`
           : "Submitted — waiting on your manager's review.";

@@ -335,9 +335,9 @@ function EmployeeReport({ employee }: { employee: EmployeeSummary }) {
 
 const REVIEW_STATUS_LABELS: Record<string, string> = {
   SUBMITTED: "With manager",
-  NEEDS_REVIEW: "Back with employee",
+  NEEDS_REVIEW: "Rejected — with employee",
   MANAGER_SUBMITTED: "Awaiting HR approval",
-  NEEDS_MANAGER_REVIEW: "Back with manager",
+  NEEDS_MANAGER_REVIEW: "Rejected — with managers",
   APPROVED: "Approved",
 };
 

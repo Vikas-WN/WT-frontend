@@ -150,8 +150,12 @@ export function ManagerReviewModal({
 
               {hrSendBack ? (
                 <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-                  <p className="font-semibold text-wt-text">HR sent this back to you</p>
+                  <p className="font-semibold text-wt-text">HR rejected the managers&apos; review</p>
                   <p className="mt-1 text-wt-text-muted">{hrSendBack}</p>
+                  <p className="mt-1 text-xs text-wt-text-muted">
+                    Your previous ratings are filled in. Change what needs changing, then submit again — the
+                    employee&apos;s submission stays as it is.
+                  </p>
                 </div>
               ) : null}
 
