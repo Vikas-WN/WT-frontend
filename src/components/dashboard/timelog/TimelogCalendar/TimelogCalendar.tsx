@@ -147,7 +147,7 @@ export function TimelogCalendar({
           >
             <ChevronRight className="size-4" aria-hidden />
           </Button>
-          <div className="flex min-w-34 flex-col gap-1">
+          <div className="flex min-w-[8.5rem] flex-col gap-1">
             <FieldLabel label="Month" htmlFor={monthFieldId} />
             <SearchableSelectCombobox
               id={monthFieldId}
@@ -166,7 +166,7 @@ export function TimelogCalendar({
               clearSelectionOnEmptyInput={false}
             />
           </div>
-          <div className="flex min-w-34 flex-col gap-1">
+          <div className="flex min-w-[8.5rem] flex-col gap-1">
             <FieldLabel label="Year" htmlFor={yearFieldId} />
             <SearchableSelectCombobox
               id={yearFieldId}
