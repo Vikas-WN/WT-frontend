@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { RatingButtons } from "@/components/dashboard/pulse/employee/RatingButtons";
+import { PULSE_COPY, PULSE_REVIEWER_PICKER_ROLES } from "@/constants/pulseCopy";
 import { DropdownSelect } from "@/components/dashboard/ui/DropdownSelect";
 import { useAuth } from "@/context/AuthContext";
 import { normalizeRoles } from "@/utils/roles";
@@ -24,6 +25,7 @@ import type {
   KpiDefinitionItem,
   MonthlySubmissionDraftPayload,
   MonthlySubmissionItem,
+  ProjectWithManagers,
   WebknotValueItem,
 } from "@/types/kpi";
 import { cn } from "@/lib/utils";
@@ -58,18 +60,16 @@ function currentMonthKey(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-type ProjectOption = { code: string; name: string };
+/** An active project, identified to the employee by who will review it (never by its code). */
+type ProjectOption = { code: string; name: string; managers: EmployeeSummary[] };
 
-function normalizeProjectOptions(raw: unknown): ProjectOption[] {
-  const rows = Array.isArray(raw) ? raw : [];
-  return rows
-    .map((row) => {
-      const r = row as Record<string, unknown>;
-      const code = String(r.project_code ?? r.projectCode ?? r.code ?? "").trim();
-      const name = String(r.project_name ?? r.projectName ?? r.name ?? "").trim();
-      return code ? { code, name: name || code } : null;
-    })
-    .filter((x): x is ProjectOption => x !== null);
+function toProjectOptions(rows: ProjectWithManagers[]): ProjectOption[] {
+  return rows.map((row) => ({ code: row.project_code, name: row.project_name, managers: row.managers }));
+}
+
+/** Project managers as a readable list — "Asha, Ravi", or a fallback when none is on record. */
+function managerNames(managers: EmployeeSummary[]): string {
+  return managers.length ? managers.map((m) => m.name).join(", ") : PULSE_COPY.noProjectManager;
 }
 
 const STEPS = ["Projects", "KPIs", "Company Values", "Certifications", "Review & Submit"] as const;
@@ -105,14 +105,19 @@ function isEditable(row: MonthlySubmissionItem): boolean {
 function SubmissionStatusCard({ submission }: { submission: MonthlySubmissionItem }) {
   const status = submission.review_status;
   const isApproved = status === "APPROVED";
+  const waitingOn = submission.reviewer
+    ? submission.reviewer.name
+    : submission.managers.length
+      ? managerNames(submission.managers)
+      : null;
   const message = isApproved
-    ? "Your review for this cycle is approved."
+    ? "Your review for this cycle is complete."
     : status === "MANAGER_SUBMITTED"
-      ? "Your manager has reviewed it — waiting on HR approval."
+      ? "Your manager has reviewed it — waiting on HR's final check."
       : status === "NEEDS_MANAGER_REVIEW"
         ? "HR asked your manager to take another look — nothing needed from you."
-        : submission.reviewer
-          ? `Submitted — waiting on ${submission.reviewer.name}'s review.`
+        : waitingOn
+          ? `Submitted — waiting on ${waitingOn}.`
           : "Submitted — waiting on your manager's review.";
 
   return (
@@ -130,13 +135,11 @@ function SubmissionStatusCard({ submission }: { submission: MonthlySubmissionIte
       />
       <div>
         <p className="text-sm font-semibold text-wt-text">{message}</p>
-        <p className="mt-0.5 text-xs text-wt-text-muted">
-          {submission.cycle_label}
-          {submission.reviewer ? ` · Reviewer: ${submission.reviewer.name}` : ""}
-        </p>
+        <p className="mt-0.5 text-xs text-wt-text-muted">{submission.cycle_label}</p>
         {submission.manager_review?.comments ? (
           <p className="mt-1 text-sm text-wt-text-muted">
-            Manager: &ldquo;{submission.manager_review.comments}&rdquo;
+            {submission.manager_review.reviewed_by ? "Reviewer" : "Manager"}: &ldquo;
+            {submission.manager_review.comments}&rdquo;
           </p>
         ) : null}
         {isApproved && submission.final_score != null ? (
@@ -155,14 +158,14 @@ function SubmissionStatusCard({ submission }: { submission: MonthlySubmissionIte
 export function EmployeeMonthlyReviewPanel() {
   const month = useMemo(() => currentMonthKey(), []);
   const { user } = useAuth();
-  // HR team members have no reporting-manager review — they pick an Admin.
-  const isHrTeam = useMemo(
-    () => normalizeRoles(user?.roles ?? []).includes("ROLE_HR"),
-    [user?.roles]
-  );
+  // DM / PM / AM / HR / Admin aren't reviewed by project managers — they pick an HR or Admin.
+  const needsReviewer = useMemo(() => {
+    const roles = normalizeRoles(user?.roles ?? []);
+    return PULSE_REVIEWER_PICKER_ROLES.some((role) => roles.includes(role));
+  }, [user?.roles]);
   const reviewers = useLoad<EmployeeSummary[]>(
-    () => (isHrTeam ? hrmsService.getPulseAdminReviewers() : Promise.resolve([])),
-    [isHrTeam]
+    () => (needsReviewer ? hrmsService.getPulseAdminReviewers() : Promise.resolve([])),
+    [needsReviewer]
   );
 
   const windowStatus = useLoad(
@@ -178,7 +181,7 @@ export function EmployeeMonthlyReviewPanel() {
     []
   );
   const projects = useLoad<ProjectOption[]>(
-    () => hrmsService.getAssignedProjects().then((r) => normalizeProjectOptions(r.data ?? r)),
+    () => hrmsService.getMyPulseProjects().then(toProjectOptions),
     []
   );
 
@@ -249,7 +252,7 @@ export function EmployeeMonthlyReviewPanel() {
       certRows={certifications.data ?? []}
       projectRows={projects.data ?? []}
       projectsLoading={projects.status === "loading"}
-      reviewerOptions={isHrTeam ? reviewers.data ?? [] : null}
+      reviewerOptions={needsReviewer ? reviewers.data ?? [] : null}
       needsRevision={draft.data.review_status === "NEEDS_REVIEW"}
       onSubmitted={() => setReloadTick((t) => t + 1)}
     />
@@ -273,7 +276,7 @@ function EmployeeReviewForm({
   certRows: CertificationItem[];
   projectRows: ProjectOption[];
   projectsLoading: boolean;
-  /** Admins to choose from — non-null only for HR team members, who must pick one. */
+  /** HR/Admin users to choose from — non-null only for DM / PM / AM / HR / Admin, who must pick one. */
   reviewerOptions: EmployeeSummary[] | null;
   needsRevision: boolean;
   onSubmitted: () => void;
@@ -357,6 +360,14 @@ function EmployeeReviewForm({
   // A draft can still hold a project the employee has since left — it isn't
   // listed, so it can't be unticked; only current projects count and are sent.
   const selectedProjects = form.project_codes.filter((c) => projectRows.some((p) => p.code === c));
+  const selectedManagers = Array.from(
+    new Map(
+      projectRows
+        .filter((p) => selectedProjects.includes(p.code))
+        .flatMap((p) => p.managers)
+        .map((m) => [m.id, m] as const)
+    ).values()
+  );
   const projectsValid = hasProjects
     ? selectedProjects.length >= 1 && selectedProjects.length <= 3
     : true;
@@ -379,7 +390,7 @@ function EmployeeReviewForm({
     if (!canSubmit) {
       notifyError(
         !reviewerValid
-          ? "Select the Admin who should review your submission."
+          ? "Select the HR or Admin who should review your submission."
           : !allValuesCommented
             ? "Add a quick example for every Company Value before submitting."
             : hasProjects
@@ -448,7 +459,12 @@ function EmployeeReviewForm({
           <div className="space-y-3">
             <div>
               <h3 className="text-sm font-semibold text-wt-text">Projects you worked on</h3>
-              <p className="mt-0.5 text-xs text-wt-text-muted">Pick 1 to 3 active projects.</p>
+              <p className="mt-0.5 text-xs text-wt-text-muted">
+                Pick 1 to 3 active projects.{" "}
+                {requiresReviewer
+                  ? PULSE_COPY.reviewerIntro
+                  : "Your review goes to the managers of the projects you pick, all at once."}
+              </p>
             </div>
             {projectsLoading ? (
               <SectionLoading label="" />
@@ -469,12 +485,17 @@ function EmployeeReviewForm({
                       onCheckedChange={() => toggleProject(p.code)}
                       disabled={!selectedProjects.includes(p.code) && selectedProjects.length >= 3}
                     />
-                    <span className="text-sm text-wt-text">{p.name}</span>
-                    <span className="ml-auto text-xs text-wt-text-faint">{p.code}</span>
+                    <span className="text-sm font-medium text-wt-text">{managerNames(p.managers)}</span>
+                    <span className="ml-auto text-xs text-wt-text-faint">{p.name}</span>
                   </label>
                 ))}
               </div>
             )}
+            {!requiresReviewer && selectedManagers.length > 0 ? (
+              <p className="text-xs text-wt-text-muted">
+                Goes to: <span className="font-medium text-wt-text">{managerNames(selectedManagers)}</span>
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -483,7 +504,7 @@ function EmployeeReviewForm({
             <div>
               <h3 className="text-sm font-semibold text-wt-text">Rate your KPIs</h3>
               <p className="mt-0.5 text-xs text-wt-text-muted">
-                Applicable to your band and department. 1 = needs improvement, 5 = exceptional.
+                Applicable to your band and department. Choose the level that best fits each one.
               </p>
             </div>
             {kpiRows.length === 0 ? (
@@ -638,7 +659,7 @@ function EmployeeReviewForm({
             {reviewerOptions !== null ? (
               <div>
                 <p className="mb-1.5 text-sm font-medium text-wt-text">
-                  Reviewer (Admin) <span className="text-rose-600">*</span>
+                  {PULSE_COPY.reviewerFieldLabel} <span className="text-rose-600">*</span>
                 </p>
                 <DropdownSelect
                   value={form.reviewer_id ? String(form.reviewer_id) : ""}
@@ -647,13 +668,10 @@ function EmployeeReviewForm({
                     value: String(r.id),
                     label: `${r.name}${r.emp_id ? ` (${r.emp_id})` : ""}`,
                   }))}
-                  placeholder={reviewerOptions.length ? "Select an Admin" : "No Admins available"}
+                  placeholder={reviewerOptions.length ? PULSE_COPY.reviewerPlaceholder : PULSE_COPY.reviewerEmpty}
                   aria-label="Reviewer"
                 />
-                <p className="mt-1 text-xs text-wt-text-muted">
-                  As part of the HR team, your self review goes to the Admin you choose here instead of a
-                  reporting manager.
-                </p>
+                <p className="mt-1 text-xs text-wt-text-muted">{PULSE_COPY.reviewerIntro}</p>
               </div>
             ) : null}
             <div className="rounded-xl border border-wt-border bg-wt-surface-2/40 p-4 text-sm text-wt-text-muted">
@@ -678,7 +696,7 @@ function EmployeeReviewForm({
                 {requiresReviewer ? (
                   <li className="flex items-center gap-2">
                     <Badge variant={reviewerValid ? "default" : "outline"}>{reviewerValid ? "✓" : "—"}</Badge>
-                    Reviewer selected
+                    {PULSE_COPY.reviewerSelected}
                   </li>
                 ) : null}
               </ul>

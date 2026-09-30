@@ -31,6 +31,9 @@ import type {
   MonthlySubmissionDraftPayload,
   MonthlySubmissionType,
   ManagerReviewSubmitPayload,
+  ManagerReviewDraftPatch,
+  ManagerReviewDraftState,
+  ProjectWithManagers,
   AdminEditPayload,
   AdminReviewSubmitPayload,
   ScoreBreakdown,
@@ -862,6 +865,11 @@ export const hrmsService = {
 
   getAllProjects(params: Record<string, string> = {}) {
     return apiClient.get<ApiEnvelope<PagedData<unknown>>>(endpoints.project.listAll, { query: params });
+  },
+
+  /** GET /monthly-submissions/my-projects — my active projects, each with the managers who'll review it. */
+  getMyPulseProjects() {
+    return apiClient.get<ProjectWithManagers[]>(endpoints.monthlySubmissions.myProjects);
   },
 
   getAssignedProjects() {
@@ -1878,6 +1886,19 @@ export const hrmsService = {
 
   getManagerTeamSubmissions() {
     return apiClient.get<MonthlySubmissionItem[]>(endpoints.monthlySubmissions.managerTeam);
+  },
+
+  /** GET — the shared draft plus whether a co-manager already decided. Polled while a review is open. */
+  getManagerReviewDraft(submissionId: number) {
+    return apiClient.get<ManagerReviewDraftState>(endpoints.monthlySubmissions.managerReviewDraft(submissionId));
+  },
+
+  /** PUT — merge my changed ratings/comments into the draft every assigned manager shares. */
+  saveManagerReviewDraft(submissionId: number, patch: ManagerReviewDraftPatch) {
+    return apiClient.put<ManagerReviewDraftState>(endpoints.monthlySubmissions.managerReviewDraft(submissionId), {
+      contentType: "application/json",
+      body: JSON.stringify(patch),
+    });
   },
 
   submitManagerReview(submissionId: number, payload: ManagerReviewSubmitPayload) {

@@ -279,10 +279,10 @@ function EmployeeReport({ employee }: { employee: EmployeeSummary }) {
                       <div className="flex shrink-0 flex-wrap items-center gap-2">
                         <Badge variant="outline">{REVIEW_STATUS_LABELS[row.review_status ?? ""] ?? row.review_status}</Badge>
                         {row.employee_rating_display ? (
-                          <Badge variant="outline">Self {row.employee_rating_display.split(" - ")[0]}</Badge>
+                          <Badge variant="outline">Self: {row.employee_rating_display}</Badge>
                         ) : null}
                         {row.manager_rating_display ? (
-                          <Badge variant="outline">Manager {row.manager_rating_display.split(" - ")[0]}</Badge>
+                          <Badge variant="outline">Manager: {row.manager_rating_display}</Badge>
                         ) : null}
                         {row.final_score != null ? <Badge>Final {row.final_score}</Badge> : null}
                         {row.admin_edits?.length ? <Badge variant="outline">Edited by HR</Badge> : null}

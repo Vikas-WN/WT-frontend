@@ -267,6 +267,7 @@ export const endpoints = {
     applicableKpis: `${api}/monthly-submissions/applicable-kpis`,
     webknotValues: `${api}/monthly-submissions/webknot-values`,
     reviewers: `${api}/monthly-submissions/reviewers`,
+    myProjects: `${api}/monthly-submissions/my-projects`,
     draft: `${api}/monthly-submissions/draft`,
     self: `${api}/monthly-submissions/self`,
     me: `${api}/monthly-submissions/me`,
@@ -279,6 +280,8 @@ export const endpoints = {
     managerTeam: `${api}/monthly-submissions/manager/team`,
     managerReview: (submissionId: string | number) =>
       `${api}/monthly-submissions/${encodeURIComponent(String(submissionId))}/manager-review`,
+    managerReviewDraft: (submissionId: string | number) =>
+      `${api}/monthly-submissions/${encodeURIComponent(String(submissionId))}/manager-review/draft`,
     list: `${api}/monthly-submissions`,
     adminOverview: `${api}/monthly-submissions/admin-overview`,
     scoreBreakdown: (submissionId: string | number) =>

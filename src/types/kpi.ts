@@ -128,7 +128,7 @@ export interface MonthlySubmissionDraftPayload {
   certifications: CertificationClaim[];
   project_codes: string[];
   recognitions_count: number;
-  /** HR team only — the Admin who reviews this submission. */
+  /** DM / PM / AM / HR / Admin only — the HR or Admin who reviews this submission. */
   reviewer_id?: number | null;
 }
 
@@ -186,9 +186,13 @@ export interface MonthlySubmissionItem {
   certifications: CertificationClaim[];
   project_codes: string[];
   recognitions_count: number;
-  /** HR team submissions: the Admin chosen to review it. */
+  /** DM / PM / AM / HR / Admin submissions: the HR or Admin chosen to review it. */
   reviewer_id: number | null;
   reviewer: EmployeeSummary | null;
+  /** The project managers this went to — any one of them can finalize it. */
+  managers: EmployeeSummary[];
+  /** Reviewers only: the in-progress review the assigned managers share. */
+  manager_draft: ManagerReviewDraft | null;
   /** Names for the ids above — every KPI applicable to the employee plus any rated. */
   kpi_details: SubmissionKpiDetail[];
   value_details: NamedRef[];
@@ -231,6 +235,40 @@ export interface AdminEditPayload {
   manager_comments?: string;
   /** Approved submissions only; omitted = recomputed from the edited ratings. */
   final_score?: number;
+}
+
+/** The one not-yet-submitted review every assigned manager shares. */
+export interface ManagerReviewDraft {
+  kpi_ratings: Record<string, number>;
+  value_ratings: Record<string, number>;
+  comments: string;
+  /** Bumps on every save, so a poller can tell whether it already has the latest. */
+  version: number;
+  updated_at: string | null;
+  /** Who saved last — shown to the other managers as "X is editing". */
+  updated_by: EmployeeSummary | null;
+}
+
+/** Polled while a review is open: the shared draft, and who decided it if someone already did. */
+export interface ManagerReviewDraftState {
+  submission_id: number;
+  review_status: MonthlySubmissionReviewStatus | null;
+  draft: ManagerReviewDraft | null;
+  decided_by: EmployeeSummary | null;
+}
+
+/** Only what this manager just changed; the server merges it per KPI/value. */
+export interface ManagerReviewDraftPatch {
+  kpi_ratings: KpiRating[];
+  value_ratings: ValueRating[];
+  comments?: string;
+}
+
+/** One of the employee's active projects and the managers who will review it. */
+export interface ProjectWithManagers {
+  project_code: string;
+  project_name: string;
+  managers: EmployeeSummary[];
 }
 
 export interface ManagerReviewSubmitPayload {

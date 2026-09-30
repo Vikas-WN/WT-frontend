@@ -62,17 +62,9 @@ export function SummarySection({ summary }: { summary: AllTimeKpiSummary }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile label="Total submissions" value={String(summary.total_submissions)} />
         <StatTile label="Reviewed" value={String(summary.reviewed_submissions)} />
-        <StatTile
-          label="Your rating"
-          value={scoreCell(summary.employee_rating_average)}
-          sub={summary.employee_rating_display}
-        />
-        <StatTile
-          label="Manager rating"
-          value={scoreCell(summary.manager_rating_average)}
-          sub={summary.manager_rating_display}
-        />
-        <StatTile label="Admin (final) rating" value={scoreCell(summary.admin_rating_average)} />
+        <StatTile label="Your rating" value={summary.employee_rating_display ?? "—"} />
+        <StatTile label="Manager rating" value={summary.manager_rating_display ?? "—"} />
+        <StatTile label="Final score" value={scoreCell(summary.admin_rating_average)} />
         <StatTile label="All-time KPI average" value={scoreCell(summary.all_time_kpi_average)} />
         <StatTile
           label="All-time manager KPI average"
@@ -99,14 +91,8 @@ export function SummarySection({ summary }: { summary: AllTimeKpiSummary }) {
                   <TableRow key={cycle.cycle_key}>
                     <TableCell className="text-wt-text">{cycle.cycle_label}</TableCell>
                     <TableCell>{cycle.submissions}</TableCell>
-                    <TableCell>
-                      {scoreCell(cycle.employee_rating_average)}
-                      {cycle.employee_rating_display ? ` · ${cycle.employee_rating_display}` : ""}
-                    </TableCell>
-                    <TableCell>
-                      {scoreCell(cycle.manager_rating_average)}
-                      {cycle.manager_rating_display ? ` · ${cycle.manager_rating_display}` : ""}
-                    </TableCell>
+                    <TableCell>{cycle.employee_rating_display ?? "—"}</TableCell>
+                    <TableCell>{cycle.manager_rating_display ?? "—"}</TableCell>
                     <TableCell>{scoreCell(cycle.admin_rating_average)}</TableCell>
                   </TableRow>
                 ))}

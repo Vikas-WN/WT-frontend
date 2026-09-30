@@ -1,5 +1,6 @@
 "use client";
 
+import { pulseRatingLabel } from "@/constants/pulseRatings";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, ChevronRight, Pencil, Trash2, Upload, XCircle } from "lucide-react";
 
@@ -70,11 +71,12 @@ const ALL_STATUSES = "ALL";
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: ALL_STATUSES, label: "All statuses" },
-  { value: "MANAGER_SUBMITTED", label: "Awaiting HR approval" },
+  { value: "SUBMITTED", label: "Awaiting managers" },
   { value: "NEEDS_REVIEW", label: "Back with employee" },
-  { value: "NEEDS_MANAGER_REVIEW", label: "Back with manager" },
-  { value: "APPROVED", label: "Approved" },
-  { value: "SUBMITTED", label: "Awaiting manager" },
+  { value: "NEEDS_MANAGER_REVIEW", label: "Back with managers" },
+  { value: "APPROVED", label: "Final" },
+  // Only rows from before managers' submissions became final; nothing new lands here.
+  { value: "MANAGER_SUBMITTED", label: "Awaiting HR approval (older)" },
 ];
 
 function statusLabel(status: MonthlySubmissionReviewStatus | null): string {
@@ -82,7 +84,7 @@ function statusLabel(status: MonthlySubmissionReviewStatus | null): string {
 }
 
 export function SubmissionsReviewPanel() {
-  const [statusFilter, setStatusFilter] = useState("MANAGER_SUBMITTED");
+  const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
   const [reloadTick, setReloadTick] = useState(0);
   const refresh = useCallback(() => setReloadTick((t) => t + 1), []);
 
@@ -169,7 +171,7 @@ export function SubmissionsReviewPanel() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <MetricCard label="This cycle" value={overview.data.total_submissions} loading={false} />
           <MetricCard label="Manager reviewed" value={overview.data.manager_reviewed} loading={false} />
-          <MetricCard label="Approved" value={overview.data.approved} loading={false} />
+          <MetricCard label="Final" value={overview.data.approved} loading={false} />
           <MetricCard
             label="Pending manager review"
             value={overview.data.pending_manager_review}
@@ -187,7 +189,8 @@ export function SubmissionsReviewPanel() {
         <div>
           <h3 className="text-sm font-semibold text-wt-text">Submissions</h3>
           <p className="mt-0.5 text-xs text-wt-text-muted">
-            Every rating side by side. Approve, send back to the employee or manager, or edit anyone&apos;s part.
+            Every rating side by side. A manager&apos;s submission is final — send it back to the employee or
+            the managers, or correct anyone&apos;s part.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -686,7 +689,7 @@ export function RatingsComparison({ submission }: { submission: MonthlySubmissio
                     <p className="text-wt-text">{r.label}</p>
                     {r.meta ? <p className="text-xs text-wt-text-faint">{r.meta}</p> : null}
                   </TableCell>
-                  <TableCell className="text-center text-wt-text">{r.self ?? "—"}</TableCell>
+                  <TableCell className="text-center text-wt-text">{pulseRatingLabel(r.self)}</TableCell>
                   <TableCell
                     className={cn(
                       "text-center font-semibold",
@@ -695,7 +698,7 @@ export function RatingsComparison({ submission }: { submission: MonthlySubmissio
                         : "text-wt-text"
                     )}
                   >
-                    {r.manager ?? "—"}
+                    {pulseRatingLabel(r.manager)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -712,11 +715,11 @@ export function RatingsComparison({ submission }: { submission: MonthlySubmissio
   );
 }
 
-/** "avg 3.5" over the rated entries, or "—" when none are rated yet. */
+/** The level the rated entries average out to, or "—" when none are rated yet. */
 function averageLabel(ratings: (number | undefined)[]): string {
   const rated = ratings.filter((r): r is number => r != null);
   if (rated.length === 0) return "—";
-  return `avg ${Math.round((rated.reduce((a, b) => a + b, 0) / rated.length) * 10) / 10}`;
+  return pulseRatingLabel(Math.round(rated.reduce((a, b) => a + b, 0) / rated.length));
 }
 
 function ScoreTile({ label, value, emphasize = false }: { label: string; value: number; emphasize?: boolean }) {
