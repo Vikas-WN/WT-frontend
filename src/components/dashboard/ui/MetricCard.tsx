@@ -55,7 +55,7 @@ export function MetricCard({
         <Skeleton className="mt-3 h-9 w-24" />
       ) : (
         <>
-          <p className="mt-2 text-3xl font-semibold tracking-tight text-wt-text tabular-nums">
+          <p className="mt-2 text-3xl font-bold tracking-[-0.02em] text-wt-text tabular-nums">
             {value.toLocaleString()}
           </p>
           {trend ? (

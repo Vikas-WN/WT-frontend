@@ -47,14 +47,15 @@
   --wt-border: rgba(15, 23, 42, 0.07);
   --wt-border-md: rgba(15, 23, 42, 0.12);
 
-  /* Soft elevation */
-  --wt-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.04);
-  --wt-shadow-md: 0 2px 4px rgba(15, 23, 42, 0.05), 0 8px 24px rgba(53, 80, 149, 0.08);
-  --wt-shadow-lg: 0 4px 8px rgba(15, 23, 42, 0.06), 0 16px 40px rgba(53, 80, 149, 0.12);
+  /* Crisp elevation — tight, neutral shadows (no soft brand-tinted bloom).
+     Modern-SaaS direction: definition over softness. */
+  --wt-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --wt-shadow-md: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 10px rgba(15, 23, 42, 0.06);
+  --wt-shadow-lg: 0 2px 4px rgba(15, 23, 42, 0.05), 0 12px 24px rgba(15, 23, 42, 0.08);
 
   /* Accent glow — brand-tinted (not indigo/violet) */
-  --wt-glow-indigo: 0 8px 24px rgba(53, 80, 149, 0.16);
-  --wt-glow-violet: 0 10px 32px rgba(53, 80, 149, 0.1);
+  --wt-glow-indigo: 0 4px 14px rgba(53, 80, 149, 0.18);
+  --wt-glow-violet: 0 6px 18px rgba(53, 80, 149, 0.12);
 
   /* Radius — single scale; @theme derives rounded-* from --radius */
   --radius-sm: 8px;
@@ -98,8 +99,9 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  /* Base radius → Tailwind rounded-* via @theme (12px → roomy cards/controls) */
-  --radius: 0.75rem;
+  /* Base radius → Tailwind rounded-* via @theme (8px → crisp Modern-SaaS controls/cards,
+     tightened from the previous 12px "soft/roomy" scale) */
+  --radius: 0.5rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);

@@ -115,7 +115,7 @@ const SIDEBAR_CHILD_BASE =
   "wt-sidebar-nav-item relative flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 whitespace-normal transition-[background-color,color] duration-[var(--wt-duration)] ease-[var(--wt-ease)]";
 
 const SIDEBAR_ACTIVE_CLASS =
-  "bg-[color-mix(in_srgb,var(--wt-brand)_11%,var(--wt-surface-1))] text-wt-text before:absolute before:left-0 before:top-1/2 before:h-[1.15rem] before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-[var(--wt-brand)] [&_svg]:text-[var(--wt-brand)] [&_svg]:opacity-100 dark:bg-[color-mix(in_srgb,var(--wt-brand)_18%,transparent)]";
+  "bg-[color-mix(in_srgb,var(--wt-brand)_14%,var(--wt-surface-1))] font-semibold text-wt-text before:absolute before:left-0 before:top-1/2 before:h-[1.15rem] before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-[var(--wt-brand)] [&_svg]:text-[var(--wt-brand)] [&_svg]:opacity-100 dark:bg-[color-mix(in_srgb,var(--wt-brand)_20%,transparent)]";
 
 const SIDEBAR_ACTIVE_COLLAPSED_CLASS =
   "lg:bg-[color-mix(in_srgb,var(--wt-brand)_14%,var(--wt-surface-2))] lg:text-wt-text lg:before:hidden lg:ring-1 lg:ring-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)]";
