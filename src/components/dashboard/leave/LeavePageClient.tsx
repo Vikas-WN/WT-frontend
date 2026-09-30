@@ -163,8 +163,10 @@ import { buildUserRequestBody } from "@/utils/leaveRequestPayload";
 import { activeAllocationsRequireClientApproval, isTalentPoolLeaveRouting } from "@/utils/leaveAllocations";
 import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSummary";
 import { LeaveBalanceForecastWidget } from "@/components/dashboard/leave/LeaveBalanceForecastWidget";
+import { LeaveMonthlyOutlook } from "@/components/dashboard/leave/LeaveMonthlyOutlook";
 import { HrLeaveBalancesPanel } from "@/components/dashboard/leave/HrLeaveBalancesPanel";
 import { useMyLeaveBalance } from "@/hooks/leave/useMyLeaveBalance";
+import { LEAVE_QUERY_ROOT } from "@/constants/leaveQueryKeys";
 import { CONTENT_CARD_CLASS, FILTER_BAR_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { cn } from "@/lib/utils";
 
@@ -347,8 +349,10 @@ export function LeavePageClient() {
   const myLeaveTabActive = leaveSubTab === "my" || leaveSubTab === "wfh";
   const teamLeaveTabActive = leaveSubTab === "team" || leaveSubTab === "org";
   const queryClient = useQueryClient();
+  // Balance, monthly plan, forecast and request preview all hang off the "leave" key, so one
+  // call after a request is created, decided or withdrawn refreshes every one of them.
   const invalidateLeaveBalance = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["leave", "my-balance"] });
+    void queryClient.invalidateQueries({ queryKey: LEAVE_QUERY_ROOT });
   }, [queryClient]);
 
   const [myRequestsFromDate, setMyRequestsFromDate] = useState("");
@@ -2184,6 +2188,7 @@ export function LeavePageClient() {
                               {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
                               <div className="mb-6"><LeaveBalanceSummary selectedType={normalizeUserRequestType(leaveRequestForm.request_type)} /></div>
                               <LeaveBalanceForecastWidget />
+                              {normalizeUserRequestType(leaveRequestForm.request_type) !== "COMP_OFF" ? <LeaveMonthlyOutlook /> : null}
                               <Tabs value={requestViewTab} onValueChange={(v) => setRequestViewTab(v as "request" | "view")} orientation="horizontal">
                                 <TabsList variant="line" className="w-full justify-start border-b border-wt-border/80">
                                   <TabsTrigger value="request">Apply for Leave</TabsTrigger>

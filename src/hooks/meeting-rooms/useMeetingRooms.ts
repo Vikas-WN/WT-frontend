@@ -5,8 +5,10 @@ import { hrmsService } from "@/services/hrms.service";
 import { notifyError, notifySuccess } from "@/lib/notify";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { ApiError } from "@/api/error";
+import { MEETING_ROOM_REFRESH_MS, MEETING_ROOM_STALE_MS } from "@/constants/meetingRooms";
 import type {
   MeetingRoomBookingCreatePayload,
+  MeetingRoomBookingUpdatePayload,
   MeetingRoomCreatePayload,
   MeetingRoomUpdatePayload,
 } from "@/types/meetingRoom";
@@ -44,7 +46,9 @@ export function useMeetingRoomBookings(roomId: number | null, from?: string, to?
       const res = await hrmsService.getMeetingRoomBookings(roomId as number, { from, to });
       return res.data ?? [];
     },
-    staleTime: 15_000,
+    staleTime: MEETING_ROOM_STALE_MS,
+    refetchInterval: MEETING_ROOM_REFRESH_MS,
+    refetchOnWindowFocus: "always",
   });
 }
 
@@ -55,7 +59,9 @@ export function useMyMeetingRoomBookings(upcomingOnly = false) {
       const res = await hrmsService.getMyMeetingRoomBookings(upcomingOnly);
       return res.data ?? [];
     },
-    staleTime: 15_000,
+    staleTime: MEETING_ROOM_STALE_MS,
+    refetchInterval: MEETING_ROOM_REFRESH_MS,
+    refetchOnWindowFocus: "always",
   });
 }
 
@@ -112,6 +118,19 @@ export function useCreateMeetingRoomBooking() {
       notifySuccess(`Booked '${res.data?.room_name}' for ${res.data?.title}.`);
     },
     onError: (error) => notifyError(apiErrorMessage(error, "Couldn't book that room.")),
+  });
+}
+
+export function useUpdateMeetingRoomBooking() {
+  const invalidate = useInvalidateMeetingRoomQueries();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: MeetingRoomBookingUpdatePayload }) =>
+      hrmsService.updateMeetingRoomBooking(id, payload),
+    onSuccess: (res) => {
+      invalidate();
+      notifySuccess(`Updated '${res.data?.title}' — everyone sees the new time.`);
+    },
+    onError: (error) => notifyError(apiErrorMessage(error, "Couldn't update that booking.")),
   });
 }
 

@@ -9,9 +9,9 @@ import { formatBalanceDays } from "@/utils/leaveRequestDisplay";
 import { formatApiDate, toApiDateParam } from "@/utils/apiDate";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 
-/** Projected leave balance on a future date, before booking travel — factors in
- *  already-approved and still-pending leave/optional-leave requests between
- *  today and that date, not just the current snapshot. */
+/** Projected leave balance on a future date, before booking travel — adds the leaves credited
+ *  on the 1st of each month until then and subtracts approved and still-pending
+ *  leave/optional-leave requests, not just the current snapshot. */
 export function LeaveBalanceForecastWidget() {
   const [targetDate, setTargetDate] = useState("");
   const normalized = targetDate ? (toApiDateParam(targetDate) ?? "") : "";
@@ -64,11 +64,15 @@ export function LeaveBalanceForecastWidget() {
               </span>{" "}
               <span className="text-xs text-wt-text-muted">days</span>
             </p>
-            {forecast.approved_days > 0 || forecast.pending_days > 0 ? (
+            {forecast.accrual_days > 0 || forecast.approved_days > 0 || forecast.pending_days > 0 ? (
               <p className="text-xs text-wt-text-muted">
-                {forecast.approved_days > 0 ? `${forecast.approved_days} approved` : null}
-                {forecast.approved_days > 0 && forecast.pending_days > 0 ? " · " : null}
-                {forecast.pending_days > 0 ? `${forecast.pending_days} pending` : null}
+                {[
+                  forecast.accrual_days > 0 ? `+${forecast.accrual_days} credited` : null,
+                  forecast.approved_days > 0 ? `−${forecast.approved_days} approved` : null,
+                  forecast.pending_days > 0 ? `−${forecast.pending_days} pending` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
                 {" between now and then"}
               </p>
             ) : null}

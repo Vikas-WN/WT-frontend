@@ -92,9 +92,20 @@ function RoomCard({
   );
 }
 
-function RoomScheduleTable({ roomId }: { roomId: number }) {
+/** The owner may edit a booking; so may a room admin (Office Admin / HR / Admin). */
+function useCanEditBooking(): (booking: MeetingRoomBooking) => boolean {
+  const { user } = useAuth();
+  const email = (user?.email ?? "").toLowerCase();
+  const isAdmin = (user?.roles ?? []).some((role) => ROOM_ADMIN_ROLES.includes(role));
+  return (booking) => isAdmin || booking.booked_by.email.toLowerCase() === email;
+}
+
+function RoomScheduleTable({ room }: { room: MeetingRoom }) {
   const today = useMemo(() => formatApiDate(new Date()), []);
-  const bookingsQ = useMeetingRoomBookings(roomId);
+  const bookingsQ = useMeetingRoomBookings(room.id);
+  const canEdit = useCanEditBooking();
+  // Transient UI state: which booking's edit dialog is open.
+  const [editing, setEditing] = useState<MeetingRoomBooking | null>(null);
   const rows = bookingsQ.data ?? [];
 
   return (
@@ -112,6 +123,7 @@ function RoomScheduleTable({ roomId }: { roomId: number }) {
                 <TableHead>When</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>Booked by</TableHead>
+                <TableHead className="w-20" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -122,22 +134,47 @@ function RoomScheduleTable({ roomId }: { roomId: number }) {
                   </TableCell>
                   <TableCell className="whitespace-normal font-medium text-wt-text">{b.title}</TableCell>
                   <TableCell>{b.booked_by.name}</TableCell>
+                  <TableCell>
+                    {canEdit(b) ? (
+                      <Button type="button" variant="outline" size="sm" onClick={() => setEditing(b)}>
+                        Edit
+                      </Button>
+                    ) : null}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </WtTable>
         </ScrollableTable>
       </ManagementListContent>
-      <p className="text-xs text-wt-text-faint">Showing from {today}.</p>
+      <p className="text-xs text-wt-text-faint">
+        Showing from {today}. This updates on its own, so a change anyone makes appears here within seconds.
+      </p>
+      {editing ? <BookRoomDialog room={room} booking={editing} onClose={() => setEditing(null)} /> : null}
     </ManagementListCard>
   );
 }
 
 function MyBookingsSection() {
   const myBookingsQ = useMyMeetingRoomBookings(true);
+  const roomsQ = useMeetingRoomsList();
   const cancelBooking = useCancelMeetingRoomBooking();
   const [pendingCancel, setPendingCancel] = useState<MeetingRoomBooking | null>(null);
+  const [editing, setEditing] = useState<MeetingRoomBooking | null>(null);
   const rows = myBookingsQ.data ?? [];
+  // The edit dialog needs the room; a booking in a since-deactivated room still carries its name.
+  const editingRoom = editing
+    ? ((roomsQ.data ?? []).find((r) => r.id === editing.room_id) ?? {
+        id: editing.room_id,
+        name: editing.room_name,
+        location: null,
+        capacity: null,
+        amenities: null,
+        is_active: true,
+        created_at: editing.created_at,
+        updated_at: editing.created_at,
+      })
+    : null;
 
   return (
     <ManagementListCard title="My upcoming bookings">
@@ -161,19 +198,28 @@ function MyBookingsSection() {
                   {formatApiDateTimeDisplay(b.start_time)} – {formatApiDateTimeDisplay(b.end_time)}
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setPendingCancel(b)}
-                disabled={cancelBooking.isPending}
-              >
-                Cancel
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setEditing(b)}>
+                  Edit
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPendingCancel(b)}
+                  disabled={cancelBooking.isPending}
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           ))}
         </div>
       </ManagementListContent>
+
+      {editing && editingRoom ? (
+        <BookRoomDialog room={editingRoom} booking={editing} onClose={() => setEditing(null)} />
+      ) : null}
 
       <ConfirmDialog
         open={pendingCancel != null}
@@ -197,6 +243,7 @@ function BookRoomTab() {
   const roomsQ = useMeetingRoomsList();
   const rooms = roomsQ.data ?? [];
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
+  const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? null;
   const [bookingRoom, setBookingRoom] = useState<MeetingRoom | null>(null);
 
   return (
@@ -222,7 +269,7 @@ function BookRoomTab() {
         </ManagementListContent>
       </ManagementListCard>
 
-      {selectedRoomId != null ? <RoomScheduleTable roomId={selectedRoomId} /> : null}
+      {selectedRoom ? <RoomScheduleTable room={selectedRoom} /> : null}
 
       <MyBookingsSection />
 

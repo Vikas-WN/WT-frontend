@@ -58,3 +58,14 @@ export interface MeetingRoomBookingCreatePayload {
   attendees?: string | null;
   notes?: string | null;
 }
+
+/** Only the fields sent change. `attendees` / `notes` are cleared by sending null. */
+export interface MeetingRoomBookingUpdatePayload {
+  room_id?: number;
+  title?: string;
+  /** dd/mm/yyyy HH:MM:SS — read as office (business timezone) time. */
+  start_time?: string;
+  end_time?: string;
+  attendees?: string | null;
+  notes?: string | null;
+}

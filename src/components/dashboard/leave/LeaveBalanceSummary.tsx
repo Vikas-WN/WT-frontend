@@ -83,6 +83,7 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
   const showAll = !isCompOffOnly;
 
   return (
+    <>
     <div className={`grid grid-cols-1 gap-4 ${isCompOffOnly ? "" : "sm:grid-cols-2 lg:grid-cols-5"}`}>
       {showAll ? (
         <BalanceStatCard
@@ -139,5 +140,12 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
         />
       ) : null}
     </div>
+    {showAll ? (
+      <p className="mt-2 text-xs text-muted-foreground">
+        This is your balance today. You earn 1.5 leaves on the 1st of every month, and leave approved for a
+        later month comes off that month — see &ldquo;Your leave, month by month&rdquo; below.
+      </p>
+    ) : null}
+    </>
   );
 }

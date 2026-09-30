@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react";
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
 import { DatePickerField, InputField, TextAreaField } from "@/components/dashboard/ui/forms";
-import { useCreateMeetingRoomBooking } from "@/hooks/meeting-rooms/useMeetingRooms";
+import { useCreateMeetingRoomBooking, useUpdateMeetingRoomBooking } from "@/hooks/meeting-rooms/useMeetingRooms";
 import { formatApiDate, formatApiDateTime, fromApiDate } from "@/utils/apiDate";
-import type { MeetingRoom } from "@/types/meetingRoom";
+import type { MeetingRoom, MeetingRoomBooking } from "@/types/meetingRoom";
 
 function combineDateAndTime(dateApiValue: string, time: string): Date | null {
   if (!dateApiValue || !time) return null;
@@ -17,23 +17,37 @@ function combineDateAndTime(dateApiValue: string, time: string): Date | null {
   return combined;
 }
 
+/** "dd/mm/yyyy HH:MM:SS" -> the date and "HH:MM" the form fields hold. */
+function splitApiDateTime(value: string): { date: string; time: string } {
+  const [date = "", time = ""] = value.trim().split(/\s+/);
+  return { date, time: time.slice(0, 5) };
+}
+
+/** Books a room — or, given `booking`, edits one: same form, pre-filled, saved in place. */
 export function BookRoomDialog({
   room,
   onClose,
   defaultDate,
+  booking,
 }: {
   room: MeetingRoom;
   onClose: () => void;
   /** dd/mm/yyyy — the day the user was viewing when they hit "Book". */
   defaultDate?: string;
+  /** Edit this existing booking instead of making a new one. */
+  booking?: MeetingRoomBooking;
 }) {
-  const [date, setDate] = useState(defaultDate || formatApiDate(new Date()));
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [title, setTitle] = useState("");
-  const [attendees, setAttendees] = useState("");
-  const [notes, setNotes] = useState("");
+  const editing = booking != null;
+  const initialStart = booking ? splitApiDateTime(booking.start_time) : null;
+  const [date, setDate] = useState(initialStart?.date || defaultDate || formatApiDate(new Date()));
+  const [startTime, setStartTime] = useState(initialStart?.time ?? "");
+  const [endTime, setEndTime] = useState(booking ? splitApiDateTime(booking.end_time).time : "");
+  const [title, setTitle] = useState(booking?.title ?? "");
+  const [attendees, setAttendees] = useState(booking?.attendees ?? "");
+  const [notes, setNotes] = useState(booking?.notes ?? "");
   const createBooking = useCreateMeetingRoomBooking();
+  const updateBooking = useUpdateMeetingRoomBooking();
+  const saving = createBooking.isPending || updateBooking.isPending;
 
   const startDate = useMemo(() => combineDateAndTime(date, startTime), [date, startTime]);
   const endDate = useMemo(() => combineDateAndTime(date, endTime), [date, endTime]);
@@ -50,6 +64,23 @@ export function BookRoomDialog({
 
   const handleSubmit = () => {
     if (!canSubmit || !startDate || !endDate) return;
+    if (booking) {
+      // Attendees/notes are sent as null when emptied so they are actually cleared.
+      updateBooking.mutate(
+        {
+          id: booking.id,
+          payload: {
+            title: title.trim(),
+            start_time: formatApiDateTime(startDate),
+            end_time: formatApiDateTime(endDate),
+            attendees: attendees.trim() || null,
+            notes: notes.trim() || null,
+          },
+        },
+        { onSuccess: onClose }
+      );
+      return;
+    }
     createBooking.mutate(
       {
         room_id: room.id,
@@ -66,14 +97,14 @@ export function BookRoomDialog({
   return (
     <WtFormDialog
       open
-      title={`Book ${room.name}`}
+      title={editing ? `Edit booking · ${room.name}` : `Book ${room.name}`}
       description={room.location ?? undefined}
       onClose={onClose}
       onSubmit={handleSubmit}
-      submitLabel="Book room"
-      submittingLabel="Booking…"
+      submitLabel={editing ? "Save changes" : "Book room"}
+      submittingLabel={editing ? "Saving…" : "Booking…"}
       submitDisabled={!canSubmit}
-      loading={createBooking.isPending}
+      loading={saving}
     >
       <div className="space-y-5">
         <InputField label="Meeting title" value={title} onChange={setTitle} required placeholder="Sprint planning" />

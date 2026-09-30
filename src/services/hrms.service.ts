@@ -63,6 +63,7 @@ import type {
   MeetingRoom,
   MeetingRoomBooking,
   MeetingRoomBookingCreatePayload,
+  MeetingRoomBookingUpdatePayload,
   MeetingRoomCreatePayload,
   MeetingRoomUpdatePayload,
 } from "@/types/meetingRoom";
@@ -96,9 +97,48 @@ export interface LeaveBalanceForecastData {
   as_of_date: string;
   target_date: string;
   current_total: number;
+  /** Approved leave in later months — already in the plan, not yet in today's balance. */
   approved_days: number;
   pending_days: number;
+  /** Leaves credited (1.5 on the 1st of each month) between now and the target date. */
+  accrual_days: number;
   projected_total: number;
+}
+
+/** One month of the employee's leave plan (GET /profile/balances/monthly). */
+export interface LeaveMonthOutlookItem {
+  year: number;
+  month: number;
+  label: string;
+  is_current: boolean;
+  /** Credited on the 1st of this month; 0 for the current month (already in the balance). */
+  credit: number;
+  approved_days: number;
+  pending_days: number;
+  /** Balance at the end of the month counting approved leave; any shortfall is LOP. */
+  closing_total: number;
+  lop_days: number;
+  closing_total_if_pending: number;
+  lop_days_if_pending: number;
+}
+
+export interface LeaveMonthlyOutlookData {
+  accrues: boolean;
+  monthly_credit_total: number;
+  monthly_credit_primary: number;
+  monthly_credit_secondary: number;
+  credited_on: string;
+  current_total: number;
+  months: LeaveMonthOutlookItem[];
+}
+
+/** What a leave request for some dates would do to the balance (GET /profile/balances/leave-impact). */
+export interface LeaveImpactData {
+  leave_days: number;
+  lop_days: number;
+  covered_days: number;
+  balance_after: number;
+  message: string;
 }
 
 export interface LeaveBalancesListItem {
@@ -589,6 +629,21 @@ export const hrmsService = {
       endpoints.profile.myBalancesForecast,
       { query: applyApiDateQuery({ targetDate }, ["targetDate"]) }
     );
+  },
+
+  getMyLeaveOutlook(months = 6) {
+    return apiClient.get<ApiEnvelope<LeaveMonthlyOutlookData>>(endpoints.profile.myBalancesMonthly, {
+      query: { months: String(months) },
+    });
+  },
+
+  getMyLeaveImpact(params: { fromDate: string; toDate: string; isHalfDay: boolean }) {
+    return apiClient.get<ApiEnvelope<LeaveImpactData>>(endpoints.profile.myLeaveImpact, {
+      query: {
+        ...applyApiDateQuery({ fromDate: params.fromDate, toDate: params.toDate }, ["fromDate", "toDate"]),
+        isHalfDay: String(params.isHalfDay),
+      },
+    });
   },
 
   getEmployeeLeaveBalances(empId: string) {
@@ -1596,6 +1651,13 @@ export const hrmsService = {
 
   createMeetingRoomBooking(payload: MeetingRoomBookingCreatePayload) {
     return apiClient.post<ApiEnvelope<MeetingRoomBooking>>(endpoints.meetingRooms.bookingsRoot, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateMeetingRoomBooking(id: number, payload: MeetingRoomBookingUpdatePayload) {
+    return apiClient.put<ApiEnvelope<MeetingRoomBooking>>(endpoints.meetingRooms.bookingById(id), {
       contentType: "application/json",
       body: JSON.stringify(payload),
     });

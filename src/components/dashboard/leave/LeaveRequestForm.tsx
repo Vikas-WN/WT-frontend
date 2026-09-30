@@ -7,6 +7,7 @@ import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSe
 import { Textarea } from "@/components/ui/textarea";
 import { LeaveManagerSelector } from "./LeaveManagerSelector";
 import { LeaveAdditionalRecipientsSelector } from "./LeaveAdditionalRecipientsSelector";
+import { LeaveImpactNotice } from "./LeaveImpactNotice";
 import { DatePicker } from "@/components/ui/date-picker";
 import { normalizeUserRequestType } from "@/utils/actionToast";
 import { useMemo } from "react";
@@ -159,6 +160,12 @@ export function LeaveRequestForm({
             </label>
           </div>
         ) : null}
+        <LeaveImpactNotice
+          fromDate={values.request_from_date}
+          toDate={values.is_half_day ? values.request_from_date : values.request_to_date}
+          isHalfDay={values.is_half_day}
+          enabled={isLeaveOrOptional && !editingLeaveRequestId}
+        />
         {isCompOff ? (
           <div className="mt-5">
             <Button
