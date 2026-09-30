@@ -24,6 +24,7 @@ import {
   WT_STICKY_TABLE_HEAD_CLASS,
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
+import { PULSE_RATING_LEVELS } from "@/constants/pulseRatings";
 import type { AdminEditPayload, MonthlySubmissionItem } from "@/types/kpi";
 
 type Ratings = Record<number, number | null>;
@@ -286,9 +287,9 @@ function RatingSelect({
       )}
     >
       {value == null ? <option value="">—</option> : null}
-      {[1, 2, 3, 4, 5].map((n) => (
-        <option key={n} value={n}>
-          {n}
+      {PULSE_RATING_LEVELS.map((level) => (
+        <option key={level.value} value={level.value}>
+          {level.label}
         </option>
       ))}
     </select>

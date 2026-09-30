@@ -25,7 +25,8 @@ export function PulsePageClient() {
   const { user } = useAuth();
   const roles = useMemo(() => normalizeRoles(user?.roles ?? []), [user?.roles]);
   const isHrOrAdmin = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
-  const isManager = roles.includes("ROLE_MANAGER") || roles.includes("ROLE_DM");
+  // Project, Delivery and Account Managers all review the submissions routed to them.
+  const isManager = roles.includes("ROLE_MANAGER") || roles.includes("ROLE_DM") || roles.includes("ROLE_AM");
 
   if (isHrOrAdmin) return <PulseAdminPageClient />;
   if (isManager) return <PulseManagerPageClient />;
@@ -179,7 +180,7 @@ const ADMIN_LINKS: Partial<Record<PulseTabLink, AdminTab>> = { "team-reviews": "
 function PulseAdminPageClient() {
   return (
     <PulseTabsPage<AdminTab>
-      description="Define KPIs and WebKnot values per band and designation, open or close the submission window, give final approval, and review KPI reports."
+      description="Define KPIs and WebKnot values per band and designation, open or close the submission window, send reviews back when needed, and review KPI reports."
       initial="submissions"
       items={ADMIN_TABS}
       links={ADMIN_LINKS}
