@@ -37,7 +37,13 @@ export function parseUserPreferences(raw: unknown): UserPreferences {
       dateFormat === "DMY" || dateFormat === "MDY" || dateFormat === "YMD"
         ? (dateFormat as DateFormatPreference)
         : DEFAULT_USER_PREFERENCES.date_format,
+    last_seen_release: parseReleaseId(row.last_seen_release ?? row.lastSeenRelease),
   };
+}
+
+function parseReleaseId(raw: unknown): string | null {
+  const id = typeof raw === "string" ? raw.trim() : "";
+  return id === "" ? null : id;
 }
 
 export function applyDensityPreference(density: DensityPreference) {

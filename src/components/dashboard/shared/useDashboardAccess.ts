@@ -49,6 +49,14 @@ export function useDashboardAccess() {
    * direction locks working employees out of the whole app.
    */
   const [statusFromProfile, setStatusFromProfile] = useState(false);
+  /**
+   * True once the onboarding decision above has actually been made — the profile has loaded (or
+   * there is none to load) and `requiresSelfOnboarding` reflects it. Before that,
+   * `requiresSelfOnboarding` is false simply because nothing is known yet, so anything that
+   * must not appear for someone still being onboarded has to wait for this, not for that flag.
+   * Set in the same state update as the decision, so the two are never out of step.
+   */
+  const [accessSettled, setAccessSettled] = useState(false);
   const [isSelfOnboarded, setIsSelfOnboarded] = useState(
     () => !shouldRequireSelfOnboarding(initialStatus)
   );
@@ -78,6 +86,7 @@ export function useDashboardAccess() {
   useEffect(() => {
     if (!user) return;
     if (profileQ.isLoading) return;
+    setAccessSettled(true);
 
     const profile = profileQ.data ?? null;
     if (!profile) {
@@ -133,6 +142,7 @@ export function useDashboardAccess() {
     isAccountManagerOnly,
     isEmployee,
     requiresSelfOnboarding,
+    accessSettled,
     requiresExitSurvey,
     employeeSelfServeProfile,
     canAccessProfile,

@@ -12,6 +12,8 @@ export type UserPreferences = {
   desktop_notifications: boolean;
   week_starts_on: WeekStartPreference;
   date_format: DateFormatPreference;
+  /** Newest "What's new" release this user has read; null until they read one. */
+  last_seen_release: string | null;
 };
 
 export type UserPreferencesUpdate = Partial<UserPreferences>;
@@ -25,6 +27,7 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   desktop_notifications: true,
   week_starts_on: "monday",
   date_format: "DMY",
+  last_seen_release: null,
 };
 
 /** Curated IANA zones for the settings picker (API accepts any valid zone). */

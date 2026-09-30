@@ -37,4 +37,5 @@ WebTrak frontend: Next.js 16 (App Router, Turbopack dev), React 19, TypeScript s
 - `api_contract.md` is the endpoint-by-endpoint backend contract.
 - `docs/ARCHITECTURE.md` is mirrored in `../webtrak1.0/docs/` — update both. README is a slightly older copy of it.
 - Some files are huge (`UploadsPageClient.tsx` ~2.8k lines, `hrms.service.ts` ~2.5k); refactor by extraction following `src/ARCHITECTURE.md`'s incremental cleanup guide.
+- **"What's new" dialog:** to announce a deployment, add an entry at the TOP of `src/constants/releaseNotes.ts` (new `id` = `YYYY-MM-DD-NN`, plain-language highlights) — each user then sees it once, and never again. No entry, no dialog. `?whatsNew=preview` shows the latest one without marking it seen. Tests: `pnpm test:unit` (rules + a guard on the notes file) and `pnpm test:e2e:whats-new` (real Chrome, real app, mock API; screenshots in `scripts/e2e/out/`).
 - `scripts/*.mjs` and `replace_skills_form.py` are one-off codemods, not part of any workflow. `migration/` holds CSV data-migration templates.

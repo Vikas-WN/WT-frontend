@@ -29,9 +29,13 @@ import { showErrorToast, showSuccessToast } from "@/lib/toast";
 type UserPreferencesContextValue = {
   preferences: UserPreferences;
   isLoading: boolean;
+  /** The preferences request failed, so `preferences` is only a default — not what is saved. */
+  loadFailed: boolean;
   isSaving: boolean;
   setTheme: (theme: ThemePreference) => void;
   updatePreferences: (patch: UserPreferencesUpdate) => Promise<void>;
+  /** Record that this user has read a release's notes — saved quietly, no toast. */
+  markReleaseSeen: (releaseId: string) => Promise<void>;
   refresh: () => Promise<void>;
 };
 
@@ -98,7 +102,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   const mutation = useMutation({
-    mutationFn: async (args: { patch: UserPreferencesUpdate; silent?: boolean }) => {
+    mutationFn: async (args: { patch: UserPreferencesUpdate; silent?: boolean; quiet?: boolean }) => {
       const res = await hrmsService.updateMyPreferences(args.patch);
       return { prefs: parseUserPreferences(unwrapPreferencesPayload(res)), silent: Boolean(args.silent) };
     },
@@ -111,14 +115,15 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
       if (patch.reduce_motion !== undefined) applyReduceMotionPreference(patch.reduce_motion);
       return { previous };
     },
-    onError: (error, _args, ctx) => {
+    onError: (error, args, ctx) => {
       if (ctx?.previous) {
         setOptimistic(ctx.previous);
         applyTheme(ctx.previous.theme);
         applyDensityPreference(ctx.previous.density);
         applyReduceMotionPreference(ctx.previous.reduce_motion);
       }
-      showErrorToast(error instanceof Error ? error.message : "Could not save preferences.");
+      // A background save (marking a release as read) must not interrupt anyone with an error.
+      if (!args.quiet) showErrorToast(error instanceof Error ? error.message : "Could not save preferences.");
     },
     onSuccess: (result) => {
       setOptimistic(null);
@@ -141,6 +146,13 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     [mutation]
   );
 
+  const markReleaseSeen = useCallback(
+    async (releaseId: string) => {
+      await mutation.mutateAsync({ patch: { last_seen_release: releaseId }, silent: true, quiet: true });
+    },
+    [mutation]
+  );
+
   const refresh = useCallback(async () => {
     await query.refetch();
   }, [query]);
@@ -149,12 +161,14 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     () => ({
       preferences,
       isLoading: query.isLoading && enabled,
+      loadFailed: query.isError,
       isSaving: mutation.isPending,
       setTheme,
       updatePreferences,
+      markReleaseSeen,
       refresh,
     }),
-    [preferences, query.isLoading, enabled, mutation.isPending, setTheme, updatePreferences, refresh]
+    [preferences, query.isLoading, query.isError, enabled, mutation.isPending, setTheme, updatePreferences, markReleaseSeen, refresh]
   );
 
   return (
@@ -169,9 +183,11 @@ export function useUserPreferences() {
     return {
       preferences: DEFAULT_USER_PREFERENCES,
       isLoading: false,
+      loadFailed: false,
       isSaving: false,
       setTheme: (theme: ThemePreference) => applyTheme(theme),
       updatePreferences: async () => undefined,
+      markReleaseSeen: async () => undefined,
       refresh: async () => undefined,
       resolvedTheme: resolveThemePreference(DEFAULT_USER_PREFERENCES.theme),
     };

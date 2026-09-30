@@ -11,6 +11,7 @@ import { DashboardChrome } from "@/components/dashboard/DashboardChrome";
 import { CommandPaletteProvider } from "@/components/dashboard/CommandPalette";
 import { KeyboardShortcutsProvider } from "@/components/dashboard/KeyboardShortcuts";
 import { UserPreferencesProvider } from "@/context/UserPreferencesContext";
+import { WhatsNewGate } from "@/components/dashboard/whats-new/WhatsNewGate";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 
 function PendingOnboardingGuard({ children }: { children: ReactNode }) {
@@ -74,6 +75,7 @@ function DashboardChromeBoundary({ children }: { children: ReactNode }) {
             </DashboardChrome>
           </KeyboardShortcutsProvider>
         </CommandPaletteProvider>
+        <WhatsNewGate />
       </UserPreferencesProvider>
     </DashboardNavProvider>
   );
