@@ -142,15 +142,15 @@ function Calendar({
           "text-muted-foreground/40 [&_.rdp-day_button]:text-muted-foreground/40",
         hidden: "invisible",
         today:
-          "border border-border text-foreground font-medium rounded-md",
+          "border border-[var(--wt-brand)] text-foreground font-medium rounded-md",
         selected:
-          "bg-black dark:bg-white text-white dark:text-black font-medium rounded-md [&_.rdp-day_button]:bg-transparent",
+          "bg-[var(--wt-brand)] text-[var(--wt-brand-text)] font-medium rounded-md [&_.rdp-day_button]:bg-transparent",
         range_start:
-          "bg-black dark:bg-white text-white dark:text-black rounded-l-md font-medium [&_.rdp-day_button]:bg-transparent",
+          "bg-[var(--wt-brand)] text-[var(--wt-brand-text)] rounded-l-md font-medium [&_.rdp-day_button]:bg-transparent",
         range_end:
-          "bg-black dark:bg-white text-white dark:text-black rounded-r-md font-medium [&_.rdp-day_button]:bg-transparent",
+          "bg-[var(--wt-brand)] text-[var(--wt-brand-text)] rounded-r-md font-medium [&_.rdp-day_button]:bg-transparent",
         range_middle:
-          "bg-muted/60 text-foreground rounded-none [&_.rdp-day_button]:bg-transparent",
+          "bg-[var(--wt-brand-soft)] text-foreground rounded-none [&_.rdp-day_button]:bg-transparent",
         ...classNames,
       }}
       {...props}

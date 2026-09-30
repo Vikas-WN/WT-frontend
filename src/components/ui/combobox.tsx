@@ -148,7 +148,7 @@ function ComboboxContent({
             // Width tracks the trigger but is capped at 28rem — a full-column-width
             // trigger (e.g. Reporting Manager on the onboarding form) would otherwise
             // open a popup that hugs / spills past the right edge of the screen.
-            "group/combobox-content relative z-[200] flex max-h-[min(15rem,var(--available-height,calc(100dvh-1rem)))] w-[min(var(--anchor-width),var(--available-width,100vw),28rem)] max-w-[min(var(--available-width,100vw),calc(100vw-1rem))] min-h-0 min-w-0 flex-col overflow-x-hidden overflow-y-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 duration-100 dark:border-wt-border-md dark:bg-wt-surface-1 dark:shadow-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-8 *:data-[slot=input-group]:border-input/30 *:data-[slot=input-group]:bg-input/30 *:data-[slot=input-group]:shadow-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            "group/combobox-content relative z-[200] flex max-h-[min(15rem,var(--available-height,calc(100dvh-1rem)))] w-[min(var(--anchor-width),var(--available-width,100vw),28rem)] max-w-[min(var(--available-width,100vw),calc(100vw-1rem))] min-h-0 min-w-0 flex-col overflow-x-hidden overflow-y-hidden rounded-xl border border-wt-border bg-wt-surface-1 shadow-[var(--wt-shadow-lg)] duration-100 dark:border-wt-border-md dark:shadow-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-8 *:data-[slot=input-group]:border-input/30 *:data-[slot=input-group]:bg-input/30 *:data-[slot=input-group]:shadow-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
             className
           )}
           {...props}
@@ -214,7 +214,7 @@ const ComboboxList = forwardRef<HTMLDivElement, ComboboxPrimitive.List.Props>(
         {canScrollUp ? (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center bg-gradient-to-b from-white via-white/90 to-transparent py-1 dark:from-wt-surface-1 dark:via-wt-surface-1/90"
+            className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center bg-gradient-to-b from-wt-surface-1 via-wt-surface-1/90 to-transparent py-1"
           >
             <ChevronDownIcon className="size-3.5 rotate-180 text-muted-foreground" />
           </div>
@@ -222,7 +222,7 @@ const ComboboxList = forwardRef<HTMLDivElement, ComboboxPrimitive.List.Props>(
         {canScrollDown ? (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center bg-gradient-to-t from-white via-white/90 to-transparent py-1 dark:from-wt-surface-1 dark:via-wt-surface-1/90"
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center bg-gradient-to-t from-wt-surface-1 via-wt-surface-1/90 to-transparent py-1"
           >
             <ChevronDownIcon className="size-3.5 text-muted-foreground" />
           </div>
@@ -241,7 +241,7 @@ function ComboboxItem({
     <ComboboxPrimitive.Item
       data-slot="combobox-item"
       className={cn(
-        "relative flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg py-2.5 pr-8 pl-3 text-sm outline-hidden select-none transition-colors duration-150 text-slate-900 data-highlighted:bg-slate-100 data-highlighted:text-slate-900 not-data-[variant=destructive]:data-highlighted:**:text-slate-900 data-disabled:pointer-events-none data-disabled:opacity-50 dark:text-white dark:data-highlighted:bg-wt-surface-2 dark:data-highlighted:text-white dark:not-data-[variant=destructive]:data-highlighted:**:text-white [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg py-2.5 pr-8 pl-3 text-sm outline-hidden select-none transition-colors duration-150 text-wt-text data-highlighted:bg-wt-surface-2 data-highlighted:text-wt-text not-data-[variant=destructive]:data-highlighted:**:text-wt-text data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
