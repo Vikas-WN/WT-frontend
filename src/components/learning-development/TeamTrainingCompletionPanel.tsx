@@ -7,6 +7,16 @@ import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { hrmsService } from "@/services/hrms.service";
+import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  WT_STICKY_TABLE_HEAD_CLASS,
+  WtTable,
+} from "@/components/dashboard/ui/wtTable";
 import type { TeamTrainingCompletionRow } from "@/types/learning";
 import { cn } from "@/lib/utils";
 
@@ -64,39 +74,39 @@ export function TeamTrainingCompletionPanel() {
       ) : data.length === 0 ? (
         <EmptyState title="No Enrollments Yet" description="Your reports haven't enrolled in any trainings." />
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-wt-border">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-wt-surface-2/60 text-xs font-semibold uppercase tracking-wide text-wt-text-muted">
-              <tr>
-                <th className="px-4 py-2.5">Employee</th>
-                <th className="px-4 py-2.5">Training</th>
-                <th className="px-4 py-2.5">Status</th>
-                <th className="px-4 py-2.5">Progress</th>
-                <th className="px-4 py-2.5">Deadline</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-wt-border">
+        <ScrollableTable maxHeightClass="max-h-[min(60vh,520px)]">
+          <WtTable>
+            <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Employee</TableHead>
+                <TableHead>Training</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Progress</TableHead>
+                <TableHead>Deadline</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {data.map((row) => (
-                <tr
+                <TableRow
                   key={`${row.user_id}-${row.training_id}`}
-                  className={cn(row.is_overdue && "bg-rose-500/5")}
+                  className={cn(row.is_overdue && "bg-rose-500/5 hover:bg-rose-500/10")}
                 >
-                  <td className="px-4 py-2.5 font-medium text-wt-text">{row.name}</td>
-                  <td className="px-4 py-2.5 text-wt-text-muted">
+                  <TableCell className="font-medium text-wt-text">{row.name}</TableCell>
+                  <TableCell className="whitespace-normal">
                     {row.training_name}
                     {row.is_mandatory ? (
                       <Badge variant="outline" className="ml-2 text-[10px]">
                         Mandatory
                       </Badge>
                     ) : null}
-                  </td>
-                  <td className="px-4 py-2.5">
+                  </TableCell>
+                  <TableCell>
                     <Badge variant={row.enrollment_status === "COMPLETED" ? "default" : "outline"}>
                       {row.enrollment_status ?? "IN PROGRESS"}
                     </Badge>
-                  </td>
-                  <td className="px-4 py-2.5 tabular-nums text-wt-text-muted">{row.progress_percent}%</td>
-                  <td className="px-4 py-2.5">
+                  </TableCell>
+                  <TableCell className="tabular-nums">{row.progress_percent}%</TableCell>
+                  <TableCell>
                     {row.completion_deadline ? (
                       <span
                         className={cn(
@@ -110,12 +120,12 @@ export function TeamTrainingCompletionPanel() {
                     ) : (
                       <span className="text-wt-text-faint">—</span>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </WtTable>
+        </ScrollableTable>
       )}
     </section>
   );
