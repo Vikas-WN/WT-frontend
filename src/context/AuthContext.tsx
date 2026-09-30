@@ -19,6 +19,7 @@ import {
   useSessionTimeout,
 } from "@/hooks/useSessionTimeout";
 import {
+  SESSION_INACTIVITY_MS,
   SESSION_REFRESH_INTERVAL_MS,
   persistSessionPolicy,
   type SessionLogoutReason,
@@ -45,7 +46,6 @@ type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 const AUTH_STATUS_WATCHDOG_MS = 40_000;
 
 /** Minimum client-side idle window — see sessionInactivityMs below. */
-const SESSION_MIN_INACTIVITY_MS = 4 * 60 * 60 * 1000;
 
 interface AuthContextValue {
   /** Reflects the active persona: roles is narrowed to [activePersona] when one is selected. */
@@ -71,7 +71,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function applyAuthenticatedUser(freshUser: AuthUser): AuthUser {
   const normalized = { ...freshUser, roles: normalizeRoles(freshUser.roles ?? []) };
-  persistSessionTiming(normalized.session_started_at);
+  persistSessionTiming();
   return normalized;
 }
 
@@ -102,20 +102,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     return rawUser;
   }, [rawUser, activePersona]);
-  // Only true inactivity signs a user out: 4 hours with no keystroke / pointer /
-  // scroll / touch anywhere in the app (see useSessionTimeout's activity list).
-  // A larger server-provided window is honoured; a smaller one is floored to 4h.
-  const sessionInactivityMs = useMemo(
-    () =>
-      Math.max(
-        SESSION_MIN_INACTIVITY_MS,
-        Math.max(1, Number(user?.session_inactivity_minutes ?? 240)) * 60 * 1000
-      ),
-    [user?.session_inactivity_minutes]
-  );
-  // Do not sign an *active* user out on session age alone — the absolute cap is
-  // enforced server-side as a long backstop only.
-  const sessionMaxMs = Number.POSITIVE_INFINITY;
+  // Only true inactivity signs a user out: exactly 4 hours with no mouse movement or
+  // keystroke in any open tab (see useSessionTimeout). The window is a fixed constant
+  // — the server's value is the same constant — and session age never matters.
 
   useEffect(() => {
     userRef.current = user;
@@ -279,6 +268,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIdleWarningMinutes(minutesRemaining);
   }, []);
 
+  // Activity (in this or another tab) makes an open warning obsolete.
+  const clearIdleWarning = useCallback(() => setIdleWarningMinutes(null), []);
+
   const dismissIdleWarning = useCallback(() => {
     setIdleWarningMinutes(null);
     extendSessionRef.current();
@@ -301,9 +293,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     handleSessionTimeout,
     handleIdleWarning,
     {
-      inactivityMs: sessionInactivityMs,
-      maxMs: sessionMaxMs,
+      inactivityMs: SESSION_INACTIVITY_MS,
       refreshIntervalMs: SESSION_REFRESH_INTERVAL_MS,
+      onIdleWarningCleared: clearIdleWarning,
     }
   );
 

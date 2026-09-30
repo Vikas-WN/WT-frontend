@@ -313,7 +313,7 @@ Each codebase ships as one Docker image (`webtrak-frontend`, `webtrak-backend`, 
 | `COMPANY_EMAIL_DOMAIN`, `OAUTH_AUTO_CREATE_USER` | Backend | Sign-in policy for unregistered users |
 | `SMTP_*`, `SMTP_REDIRECT_NON_PROD` | Backend | Email delivery and non-prod redirection |
 | `APP_TIMEZONE`, `SCHEDULER_TIMEZONE`, `ENABLE_SCHEDULER` | Backend | Business zone and job scheduling |
-| `SESSION_INACTIVITY_MINUTES`, `SESSION_MAX_HOURS` | Both | Session policy (frontend copies are for display timers) |
+| *(none — fixed in code)* | Both | Sessions end only after 4 hours of inactivity (`src/constants/sessionPolicy.ts`, mirrored by the backend's `session_policy.py`); there is no absolute session cap and no env setting for it |
 
 **Build pipeline:** there is no CI config in either repo. Type errors surface only during `pnpm build` in the Docker build (as in the UAT build failure fixed on 23 Sep 2026), and backend tests are not run before images are built.
 

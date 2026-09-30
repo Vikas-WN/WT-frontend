@@ -1,17 +1,22 @@
-/** Session security policy — keep in sync with backend SESSION_* settings. */
-export const SESSION_INACTIVITY_MS =
-  Number(process.env.NEXT_PUBLIC_SESSION_INACTIVITY_MINUTES ?? 240) * 60 * 1000;
+/**
+ * Session policy. The only thing that signs a user out is 4 hours with no mouse
+ * movement and no keystroke (in any open tab) — never the age of the session. These
+ * are fixed on purpose: an environment value here has before shortened the window
+ * below what the backend enforces, or added an age cap that cut off active users.
+ */
+export const SESSION_INACTIVITY_MS = 4 * 60 * 60 * 1000;
 
-export const SESSION_MAX_MS =
-  Number(process.env.NEXT_PUBLIC_SESSION_MAX_HOURS ?? 8) * 60 * 60 * 1000;
-
-/** Ping server activity before idle cutoff (server also enforces inactivity). */
-export const SESSION_ACTIVITY_PING_MS = 5 * 60 * 1000;
+/** While the user is active, tell the server at most this often (only if something happened). */
+export const SESSION_ACTIVITY_PING_MS = 2 * 60 * 1000;
 
 /** Refresh access token while user is active (access token default 30 min). */
 export const SESSION_REFRESH_INTERVAL_MS = 25 * 60 * 1000;
 
-export const SESSION_STORAGE_STARTED_AT = "wt.sessionStartedAt";
+/**
+ * Last real user activity (epoch ms), in localStorage so every open tab shares it.
+ * It used to be per tab (sessionStorage): an idle background tab reached 4 hours
+ * and signed the user out while they were busy in another tab.
+ */
 export const SESSION_STORAGE_LAST_ACTIVITY = "wt.lastActivityAt";
 
 export const SESSION_IDLE_WARNING_MS = 5 * 60 * 1000;

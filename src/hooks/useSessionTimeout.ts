@@ -1,68 +1,75 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   SESSION_ACTIVITY_PING_MS,
   SESSION_IDLE_WARNING_MS,
   SESSION_INACTIVITY_MS,
-  SESSION_MAX_MS,
   SESSION_REFRESH_INTERVAL_MS,
   SESSION_STORAGE_LAST_ACTIVITY,
-  SESSION_STORAGE_STARTED_AT,
   type SessionLogoutReason,
 } from "@/constants/sessionPolicy";
 import { recordSessionActivity } from "@/lib/auth";
+import {
+  isIdleExpired,
+  isInWarningWindow,
+  latestActivity,
+  parseStoredActivity,
+  resolveInitialActivity,
+  shouldPingActivity,
+} from "@/utils/sessionActivity";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
 }
 
-function readSessionStartMs(): number {
-  if (!isBrowser()) return Date.now();
-  const raw = sessionStorage.getItem(SESSION_STORAGE_STARTED_AT);
-  if (!raw) return Date.now();
-  const parsed = Date.parse(raw);
-  return Number.isFinite(parsed) ? parsed : Date.now();
+/** Last activity recorded by ANY tab. Storage can be blocked, so never throw. */
+function readSharedActivity(): number | null {
+  if (!isBrowser()) return null;
+  try {
+    return parseStoredActivity(window.localStorage.getItem(SESSION_STORAGE_LAST_ACTIVITY));
+  } catch {
+    return null;
+  }
 }
 
-function readLastActivityMs(): number {
-  if (!isBrowser()) return Date.now();
-  const raw = sessionStorage.getItem(SESSION_STORAGE_LAST_ACTIVITY);
-  if (!raw) return Date.now();
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed : Date.now();
-}
-
-function touchLocalActivity() {
-  const now = Date.now();
-  if (!isBrowser()) return now;
-  sessionStorage.setItem(SESSION_STORAGE_LAST_ACTIVITY, String(now));
-  return now;
+function writeSharedActivity(at: number): void {
+  if (!isBrowser()) return;
+  try {
+    window.localStorage.setItem(SESSION_STORAGE_LAST_ACTIVITY, String(at));
+  } catch {
+    /* storage blocked — this tab still tracks its own activity */
+  }
 }
 
 export function recordLocalSessionActivity(): number {
-  return touchLocalActivity();
+  const now = Date.now();
+  writeSharedActivity(now);
+  return now;
 }
 
-export function persistSessionTiming(sessionStartedAt?: string | null) {
-  if (!isBrowser()) return;
-  const started = sessionStartedAt ? Date.parse(sessionStartedAt) : Date.now();
-  sessionStorage.setItem(SESSION_STORAGE_STARTED_AT, new Date(started).toISOString());
-  touchLocalActivity();
+export function persistSessionTiming() {
+  recordLocalSessionActivity();
 }
 
 export function clearSessionTiming() {
   if (!isBrowser()) return;
-  sessionStorage.removeItem(SESSION_STORAGE_STARTED_AT);
-  sessionStorage.removeItem(SESSION_STORAGE_LAST_ACTIVITY);
+  try {
+    window.localStorage.removeItem(SESSION_STORAGE_LAST_ACTIVITY);
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
- * Logs the user out after the configured inactivity window (server-provided
- * `session_inactivity_minutes`, default 240) or the absolute session-age cap
- * (`session_max_hours`, default 8).
- * Activity: mouse, keyboard, scroll, touch, focus, and client-side navigation.
+ * Signs the user out after 4 hours of inactivity — no mouse movement and no
+ * keystroke (scroll/touch count too, for touch devices) in any open tab — and
+ * for nothing else. Session age never matters.
+ *
+ * Activity is shared between tabs through localStorage. Each tab used to keep
+ * its own clock, so a background tab that had sat untouched for 4 hours signed
+ * the user out (logout is session-wide) while they were working in another tab.
  */
 export function useSessionTimeout(
   enabled: boolean,
@@ -70,21 +77,24 @@ export function useSessionTimeout(
   onIdleWarning?: (minutesRemaining: number) => void,
   options?: {
     inactivityMs?: number;
-    maxMs?: number;
     activityPingMs?: number;
     idleWarningMs?: number;
     refreshIntervalMs?: number;
+    /** Activity (here or in another tab) made an open idle warning obsolete. */
+    onIdleWarningCleared?: () => void;
   }
 ): { extendSession: () => void } {
   const pathname = usePathname();
   const onTimeoutRef = useRef(onTimeout);
   const onIdleWarningRef = useRef(onIdleWarning);
-  const lastActivityRef = useRef(Date.now());
-  const lastPingRef = useRef(Date.now());
-  const lastRefreshRef = useRef(Date.now());
+  const onIdleWarningClearedRef = useRef(options?.onIdleWarningCleared);
+  // Read the clock once, lazily; the real starting values are set when tracking begins.
+  const [mountedAt] = useState(() => Date.now());
+  const lastActivityRef = useRef(mountedAt);
+  const lastPingRef = useRef(mountedAt);
+  const lastRefreshRef = useRef(mountedAt);
   const idleWarningShownRef = useRef(false);
   const inactivityMs = options?.inactivityMs ?? SESSION_INACTIVITY_MS;
-  const maxMs = options?.maxMs ?? SESSION_MAX_MS;
   const activityPingMs = options?.activityPingMs ?? SESSION_ACTIVITY_PING_MS;
   const idleWarningMs = Math.min(options?.idleWarningMs ?? SESSION_IDLE_WARNING_MS, inactivityMs);
   const refreshIntervalMs = options?.refreshIntervalMs ?? SESSION_REFRESH_INTERVAL_MS;
@@ -97,39 +107,72 @@ export function useSessionTimeout(
     onIdleWarningRef.current = onIdleWarning;
   }, [onIdleWarning]);
 
-  const bumpActivity = useCallback(() => {
+  useEffect(() => {
+    onIdleWarningClearedRef.current = options?.onIdleWarningCleared;
+  }, [options?.onIdleWarningCleared]);
+
+  const clearWarning = useCallback(() => {
+    if (!idleWarningShownRef.current) return;
     idleWarningShownRef.current = false;
-    lastActivityRef.current = touchLocalActivity();
+    onIdleWarningClearedRef.current?.();
   }, []);
+
+  /** Latest activity from this tab or any other. */
+  const currentLastActivity = useCallback(
+    () => latestActivity(lastActivityRef.current, readSharedActivity()),
+    []
+  );
+
+  const bumpActivity = useCallback(() => {
+    clearWarning();
+    const now = Date.now();
+    lastActivityRef.current = now;
+    writeSharedActivity(now);
+  }, [clearWarning]);
 
   useEffect(() => {
     if (!enabled) return;
 
     const now = Date.now();
-    lastActivityRef.current = readLastActivityMs();
+    lastActivityRef.current = resolveInitialActivity(readSharedActivity(), now, inactivityMs);
+    writeSharedActivity(lastActivityRef.current);
     lastPingRef.current = now;
     lastRefreshRef.current = now;
 
+    // Mouse movement and keystrokes are the activity; scroll/touch/click/pointer
+    // cover touch devices and scroll-only use. "focus" is deliberately not one:
+    // a window regaining focus says nothing about the user being here (see onReturn).
     const events: Array<keyof WindowEventMap> = [
       "mousedown",
       "mousemove",
       "keydown",
       "click",
       "scroll",
+      "wheel",
       "touchstart",
       "pointerdown",
-      "focus",
       "input",
       "change",
     ];
 
+    // Input after the idle limit has already passed must not revive the session:
+    // timers are throttled or frozen in a background tab / sleeping laptop, so the
+    // interval below may not have fired yet. The server would refuse it anyway.
+    const expireIfIdle = (): boolean => {
+      if (!isIdleExpired(Date.now(), currentLastActivity(), inactivityMs)) return false;
+      clearWarning();
+      onTimeoutRef.current("idle");
+      return true;
+    };
+
     let moveThrottleUntil = 0;
     const onActivity = (event: Event) => {
       if (event.type === "mousemove") {
-        const now = Date.now();
-        if (now < moveThrottleUntil) return;
-        moveThrottleUntil = now + 2_000;
+        const at = Date.now();
+        if (at < moveThrottleUntil) return;
+        moveThrottleUntil = at + 2_000;
       }
+      if (expireIfIdle()) return;
       bumpActivity();
     };
     for (const eventName of events) {
@@ -137,68 +180,67 @@ export function useSessionTimeout(
       window.addEventListener(eventName, onActivity, { passive: true, capture: true });
     }
 
-    // Browsers throttle (or fully suspend) setInterval timers in a
-    // backgrounded tab — Chrome commonly drops a 30s interval to once a
-    // minute or slower after a few minutes hidden. A tester (or any user)
-    // who alt-tabs away to another window/tab for a while and comes back
-    // is still "actively using the app" by any reasonable definition, but
-    // the periodic activity ping below could stay silent well past the
-    // server's inactivity window during that time, so the very next request
-    // after returning gets a stale-session 401 — read by the user as being
-    // logged out while active. Ping immediately on return instead of
-    // waiting for the (possibly still-throttled) interval to catch up.
-    const onVisible = () => {
+    // Another tab saw the user: adopt it, and close a warning that no longer applies.
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== SESSION_STORAGE_LAST_ACTIVITY) return;
+      const at = parseStoredActivity(event.newValue);
+      if (at != null && at > lastActivityRef.current) {
+        lastActivityRef.current = at;
+        clearWarning();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+
+    // Coming back to the tab (or window). If 4 hours have passed, that is a
+    // sign-out; otherwise the user is here, so renew the session promptly rather
+    // than waiting for a (possibly still-throttled) timer.
+    const onReturn = () => {
       if (document.visibilityState !== "visible") return;
+      if (expireIfIdle()) return;
       bumpActivity();
-      const now = Date.now();
-      lastPingRef.current = now;
+      const at = Date.now();
+      lastPingRef.current = at;
       void recordSessionActivity().catch(() => undefined);
-      if (now - lastRefreshRef.current >= refreshIntervalMs) {
-        lastRefreshRef.current = now;
+      if (at - lastRefreshRef.current >= refreshIntervalMs) {
+        lastRefreshRef.current = at;
         void import("@/lib/auth").then(({ attemptTokenRefresh }) =>
           attemptTokenRefresh().catch(() => undefined)
         );
       }
     };
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onVisible);
+    document.addEventListener("visibilitychange", onReturn);
+    window.addEventListener("focus", onReturn);
 
     const intervalId = window.setInterval(async () => {
-      const now = Date.now();
-      const sessionStart = readSessionStartMs();
-      const idleFor = now - lastActivityRef.current;
+      const at = Date.now();
+      const last = currentLastActivity();
+      lastActivityRef.current = last;
 
-      if (now - sessionStart >= maxMs) {
-        idleWarningShownRef.current = false;
-        onTimeoutRef.current("expired");
-        return;
-      }
-      if (idleFor >= inactivityMs) {
-        idleWarningShownRef.current = false;
+      if (isIdleExpired(at, last, inactivityMs)) {
+        clearWarning();
         onTimeoutRef.current("idle");
         return;
       }
 
-      const warningThreshold = inactivityMs - idleWarningMs;
-      if (
-        idleFor >= warningThreshold &&
-        !idleWarningShownRef.current &&
-        onIdleWarningRef.current
-      ) {
-        idleWarningShownRef.current = true;
-        const minutesLeft = Math.max(1, Math.ceil((inactivityMs - idleFor) / 60_000));
-        onIdleWarningRef.current(minutesLeft);
+      if (isInWarningWindow(at, last, inactivityMs, idleWarningMs)) {
+        if (!idleWarningShownRef.current && onIdleWarningRef.current) {
+          idleWarningShownRef.current = true;
+          onIdleWarningRef.current(Math.max(1, Math.ceil((inactivityMs - (at - last)) / 60_000)));
+        }
+      } else {
+        clearWarning();
       }
 
-      if (idleFor < inactivityMs && now - lastPingRef.current >= activityPingMs) {
-        lastPingRef.current = now;
+      // Tell the server only when the user actually did something since the last ping.
+      if (shouldPingActivity(at, last, lastPingRef.current, activityPingMs)) {
+        lastPingRef.current = at;
         void recordSessionActivity().catch(() => undefined);
       }
 
-      // Proactively refresh access token before it expires (default 25 min vs 30 min expiry).
-      // This avoids 401->refresh races when the access token expires during activity.
-      if (idleFor < inactivityMs && now - lastRefreshRef.current >= refreshIntervalMs) {
-        lastRefreshRef.current = now;
+      // Keep the access token fresh (30 min expiry vs this 25 min cadence) so it
+      // doesn't lapse mid-activity and force a 401 -> refresh round trip.
+      if (at - lastRefreshRef.current >= refreshIntervalMs) {
+        lastRefreshRef.current = at;
         const { attemptTokenRefresh } = await import("@/lib/auth");
         void attemptTokenRefresh().catch(() => undefined);
       }
@@ -208,11 +250,12 @@ export function useSessionTimeout(
       for (const eventName of events) {
         window.removeEventListener(eventName, onActivity, { capture: true } as AddEventListenerOptions);
       }
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onVisible);
+      window.removeEventListener("storage", onStorage);
+      document.removeEventListener("visibilitychange", onReturn);
+      window.removeEventListener("focus", onReturn);
       window.clearInterval(intervalId);
     };
-  }, [activityPingMs, bumpActivity, enabled, idleWarningMs, inactivityMs, maxMs, refreshIntervalMs]);
+  }, [activityPingMs, bumpActivity, clearWarning, currentLastActivity, enabled, idleWarningMs, inactivityMs, refreshIntervalMs]);
 
   useEffect(() => {
     if (enabled) bumpActivity();
