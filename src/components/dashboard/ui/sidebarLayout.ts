@@ -1,8 +1,9 @@
 import { cn } from "@/lib/utils";
 
-/** Sidebar shell — fixed viewport height; nav scrolls inside. */
+/** Sidebar shell — fixed viewport height; nav scrolls inside. Deliberately
+ *  dark regardless of the app theme (see --wt-sidebar-* tokens). */
 export const SIDEBAR_SHELL_BASE =
-  "wt-sidebar wt-mobile-drawer z-40 flex h-dvh max-h-dvh shrink-0 flex-col border-r border-wt-border bg-wt-surface-1 transition-[width,transform,padding,background-color,border-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)] max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,288px)] lg:min-w-0 lg:translate-x-0 max-lg:shadow-[0_24px_64px_rgba(15,23,42,0.22)]";
+  "wt-sidebar wt-mobile-drawer z-40 flex h-dvh max-h-dvh shrink-0 flex-col border-r border-[var(--wt-sidebar-border)] bg-[var(--wt-sidebar-bg)] transition-[width,transform,padding] duration-[var(--wt-duration)] ease-[var(--wt-ease)] max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,288px)] lg:min-w-0 lg:translate-x-0 max-lg:shadow-[0_24px_64px_rgba(0,0,0,0.45)]";
 
 /** @deprecated Use sidebarShellClass */
 export const SIDEBAR_SHELL_CLASS = cn(
@@ -31,7 +32,7 @@ export const SIDEBAR_BACKDROP_CLASS =
   "fixed inset-0 z-30 bg-black/55 backdrop-blur-[3px] transition-opacity duration-200 lg:hidden";
 
 export const SIDEBAR_BRAND_WRAP_CLASS =
-  "mb-3 shrink-0 border-b border-wt-border/70 px-1 pb-3.5";
+  "mb-3 shrink-0 border-b border-[var(--wt-sidebar-border)] px-1 pb-3.5";
 
 export function sidebarBrandWrapClass(collapsed: boolean) {
   return cn(SIDEBAR_BRAND_WRAP_CLASS, collapsed && "lg:mb-2.5 lg:px-0 lg:pb-3");
@@ -47,7 +48,7 @@ export function sidebarBrandRowClass(collapsed: boolean) {
 }
 
 export const SIDEBAR_COLLAPSE_TOGGLE_CLASS =
-  "flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent text-wt-text-muted transition-colors duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:border-wt-border hover:bg-wt-surface-2 hover:text-wt-text max-lg:hidden";
+  "flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent text-[var(--wt-sidebar-text-muted)] transition-colors duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:border-[var(--wt-sidebar-border)] hover:bg-[var(--wt-sidebar-hover-bg)] hover:text-[var(--wt-sidebar-text)] max-lg:hidden";
 
 export const SIDEBAR_NAV_CLASS =
   "wt-sidebar-nav min-h-0 min-w-0 flex-1 space-y-1 overflow-x-hidden overflow-y-auto px-0.5 pb-2 pt-1";
@@ -56,22 +57,22 @@ export const SIDEBAR_GROUP_STACK_CLASS = "space-y-0.5";
 
 export function sidebarChildrenWrapClass(collapsed: boolean) {
   return cn(
-    "ml-3.5 min-w-0 space-y-0.5 border-l border-wt-border/60 py-1 pl-2.5",
+    "ml-3.5 min-w-0 space-y-0.5 border-l border-[var(--wt-sidebar-border)] py-1 pl-2.5",
     collapsed && "lg:hidden"
   );
 }
 
 export const SIDEBAR_FLYOUT_CLASS =
-  "absolute left-full top-0 z-[60] ml-2 w-60 rounded-xl border border-wt-border bg-wt-surface-1 p-1.5 shadow-[0_18px_48px_rgba(15,23,42,0.14)] ring-1 ring-black/[0.04] backdrop-blur-xl dark:ring-white/[0.06]";
+  "absolute left-full top-0 z-[60] ml-2 w-60 rounded-xl border border-[var(--wt-sidebar-border)] bg-[var(--wt-sidebar-surface-2)] p-1.5 shadow-[0_18px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl";
 
 export const SIDEBAR_FLYOUT_TITLE_CLASS =
-  "px-2.5 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-wt-text-faint";
+  "px-2.5 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--wt-sidebar-text-faint)]";
 
-export const SIDEBAR_FOOTER_CLASS = "mt-2 shrink-0 border-t border-wt-border/70 pt-2.5";
+export const SIDEBAR_FOOTER_CLASS = "mt-2 shrink-0 border-t border-[var(--wt-sidebar-border)] pt-2.5";
 
 export function sidebarFooterCardClass(collapsed: boolean) {
   return cn(
-    "rounded-xl bg-wt-surface-2/70 p-1 dark:bg-wt-surface-2/40",
+    "rounded-xl bg-[var(--wt-sidebar-hover-bg)] p-1",
     collapsed && "lg:bg-transparent lg:p-0"
   );
 }
@@ -115,13 +116,13 @@ const SIDEBAR_CHILD_BASE =
   "wt-sidebar-nav-item relative flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 whitespace-normal transition-[background-color,color] duration-[var(--wt-duration)] ease-[var(--wt-ease)]";
 
 const SIDEBAR_ACTIVE_CLASS =
-  "bg-[color-mix(in_srgb,var(--wt-brand)_14%,var(--wt-surface-1))] font-semibold text-wt-text before:absolute before:left-0 before:top-1/2 before:h-[1.15rem] before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-[var(--wt-brand)] [&_svg]:text-[var(--wt-brand)] [&_svg]:opacity-100 dark:bg-[color-mix(in_srgb,var(--wt-brand)_20%,transparent)]";
+  "bg-[var(--wt-sidebar-active-bg)] font-semibold text-[var(--wt-sidebar-text)] before:absolute before:left-0 before:top-1/2 before:h-[1.15rem] before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-[var(--wt-brand)] [&_svg]:text-[color-mix(in_srgb,var(--wt-brand)_55%,white)] [&_svg]:opacity-100";
 
 const SIDEBAR_ACTIVE_COLLAPSED_CLASS =
-  "lg:bg-[color-mix(in_srgb,var(--wt-brand)_14%,var(--wt-surface-2))] lg:text-wt-text lg:before:hidden lg:ring-1 lg:ring-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)]";
+  "lg:bg-[var(--wt-sidebar-active-bg-collapsed)] lg:text-[var(--wt-sidebar-text)] lg:before:hidden lg:ring-1 lg:ring-[color-mix(in_srgb,var(--wt-brand)_45%,transparent)]";
 
 const SIDEBAR_IDLE_CLASS =
-  "text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text";
+  "text-[var(--wt-sidebar-text-muted)] hover:bg-[var(--wt-sidebar-hover-bg)] hover:text-[var(--wt-sidebar-text)]";
 
 function sidebarCollapsedItemClass(collapsed: boolean) {
   return collapsed

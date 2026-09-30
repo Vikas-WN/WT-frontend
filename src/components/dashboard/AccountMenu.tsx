@@ -76,8 +76,8 @@ export function AccountMenu({
           open && "border-[color-mix(in_srgb,var(--wt-brand)_40%,var(--wt-border))] ring-2 ring-[color-mix(in_srgb,var(--wt-brand)_22%,transparent)]"
         )
       : cn(
-          "group flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:bg-wt-surface-1 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)]",
-          open && "bg-wt-surface-1 shadow-sm ring-1 ring-[color-mix(in_srgb,var(--wt-brand)_22%,transparent)]",
+          "group flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:bg-[var(--wt-sidebar-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)]",
+          open && "bg-[var(--wt-sidebar-hover-bg)] ring-1 ring-[color-mix(in_srgb,var(--wt-brand)_35%,transparent)]",
           collapsed && "lg:justify-center lg:px-1.5"
         );
 
@@ -108,7 +108,10 @@ export function AccountMenu({
           />
           <span
             className={cn(
-              "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-wt-surface-1 bg-emerald-500 shadow-sm dark:border-wt-surface-2",
+              "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 bg-emerald-500 shadow-sm",
+              placement === "sidebar"
+                ? "border-[var(--wt-sidebar-bg)]"
+                : "border-wt-surface-1 dark:border-wt-surface-2",
               placement === "sidebar" && collapsed && "lg:hidden"
             )}
             title="Online"
@@ -122,10 +125,10 @@ export function AccountMenu({
                 "lg:pointer-events-none lg:absolute lg:-m-px lg:h-px lg:w-px lg:overflow-hidden lg:whitespace-nowrap lg:border-0 lg:p-0"
             )}
           >
-            <span className="block truncate text-xs font-semibold leading-tight text-wt-text">
+            <span className="block truncate text-xs font-semibold leading-tight text-[var(--wt-sidebar-text)]">
               {displayName}
             </span>
-            <span className="mt-0.5 block truncate text-[10px] text-wt-text-muted">
+            <span className="mt-0.5 block truncate text-[10px] text-[var(--wt-sidebar-text-muted)]">
               Account & settings
             </span>
           </span>

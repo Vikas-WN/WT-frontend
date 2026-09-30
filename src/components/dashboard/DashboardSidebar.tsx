@@ -67,7 +67,7 @@ function SidebarSearchTrigger({
         onClick={onOpen}
         aria-label="Search"
         title={`Search (${mod}+K)`}
-        className="mx-auto flex size-10 items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2 text-wt-text-muted transition-colors hover:bg-wt-surface-3 hover:text-wt-text"
+        className="mx-auto flex size-10 items-center justify-center rounded-xl border border-[var(--wt-sidebar-border)] bg-[var(--wt-sidebar-hover-bg)] text-[var(--wt-sidebar-text-muted)] transition-colors hover:bg-[var(--wt-sidebar-surface-2)] hover:text-[var(--wt-sidebar-text)]"
       >
         <Search className="size-4" aria-hidden />
       </button>
@@ -77,11 +77,11 @@ function SidebarSearchTrigger({
     <button
       type="button"
       onClick={onOpen}
-      className="flex w-full items-center gap-2.5 rounded-xl border border-wt-border bg-wt-surface-2 px-3 py-2 text-left text-sm text-wt-text-muted transition-colors hover:bg-wt-surface-3 hover:text-wt-text"
+      className="flex w-full items-center gap-2.5 rounded-xl border border-[var(--wt-sidebar-border)] bg-[var(--wt-sidebar-hover-bg)] px-3 py-2 text-left text-sm text-[var(--wt-sidebar-text-muted)] transition-colors hover:bg-[var(--wt-sidebar-surface-2)] hover:text-[var(--wt-sidebar-text)]"
     >
       <Search className="size-4 shrink-0" aria-hidden />
       <span className="min-w-0 flex-1 truncate">Search…</span>
-      <kbd className="hidden shrink-0 rounded border border-wt-border bg-wt-surface-1 px-1.5 py-0.5 font-sans text-[10px] text-wt-text-faint lg:inline">
+      <kbd className="hidden shrink-0 rounded border border-[var(--wt-sidebar-border)] bg-[var(--wt-sidebar-bg)] px-1.5 py-0.5 font-sans text-[10px] text-[var(--wt-sidebar-text-faint)] lg:inline">
         {mod === "⌘" ? "⌘K" : `${mod}+K`}
       </kbd>
     </button>

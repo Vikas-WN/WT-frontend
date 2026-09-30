@@ -38,6 +38,20 @@
   --wt-surface-2: #f7f9fc;
   --wt-surface-3: #eef2f7;
 
+  /* Sidebar — deliberately fixed dark regardless of the app's light/dark
+     theme (Vercel/Linear-style structural contrast against the light
+     content area). Defined once here, not overridden in the dark block,
+     so the sidebar never changes with the theme toggle. */
+  --wt-sidebar-bg: #0b1220;
+  --wt-sidebar-surface-2: #131c2e;
+  --wt-sidebar-border: rgba(255, 255, 255, 0.08);
+  --wt-sidebar-text: #f1f5f9;
+  --wt-sidebar-text-muted: #94a3b8;
+  --wt-sidebar-text-faint: #64748b;
+  --wt-sidebar-hover-bg: rgba(255, 255, 255, 0.07);
+  --wt-sidebar-active-bg: color-mix(in srgb, var(--wt-brand) 32%, transparent);
+  --wt-sidebar-active-bg-collapsed: color-mix(in srgb, var(--wt-brand) 40%, var(--wt-sidebar-surface-2));
+
   /* Text */
   --wt-text: #0f172a;
   --wt-text-muted: #475569;
