@@ -73,7 +73,8 @@ export function LeaveMonthlyOutlook({ enabled = true }: { enabled?: boolean }) {
       </p>
     );
   }
-  if (!data) return null;
+  // An empty or malformed response hides this card; it must never take the whole Leave page down.
+  if (!data || !Array.isArray(data.months)) return null;
 
   return (
     <section className="mb-6 rounded-xl border border-wt-border bg-wt-surface-1 p-4" aria-label="Leave by month">

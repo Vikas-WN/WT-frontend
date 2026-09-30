@@ -16,6 +16,7 @@ export function startMockApi({ port }) {
     getStatus: 200, // set to 500 to simulate preferences failing to load
     userStatus: "ACTIVE",
     puts: [], // every body PUT to /profile/preferences
+    writes: [], // every non-GET request anywhere: { method, path, body }
     requests: [],
   };
   const json = (res, status, body) => {
@@ -30,6 +31,11 @@ export function startMockApi({ port }) {
     req.on("data", (chunk) => (raw += chunk));
     req.on("end", () => {
       state.requests.push(`${req.method} ${url.pathname}`);
+      if (req.method !== "GET") {
+        let body = raw;
+        try { body = raw ? JSON.parse(raw) : null; } catch { /* leave as text */ }
+        state.writes.push({ method: req.method, path: url.pathname, body });
+      }
       const path = url.pathname.replace(/^\/api\/v1/, "");
       // Like the real API: no session cookie forwarded, no access. (Without this the sign-in page
       // would think you are logged in and bounce you to the dashboard.)
@@ -63,6 +69,17 @@ export function startMockApi({ port }) {
       }
       if (path === "/profile") {
         return json(res, 200, { message: "ok", data: { email: "qa@webknot.in", name: "QA Tester", status: state.userStatus, roles: ["ROLE_EMPLOYEE"] } });
+      }
+      if (path === "/profile/balances") {
+        return json(res, 200, { message: "ok", data: { emp_id: "E1", leave: { primary: 5, secondary: 2, carry_forward: 0, total: 7 }, comp_off_balance: 0 } });
+      }
+      if (path === "/profile/balances/monthly") {
+        const month = (m, label, extra = {}) => ({ year: 2026, month: m, label, is_current: false, credit: 1.5, approved_days: 0, pending_days: 0, closing_total: 8.5, lop_days: 0, closing_total_if_pending: 8.5, lop_days_if_pending: 0, ...extra });
+        return json(res, 200, { message: "ok", data: { accrues: true, monthly_credit_total: 1.5, monthly_credit_primary: 1, monthly_credit_secondary: 0.5, credited_on: "the 1st of every month", current_total: 7,
+          months: [month(9, "Sep 2026", { is_current: true, credit: 0, closing_total: 7 }), month(10, "Oct 2026", { approved_days: 3, closing_total: 5.5 }), month(11, "Nov 2026")] } });
+      }
+      if (path === "/profile/balances/leave-impact") {
+        return json(res, 200, { message: "ok", data: { leave_days: 1, lop_days: 0, covered_days: 1, balance_after: 6, message: "Covered by your leave balance — 1 day(s) will be deducted." } });
       }
       // Shapes the dashboard home needs to render without its error boundary.
       if (path === "/celebrations") return json(res, 200, { message: "ok", data: { birthdays: [], anniversaries: [], today: [], upcoming: [] } });
