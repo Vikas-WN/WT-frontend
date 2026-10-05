@@ -344,7 +344,7 @@ export function LeaveApprovalsPanel({
                           </TableCell>
                           <TableCell className="px-3 py-2.5">
                             <div className="flex flex-col items-start gap-1">
-                              <LeaveRequestStatusBadge status={rowStatus} />
+                              <LeaveRequestStatusBadge status={rowStatus} request={rowRecord} />
                               {hasSecondaryLeaveManagers(rowRecord) &&
                               (primaryStage !== "PENDING" || secondaryStage !== "PENDING") ? (
                                 <p className="text-[11px] text-wt-text-muted">

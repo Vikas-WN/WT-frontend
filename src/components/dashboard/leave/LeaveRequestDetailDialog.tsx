@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { CalendarDays, Clock, Paperclip, ShieldCheck } from "lucide-react";
 
+import { LeaveRequestStatusBadge } from "@/components/dashboard/leave/LeaveRequestStatusBadge";
 import { RequestStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
 import {
   MODAL_BODY_CLASS,
@@ -38,6 +39,8 @@ export type LeaveRequestDetailView = {
   blockedHint: string | null;
   /** Passed straight back to the approve / reject handlers. */
   requestType: unknown;
+  /** The request row, so the status tag can show its approval details. */
+  request?: Record<string, unknown> | null;
 };
 
 function initialsOf(name: string): string {
@@ -135,7 +138,7 @@ export function LeaveRequestDetailDialog({
               {view.email ? ` · ${view.email}` : ""}
             </p>
           </div>
-          <RequestStatusBadge status={headStatus} className="shrink-0" />
+          <LeaveRequestStatusBadge status={headStatus} request={view.request} className="shrink-0" />
         </div>
 
         <div className={cn(MODAL_BODY_CLASS, "space-y-5")}>

@@ -342,7 +342,7 @@ export function EmployeeLeaveRequestsPanel({
             <div>
               <dt className="text-wt-text-muted">Status</dt>
               <dd className="font-medium">
-                <LeaveRequestStatusBadge status={viewingStatus} />
+                <LeaveRequestStatusBadge status={viewingStatus} request={viewingRequest} />
               </dd>
             </div>
             <div>

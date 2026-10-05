@@ -93,7 +93,7 @@ import {
 } from "@/components/dashboard/ui/profile";
 import { Badge } from "@/components/ui/badge";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
-import { RequestStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
+import { LeaveRequestStatusBadge } from "@/components/dashboard/leave/LeaveRequestStatusBadge";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { useClientPagination } from "@/hooks/useClientPagination";
@@ -2634,6 +2634,7 @@ export function LeavePageClient() {
                                       canReject: Boolean(hrCanActOnRow || showManagerReject),
                                       blockedHint: blockedHint ?? null,
                                       requestType: rowRequestType,
+                                      request: rowRecord,
                                     };
                                     const openDetail = () => setDetailView(detailViewForRow);
                                     return (
@@ -2679,9 +2680,9 @@ export function LeavePageClient() {
                                         <TableCell className="px-4 py-3 whitespace-nowrap">
                                           <div className="flex flex-col items-start gap-1">
                                             {status ? (
-                                              <RequestStatusBadge status={status} />
+                                              <LeaveRequestStatusBadge status={status} request={rowRecord} />
                                             ) : managerStatus ? (
-                                              <RequestStatusBadge status={managerStatus} />
+                                              <LeaveRequestStatusBadge status={managerStatus} request={rowRecord} />
                                             ) : (
                                               <span className="text-xs text-muted-foreground">—</span>
                                             )}
