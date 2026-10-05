@@ -257,6 +257,9 @@ export function notificationCategoryLabel(
     case "EVENT_UPDATED":
     case "EVENT_REMINDER":
       return "Event";
+    case "FORM_REQUEST":
+    case "FORM_REMINDER":
+      return "Form";
     case "BIRTHDAY_WISH":
       return "Birthday";
     case "EMPLOYEE_ID_UPDATED":
@@ -447,6 +450,12 @@ export function resolveNotificationHref(
     case "ANNOUNCEMENT": {
       const id = readNotificationMessage(row).match(/announcement\s*#\s*(\d+)/i)?.[1];
       return id ? `${DASHBOARD_ROUTES.announcements}?announcementId=${id}` : DASHBOARD_ROUTES.announcements;
+    }
+
+    case "FORM_REQUEST":
+    case "FORM_REMINDER": {
+      const id = readNotificationMessage(row).match(/form\s*#\s*(\d+)/i)?.[1];
+      return id ? `${DASHBOARD_ROUTES.forms}?formId=${id}` : DASHBOARD_ROUTES.forms;
     }
 
     case "EVENT_INVITE":

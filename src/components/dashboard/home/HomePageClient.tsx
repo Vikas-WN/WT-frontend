@@ -20,6 +20,7 @@ import { useCommandPalette } from "@/components/dashboard/CommandPalette";
 import { HomeCard, CardMessage, CardSkeleton } from "@/components/dashboard/home/HomeCard";
 import { AnnouncementsHomeCard } from "@/components/dashboard/announcements/AnnouncementsHomeCard";
 import { UpcomingEventsHomeCard } from "@/components/dashboard/events/UpcomingEventsHomeCard";
+import { FormsHomeCard } from "@/components/dashboard/forms/FormsHomeCard";
 import { CelebrationsCard } from "@/components/dashboard/home/CelebrationsCard";
 import { TodaysCelebrationsBanner } from "@/components/dashboard/home/TodaysCelebrationsBanner";
 import { AttendanceCard } from "@/components/dashboard/home/AttendanceCard";
@@ -86,6 +87,7 @@ const LEAVE_SEGMENT_COLORS = ["bg-[var(--wt-brand)]", "bg-emerald-500", "bg-ambe
 
 const HOME_WIDGET_IDS = [
   "announcements",
+  "forms",
   "events",
   "attendance",
   "approvals",
@@ -99,6 +101,7 @@ const HOME_WIDGET_IDS = [
 
 const HOME_WIDGET_TITLES: Record<string, string> = {
   announcements: "Announcements",
+  forms: "Forms To Fill",
   events: "Upcoming Events",
   attendance: "Today's Attendance",
   approvals: "Pending Approvals",
@@ -308,6 +311,7 @@ export function HomePageClient() {
 
   const widgetRegistry: Record<string, { eligible: boolean; node: React.ReactNode }> = {
     announcements: { eligible: true, node: <AnnouncementsHomeCard /> },
+    forms: { eligible: true, node: <FormsHomeCard /> },
     events: { eligible: true, node: <UpcomingEventsHomeCard /> },
     attendance: {
       eligible: canSeeOrgOut,

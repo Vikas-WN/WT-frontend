@@ -178,6 +178,16 @@ export const endpoints = {
     importCsv: `${api}/assets/import-csv`,
   },
 
+  forms: {
+    root: `${api}/forms`,
+    managed: `${api}/forms/managed`,
+    byId: (id: number | string) => `${api}/forms/${encodeURIComponent(id)}`,
+    submit: (id: number | string) => `${api}/forms/${encodeURIComponent(id)}/submit`,
+    responses: (id: number | string) => `${api}/forms/${encodeURIComponent(id)}/responses`,
+    responsesCsv: (id: number | string) => `${api}/forms/${encodeURIComponent(id)}/responses.csv`,
+    remind: (id: number | string) => `${api}/forms/${encodeURIComponent(id)}/remind`,
+  },
+
   events: {
     root: `${api}/events`,
     byId: (id: number | string) => `${api}/events/${encodeURIComponent(id)}`,
