@@ -1,9 +1,11 @@
 "use client";
 
-import { Archive, ArchiveRestore, Pin, PinOff } from "lucide-react";
+import { useState } from "react";
+import { Archive, ArchiveRestore, Pin, PinOff, Vote } from "lucide-react";
 
+import { PollResultsDialog } from "@/components/dashboard/announcements/PollResultsDialog";
 import { Button } from "@/components/ui/button";
-import { ANNOUNCEMENT_COPY } from "@/constants/announcements";
+import { ANNOUNCEMENT_COPY, POLL_COPY } from "@/constants/announcements";
 import { describeAudience } from "@/constants/audience";
 import { cn } from "@/lib/utils";
 import type { Announcement, AnnouncementUpdatePayload } from "@/types/announcement";
@@ -23,6 +25,9 @@ export function PostedAnnouncementCard({
   const read = announcement.read_count ?? 0;
   const percent = total > 0 ? Math.round((read / total) * 100) : 0;
   const audience = announcement.audience;
+  // UI-only: whether the voter-list dialog is open.
+  const [showVoters, setShowVoters] = useState(false);
+  const poll = announcement.poll;
 
   return (
     <article
@@ -69,6 +74,25 @@ export function PostedAnnouncementCard({
         </div>
       </div>
       <p className="mt-3 line-clamp-2 whitespace-pre-wrap text-sm text-wt-text-muted">{announcement.body}</p>
+      {poll ? (
+        <div className="mt-3 rounded-xl border border-wt-border bg-wt-surface-2/50 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="min-w-0 text-sm font-medium text-wt-text">{poll.question}</p>
+            <Button type="button" size="sm" variant="outline" onClick={() => setShowVoters(true)}>
+              <Vote className="size-3.5" /> {POLL_COPY.whoVoted}
+            </Button>
+          </div>
+          <ul className="mt-2 space-y-1">
+            {poll.options.map((option) => (
+              <li key={option.id} className="flex justify-between gap-3 text-xs text-wt-text-muted">
+                <span className="truncate">{option.label}</span>
+                <span className="tabular-nums">{option.votes}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-wt-text-muted">{POLL_COPY.voters(poll.total_voters)}</p>
+        </div>
+      ) : null}
       <div className="mt-4">
         <div className="mb-1 flex items-center justify-between text-xs text-wt-text-muted">
           <span>
@@ -80,6 +104,7 @@ export function PostedAnnouncementCard({
           <div className="h-full rounded-full bg-[var(--wt-brand)] transition-all" style={{ width: `${percent}%` }} />
         </div>
       </div>
+      {showVoters ? <PollResultsDialog announcementId={announcement.id} onClose={() => setShowVoters(false)} /> : null}
     </article>
   );
 }

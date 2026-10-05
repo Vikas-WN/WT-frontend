@@ -86,3 +86,22 @@ export function useMarkAnnouncementRead() {
     },
   });
 }
+
+/** Vote (or change a vote). The poll in the response is the fresh tally, so every list refreshes. */
+export function useVotePoll() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, optionIds }: { id: number; optionIds: string[] }) => announcementService.vote(id, optionIds),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ANNOUNCEMENT_QUERY_KEYS.all }),
+    onError: (error) => notifyError(apiErrorMessage(error, "Couldn't record your vote.")),
+  });
+}
+
+/** Who voted for what. Only fetched while the results dialog is open. */
+export function usePollResults(id: number) {
+  return useQuery({
+    queryKey: ANNOUNCEMENT_QUERY_KEYS.pollResults(id),
+    queryFn: async () => (await announcementService.pollResults(id)).data ?? null,
+    staleTime: 0,
+  });
+}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pin } from "lucide-react";
 
 import { AuthorAvatar } from "@/components/dashboard/announcements/AuthorAvatar";
+import { PollVoteBlock } from "@/components/dashboard/announcements/PollVoteBlock";
 import { ANNOUNCEMENT_COLLAPSE_CHARS, ANNOUNCEMENT_COPY } from "@/constants/announcements";
 import { cn } from "@/lib/utils";
 import type { Announcement } from "@/types/announcement";
@@ -63,6 +64,7 @@ export function AnnouncementCard({
           >
             {announcement.body}
           </p>
+          {announcement.poll ? <PollVoteBlock announcementId={announcement.id} poll={announcement.poll} /> : null}
           {long ? (
             <button
               type="button"

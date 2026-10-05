@@ -4,6 +4,7 @@ export const ANNOUNCEMENT_QUERY_KEYS = {
   managed: ["announcements", "managed"] as const,
   audience: ["audience", "options"] as const,
   all: ["announcements"] as const,
+  pollResults: (id: number) => ["announcements", "poll-results", id] as const,
 };
 
 /** Roles that can post (HR/Admin to anyone, managers to their team). Mirrors the backend. */
@@ -47,4 +48,31 @@ export const ANNOUNCEMENT_COPY = {
   homeTitle: "Announcements",
   homeEmpty: "No announcements right now.",
   homeCta: "See all",
+} as const;
+
+export const POLL_LIMITS = { minOptions: 2, maxOptions: 10, optionMaxChars: 100 } as const;
+
+export const POLL_COPY = {
+  addPoll: "Add a poll",
+  addPollHint: "Ask people to vote. You and HR can see who voted.",
+  questionLabel: "Poll question",
+  questionPlaceholder: "e.g. Which day works for the offsite?",
+  optionPlaceholder: (n: number) => `Option ${n}`,
+  addOption: "Add option",
+  removeOption: "Remove option",
+  multipleLabel: "Allow picking more than one",
+  voteHint: "Pick one",
+  voteHintMultiple: "Pick any that apply",
+  submit: "Vote",
+  change: "Change my vote",
+  closed: "Poll closed",
+  voters: (n: number) => `${n} ${n === 1 ? "person has" : "people have"} voted`,
+  mine: "Your vote",
+  whoVoted: "Who voted",
+  resultsTitle: "Poll results",
+  noVoters: "No votes yet.",
+  notVoted: (n: number) => `Haven't voted (${n})`,
+  everyoneVoted: "Everyone has voted.",
+  exportPdf: "Export PDF",
+  loadError: "Couldn't load the poll results.",
 } as const;

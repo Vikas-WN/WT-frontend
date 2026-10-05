@@ -1,4 +1,4 @@
-const STORAGE_KEY = "wt-sidebar-collapsed";
+const STORAGE_KEY = "wt-sidebar-collapsed-v2";
 
 /** The dashboard sidebar defaults to collapsed (icon rail). Users may still
  *  expand it; the choice is remembered per browser. */

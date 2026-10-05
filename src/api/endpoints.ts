@@ -201,6 +201,8 @@ export const endpoints = {
     unreadCount: `${api}/announcements/unread-count`,
     byId: (id: number | string) => `${api}/announcements/${encodeURIComponent(id)}`,
     readById: (id: number | string) => `${api}/announcements/${encodeURIComponent(id)}/read`,
+    voteById: (id: number | string) => `${api}/announcements/${encodeURIComponent(id)}/vote`,
+    pollResultsById: (id: number | string) => `${api}/announcements/${encodeURIComponent(id)}/poll-results`,
   },
 
   audience: {

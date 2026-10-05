@@ -3,13 +3,15 @@
 import { useState } from "react";
 
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
+import { EMPTY_POLL, isPollComplete, PollBuilder } from "@/components/dashboard/announcements/PollBuilder";
 import { AudiencePicker, isAudienceComplete } from "@/components/audience/AudiencePicker";
 import { DatePickerField, InputField, TextAreaField } from "@/components/dashboard/ui/forms";
-import { ANNOUNCEMENT_COPY } from "@/constants/announcements";
+import { ANNOUNCEMENT_COPY, POLL_COPY } from "@/constants/announcements";
 import { AUDIENCE_COPY } from "@/constants/audience";
 import { useAudienceOptions, useCreateAnnouncement } from "@/hooks/announcements/useAnnouncements";
 import { formatApiDate } from "@/utils/apiDate";
 import { EMPTY_AUDIENCE, type AudienceScope, type AudienceSpec } from "@/types/audience";
+import type { PollCreatePayload } from "@/types/announcement";
 
 const MIN_LENGTH = 3;
 
@@ -38,12 +40,14 @@ export function AnnouncementComposerDialog({ onClose }: { onClose: () => void })
   const [emailToo, setEmailToo] = useState(false);
   const [expiresOn, setExpiresOn] = useState("");
   const [audience, setAudience] = useState<AudienceSpec | null>(null);
+  const [poll, setPoll] = useState<PollCreatePayload | null>(null);
 
   // A manager can't send company-wide, so start on the first scope the server allows.
   const firstScope: AudienceScope = options.data?.scopes[0] ?? "ALL";
   const effective = audience ?? { ...EMPTY_AUDIENCE, scope: firstScope };
   const canSubmit =
-    title.trim().length >= MIN_LENGTH && body.trim().length >= MIN_LENGTH && isAudienceComplete(effective);
+    title.trim().length >= MIN_LENGTH && body.trim().length >= MIN_LENGTH && isAudienceComplete(effective) &&
+    (poll === null || isPollComplete(poll));
 
   return (
     <WtFormDialog
@@ -60,6 +64,7 @@ export function AnnouncementComposerDialog({ onClose }: { onClose: () => void })
             expires_on: expiresOn || null,
             audience: effective,
             notify_by_email: emailToo,
+            poll: poll ? { ...poll, question: poll.question.trim(), options: poll.options.map((o) => o.trim()) } : null,
           },
           { onSuccess: onClose }
         )
@@ -94,6 +99,11 @@ export function AnnouncementComposerDialog({ onClose }: { onClose: () => void })
         ) : (
           <p className="text-sm text-rose-600 dark:text-rose-400">{AUDIENCE_COPY.error}</p>
         )}
+
+        <div className="space-y-2">
+          <Toggle label={`${POLL_COPY.addPoll} — ${POLL_COPY.addPollHint}`} checked={poll !== null} onChange={(on) => setPoll(on ? EMPTY_POLL : null)} />
+          {poll ? <PollBuilder value={poll} onChange={setPoll} /> : null}
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <DatePickerField

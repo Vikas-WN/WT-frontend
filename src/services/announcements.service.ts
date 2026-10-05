@@ -1,6 +1,12 @@
 import { endpoints } from "@/api/endpoints";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
-import type { Announcement, AnnouncementCreatePayload, AnnouncementUpdatePayload } from "@/types/announcement";
+import type {
+  Announcement,
+  AnnouncementCreatePayload,
+  AnnouncementUpdatePayload,
+  Poll,
+  PollResults,
+} from "@/types/announcement";
 import type { AudienceOptions } from "@/types/audience";
 
 const JSON_BODY = { contentType: "application/json" } as const;
@@ -36,6 +42,18 @@ export const announcementService = {
 
   markRead(id: number) {
     return apiClient.post<ApiEnvelope<{ id: number }>>(endpoints.announcements.readById(id), {});
+  },
+
+  vote(id: number, optionIds: string[]) {
+    return apiClient.post<ApiEnvelope<Poll>>(endpoints.announcements.voteById(id), {
+      ...JSON_BODY,
+      body: JSON.stringify({ option_ids: optionIds }),
+    });
+  },
+
+  /** Who voted for what — HR/Admin or the poster only. */
+  pollResults(id: number) {
+    return apiClient.get<ApiEnvelope<PollResults>>(endpoints.announcements.pollResultsById(id));
   },
 
   /** The audience picker's choices — shared by announcements, events and forms. */
