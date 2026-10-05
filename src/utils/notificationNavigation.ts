@@ -253,6 +253,10 @@ export function notificationCategoryLabel(
     case "BUG_REPORTED":
     case "BUG_UPDATED":
       return "Bug report";
+    case "EVENT_INVITE":
+    case "EVENT_UPDATED":
+    case "EVENT_REMINDER":
+      return "Event";
     case "BIRTHDAY_WISH":
       return "Birthday";
     case "EMPLOYEE_ID_UPDATED":
@@ -443,6 +447,13 @@ export function resolveNotificationHref(
     case "ANNOUNCEMENT": {
       const id = readNotificationMessage(row).match(/announcement\s*#\s*(\d+)/i)?.[1];
       return id ? `${DASHBOARD_ROUTES.announcements}?announcementId=${id}` : DASHBOARD_ROUTES.announcements;
+    }
+
+    case "EVENT_INVITE":
+    case "EVENT_UPDATED":
+    case "EVENT_REMINDER": {
+      const id = readNotificationMessage(row).match(/event\s*#\s*(\d+)/i)?.[1];
+      return id ? `${DASHBOARD_ROUTES.events}?eventId=${id}` : DASHBOARD_ROUTES.events;
     }
 
     case "BUG_REPORTED":

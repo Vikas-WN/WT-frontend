@@ -285,6 +285,22 @@ export const dashboardNavigation: NavItem[] = [
   },
   {
     kind: "link",
+    id: "events",
+    label: "Events",
+    roles: [
+      "ROLE_EMPLOYEE",
+      "ROLE_AM",
+      "ROLE_MANAGER",
+      "ROLE_DM",
+      "ROLE_OFFICE_ADMIN",
+      "ROLE_HR",
+      "ROLE_ADMIN",
+      "ROLE_FINANCE",
+    ],
+    icon: "ticket",
+  },
+  {
+    kind: "link",
     id: "announcements",
     label: "Announcements",
     roles: [

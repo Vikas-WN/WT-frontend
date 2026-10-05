@@ -178,6 +178,13 @@ export const endpoints = {
     importCsv: `${api}/assets/import-csv`,
   },
 
+  events: {
+    root: `${api}/events`,
+    byId: (id: number | string) => `${api}/events/${encodeURIComponent(id)}`,
+    rsvp: (id: number | string) => `${api}/events/${encodeURIComponent(id)}/rsvp`,
+    attendees: (id: number | string) => `${api}/events/${encodeURIComponent(id)}/attendees`,
+  },
+
   announcements: {
     root: `${api}/announcements`,
     managed: `${api}/announcements/managed`,
