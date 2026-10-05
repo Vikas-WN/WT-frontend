@@ -5,6 +5,7 @@ import { Bell, Download, Lock, LockOpen } from "lucide-react";
 
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
 import { FormResults } from "@/components/dashboard/forms/FormResults";
+import { PagedList } from "@/components/dashboard/ui/PagedList";
 import { Button } from "@/components/ui/button";
 import { FORM_COPY } from "@/constants/forms";
 import { useExportFormCsv, useFormResponses, useRemindForm, useUpdateForm } from "@/hooks/forms/useForms";
@@ -96,19 +97,29 @@ export function FormResponsesDialog({ formId, onClose }: { formId: number; onClo
             data.responses.length === 0 ? <p className="text-sm text-wt-text-muted">{FORM_COPY.noAnswers}</p> : <FormResults results={data.results} questions={data.questions} responses={data.responses} />
           ) : null}
           {view === "people" ? (
-            <div className="space-y-2">
-              {data.responses.length === 0 ? <p className="text-sm text-wt-text-muted">{FORM_COPY.noAnswers}</p> : data.responses.map((row) => <PersonAnswers key={row.email} row={row} labels={labels} />)}
-            </div>
+            <PagedList
+              items={data.responses}
+              idPrefix="form-answered"
+              empty={<p className="text-sm text-wt-text-muted">{FORM_COPY.noAnswers}</p>}
+              matches={(row, needle) => row.name.toLowerCase().includes(needle) || row.email.toLowerCase().includes(needle)}
+              wrap={(rows) => <div className="space-y-2">{rows}</div>}
+              renderItem={(row) => <PersonAnswers key={row.email} row={row} labels={labels} />}
+            />
           ) : null}
           {view === "pending" ? (
-            <ul className="divide-y divide-wt-border rounded-xl border border-wt-border">
-              {data.pending.length === 0 ? <li className="px-3 py-3 text-sm text-wt-text-muted">Everyone has answered.</li> : data.pending.map((person) => (
+            <PagedList
+              items={data.pending}
+              idPrefix="form-pending"
+              empty={<p className="rounded-xl border border-wt-border px-3 py-3 text-sm text-wt-text-muted">Everyone has answered.</p>}
+              matches={(person, needle) => person.name.toLowerCase().includes(needle) || person.email.toLowerCase().includes(needle)}
+              wrap={(rows) => <ul className="divide-y divide-wt-border rounded-xl border border-wt-border">{rows}</ul>}
+              renderItem={(person) => (
                 <li key={person.email} className="px-3 py-2">
                   <p className="text-sm font-medium text-wt-text">{person.name}</p>
                   <p className="text-xs text-wt-text-muted">{person.email}</p>
                 </li>
-              ))}
-            </ul>
+              )}
+            />
           ) : null}
         </div>
       )}
