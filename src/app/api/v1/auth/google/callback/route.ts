@@ -10,9 +10,24 @@ import {
 
 export const dynamic = "force-dynamic";
 
-function loginRedirect(request: NextRequest, error?: string) {
+/** "lakshmi@webknot.in" -> "la•••@webknot.in": enough to recognise the Google account, not enough to leak it. */
+function maskEmail(email: string): string {
+  const at = email.lastIndexOf("@");
+  if (at < 1) return "";
+  const local = email.slice(0, at);
+  const shown = local.slice(0, local.length > 3 ? 2 : 1);
+  return `${shown}•••${email.slice(at)}`;
+}
+
+/** Codes where naming the refused Google account helps the person fix it. */
+const CODES_THAT_NAME_THE_ACCOUNT = new Set(["unregistered_user", "account_inactive", "unauthorized_email_domain"]);
+
+function loginRedirect(request: NextRequest, error?: string, refusedEmail?: string | null) {
   const url = new URL("/login", getAppBaseUrl(request));
   if (error) url.searchParams.set("error", error);
+  // Masked, and only for sign-in refusals: the login page shows "Google signed you in as la•••@…".
+  const masked = refusedEmail && error && CODES_THAT_NAME_THE_ACCOUNT.has(error) ? maskEmail(refusedEmail) : "";
+  if (masked) url.searchParams.set("email", masked);
   return NextResponse.redirect(url);
 }
 
@@ -86,7 +101,7 @@ export async function GET(request: NextRequest) {
     } catch {
       /* ignore parse errors */
     }
-    return loginRedirect(request, errorCode);
+    return loginRedirect(request, errorCode, exchangeResponse.headers.get("x-login-email"));
   }
 
   const payload = (await exchangeResponse.json()) as {

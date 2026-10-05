@@ -249,6 +249,27 @@ export async function fetchRoles(): Promise<string[]> {
   }
 }
 
+/**
+ * The message for a failed sign-in. When the callback could name the Google account that was refused
+ * (masked, e.g. "la•••@gmail.com") the message says so and tells the person what to try — the most common
+ * cause is signing in with a personal or differently spelled address instead of the work one HR registered.
+ */
+export function describeOAuthError(code: string, maskedEmail?: string | null): string {
+  const account = maskedEmail?.trim();
+  if (account) {
+    if (code === "unregistered_user") {
+      return `Google signed you in as ${account}, but that address isn't registered in WebTrak. Sign in with the work email HR registered for you. If that is the one you used, ask HR to check the email on your profile.`;
+    }
+    if (code === "account_inactive") {
+      return `${account} is registered, but the account is inactive. Please contact HR.`;
+    }
+    if (code === "unauthorized_email_domain") {
+      return `${account} isn't a company address. Choose your company Google account.`;
+    }
+  }
+  return oauthErrorMessages[code] ?? "An unknown error occurred.";
+}
+
 /** Human-readable messages for OAuth error query params */
 export const oauthErrorMessages: Record<string, string> = {
   oauth_failed: "Google sign-in was cancelled or returned an error.",

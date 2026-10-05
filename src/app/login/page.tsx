@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   fetchMe,
   getGoogleSignInUrl,
-  oauthErrorMessages,
+  describeOAuthError,
 } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
@@ -195,7 +195,7 @@ function LoginPage() {
       return;
     }
     setSessionLogoutReason(null);
-    setError(oauthErrorMessages[rawError] ?? "An unknown error occurred.");
+    setError(describeOAuthError(rawError, params.get("email")));
   }, [params]);
 
   useEffect(() => {
