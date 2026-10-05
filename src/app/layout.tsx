@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
 import { ActionSplashHost } from "@/components/ui/ActionSplash";
@@ -7,15 +7,19 @@ import { themeInitScript } from "@/components/shared/ThemeInitScript";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const inter = Inter({
-  subsets: ["latin"],
+// Self-hosted (latin subset, variable) rather than next/font/google: the Google
+// loader downloads the files during `next build`, so a build machine that can't
+// reach fonts.gstatic.com — like the production Docker build — fails outright.
+const inter = localFont({
+  src: "./fonts/Inter-latin-variable.woff2",
+  weight: "100 900",
   variable: "--font-inter",
   display: "swap",
 });
 
-const plusJakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["600", "700"],
+const plusJakarta = localFont({
+  src: "./fonts/PlusJakartaSans-latin-variable.woff2",
+  weight: "200 800",
   variable: "--font-brand",
   display: "swap",
 });

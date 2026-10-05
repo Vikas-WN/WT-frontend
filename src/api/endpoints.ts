@@ -186,6 +186,7 @@ export const endpoints = {
     bookingsRoot: `${api}/meeting-room-bookings`,
     bookingById: (id: number | string) => `${api}/meeting-room-bookings/${encodeURIComponent(id)}`,
     myBookings: `${api}/meeting-room-bookings/mine`,
+    allBookings: `${api}/meeting-room-bookings`,
   },
 
   learning: {
@@ -270,6 +271,8 @@ export const endpoints = {
     webknotValues: `${api}/monthly-submissions/webknot-values`,
     reviewers: `${api}/monthly-submissions/reviewers`,
     myProjects: `${api}/monthly-submissions/my-projects`,
+    myWindow: `${api}/monthly-submissions/my-window`,
+    windowCandidates: `${api}/monthly-submissions/window-candidates`,
     draft: `${api}/monthly-submissions/draft`,
     self: `${api}/monthly-submissions/self`,
     me: `${api}/monthly-submissions/me`,

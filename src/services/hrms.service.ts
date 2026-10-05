@@ -19,6 +19,7 @@ import type {
   SubmissionCycleItem,
   SubmissionCycleWritePayload,
   SubmissionWindowStatus,
+  PulseWindowPurpose,
   CertificationItem,
   CertificationWritePayload,
   WebknotValueItem,
@@ -1644,6 +1645,15 @@ export const hrmsService = {
     });
   },
 
+  /** Everyone's bookings across all rooms (or one) — the shared schedule. from/to are ISO instants. */
+  getAllMeetingRoomBookings(params: { roomId?: number; from?: string; to?: string } = {}) {
+    const query: Record<string, string> = {};
+    if (params.roomId != null) query.room_id = String(params.roomId);
+    if (params.from) query.from = params.from;
+    if (params.to) query.to = params.to;
+    return apiClient.get<ApiEnvelope<MeetingRoomBooking[]>>(endpoints.meetingRooms.allBookings, { query });
+  },
+
   getMyMeetingRoomBookings(upcomingOnly = false) {
     const query = upcomingOnly ? { upcoming_only: "true" } : undefined;
     return apiClient.get<ApiEnvelope<MeetingRoomBooking[]>>(endpoints.meetingRooms.myBookings, { query });
@@ -1784,6 +1794,21 @@ export const hrmsService = {
         { query }
       )
       .then(toEnvelope);
+  },
+
+  /** My own window for a month, resolved server-side from my role: GLOBAL, my
+   *  audience's (EMPLOYEE, or MANAGER for managers) or my individual one. */
+  getMyPulseWindow(params: { month: string; purpose: PulseWindowPurpose }) {
+    return apiClient.get<SubmissionWindowStatus>(endpoints.monthlySubmissions.myWindow, {
+      query: { month: params.month, purpose: params.purpose },
+    });
+  },
+
+  /** HR/Admin: active employees to open an individual window for. */
+  searchPulseWindowCandidates(query: string) {
+    return apiClient.get<EmployeeSummary[]>(endpoints.monthlySubmissions.windowCandidates, {
+      query: query.trim() ? { q: query.trim() } : undefined,
+    });
   },
 
   createSubmissionCycle(payload: SubmissionCycleWritePayload) {

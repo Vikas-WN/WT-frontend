@@ -10,6 +10,7 @@ import { KpiDefinitionsPanel } from "@/components/dashboard/pulse/KpiDefinitions
 import { WebknotValuesPanel } from "@/components/dashboard/pulse/WebknotValuesPanel";
 import { CertificationsPanel } from "@/components/dashboard/pulse/CertificationsPanel";
 import { KpiReportsPanel } from "@/components/dashboard/pulse/KpiReportsPanel";
+import { PulseScoringForm } from "@/components/dashboard/pulse/scoring/PulseScoringForm";
 import { SubmissionPortalPanel } from "@/components/dashboard/pulse/SubmissionPortalPanel";
 import { SubmissionsReviewPanel } from "@/components/dashboard/pulse/SubmissionsReviewPanel";
 import { EmployeeMonthlyReviewPanel } from "@/components/dashboard/pulse/employee/EmployeeMonthlyReviewPanel";
@@ -112,7 +113,7 @@ const EMPLOYEE_LINKS: Partial<Record<PulseTabLink, EmployeeTab>> = { "my-review"
 function PulseEmployeePageClient() {
   return (
     <PulseTabsPage<EmployeeTab>
-      description="Fill in your monthly KPI self-review while the window is open, and track how past reviews were rated."
+      description="Fill in your self-review month by month while its window is open, and look back at how past months were rated."
       initial="review"
       items={EMPLOYEE_TABS}
       links={EMPLOYEE_LINKS}
@@ -136,7 +137,7 @@ const MANAGER_LINKS: Partial<Record<PulseTabLink, ManagerTab>> = {
 function PulseManagerPageClient() {
   return (
     <PulseTabsPage<ManagerTab>
-      description="Review your team's monthly self-reviews, and submit your own."
+      description="Review your team's self-reviews month by month, and submit your own while your window is open."
       initial="team"
       items={MANAGER_TABS}
       links={MANAGER_LINKS}
@@ -161,7 +162,8 @@ type AdminTab =
   | "values"
   | "certifications"
   | "reports"
-  | "portal";
+  | "portal"
+  | "scoring";
 
 const ADMIN_TABS: readonly TabItem<AdminTab>[] = [
   { value: "submissions", label: "Submissions" },
@@ -174,13 +176,14 @@ const ADMIN_TABS: readonly TabItem<AdminTab>[] = [
   { value: "certifications", label: "Certifications" },
   { value: "reports", label: "KPI Reports" },
   { value: "portal", label: "Submission Portal" },
+  { value: "scoring", label: "Scoring" },
 ];
 const ADMIN_LINKS: Partial<Record<PulseTabLink, AdminTab>> = { "team-reviews": "manager-reviews" };
 
 function PulseAdminPageClient() {
   return (
     <PulseTabsPage<AdminTab>
-      description="Define KPIs and WebKnot values per band and designation, open or close the submission window, send reviews back when needed, and review KPI reports."
+      description="Define KPIs and WebKnot values, open Pulse month by month (for everyone, employees, managers or one person), set the scoring weightage, send reviews back when needed, and review KPI reports."
       initial="submissions"
       items={ADMIN_TABS}
       links={ADMIN_LINKS}
@@ -199,8 +202,10 @@ function PulseAdminPageClient() {
           <CertificationsPanel />
         ) : tab === "reports" ? (
           <KpiReportsPanel />
-        ) : (
+        ) : tab === "portal" ? (
           <SubmissionPortalPanel />
+        ) : (
+          <PulseScoringForm />
         )
       }
     />

@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { CalendarClock, MapPin, Plus, Users } from "lucide-react";
+import { useState } from "react";
+import { Plus } from "lucide-react";
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { PageHero } from "@/components/dashboard/ui/PageHero";
@@ -20,140 +20,20 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { CONTENT_CARD_CLASS } from "@/components/dashboard/ui/uiLayout";
-import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
-import { formatApiDate, formatApiDateTimeDisplay } from "@/utils/apiDate";
+import { formatApiDateTimeDisplay } from "@/utils/apiDate";
 import {
   useCancelMeetingRoomBooking,
   useDeactivateMeetingRoom,
-  useMeetingRoomBookings,
   useMeetingRoomsList,
   useMyMeetingRoomBookings,
 } from "@/hooks/meeting-rooms/useMeetingRooms";
 import { BookRoomDialog } from "@/components/dashboard/meeting-rooms/BookRoomDialog";
+import { DayScheduleView } from "@/components/dashboard/meeting-rooms/DayScheduleView";
 import { RoomFormDialog } from "@/components/dashboard/meeting-rooms/RoomFormDialog";
 import type { MeetingRoom, MeetingRoomBooking } from "@/types/meetingRoom";
 
 const ROOM_ADMIN_ROLES = ["ROLE_OFFICE_ADMIN", "ROLE_HR", "ROLE_ADMIN"];
-
-function RoomCard({
-  room,
-  selected,
-  onSelect,
-  onBook,
-}: {
-  room: MeetingRoom;
-  selected: boolean;
-  onSelect: () => void;
-  onBook: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        CONTENT_CARD_CLASS,
-        "flex w-full flex-col items-start gap-3 p-5 text-left",
-        selected && "border-[var(--wt-brand)] ring-1 ring-[var(--wt-brand)]"
-      )}
-    >
-      <div className="flex w-full items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-base font-semibold text-wt-text">{room.name}</p>
-          {room.location ? (
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-wt-text-muted">
-              <MapPin className="size-3.5 shrink-0" aria-hidden />
-              <span className="truncate">{room.location}</span>
-            </p>
-          ) : null}
-        </div>
-        {room.capacity ? (
-          <span className="flex shrink-0 items-center gap-1 rounded-full bg-wt-surface-2 px-2 py-1 text-xs text-wt-text-muted">
-            <Users className="size-3.5" aria-hidden />
-            {room.capacity}
-          </span>
-        ) : null}
-      </div>
-      {room.amenities ? <p className="line-clamp-2 text-xs text-wt-text-muted">{room.amenities}</p> : null}
-      <Button
-        type="button"
-        variant="brand"
-        size="sm"
-        className="mt-1 w-full"
-        onClick={(event) => {
-          event.stopPropagation();
-          onBook();
-        }}
-      >
-        <CalendarClock className="size-4" /> Book this room
-      </Button>
-    </button>
-  );
-}
-
-/** The owner may edit a booking; so may a room admin (Office Admin / HR / Admin). */
-function useCanEditBooking(): (booking: MeetingRoomBooking) => boolean {
-  const { user } = useAuth();
-  const email = (user?.email ?? "").toLowerCase();
-  const isAdmin = (user?.roles ?? []).some((role) => ROOM_ADMIN_ROLES.includes(role));
-  return (booking) => isAdmin || booking.booked_by.email.toLowerCase() === email;
-}
-
-function RoomScheduleTable({ room }: { room: MeetingRoom }) {
-  const today = useMemo(() => formatApiDate(new Date()), []);
-  const bookingsQ = useMeetingRoomBookings(room.id);
-  const canEdit = useCanEditBooking();
-  // Transient UI state: which booking's edit dialog is open.
-  const [editing, setEditing] = useState<MeetingRoomBooking | null>(null);
-  const rows = bookingsQ.data ?? [];
-
-  return (
-    <ManagementListCard title="Schedule" description="Confirmed bookings for the next 14 days, starting today.">
-      <ManagementListContent
-        isLoading={bookingsQ.isLoading}
-        isEmpty={rows.length === 0}
-        emptyTitle="Nothing booked"
-        emptyDescription="This room is free for the next two weeks."
-      >
-        <ScrollableTable maxHeightClass="max-h-[min(50vh,420px)]">
-          <WtTable>
-            <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-              <TableRow className="hover:bg-transparent">
-                <TableHead>When</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Booked by</TableHead>
-                <TableHead className="w-20" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((b) => (
-                <TableRow key={b.id}>
-                  <TableCell className="whitespace-normal">
-                    {formatApiDateTimeDisplay(b.start_time)} – {formatApiDateTimeDisplay(b.end_time)}
-                  </TableCell>
-                  <TableCell className="whitespace-normal font-medium text-wt-text">{b.title}</TableCell>
-                  <TableCell>{b.booked_by.name}</TableCell>
-                  <TableCell>
-                    {canEdit(b) ? (
-                      <Button type="button" variant="outline" size="sm" onClick={() => setEditing(b)}>
-                        Edit
-                      </Button>
-                    ) : null}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </WtTable>
-        </ScrollableTable>
-      </ManagementListContent>
-      <p className="text-xs text-wt-text-faint">
-        Showing from {today}. This updates on its own, so a change anyone makes appears here within seconds.
-      </p>
-      {editing ? <BookRoomDialog room={room} booking={editing} onClose={() => setEditing(null)} /> : null}
-    </ManagementListCard>
-  );
-}
 
 function MyBookingsSection() {
   const myBookingsQ = useMyMeetingRoomBookings(true);
@@ -240,40 +120,10 @@ function MyBookingsSection() {
 }
 
 function BookRoomTab() {
-  const roomsQ = useMeetingRoomsList();
-  const rooms = roomsQ.data ?? [];
-  const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
-  const selectedRoom = rooms.find((room) => room.id === selectedRoomId) ?? null;
-  const [bookingRoom, setBookingRoom] = useState<MeetingRoom | null>(null);
-
   return (
     <div className="space-y-6">
-      <ManagementListCard title="Rooms" description="Pick a room to see its schedule, or book it directly.">
-        <ManagementListContent
-          isLoading={roomsQ.isLoading}
-          isEmpty={rooms.length === 0}
-          emptyTitle="No meeting rooms yet"
-          emptyDescription="An admin needs to register a room before anyone can book one."
-        >
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {rooms.map((room) => (
-              <RoomCard
-                key={room.id}
-                room={room}
-                selected={selectedRoomId === room.id}
-                onSelect={() => setSelectedRoomId(room.id)}
-                onBook={() => setBookingRoom(room)}
-              />
-            ))}
-          </div>
-        </ManagementListContent>
-      </ManagementListCard>
-
-      {selectedRoom ? <RoomScheduleTable room={selectedRoom} /> : null}
-
+      <DayScheduleView />
       <MyBookingsSection />
-
-      {bookingRoom ? <BookRoomDialog room={bookingRoom} onClose={() => setBookingRoom(null)} /> : null}
     </div>
   );
 }

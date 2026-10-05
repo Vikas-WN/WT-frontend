@@ -17,6 +17,8 @@ export const MEETING_ROOM_QUERY_KEYS = {
   rooms: (includeInactive: boolean) => ["meeting-rooms", "rooms", includeInactive] as const,
   bookings: (roomId: number | null, from?: string, to?: string) =>
     ["meeting-rooms", "bookings", roomId, from ?? null, to ?? null] as const,
+  all: (roomId: number | null, from?: string, to?: string) =>
+    ["meeting-rooms", "all-bookings", roomId, from ?? null, to ?? null] as const,
   mine: (upcomingOnly: boolean) => ["meeting-rooms", "mine", upcomingOnly] as const,
 };
 
@@ -46,6 +48,22 @@ export function useMeetingRoomBookings(roomId: number | null, from?: string, to?
       const res = await hrmsService.getMeetingRoomBookings(roomId as number, { from, to });
       return res.data ?? [];
     },
+    staleTime: MEETING_ROOM_STALE_MS,
+    refetchInterval: MEETING_ROOM_REFRESH_MS,
+    refetchOnWindowFocus: "always",
+  });
+}
+
+/** Every employee's bookings (all rooms, or one) in a window — the shared schedule. */
+export function useAllMeetingRoomBookings(roomId: number | null, from?: string, to?: string) {
+  return useQuery({
+    queryKey: MEETING_ROOM_QUERY_KEYS.all(roomId, from, to),
+    queryFn: async () => {
+      const res = await hrmsService.getAllMeetingRoomBookings({ roomId: roomId ?? undefined, from, to });
+      return res.data ?? [];
+    },
+    // Same live refresh as a single room's schedule: a booking anyone makes,
+    // edits or cancels shows up here within seconds.
     staleTime: MEETING_ROOM_STALE_MS,
     refetchInterval: MEETING_ROOM_REFRESH_MS,
     refetchOnWindowFocus: "always",

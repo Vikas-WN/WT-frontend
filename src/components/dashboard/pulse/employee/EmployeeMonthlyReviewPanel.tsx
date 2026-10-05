@@ -1,727 +1,124 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Activity, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Lock } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Lock } from "lucide-react";
 
-import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { SubmissionSummary } from "@/components/dashboard/pulse/employee/SubmissionSummary";
+import { ReviewForm } from "@/components/dashboard/pulse/employee/review/ReviewForm";
+import { isEditable } from "@/components/dashboard/pulse/employee/review/reviewModel";
+import { MonthSwitcher } from "@/components/dashboard/pulse/shared/MonthSwitcher";
+import { WindowPill } from "@/components/dashboard/pulse/shared/WindowPill";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
-import { TextAreaField } from "@/components/dashboard/ui/forms";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { ExplainedRatingRow, explainedRowDomId } from "@/components/dashboard/pulse/ExplainedRatingRow";
-import { SubmissionChecklist } from "@/components/dashboard/pulse/SubmissionChecklist";
-import { buildChecklist, summarizeChecklist, summarizeGroup, type ChecklistGroup, type ChecklistItem } from "@/utils/pulseChecklist";
-import { PULSE_COPY, PULSE_REVIEWER_PICKER_ROLES } from "@/constants/pulseCopy";
-import { DropdownSelect } from "@/components/dashboard/ui/DropdownSelect";
+import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { useAuth } from "@/context/AuthContext";
+import {
+  useActiveCertifications,
+  useActiveValues,
+  useAdminReviewers,
+  useApplicableKpis,
+  useMyPulseProjects,
+  useMonthDraft,
+  useMySubmissionMonths,
+  useMyMonthSubmission,
+  usePulseWindow,
+} from "@/hooks/pulse/usePulse";
+import { currentMonthKey, formatMonthLabel, shiftMonth } from "@/utils/pulseMonth";
+import { PULSE_REVIEWER_PICKER_ROLES } from "@/constants/pulseCopy";
 import { normalizeRoles } from "@/utils/roles";
-import { hrmsService } from "@/services/hrms.service";
-import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { notifyError, notifySuccess } from "@/lib/notify";
-import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
-import { ApiError } from "@/api/error";
-import type {
-  CertificationItem,
-  EmployeeSummary,
-  KpiDefinitionItem,
-  MonthlySubmissionDraftPayload,
-  MonthlySubmissionItem,
-  ProjectWithManagers,
-  WebknotValueItem,
-} from "@/types/kpi";
-import { cn } from "@/lib/utils";
-import { formatWeight, groupKpisByParameter, hasKpiParameters } from "@/utils/kpiParameters";
 
-type Load<T> = { status: "loading" | "done" | "error"; data: T | null };
-
-/** Local copy of the small async-fetch hook used across dashboard pages —
- *  kept file-local rather than shared (see HomePageClient's own copy). */
-function useLoad<T>(fn: () => Promise<T>, deps: unknown[] = []): Load<T> {
-  const [state, setState] = useState<Load<T>>({ status: "loading", data: null });
-  useEffect(() => {
-    let alive = true;
-    void (async () => {
-      try {
-        const data = await fn();
-        if (alive) setState({ status: "done", data });
-      } catch {
-        if (alive) setState({ status: "error", data: null });
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-  return state;
+/** Last month's window can still be the live one (a window opened at the end
+ *  of a month runs into the next) — open on whichever month is accepting reviews. */
+function useDefaultMonth(): string {
+  const thisMonth = currentMonthKey();
+  const lastMonth = shiftMonth(thisMonth, -1);
+  const now = usePulseWindow(thisMonth, "self");
+  const before = usePulseWindow(lastMonth, "self");
+  if (now.data?.open) return thisMonth;
+  return before.data?.open ? lastMonth : thisMonth;
 }
 
-function currentMonthKey(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
-/** An active project, identified to the employee by who will review it (never by its code). */
-type ProjectOption = { code: string; name: string; managers: EmployeeSummary[] };
-
-function toProjectOptions(rows: ProjectWithManagers[]): ProjectOption[] {
-  return rows.map((row) => ({ code: row.project_code, name: row.project_name, managers: row.managers }));
-}
-
-/** Project managers as a readable list — "Asha, Ravi", or a fallback when none is on record. */
-function managerNames(managers: EmployeeSummary[]): string {
-  return managers.length ? managers.map((m) => m.name).join(", ") : PULSE_COPY.noProjectManager;
-}
-
-const STEPS = ["Projects", "KPIs", "Company Values", "Certifications", "Review & Submit"] as const;
-
-/** Which wizard step each checklist group is filled in on (index into STEPS). */
-const CHECKLIST_STEPS = { projects: 0, kpis: 1, values: 2, selfReview: 4, reviewer: 4 } as const;
-
-function draftFromSubmission(row: MonthlySubmissionItem): MonthlySubmissionDraftPayload {
-  return {
-    month: row.month,
-    submission_type: "EMPLOYEE_MONTHLY_SUBMISSION",
-    self_review_text: row.self_review_text,
-    kpi_ratings: row.kpi_ratings,
-    value_ratings: row.value_ratings,
-    certifications: row.certifications,
-    project_codes: row.project_codes,
-    recognitions_count: row.recognitions_count,
-    reviewer_id: row.reviewer_id ?? null,
-  };
-}
-
-/** The API rejects a rating below 1 — a KPI or value only gets a rating once its
- *  buttons are clicked, but typing its comment first creates a rating-0 entry
- *  locally. Drop those until rated, so autosave/submit don't 422. */
-function toApiPayload(form: MonthlySubmissionDraftPayload): MonthlySubmissionDraftPayload {
-  return {
-    ...form,
-    kpi_ratings: form.kpi_ratings.filter((r) => r.rating >= 1),
-    value_ratings: form.value_ratings.filter((r) => r.rating >= 1),
-  };
-}
-
-/** Mirrors the backend: the employee can only edit while the submission is
- *  with them — a fresh draft, or one sent back for changes. */
-function isEditable(row: MonthlySubmissionItem): boolean {
-  const status = row.review_status;
-  return !row.locked && (!status || status === "DRAFT" || status === "NEEDS_REVIEW");
-}
-
-function SubmissionStatusCard({ submission }: { submission: MonthlySubmissionItem }) {
-  const status = submission.review_status;
-  const isApproved = status === "APPROVED";
-  const waitingOn = submission.reviewer
-    ? submission.reviewer.name
-    : submission.managers.length
-      ? managerNames(submission.managers)
-      : null;
-  const message = isApproved
-    ? "Your review for this cycle is complete."
-    : status === "MANAGER_SUBMITTED"
-      ? "Your manager has reviewed it — waiting on HR's final check."
-      : status === "NEEDS_MANAGER_REVIEW"
-        ? "HR asked your managers to revise their review — nothing needed from you."
-        : waitingOn
-          ? `Submitted — waiting on ${waitingOn}.`
-          : "Submitted — waiting on your manager's review.";
-
+function ClosedNotice({ month }: { month: string }) {
   return (
-    <div
-      className={cn(
-        "flex items-start gap-3 rounded-xl border p-4",
-        isApproved ? "border-emerald-500/30 bg-emerald-500/10" : "border-wt-border bg-wt-surface-2/50"
-      )}
-    >
-      <CheckCircle2
-        className={cn(
-          "mt-0.5 size-5 shrink-0",
-          isApproved ? "text-emerald-600 dark:text-emerald-400" : "text-wt-brand"
-        )}
-      />
-      <div>
-        <p className="text-sm font-semibold text-wt-text">{message}</p>
-        <p className="mt-0.5 text-xs text-wt-text-muted">{submission.cycle_label}</p>
-        {submission.manager_review?.comments ? (
-          <p className="mt-1 text-sm text-wt-text-muted">
-            {submission.manager_review.reviewed_by ? "Reviewer" : "Manager"}: &ldquo;
-            {submission.manager_review.comments}&rdquo;
-          </p>
-        ) : null}
-        {isApproved && submission.final_score != null ? (
-          <p className="mt-1 text-sm text-wt-text-muted">
-            Final score: <span className="font-semibold text-wt-text">{submission.final_score}</span>
-            {submission.promotion_eligible ? (
-              <span className="ml-2 text-xs text-emerald-600 dark:text-emerald-400">Promotion eligible</span>
-            ) : null}
-          </p>
-        ) : null}
-      </div>
+    <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 text-center">
+      <Lock className="mx-auto size-8 text-wt-text-faint" aria-hidden />
+      <h3 className="mt-3 text-base font-semibold text-wt-text">{formatMonthLabel(month)} is closed for submissions</h3>
+      <p className="mx-auto mt-1.5 max-w-md text-sm text-wt-text-muted">
+        HR opens the monthly self-review window on a schedule. Check back once it&apos;s open — KPIs, values and your self
+        review can only be entered while it is.
+      </p>
     </div>
   );
 }
 
+/** My monthly self-review, month by month: pick a month, fill it in while its
+ *  window is open, and look back at past months read-only. */
 export function EmployeeMonthlyReviewPanel() {
-  const month = useMemo(() => currentMonthKey(), []);
+  const defaultMonth = useDefaultMonth();
+  const [chosen, setChosen] = useState<string | null>(null);
+  const month = chosen ?? defaultMonth;
+
   const { user } = useAuth();
   // DM / PM / AM / HR / Admin aren't reviewed by project managers — they pick an HR or Admin.
   const needsReviewer = useMemo(() => {
     const roles = normalizeRoles(user?.roles ?? []);
     return PULSE_REVIEWER_PICKER_ROLES.some((role) => roles.includes(role));
   }, [user?.roles]);
-  const reviewers = useLoad<EmployeeSummary[]>(
-    () => (needsReviewer ? hrmsService.getPulseAdminReviewers() : Promise.resolve([])),
-    [needsReviewer]
-  );
 
-  const windowStatus = useLoad(
-    () => hrmsService.getSubmissionWindowStatus({ scope: "EMPLOYEE" }).then((r) => r.data),
-    []
-  );
-  const isWindowOpen = windowStatus.data?.open ?? false;
+  const windowQ = usePulseWindow(month, "self");
+  const existing = useMyMonthSubmission(month);
+  const months = useMySubmissionMonths();
+  const editable = existing.data ? isEditable(existing.data) : true;
+  const draft = useMonthDraft(month, Boolean(windowQ.data?.open) && editable);
 
-  const applicableKpis = useLoad<KpiDefinitionItem[]>(() => hrmsService.getApplicableKpis(), []);
-  const values = useLoad<WebknotValueItem[]>(() => hrmsService.getActiveWebknotValues(), []);
-  const certifications = useLoad<CertificationItem[]>(
-    () => hrmsService.getCertifications({ activeOnly: true }),
-    []
-  );
-  const projects = useLoad<ProjectOption[]>(
-    () => hrmsService.getMyPulseProjects().then(toProjectOptions),
-    []
-  );
+  const kpis = useApplicableKpis();
+  const values = useActiveValues();
+  const certs = useActiveCertifications();
+  const projects = useMyPulseProjects();
+  const reviewers = useAdminReviewers(needsReviewer);
 
-  const [reloadTick, setReloadTick] = useState(0);
-  // Read-only lookup first (never creates a row): the employee should see
-  // where their review stands even after the window closes.
-  const existing = useLoad<MonthlySubmissionItem | null>(
-    () =>
-      hrmsService
-        .getMyMonthlySubmissions({ month, submissionType: "EMPLOYEE_MONTHLY_SUBMISSION" })
-        .then((rows) => (Array.isArray(rows) ? rows[0] ?? null : null)),
-    [month, reloadTick]
-  );
-  const existingEditable = existing.data ? isEditable(existing.data) : true;
-  // Only fetch (and, if needed, start) the editable draft while the window
-  // is open and the review is actually with the employee.
-  const draft = useLoad<MonthlySubmissionItem>(
-    () =>
-      isWindowOpen && existingEditable ? hrmsService.getMonthlySubmissionDraft({ month }) : Promise.reject(),
-    [month, isWindowOpen, existingEditable, reloadTick]
-  );
+  const loading = windowQ.isLoading || existing.isLoading || (draft.isLoading && draft.fetchStatus !== "idle");
 
-  if (windowStatus.status === "loading" || existing.status === "loading") return <SectionLoading label="" />;
-
-  if (existing.data && !existingEditable) {
-    return <SubmissionStatusCard submission={existing.data} />;
-  }
-
-  if (!isWindowOpen) {
+  const body = () => {
+    if (loading) return <SectionLoading label="" />;
+    if (existing.data && !editable) return <SubmissionSummary submission={existing.data} />;
+    if (!windowQ.data?.open) {
+      return existing.data ? <SubmissionSummary submission={existing.data} /> : <ClosedNotice month={month} />;
+    }
+    if (kpis.isLoading || values.isLoading || certs.isLoading) return <SectionLoading label="" />;
+    if (!draft.data || !isEditable(draft.data)) {
+      return draft.data ? (
+        <SubmissionSummary submission={draft.data} />
+      ) : (
+        <EmptyState title="Couldn't load your review" description="Please refresh the page and try again." />
+      );
+    }
     return (
-      <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 text-center">
-        <Lock className="mx-auto size-8 text-wt-text-faint" />
-        <h3 className="mt-3 text-base font-semibold text-wt-text">Submission window is closed</h3>
-        <p className="mx-auto mt-1.5 max-w-md text-sm text-wt-text-muted">
-          HR opens the monthly self-review window on a schedule. Check back once it&apos;s open — your
-          KPIs, ratings, and self review can only be entered while it is.
-        </p>
-      </div>
-    );
-  }
-
-  if (draft.status === "loading" || applicableKpis.status === "loading") {
-    return <SectionLoading label="" />;
-  }
-
-  if (!draft.data) {
-    return (
-      <EmptyState
-        title="Couldn't Load Your Review"
-        description="Please refresh the page and try again."
+      <ReviewForm
+        // Remount (re-seeding the form from fresh server data) only when the
+        // underlying row changes — e.g. after a resubmit — not on every render.
+        key={`${draft.data.id}-${draft.data.updated_at}`}
+        initial={draft.data}
+        ctx={{
+          kpiRows: kpis.data ?? [],
+          valueRows: values.data ?? [],
+          certRows: certs.data ?? [],
+          projectRows: projects.data ?? [],
+          reviewerOptions: needsReviewer ? (reviewers.data ?? []) : null,
+        }}
+        projectsLoading={projects.isLoading}
+        needsRevision={draft.data.review_status === "NEEDS_REVIEW"}
+        onSubmitted={() => void existing.refetch()}
       />
     );
-  }
-
-  if (!isEditable(draft.data)) {
-    return <SubmissionStatusCard submission={draft.data} />;
-  }
-
-  return (
-    <EmployeeReviewForm
-      // Remounts (re-seeding local form state from fresh server data) only
-      // when the underlying submission row actually changes — e.g. after a
-      // resubmit bumps review_status — not on every render.
-      key={`${draft.data.id}-${draft.data.updated_at}`}
-      initial={draft.data}
-      kpiRows={applicableKpis.data ?? []}
-      valueRows={values.data ?? []}
-      certRows={certifications.data ?? []}
-      projectRows={projects.data ?? []}
-      projectsLoading={projects.status === "loading"}
-      reviewerOptions={needsReviewer ? reviewers.data ?? [] : null}
-      needsRevision={draft.data.review_status === "NEEDS_REVIEW"}
-      onSubmitted={() => setReloadTick((t) => t + 1)}
-    />
-  );
-}
-
-function EmployeeReviewForm({
-  initial,
-  kpiRows,
-  valueRows,
-  certRows,
-  projectRows,
-  projectsLoading,
-  reviewerOptions,
-  needsRevision,
-  onSubmitted,
-}: {
-  initial: MonthlySubmissionItem;
-  kpiRows: KpiDefinitionItem[];
-  valueRows: WebknotValueItem[];
-  certRows: CertificationItem[];
-  projectRows: ProjectOption[];
-  projectsLoading: boolean;
-  /** HR/Admin users to choose from — non-null only for DM / PM / AM / HR / Admin, who must pick one. */
-  reviewerOptions: EmployeeSummary[] | null;
-  needsRevision: boolean;
-  onSubmitted: () => void;
-}) {
-  const [step, setStep] = useState(0);
-  const [form, setForm] = useState<MonthlySubmissionDraftPayload>(() => draftFromSubmission(initial));
-  const [saving, setSaving] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  // Autosave: debounce local edits, PUT the draft whenever the payload
-  // actually changes.
-  const debouncedForm = useDebouncedValue(form, 900);
-  const lastSavedRef = useRef<string>(JSON.stringify(draftFromSubmission(initial)));
-  useEffect(() => {
-    const serialized = JSON.stringify(debouncedForm);
-    if (serialized === lastSavedRef.current) return;
-    lastSavedRef.current = serialized;
-    setSaving(true);
-    hrmsService
-      .saveMonthlySubmissionDraft(toApiPayload(debouncedForm))
-      .catch(() => {
-        /* Silent — next edit will retry the save. */
-      })
-      .finally(() => setSaving(false));
-  }, [debouncedForm]);
-
-  const toggleProject = (code: string) => {
-    setForm((f) => {
-      // Prune projects the employee is no longer on, so they don't eat into
-      // the 3-project cap invisibly.
-      const current = f.project_codes.filter((c) => projectRows.some((p) => p.code === c));
-      if (current.includes(code)) return { ...f, project_codes: current.filter((c) => c !== code) };
-      if (current.length >= 3) return f;
-      return { ...f, project_codes: [...current, code] };
-    });
-  };
-
-  // A KPI's rating and its reason are one entry; either can be set first, so the other
-  // half is kept (a not-yet-chosen rating is 0 and never leaves the browser — see toApiPayload).
-  const setKpiEntry = (kpiId: number, patch: { rating?: number; comment?: string }) => {
-    setForm((f) => {
-      const existing = f.kpi_ratings.find((r) => r.kpi_id === kpiId);
-      const next = {
-        kpi_id: kpiId,
-        rating: patch.rating ?? existing?.rating ?? 0,
-        comment: patch.comment ?? existing?.comment ?? "",
-      };
-      return { ...f, kpi_ratings: [...f.kpi_ratings.filter((r) => r.kpi_id !== kpiId), next] };
-    });
-  };
-
-  const setValueRating = (valueId: number, patch: { rating?: number; comment?: string }) => {
-    setForm((f) => {
-      const existing = f.value_ratings.find((r) => r.value_id === valueId);
-      const next = {
-        value_id: valueId,
-        rating: patch.rating ?? existing?.rating ?? 0,
-        comment: patch.comment ?? existing?.comment ?? "",
-      };
-      return { ...f, value_ratings: [...f.value_ratings.filter((r) => r.value_id !== valueId), next] };
-    });
-  };
-
-  const toggleCertification = (certificationId: number) => {
-    setForm((f) => {
-      const has = f.certifications.some((c) => c.certification_id === certificationId);
-      if (has) {
-        return { ...f, certifications: f.certifications.filter((c) => c.certification_id !== certificationId) };
-      }
-      return { ...f, certifications: [...f.certifications, { certification_id: certificationId, proof: "" }] };
-    });
-  };
-
-  const setCertificationProof = (certificationId: number, proof: string) => {
-    setForm((f) => ({
-      ...f,
-      certifications: f.certifications.map((c) =>
-        c.certification_id === certificationId ? { ...c, proof } : c
-      ),
-    }));
-  };
-
-  const showParameters = hasKpiParameters(kpiRows);
-  // Matches the backend: 1–3 of your current projects, or none when you're
-  // not on any (e.g. on the bench — system projects aren't listed).
-  const hasProjects = projectRows.length > 0;
-  // A draft can still hold a project the employee has since left — it isn't
-  // listed, so it can't be unticked; only current projects count and are sent.
-  const selectedProjects = form.project_codes.filter((c) => projectRows.some((p) => p.code === c));
-  const selectedManagers = Array.from(
-    new Map(
-      projectRows
-        .filter((p) => selectedProjects.includes(p.code))
-        .flatMap((p) => p.managers)
-        .map((m) => [m.id, m] as const)
-    ).values()
-  );
-  const selfReviewValid = form.self_review_text.trim().length > 0;
-  const requiresReviewer = reviewerOptions !== null;
-  const reviewerValid =
-    reviewerOptions === null || reviewerOptions.some((r) => r.id === form.reviewer_id);
-
-  // Everything the API will insist on, worked out live so the employee sees what is left
-  // instead of finding out from an error after pressing Submit.
-  const checklist = buildChecklist(
-    {
-      kpis: kpiRows.map((k) => ({ id: k.id, name: k.kpi_name })),
-      kpiRatings: Object.fromEntries(form.kpi_ratings.map((r) => [r.kpi_id, r.rating])),
-      kpiComments: Object.fromEntries(form.kpi_ratings.map((r) => [r.kpi_id, r.comment])),
-      values: valueRows.map((v) => ({ id: v.id, name: v.title })),
-      valueRatings: Object.fromEntries(form.value_ratings.map((r) => [r.value_id, r.rating])),
-      valueComments: Object.fromEntries(form.value_ratings.map((r) => [r.value_id, r.comment])),
-      projects: { required: hasProjects, selected: selectedProjects.length, max: 3 },
-      selfReviewWritten: selfReviewValid,
-      reviewer: { required: requiresReviewer, chosen: reviewerValid },
-    },
-    CHECKLIST_STEPS
-  );
-  const checklistSummary = summarizeChecklist(checklist);
-  const canSubmit = !projectsLoading && checklistSummary.complete;
-
-  /** Take the employee to the step (and the exact KPI/value row) a checklist item lives on. */
-  const goToItem = (group: ChecklistGroup, item: ChecklistItem) => {
-    if (group.step != null) setStep(group.step);
-    const [kind, id] = item.key.split(":");
-    if (kind === "kpi" || kind === "value") {
-      // The row only exists once its step is showing, so scroll after it renders.
-      window.setTimeout(() => {
-        document.getElementById(explainedRowDomId(kind, Number(id)))?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 60);
-    }
-  };
-  const stepBadge = (idx: number): string => {
-    const groups = checklist.filter((g) => g.step === idx);
-    if (groups.length === 0) return "";
-    const total = groups.reduce((n, g) => n + summarizeGroup(g).total, 0);
-    const done = groups.reduce((n, g) => n + summarizeGroup(g).done, 0);
-    return total > 1 ? ` (${done}/${total})` : done === total ? " ✓" : "";
-  };
-
-  const handleSubmit = async () => {
-    if (!canSubmit) {
-      notifyError(`${checklistSummary.remaining} item(s) still need attention — see the checklist.`);
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await hrmsService.submitMonthlySubmission({ ...toApiPayload(form), project_codes: selectedProjects });
-      notifySuccess("Self review submitted.");
-      onSubmitted();
-    } catch (error) {
-      notifyError(
-        toUserFriendlyApiErrorMessage(
-          error,
-          error instanceof ApiError ? error.message : "Couldn't submit your review."
-        )
-      );
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   return (
     <div className="space-y-5">
-      {needsRevision ? (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-          <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
-          <div>
-            <p className="text-sm font-semibold text-wt-text">
-              {initial.admin_review?.action === "REJECT" ? "HR sent this back for changes" : "Sent back for changes"}
-            </p>
-            <p className="mt-1 text-sm text-wt-text-muted">
-              {(initial.admin_review?.action === "REJECT"
-                ? initial.admin_review.comments
-                : initial.manager_review?.comments) || "Update your review and resubmit."}
-            </p>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Step nav */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        {STEPS.map((label, idx) => (
-          <button
-            key={label}
-            type="button"
-            onClick={() => setStep(idx)}
-            className={cn(
-              "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-              idx === step
-                ? "border-wt-brand bg-wt-brand-soft text-wt-brand"
-                : "border-wt-border text-wt-text-muted hover:border-wt-brand/40"
-            )}
-          >
-            {idx + 1}. {label}
-            {stepBadge(idx)}
-          </button>
-        ))}
-        <span className="ml-auto text-xs text-wt-text-faint">{saving ? "Saving…" : "Saved"}</span>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <MonthSwitcher value={month} onChange={setChosen} marks={months.data} />
+        <WindowPill status={windowQ.data} loading={windowQ.isLoading} openLabel="Accepting submissions" closedLabel="Window closed" />
       </div>
-
-      <SubmissionChecklist groups={checklist} onSelect={goToItem} />
-
-      <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
-        {step === 0 ? (
-          <div className="space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold text-wt-text">Projects you worked on</h3>
-              <p className="mt-0.5 text-xs text-wt-text-muted">
-                Pick 1 to 3 active projects.{" "}
-                {requiresReviewer
-                  ? PULSE_COPY.reviewerIntro
-                  : "Your review goes to the managers of the projects you pick, all at once."}
-              </p>
-            </div>
-            {projectsLoading ? (
-              <SectionLoading label="" />
-            ) : projectRows.length === 0 ? (
-              <EmptyState
-                title="No Active Projects"
-                description="You're not allocated to any project right now — skip this step and continue."
-              />
-            ) : (
-              <div className="space-y-2">
-                {projectRows.map((p) => (
-                  <label
-                    key={p.code}
-                    className="flex items-center gap-2.5 rounded-xl border border-wt-border bg-wt-surface-2/40 px-3.5 py-2.5"
-                  >
-                    <Checkbox
-                      checked={form.project_codes.includes(p.code)}
-                      onCheckedChange={() => toggleProject(p.code)}
-                      disabled={!selectedProjects.includes(p.code) && selectedProjects.length >= 3}
-                    />
-                    <span className="text-sm font-medium text-wt-text">{managerNames(p.managers)}</span>
-                    <span className="ml-auto text-xs text-wt-text-faint">{p.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-            {!requiresReviewer && selectedManagers.length > 0 ? (
-              <p className="text-xs text-wt-text-muted">
-                Goes to: <span className="font-medium text-wt-text">{managerNames(selectedManagers)}</span>
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-
-        {step === 1 ? (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold text-wt-text">Rate your KPIs</h3>
-              <p className="mt-0.5 text-xs text-wt-text-muted">
-                Applicable to your band and department. Choose the level that best fits each one and say
-                why — a short, specific example is what your reviewers are looking for.
-              </p>
-            </div>
-            {kpiRows.length === 0 ? (
-              <EmptyState
-                title="No KPIs Defined Yet"
-                description="HR hasn't defined KPIs for your band and department yet."
-              />
-            ) : (
-              <div className="space-y-5">
-                {groupKpisByParameter(kpiRows).map((group) => (
-                  <div key={group.parameter ?? "_none"} className="space-y-3">
-                    {showParameters ? (
-                      <div className="flex items-baseline justify-between gap-3">
-                        <h4 className="text-xs font-semibold tracking-wide text-wt-text-muted uppercase">
-                          {group.parameter ?? "Other"}
-                        </h4>
-                        <span className="text-xs text-wt-text-muted">{formatWeight(group.weight)}</span>
-                      </div>
-                    ) : null}
-                    {group.items.map((kpi) => {
-                      const entry = form.kpi_ratings.find((r) => r.kpi_id === kpi.id);
-                      return (
-                        <ExplainedRatingRow
-                          key={kpi.id}
-                          domId={explainedRowDomId("kpi", kpi.id)}
-                          title={kpi.kpi_name}
-                          detail={kpi.evaluation_criteria}
-                          meta={showParameters ? null : `Weight · ${formatWeight(kpi.weightage)}`}
-                          rating={entry?.rating ?? null}
-                          comment={entry?.comment ?? ""}
-                          onRating={(r) => setKpiEntry(kpi.id, { rating: r })}
-                          onComment={(c) => setKpiEntry(kpi.id, { comment: c })}
-                        />
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : null}
-
-        {step === 2 ? (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold text-wt-text">Company Values</h3>
-              <p className="mt-0.5 text-xs text-wt-text-muted">
-                Rate yourself on each value and say why — both are required.
-              </p>
-            </div>
-            <div className="space-y-3">
-              {valueRows.map((v) => {
-                const row = form.value_ratings.find((r) => r.value_id === v.id);
-                return (
-                  <ExplainedRatingRow
-                    key={v.id}
-                    domId={explainedRowDomId("value", v.id)}
-                    title={v.title}
-                    detail={v.evaluation_criteria}
-                    rating={row?.rating ?? null}
-                    comment={row?.comment ?? ""}
-                    onRating={(r) => setValueRating(v.id, { rating: r })}
-                    onComment={(c) => setValueRating(v.id, { comment: c })}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
-
-        {step === 3 ? (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold text-wt-text">Certifications</h3>
-              <p className="mt-0.5 text-xs text-wt-text-muted">
-                Check any you&apos;ve earned this cycle and add proof (a link or note).
-              </p>
-            </div>
-            {certRows.length === 0 ? (
-              <EmptyState title="No Certifications in the Catalog" description="Nothing to claim yet." />
-            ) : (
-              <div className="space-y-2">
-                {certRows.map((c) => {
-                  const claim = form.certifications.find((x) => x.certification_id === c.id);
-                  return (
-                    <div
-                      key={c.id}
-                      className="rounded-xl border border-wt-border bg-wt-surface-2/40 px-3.5 py-2.5"
-                    >
-                      <label className="flex items-center gap-2.5">
-                        <Checkbox checked={Boolean(claim)} onCheckedChange={() => toggleCertification(c.id)} />
-                        <span className="text-sm text-wt-text">{c.name}</span>
-                      </label>
-                      {claim ? (
-                        <input
-                          type="text"
-                          value={claim.proof}
-                          onChange={(e) => setCertificationProof(c.id, e.target.value)}
-                          placeholder="Proof — a link or note (optional)"
-                          className="mt-2 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-1.5 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40"
-                        />
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            <div className="flex items-center gap-3 rounded-xl border border-wt-border bg-wt-surface-2/40 px-3.5 py-2.5">
-              <label className="text-sm font-medium text-wt-text" htmlFor="recognitions-count">
-                Recognitions received this cycle
-              </label>
-              <input
-                id="recognitions-count"
-                type="number"
-                min={0}
-                value={form.recognitions_count}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, recognitions_count: Math.max(0, Number(e.target.value) || 0) }))
-                }
-                className="ml-auto w-20 rounded-lg border border-wt-border bg-wt-surface-1 px-2 py-1 text-sm text-wt-text"
-              />
-            </div>
-          </div>
-        ) : null}
-
-        {step === 4 ? (
-          <div className="space-y-4">
-            <TextAreaField
-              label="Self review"
-              value={form.self_review_text}
-              onChange={(v) => setForm((f) => ({ ...f, self_review_text: v }))}
-              placeholder="Summarize your impact this cycle — what shipped, what you're proud of, what you'd do differently."
-              rows={6}
-              required
-            />
-            {reviewerOptions !== null ? (
-              <div>
-                <p className="mb-1.5 text-sm font-medium text-wt-text">
-                  {PULSE_COPY.reviewerFieldLabel} <span className="text-rose-600">*</span>
-                </p>
-                <DropdownSelect
-                  value={form.reviewer_id ? String(form.reviewer_id) : ""}
-                  onChange={(v) => setForm((f) => ({ ...f, reviewer_id: v ? Number(v) : null }))}
-                  options={reviewerOptions.map((r) => ({
-                    value: String(r.id),
-                    label: `${r.name}${r.emp_id ? ` (${r.emp_id})` : ""}`,
-                  }))}
-                  placeholder={reviewerOptions.length ? PULSE_COPY.reviewerPlaceholder : PULSE_COPY.reviewerEmpty}
-                  aria-label="Reviewer"
-                />
-                <p className="mt-1 text-xs text-wt-text-muted">{PULSE_COPY.reviewerIntro}</p>
-              </div>
-            ) : null}
-            <p className="text-xs text-wt-text-faint">
-              Changes autosave while you work. Once you submit, the review is locked unless it&apos;s sent
-              back to you for changes.
-            </p>
-          </div>
-        ) : null}
-      </div>
-
-      <div className="flex items-center justify-between gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setStep((s) => Math.max(0, s - 1))}
-          disabled={step === 0}
-        >
-          <ChevronLeft className="mr-1 size-4" /> Back
-        </Button>
-        {step < STEPS.length - 1 ? (
-          <Button type="button" onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>
-            Next <ChevronRight className="ml-1 size-4" />
-          </Button>
-        ) : (
-          <Button type="button" onClick={() => void handleSubmit()} disabled={submitting || !canSubmit}>
-            <Activity className="mr-1.5 size-4" />
-            {submitting ? "Submitting…" : "Submit Self Review"}
-          </Button>
-        )}
-      </div>
+      {body()}
     </div>
   );
 }

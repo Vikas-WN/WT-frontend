@@ -24,12 +24,25 @@ export interface KpiDefinitionWritePayload {
   active: boolean;
 }
 
-export type SubmissionCycleScope = "GLOBAL" | "EMPLOYEE" | "MANAGER";
+/** GLOBAL opens Pulse for everyone, EMPLOYEE for employees only, MANAGER for
+ *  managers only, PERSON for one named employee (see `user_id`). */
+export type SubmissionCycleScope = "GLOBAL" | "EMPLOYEE" | "MANAGER" | "PERSON";
+
+/** Who a PERSON window belongs to. */
+export interface SubmissionCycleUser {
+  id: number;
+  name: string;
+  email: string;
+  emp_id: string | null;
+}
 
 export interface SubmissionCycleItem {
   id: number;
+  /** `YYYY-MM` — the review month this window opens Pulse for. */
   cycle_key: string;
   scope: SubmissionCycleScope;
+  user_id: number | null;
+  user: SubmissionCycleUser | null;
   window_start_at: string;
   window_end_at: string | null;
   manual_closed: boolean;
@@ -43,6 +56,8 @@ export interface SubmissionCycleItem {
 export interface SubmissionCycleWritePayload {
   cycle_key: string;
   scope: SubmissionCycleScope;
+  /** Required for PERSON windows, forbidden otherwise. */
+  user_id?: number | null;
   window_start_at: string;
   window_end_at: string | null;
   manual_closed: boolean;
@@ -52,8 +67,13 @@ export interface SubmissionWindowStatus {
   scope: string;
   cycle_key: string;
   open: boolean;
-  resolved_scope: string | null;
+  resolved_scope: SubmissionCycleScope | null;
+  /** When the open window(s) end — null when open-ended or closed. */
+  window_end_at?: string | null;
 }
+
+/** What a window check is for: filling in my own review, or reviewing my team. */
+export type PulseWindowPurpose = "self" | "team";
 
 export interface WebknotValueItem {
   id: number;
