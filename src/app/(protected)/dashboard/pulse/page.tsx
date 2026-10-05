@@ -1,12 +1,18 @@
-import { LazyPulsePageClient } from "@/components/dashboard/lazyPages";
+import { ComingSoonPanel } from "@/components/dashboard/ComingSoonPanel";
+import { TrendingUp } from "lucide-react";
 
 /**
- * Pulse used to redirect out to the external RT portal
- * (rtportal.webknot-dev.in) — see dashboardNavigation.ts's PULSE_EXTERNAL_URL
- * for that history. It's native now: employees fill in their monthly
- * self-review, managers review their team's, and HR/Admin manage KPIs, the
- * submission window, and final approval.
+ * Pulse is parked behind a Coming Soon panel. The nav item and route stay wired and
+ * `LazyPulsePageClient` (components/dashboard/lazyPages) is untouched — restore by
+ * rendering it here again. (It briefly redirected to the external RT portal before going
+ * native; see PULSE_EXTERNAL_URL in constants/dashboardNavigation.ts.)
  */
 export default function PulsePage() {
-  return <LazyPulsePageClient />;
+  return (
+    <ComingSoonPanel
+      title="Pulse"
+      description="Self-reviews, team reviews and KPI tracking will appear here soon. Your existing Pulse data stays connected behind this screen."
+      icon={<TrendingUp className="size-6" />}
+    />
+  );
 }
