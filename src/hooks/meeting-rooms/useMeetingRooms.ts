@@ -6,10 +6,14 @@ import { notifyError, notifySuccess } from "@/lib/notify";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import { ApiError } from "@/api/error";
 import { MEETING_ROOM_REFRESH_MS, MEETING_ROOM_STALE_MS } from "@/constants/meetingRooms";
+import { MEETING_ROOM_SKIPPED_PREVIEW_LIMIT } from "@/constants/meetingRooms";
+import { isMeetingRoomSeriesResult } from "@/types/meetingRoom";
 import type {
   MeetingRoomBookingCreatePayload,
   MeetingRoomBookingUpdatePayload,
+  MeetingRoomCancelScope,
   MeetingRoomCreatePayload,
+  MeetingRoomSeriesResult,
   MeetingRoomUpdatePayload,
 } from "@/types/meetingRoom";
 
@@ -127,13 +131,28 @@ export function useDeactivateMeetingRoom() {
   });
 }
 
+/** "Booked 4 of 5 days … Skipped 16/10 (already booked)." — the skipped days matter, so name them. */
+function seriesSummary(series: MeetingRoomSeriesResult): string {
+  const booked = `Booked ${series.created.length} of ${series.requested} days for '${series.title}' in ${series.room_name}.`;
+  if (series.skipped.length === 0) return booked;
+  const dates = series.skipped.map((s) => s.start_time.split(" ")[0]);
+  const shown = dates.slice(0, MEETING_ROOM_SKIPPED_PREVIEW_LIMIT).join(", ");
+  const more = dates.length > MEETING_ROOM_SKIPPED_PREVIEW_LIMIT ? ` and ${dates.length - MEETING_ROOM_SKIPPED_PREVIEW_LIMIT} more` : "";
+  return `${booked} Skipped (already booked): ${shown}${more}.`;
+}
+
 export function useCreateMeetingRoomBooking() {
   const invalidate = useInvalidateMeetingRoomQueries();
   return useMutation({
     mutationFn: (payload: MeetingRoomBookingCreatePayload) => hrmsService.createMeetingRoomBooking(payload),
     onSuccess: (res) => {
       invalidate();
-      notifySuccess(`Booked '${res.data?.room_name}' for ${res.data?.title}.`);
+      const data = res.data;
+      if (isMeetingRoomSeriesResult(data)) {
+        notifySuccess(seriesSummary(data));
+        return;
+      }
+      notifySuccess(`Booked '${data?.room_name}' for ${data?.title}.`);
     },
     onError: (error) => notifyError(apiErrorMessage(error, "Couldn't book that room.")),
   });
@@ -155,10 +174,12 @@ export function useUpdateMeetingRoomBooking() {
 export function useCancelMeetingRoomBooking() {
   const invalidate = useInvalidateMeetingRoomQueries();
   return useMutation({
-    mutationFn: (id: number) => hrmsService.cancelMeetingRoomBooking(id),
-    onSuccess: () => {
+    mutationFn: ({ id, scope = "this" }: { id: number; scope?: MeetingRoomCancelScope }) =>
+      hrmsService.cancelMeetingRoomBooking(id, scope),
+    onSuccess: (res) => {
       invalidate();
-      notifySuccess("Booking cancelled.");
+      const cancelled = res.data?.cancelled ?? 1;
+      notifySuccess(cancelled > 1 ? `Cancelled ${cancelled} bookings.` : "Booking cancelled.");
     },
     onError: (error) => notifyError(apiErrorMessage(error, "Couldn't cancel that booking.")),
   });

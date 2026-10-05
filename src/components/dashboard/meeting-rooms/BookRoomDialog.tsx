@@ -2,8 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
+import { RepeatFields } from "@/components/dashboard/meeting-rooms/RepeatFields";
 import { DatePickerField, InputField, TextAreaField } from "@/components/dashboard/ui/forms";
 import { useCreateMeetingRoomBooking, useUpdateMeetingRoomBooking } from "@/hooks/meeting-rooms/useMeetingRooms";
+import { useRepeatForm } from "@/hooks/meeting-rooms/useRepeatForm";
 import { formatApiDate, formatApiDateTime, fromApiDate } from "@/utils/apiDate";
 import type { MeetingRoom, MeetingRoomBooking } from "@/types/meetingRoom";
 
@@ -45,6 +47,7 @@ export function BookRoomDialog({
   const [title, setTitle] = useState(booking?.title ?? "");
   const [attendees, setAttendees] = useState(booking?.attendees ?? "");
   const [notes, setNotes] = useState(booking?.notes ?? "");
+  const repeat = useRepeatForm(date);
   const createBooking = useCreateMeetingRoomBooking();
   const updateBooking = useUpdateMeetingRoomBooking();
   const saving = createBooking.isPending || updateBooking.isPending;
@@ -60,7 +63,13 @@ export function BookRoomDialog({
     return null;
   }, [title, startTime, endTime, startDate, endDate]);
 
-  const canSubmit = Boolean(title.trim() && date && startTime && endTime && startDate && endDate && !validationError);
+  // Editing changes one day; only a new booking can repeat.
+  const repeatOk = editing || repeat.valid;
+  const canSubmit = Boolean(
+    title.trim() && date && startTime && endTime && startDate && endDate && !validationError && repeatOk
+  );
+  const repeatCount = repeat.preview?.ok ? repeat.preview.dates.length : 0;
+  const submitLabel = editing ? "Save changes" : repeatCount > 1 ? `Book ${repeatCount} days` : "Book room";
 
   const handleSubmit = () => {
     if (!canSubmit || !startDate || !endDate) return;
@@ -89,6 +98,7 @@ export function BookRoomDialog({
         end_time: formatApiDateTime(endDate),
         attendees: attendees.trim() || undefined,
         notes: notes.trim() || undefined,
+        recurrence: repeat.recurrence,
       },
       { onSuccess: onClose }
     );
@@ -101,7 +111,7 @@ export function BookRoomDialog({
       description={room.location ?? undefined}
       onClose={onClose}
       onSubmit={handleSubmit}
-      submitLabel={editing ? "Save changes" : "Book room"}
+      submitLabel={submitLabel}
       submittingLabel={editing ? "Saving…" : "Booking…"}
       submitDisabled={!canSubmit}
       loading={saving}
@@ -120,6 +130,7 @@ export function BookRoomDialog({
           <InputField label="End time" value={endTime} onChange={setEndTime} type="time" required />
         </div>
         {validationError ? <p className="text-sm text-rose-600 dark:text-rose-400">{validationError}</p> : null}
+        {!editing ? <RepeatFields form={repeat} minDate={date} /> : null}
         <InputField
           label="Attendees"
           value={attendees}

@@ -66,7 +66,9 @@ import type {
   MeetingRoomBooking,
   MeetingRoomBookingCreatePayload,
   MeetingRoomBookingUpdatePayload,
+  MeetingRoomCancelScope,
   MeetingRoomCreatePayload,
+  MeetingRoomSeriesResult,
   MeetingRoomUpdatePayload,
 } from "@/types/meetingRoom";
 
@@ -1690,8 +1692,9 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<MeetingRoomBooking[]>>(endpoints.meetingRooms.myBookings, { query });
   },
 
+  /** One booking, or — when `payload.recurrence` is set — the series (days booked and days skipped). */
   createMeetingRoomBooking(payload: MeetingRoomBookingCreatePayload) {
-    return apiClient.post<ApiEnvelope<MeetingRoomBooking>>(endpoints.meetingRooms.bookingsRoot, {
+    return apiClient.post<ApiEnvelope<MeetingRoomBooking | MeetingRoomSeriesResult>>(endpoints.meetingRooms.bookingsRoot, {
       contentType: "application/json",
       body: JSON.stringify(payload),
     });
@@ -1704,8 +1707,12 @@ export const hrmsService = {
     });
   },
 
-  cancelMeetingRoomBooking(id: number) {
-    return apiClient.delete<ApiEnvelope<unknown>>(endpoints.meetingRooms.bookingById(id));
+  /** `scope: "upcoming"` also cancels every later day of a repeating booking's series. */
+  cancelMeetingRoomBooking(id: number, scope: MeetingRoomCancelScope = "this") {
+    return apiClient.delete<ApiEnvelope<{ id: number; cancelled: number }>>(
+      endpoints.meetingRooms.bookingById(id),
+      scope === "this" ? {} : { query: { scope } }
+    );
   },
 
   markAllNotificationsRead() {
