@@ -3739,10 +3739,10 @@ export function AllocationPageClient() {
                                                     <TableRow className="hover:bg-transparent">
                                                       <TableHead>Employee Name</TableHead>
                                                       <TableHead>Project Role</TableHead>
-                                                      <TableHead>ALLOCATION %</TableHead>
+                                                      <TableHead>Allocation %</TableHead>
                                                       <TableHead>
                                                         <TableSortHeader
-                                                          label="ALLOCATION TYPE"
+                                                          label="Allocation Type"
                                                           activeDirection={activeSortDirectionForColumn(
                                                             "allocation_type",
                                                             allocationListSortId,
@@ -3782,7 +3782,7 @@ export function AllocationPageClient() {
                                                       </TableHead>
                                                       <TableHead>Start Date</TableHead>
                                                       <TableHead>End Date</TableHead>
-                                                      <TableHead className="text-right">ACTIONS</TableHead>
+                                                      <TableHead className="text-right">Actions</TableHead>
                                                     </TableRow>
                                                   </TableHeader>
                                                   <TableBody>
@@ -4091,28 +4091,28 @@ export function AllocationPageClient() {
                                             <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
                                               <TableRow className="hover:bg-transparent">
                                                 <TableHead>
-                                                  ALLOCATED PROJECT
+                                                  Allocated Project
                                                 </TableHead>
                                                 <TableHead>
-                                                  PROJECT ROLE
+                                                  Project Role
                                                 </TableHead>
                                                 <TableHead>
-                                                  ALLOCATION %
+                                                  Allocation %
                                                 </TableHead>
                                                 <TableHead>
-                                                  ALLOCATION TYPE
+                                                  Allocation Type
                                                 </TableHead>
                                                 <TableHead>
-                                                  BILLING STATUS
+                                                  Billing Status
                                                 </TableHead>
                                                 <TableHead>
-                                                  START DATE
+                                                  Start Date
                                                 </TableHead>
                                                 <TableHead>
-                                                  END DATE
+                                                  End Date
                                                 </TableHead>
                                                 <TableHead className="text-right">
-                                                  ACTIONS
+                                                  Actions
                                                 </TableHead>
                                               </TableRow>
                                             </TableHeader>

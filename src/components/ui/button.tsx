@@ -11,11 +11,11 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[var(--wt-brand)] text-[var(--wt-brand-text)] shadow-sm hover:bg-[var(--wt-brand-hover)] hover:shadow-[0_2px_6px_rgba(53,80,149,0.28)] active:bg-[var(--wt-brand-active)] active:shadow-none",
+          "bg-[var(--wt-brand)] bg-linear-to-b from-white/[0.14] to-transparent text-[var(--wt-brand-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_1px_2px_rgba(16,24,40,0.14)] hover:bg-[var(--wt-brand-hover)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_2px_6px_rgba(53,80,149,0.28)] active:bg-[var(--wt-brand-active)] active:shadow-none",
         brand:
-          "bg-[var(--wt-brand)] text-[var(--wt-brand-text)] shadow-sm hover:bg-[var(--wt-brand-hover)] hover:shadow-[0_2px_6px_rgba(53,80,149,0.28)] active:bg-[var(--wt-brand-active)] active:shadow-none",
+          "bg-[var(--wt-brand)] bg-linear-to-b from-white/[0.14] to-transparent text-[var(--wt-brand-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_1px_2px_rgba(16,24,40,0.14)] hover:bg-[var(--wt-brand-hover)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_2px_6px_rgba(53,80,149,0.28)] active:bg-[var(--wt-brand-active)] active:shadow-none",
         outline:
-          "border-wt-border bg-wt-surface-1 text-wt-text hover:bg-wt-surface-2 hover:text-wt-text aria-expanded:bg-wt-surface-2 dark:border-wt-border dark:bg-wt-surface-1 dark:hover:bg-wt-surface-2",
+          "border-wt-border bg-wt-surface-1 text-wt-text shadow-[var(--wt-shadow-sm)] hover:bg-wt-surface-2 hover:text-wt-text aria-expanded:bg-wt-surface-2 dark:border-wt-border dark:bg-wt-surface-1 dark:hover:bg-wt-surface-2",
         secondary:
           "bg-wt-surface-2 text-wt-text hover:bg-wt-surface-3 aria-expanded:bg-wt-surface-3",
         ghost:

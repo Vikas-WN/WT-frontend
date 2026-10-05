@@ -31,12 +31,14 @@
   --wt-brand-soft: color-mix(in srgb, var(--wt-brand) 10%, white);
   --wt-brand-muted: color-mix(in srgb, var(--wt-brand) 16%, transparent);
 
-  /* Surface */
-  --wt-bg: #f3f6fb;
-  --wt-page-bg: #eef2f8;
+  /* Surface — a calm, low-saturation canvas so white cards lift off it with a
+     hairline + soft shadow instead of tint. (Was a saturated blue-gray that,
+     with the page-top brand gradient on top, read as a muddy blue band.) */
+  --wt-bg: #f8f9fc;
+  --wt-page-bg: #f4f6fa;
   --wt-surface-1: #ffffff;
-  --wt-surface-2: #f7f9fc;
-  --wt-surface-3: #eef2f7;
+  --wt-surface-2: #f8fafc;
+  --wt-surface-3: #eff2f7;
 
   /* Sidebar — deliberately fixed dark regardless of the app's light/dark
      theme (Vercel/Linear-style structural contrast against the light
@@ -52,20 +54,21 @@
   --wt-sidebar-active-bg: color-mix(in srgb, var(--wt-brand) 32%, transparent);
   --wt-sidebar-active-bg-collapsed: color-mix(in srgb, var(--wt-brand) 40%, var(--wt-sidebar-surface-2));
 
-  /* Text */
-  --wt-text: #0f172a;
+  /* Text — every step clears WCAG AA (4.5:1) on both white cards and the canvas.
+     Faint was #64748b, which dipped just under on the gray canvas. */
+  --wt-text: #0b1220;
   --wt-text-muted: #475569;
-  --wt-text-faint: #64748b;
+  --wt-text-faint: #5b6779;
 
-  /* Border */
-  --wt-border: rgba(15, 23, 42, 0.07);
-  --wt-border-md: rgba(15, 23, 42, 0.12);
+  /* Border — hairlines with enough weight to define a card edge on the canvas */
+  --wt-border: rgba(15, 23, 42, 0.08);
+  --wt-border-md: rgba(15, 23, 42, 0.15);
 
-  /* Crisp elevation — tight, neutral shadows (no soft brand-tinted bloom).
-     Modern-SaaS direction: definition over softness. */
-  --wt-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --wt-shadow-md: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 10px rgba(15, 23, 42, 0.06);
-  --wt-shadow-lg: 0 2px 4px rgba(15, 23, 42, 0.05), 0 12px 24px rgba(15, 23, 42, 0.08);
+  /* Elevation — neutral, layered and soft. Cards rest on a hairline plus a 1px
+     contact shadow; overlays get a long, low-opacity ambient shadow. */
+  --wt-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --wt-shadow-md: 0 1px 2px rgba(16, 24, 40, 0.05), 0 4px 12px -2px rgba(16, 24, 40, 0.07);
+  --wt-shadow-lg: 0 2px 4px -1px rgba(16, 24, 40, 0.05), 0 16px 32px -8px rgba(16, 24, 40, 0.12);
 
   /* Accent glow — brand-tinted (not indigo/violet) */
   --wt-glow-indigo: 0 4px 14px rgba(53, 80, 149, 0.18);
@@ -281,6 +284,11 @@ html {
 
 html::-webkit-scrollbar {
   display: none;
+}
+
+/* Tabular figures: dates, percentages and counts line up down a column. */
+table {
+  font-variant-numeric: tabular-nums;
 }
 
 body {
@@ -1750,11 +1758,14 @@ select.input-field {
 .wt-sidebar {
   isolation: isolate;
   overflow: hidden;
+  /* Fixed dark in light mode too: every sidebar component is built for the dark
+     --wt-sidebar-* tokens (near-white text). The old light surface gradient left the
+     brand wordmark and account name white-on-white. */
   background:
     linear-gradient(
       180deg,
-      color-mix(in oklch, var(--wt-brand) 5%, var(--wt-surface-1)) 0%,
-      var(--wt-surface-1) 28%
+      color-mix(in oklch, var(--wt-brand) 16%, var(--wt-sidebar-bg)) 0%,
+      var(--wt-sidebar-bg) 36%
     );
   animation: wt-sidebar-shell-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -2141,12 +2152,12 @@ html[data-density="compact"] .wt-page-enter {
 }
 
 .wt-account-footer:hover {
-  background-color: color-mix(in oklch, var(--wt-surface-2) 88%, var(--wt-brand) 4%);
+  background-color: var(--wt-sidebar-hover-bg);
 }
 
 .wt-sidebar-nav {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in oklch, var(--wt-text-muted) 22%, transparent) transparent;
+  scrollbar-color: color-mix(in oklch, var(--wt-sidebar-text-muted) 30%, transparent) transparent;
 }
 
 .wt-sidebar-nav::-webkit-scrollbar {
@@ -2155,28 +2166,22 @@ html[data-density="compact"] .wt-page-enter {
 
 .wt-sidebar-nav::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: color-mix(in oklch, var(--wt-text-muted) 22%, transparent);
+  background: color-mix(in oklch, var(--wt-sidebar-text-muted) 30%, transparent);
 }
 
 .wt-sidebar-nav::-webkit-scrollbar-track {
   background: transparent;
 }
 
-/* Sidebar nav — calm hover/active, no bounce */
-.wt-sidebar-nav .wt-sidebar-nav-item {
-  color: var(--wt-text-muted);
-}
-
-.wt-sidebar-nav .wt-sidebar-nav-item:hover {
-  color: var(--wt-text);
-}
-
+/* Sidebar nav — calm hover/active, no bounce. Text and background colours are owned by
+   the --wt-sidebar-* utilities in sidebarLayout.ts; do not set them here (unlayered CSS
+   would beat those utilities, including on the active item). */
 .wt-sidebar-nav .wt-sidebar-nav-item svg {
   transition: color var(--wt-duration) var(--wt-ease), opacity var(--wt-duration) var(--wt-ease);
 }
 
 .wt-sidebar-nav .wt-sidebar-nav-item:hover svg {
-  color: var(--wt-brand);
+  color: color-mix(in srgb, var(--wt-brand) 55%, white);
   opacity: 1;
 }
 
@@ -2189,14 +2194,6 @@ html[data-density="compact"] .wt-page-enter {
   pointer-events: none;
 }
 
-:is(.dark, [data-theme="dark"]) .wt-sidebar-nav .wt-sidebar-nav-item:hover {
-  background: var(--wt-surface-2);
-  color: var(--wt-text);
-}
-
-:is(.dark, [data-theme="dark"]) .wt-sidebar-nav .wt-sidebar-nav-item:hover svg {
-  color: var(--wt-brand);
-}
 
 html.wt-reduce-motion .wt-sidebar {
   animation: none !important;
