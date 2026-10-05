@@ -19,7 +19,7 @@ export function DashboardPageShell({
         className
       )}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(ellipse_at_top,color-mix(in_srgb,var(--wt-brand)_7%,transparent),transparent_70%)] dark:opacity-60" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(ellipse_at_top,color-mix(in_srgb,var(--wt-brand)_3%,transparent),transparent_70%)] dark:opacity-60" />
       {children}
     </main>
   );
