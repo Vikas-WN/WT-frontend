@@ -178,6 +178,12 @@ export const endpoints = {
     importCsv: `${api}/assets/import-csv`,
   },
 
+  bugReports: {
+    root: `${api}/bug-reports`,
+    mine: `${api}/bug-reports/mine`,
+    byId: (id: number | string) => `${api}/bug-reports/${encodeURIComponent(id)}`,
+  },
+
   meetingRooms: {
     root: `${api}/meeting-rooms`,
     byId: (id: number | string) => `${api}/meeting-rooms/${encodeURIComponent(id)}`,

@@ -51,6 +51,12 @@ export const LazyMeetingRoomsPageClient = lazyPage(
   "Loading meeting rooms…"
 );
 
+export const LazyBugReportsPageClient = lazyPage(
+  () => import("@/components/dashboard/bug-reports/BugReportsPageClient"),
+  "BugReportsPageClient",
+  "Loading bug reports…"
+);
+
 export const LazyReportsPageClient = lazyPage(
   () => import("@/components/dashboard/reports/ReportsPageClient"),
   "ReportsPageClient",

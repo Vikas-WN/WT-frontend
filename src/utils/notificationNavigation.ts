@@ -250,6 +250,9 @@ export function notificationCategoryLabel(
       return "Internship";
     case "ANNOUNCEMENT":
       return "Announcement";
+    case "BUG_REPORTED":
+    case "BUG_UPDATED":
+      return "Bug report";
     case "BIRTHDAY_WISH":
       return "Birthday";
     case "EMPLOYEE_ID_UPDATED":
@@ -439,6 +442,12 @@ export function resolveNotificationHref(
 
     case "ANNOUNCEMENT":
       return DASHBOARD_ROUTES.profile;
+
+    case "BUG_REPORTED":
+    case "BUG_UPDATED": {
+      const bugId = readNotificationMessage(row).match(/bug\s*#\s*(\d+)/i)?.[1];
+      return bugId ? `${DASHBOARD_ROUTES["bug-reports"]}?bugId=${bugId}` : DASHBOARD_ROUTES["bug-reports"];
+    }
 
     case "EMPLOYEE_ID_UPDATED":
       return DASHBOARD_ROUTES.profile;

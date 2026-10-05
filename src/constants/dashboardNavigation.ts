@@ -283,6 +283,23 @@ export const dashboardNavigation: NavItem[] = [
     ],
     icon: "calendarCheck",
   },
+  {
+    kind: "link",
+    id: "bug-reports",
+    label: "Bug Reports",
+    // Everyone can report and follow their own; HR/Admin triage everyone's inside the page.
+    roles: [
+      "ROLE_EMPLOYEE",
+      "ROLE_AM",
+      "ROLE_MANAGER",
+      "ROLE_DM",
+      "ROLE_OFFICE_ADMIN",
+      "ROLE_HR",
+      "ROLE_ADMIN",
+      "ROLE_FINANCE",
+    ],
+    icon: "bug",
+  },
   { kind: "link", id: "apps", label: "Apps", roles: ["ROLE_ADMIN"], icon: "code" },
   {
     kind: "link",
