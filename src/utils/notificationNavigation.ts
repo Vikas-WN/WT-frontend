@@ -440,8 +440,10 @@ export function resolveNotificationHref(
     case "POLICY_PENDING_REMINDER":
       return DASHBOARD_ROUTES.profile;
 
-    case "ANNOUNCEMENT":
-      return DASHBOARD_ROUTES.profile;
+    case "ANNOUNCEMENT": {
+      const id = readNotificationMessage(row).match(/announcement\s*#\s*(\d+)/i)?.[1];
+      return id ? `${DASHBOARD_ROUTES.announcements}?announcementId=${id}` : DASHBOARD_ROUTES.announcements;
+    }
 
     case "BUG_REPORTED":
     case "BUG_UPDATED": {

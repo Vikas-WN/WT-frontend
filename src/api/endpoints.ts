@@ -178,6 +178,18 @@ export const endpoints = {
     importCsv: `${api}/assets/import-csv`,
   },
 
+  announcements: {
+    root: `${api}/announcements`,
+    managed: `${api}/announcements/managed`,
+    unreadCount: `${api}/announcements/unread-count`,
+    byId: (id: number | string) => `${api}/announcements/${encodeURIComponent(id)}`,
+    readById: (id: number | string) => `${api}/announcements/${encodeURIComponent(id)}/read`,
+  },
+
+  audience: {
+    options: `${api}/audience/options`,
+  },
+
   bugReports: {
     root: `${api}/bug-reports`,
     mine: `${api}/bug-reports/mine`,

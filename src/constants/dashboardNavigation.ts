@@ -285,6 +285,22 @@ export const dashboardNavigation: NavItem[] = [
   },
   {
     kind: "link",
+    id: "announcements",
+    label: "Announcements",
+    roles: [
+      "ROLE_EMPLOYEE",
+      "ROLE_AM",
+      "ROLE_MANAGER",
+      "ROLE_DM",
+      "ROLE_OFFICE_ADMIN",
+      "ROLE_HR",
+      "ROLE_ADMIN",
+      "ROLE_FINANCE",
+    ],
+    icon: "megaphone",
+  },
+  {
+    kind: "link",
     id: "bug-reports",
     label: "Bug Reports",
     // Everyone can report and follow their own; HR/Admin triage everyone's inside the page.

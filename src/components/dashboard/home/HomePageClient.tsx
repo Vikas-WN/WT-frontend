@@ -18,6 +18,7 @@ import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { PageHero } from "@/components/dashboard/ui/PageHero";
 import { useCommandPalette } from "@/components/dashboard/CommandPalette";
 import { HomeCard, CardMessage, CardSkeleton } from "@/components/dashboard/home/HomeCard";
+import { AnnouncementsHomeCard } from "@/components/dashboard/announcements/AnnouncementsHomeCard";
 import { CelebrationsCard } from "@/components/dashboard/home/CelebrationsCard";
 import { TodaysCelebrationsBanner } from "@/components/dashboard/home/TodaysCelebrationsBanner";
 import { AttendanceCard } from "@/components/dashboard/home/AttendanceCard";
@@ -83,6 +84,7 @@ function greeting(): string {
 const LEAVE_SEGMENT_COLORS = ["bg-[var(--wt-brand)]", "bg-emerald-500", "bg-amber-500"] as const;
 
 const HOME_WIDGET_IDS = [
+  "announcements",
   "attendance",
   "approvals",
   "leave-balance",
@@ -94,6 +96,7 @@ const HOME_WIDGET_IDS = [
 ] as const;
 
 const HOME_WIDGET_TITLES: Record<string, string> = {
+  announcements: "Announcements",
   attendance: "Today's Attendance",
   approvals: "Pending Approvals",
   "leave-balance": "My Leave Balance",
@@ -301,6 +304,7 @@ export function HomePageClient() {
   }, [allocations.data]);
 
   const widgetRegistry: Record<string, { eligible: boolean; node: React.ReactNode }> = {
+    announcements: { eligible: true, node: <AnnouncementsHomeCard /> },
     attendance: {
       eligible: canSeeOrgOut,
       node: <AttendanceCard data={attendance.data} status={attendance.status} />,
