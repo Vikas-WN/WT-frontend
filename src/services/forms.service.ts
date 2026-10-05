@@ -8,18 +8,24 @@ import type {
   FormSummary,
   FormUpdatePayload,
 } from "@/types/form";
+import { listQuery, type ListParams, type Paged } from "@/types/paged";
+import { LIST_PAGE_SIZE } from "@/constants/contentCategories";
 
 const JSON_BODY = { contentType: "application/json" } as const;
 
 export const formService = {
   /** Forms sent to me: to-do first, done last. */
-  mine() {
-    return apiClient.get<ApiEnvelope<FormSummary[]>>(endpoints.forms.root);
+  mine(params: ListParams & { status?: "all" | "todo" | "done" } = {}) {
+    return apiClient.get<ApiEnvelope<Paged<FormSummary>>>(endpoints.forms.root, {
+      query: listQuery({ ...params, page: params.page ?? 0, size: params.size ?? LIST_PAGE_SIZE }),
+    });
   },
 
   /** Forms I sent (HR/Admin: all), with how many have answered. */
-  managed() {
-    return apiClient.get<ApiEnvelope<FormSummary[]>>(endpoints.forms.managed);
+  managed(params: ListParams = {}) {
+    return apiClient.get<ApiEnvelope<Paged<FormSummary>>>(endpoints.forms.managed, {
+      query: listQuery({ ...params, page: params.page ?? 0, size: params.size ?? LIST_PAGE_SIZE }),
+    });
   },
 
   detail(id: number) {

@@ -2,7 +2,9 @@ import type { QuestionType } from "@/types/form";
 
 export const FORM_QUERY_KEYS = {
   mine: ["forms", "mine"] as const,
+  minePage: (params: object) => ["forms", "mine", params] as const,
   managed: ["forms", "managed"] as const,
+  managedPage: (params: object) => ["forms", "managed", params] as const,
   detail: (id: number) => ["forms", "detail", id] as const,
   responses: (id: number) => ["forms", "responses", id] as const,
   all: ["forms"] as const,
@@ -28,7 +30,19 @@ export const CHOICE_TYPES: ReadonlyArray<QuestionType> = ["SINGLE_CHOICE", "MULT
 
 export const RATING_LABELS = ["Poor", "Below", "Meets", "Above", "Exceptional"] as const;
 
+export type FormStatusFilter = "all" | "todo" | "done";
+
+export const FORM_STATUS_OPTIONS: ReadonlyArray<{ value: FormStatusFilter; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "todo", label: "To do" },
+  { value: "done", label: "Done" },
+];
+
 export const FORM_COPY = {
+  searchPlaceholder: "Search forms",
+  linkedNotice: "Showing the form you opened.",
+  showAll: "Show all",
+  categoryLabel: "Category",
   pageTitle: "Forms",
   pageDescription: "Surveys, requests and sign-ups sent to you — and the ones you send.",
   tabToFill: "To fill",

@@ -8,13 +8,17 @@ import type {
   PollResults,
 } from "@/types/announcement";
 import type { AudienceOptions } from "@/types/audience";
+import { listQuery, type ListParams, type Paged } from "@/types/paged";
+import { LIST_PAGE_SIZE } from "@/constants/contentCategories";
 
 const JSON_BODY = { contentType: "application/json" } as const;
 
 export const announcementService = {
   /** Announcements sent to me, pinned first. */
-  feed() {
-    return apiClient.get<ApiEnvelope<Announcement[]>>(endpoints.announcements.root);
+  feed(params: ListParams & { unread?: boolean } = {}) {
+    return apiClient.get<ApiEnvelope<Paged<Announcement>>>(endpoints.announcements.root, {
+      query: listQuery({ ...params, page: params.page ?? 0, size: params.size ?? LIST_PAGE_SIZE }),
+    });
   },
 
   unreadCount() {
@@ -22,8 +26,10 @@ export const announcementService = {
   },
 
   /** What I posted (HR/Admin: everything), with reach. */
-  managed() {
-    return apiClient.get<ApiEnvelope<Announcement[]>>(endpoints.announcements.managed);
+  managed(params: ListParams = {}) {
+    return apiClient.get<ApiEnvelope<Paged<Announcement>>>(endpoints.announcements.managed, {
+      query: listQuery({ ...params, page: params.page ?? 0, size: params.size ?? LIST_PAGE_SIZE }),
+    });
   },
 
   create(payload: AnnouncementCreatePayload) {

@@ -1,11 +1,12 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ApiError } from "@/api/error";
 import { FORM_QUERY_KEYS, FORM_REFRESH_MS } from "@/constants/forms";
 import { notifyError, notifySuccess } from "@/lib/notify";
 import { formService } from "@/services/forms.service";
+import { EMPTY_PAGE, type ListParams } from "@/types/paged";
 import type { FormAnswers, FormCreatePayload, FormUpdatePayload } from "@/types/form";
 import { downloadBlob } from "@/utils/downloadBlob";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
@@ -14,21 +15,23 @@ function apiErrorMessage(error: unknown, fallback: string): string {
   return toUserFriendlyApiErrorMessage(error, error instanceof ApiError ? error.message : fallback);
 }
 
-export function useMyForms() {
+export function useMyForms(params: ListParams & { status?: "all" | "todo" | "done" } = {}) {
   return useQuery({
-    queryKey: FORM_QUERY_KEYS.mine,
-    queryFn: async () => (await formService.mine()).data ?? [],
+    queryKey: FORM_QUERY_KEYS.minePage(params),
+    placeholderData: keepPreviousData,
+    queryFn: async () => (await formService.mine(params)).data ?? EMPTY_PAGE,
     staleTime: 30_000,
     refetchInterval: FORM_REFRESH_MS,
     refetchOnWindowFocus: "always",
   });
 }
 
-export function useManagedForms(enabled: boolean) {
+export function useManagedForms(enabled: boolean, params: ListParams = {}) {
   return useQuery({
-    queryKey: FORM_QUERY_KEYS.managed,
+    queryKey: FORM_QUERY_KEYS.managedPage(params),
     enabled,
-    queryFn: async () => (await formService.managed()).data ?? [],
+    placeholderData: keepPreviousData,
+    queryFn: async () => (await formService.managed(params)).data ?? EMPTY_PAGE,
     staleTime: 30_000,
   });
 }

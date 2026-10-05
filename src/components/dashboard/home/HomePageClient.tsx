@@ -15,10 +15,8 @@ import { HomeHeader } from "@/components/dashboard/home/HomeHeader";
 import { paginateWidgets, useHomeGridShape } from "@/hooks/dashboard/useHomeGridShape";
 import { useCommandPalette } from "@/components/dashboard/CommandPalette";
 import { HomeCard, CardMessage, CardSkeleton } from "@/components/dashboard/home/HomeCard";
-import { AnnouncementsHomeCard } from "@/components/dashboard/announcements/AnnouncementsHomeCard";
-import { UpcomingEventsHomeCard } from "@/components/dashboard/events/UpcomingEventsHomeCard";
-import { FormsHomeCard } from "@/components/dashboard/forms/FormsHomeCard";
 import { CelebrationsCard } from "@/components/dashboard/home/CelebrationsCard";
+import { HomeUpdatesGallery } from "@/components/dashboard/home/HomeUpdatesGallery";
 import { TodaysCelebrationsBanner } from "@/components/dashboard/home/TodaysCelebrationsBanner";
 import { AttendanceCard } from "@/components/dashboard/home/AttendanceCard";
 import { DashboardWidgetFrame } from "@/components/dashboard/home/DashboardWidgetFrame";
@@ -81,9 +79,6 @@ function greeting(): string {
 const LEAVE_SEGMENT_COLORS = ["bg-[var(--wt-brand)]", "bg-emerald-500", "bg-amber-500"] as const;
 
 const HOME_WIDGET_IDS = [
-  "announcements",
-  "forms",
-  "events",
   "attendance",
   "approvals",
   "leave-balance",
@@ -95,9 +90,6 @@ const HOME_WIDGET_IDS = [
 ] as const;
 
 const HOME_WIDGET_TITLES: Record<string, string> = {
-  announcements: "Announcements",
-  forms: "Forms To Fill",
-  events: "Upcoming Events",
   attendance: "Today's Attendance",
   approvals: "Pending Approvals",
   "leave-balance": "My Leave Balance",
@@ -307,9 +299,6 @@ export function HomePageClient() {
   }, [allocations.data]);
 
   const widgetRegistry: Record<string, { eligible: boolean; node: React.ReactNode }> = {
-    announcements: { eligible: true, node: <AnnouncementsHomeCard /> },
-    forms: { eligible: true, node: <FormsHomeCard /> },
-    events: { eligible: true, node: <UpcomingEventsHomeCard /> },
     attendance: {
       eligible: canSeeOrgOut,
       node: <AttendanceCard data={attendance.data} status={attendance.status} />,
@@ -570,6 +559,8 @@ export function HomePageClient() {
         pages={screens.length}
         onPageChange={setPage}
       />
+
+      <HomeUpdatesGallery />
 
       <TodaysCelebrationsBanner />
 

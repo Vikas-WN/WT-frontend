@@ -6,14 +6,15 @@ import { Plus } from "lucide-react";
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
 import { AudiencePicker, isAudienceComplete } from "@/components/audience/AudiencePicker";
 import { QuestionEditor } from "@/components/dashboard/forms/QuestionEditor";
-import { DatePickerField, InputField, TextAreaField } from "@/components/dashboard/ui/forms";
+import { DatePickerField, InputField, SelectField, TextAreaField } from "@/components/dashboard/ui/forms";
 import { Button } from "@/components/ui/button";
 import { AUDIENCE_COPY } from "@/constants/audience";
+import { FORM_CATEGORY_OPTIONS } from "@/constants/contentCategories";
 import { FORM_COPY, FORM_MAX_QUESTIONS, FORM_MIN_CHOICES } from "@/constants/forms";
 import { useAudienceOptions } from "@/hooks/announcements/useAnnouncements";
 import { useCreateForm } from "@/hooks/forms/useForms";
 import { EMPTY_AUDIENCE, type AudienceSpec } from "@/types/audience";
-import type { FormQuestion } from "@/types/form";
+import type { FormCategory, FormQuestion } from "@/types/form";
 import { formatApiDate } from "@/utils/apiDate";
 import { builderProblem, newQuestionId } from "@/utils/formAnswers";
 
@@ -27,6 +28,7 @@ export function FormBuilderDialog({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [due, setDue] = useState("");
+  const [category, setCategory] = useState<FormCategory>("OTHER");
   const [questions, setQuestions] = useState<FormQuestion[]>(() => [blankQuestion()]);
   const [audience, setAudience] = useState<AudienceSpec | null>(null);
 
@@ -49,6 +51,7 @@ export function FormBuilderDialog({ onClose }: { onClose: () => void }) {
       {
         title: title.trim(),
         description: description.trim() || null,
+        category,
         due_date: due || null,
         audience: effective,
         notify_by_email: false,
@@ -72,6 +75,12 @@ export function FormBuilderDialog({ onClose }: { onClose: () => void }) {
     >
       <div className="space-y-6">
         <InputField label={FORM_COPY.titleLabel} value={title} onChange={setTitle} required placeholder={FORM_COPY.titlePlaceholder} />
+        <SelectField
+          label={FORM_COPY.categoryLabel}
+          value={category}
+          options={FORM_CATEGORY_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
+          onChange={(value) => setCategory(value as FormCategory)}
+        />
         <div className="grid gap-4 sm:grid-cols-[1fr_14rem]">
           <TextAreaField label={FORM_COPY.descriptionLabel} value={description} onChange={setDescription} rows={2} />
           <DatePickerField label={FORM_COPY.dueLabel} value={due} onChange={setDue} min={formatApiDate(new Date())} />

@@ -5,6 +5,7 @@ import { CalendarClock, ClipboardList } from "lucide-react";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FORM_CATEGORY_OPTIONS, categoryLabel } from "@/constants/contentCategories";
 import { FORM_COPY } from "@/constants/forms";
 import { cn } from "@/lib/utils";
 import type { FormSummary } from "@/types/form";
@@ -40,6 +41,11 @@ export function FormCard({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-[0.9375rem] font-semibold text-wt-text">{form.title}</h3>
+          {form.category !== "OTHER" ? (
+            <Badge variant="secondary" className={filledBadgeClass(FORM_CATEGORY_OPTIONS.find((o) => o.value === form.category)?.tone ?? "neutral")}>
+              {categoryLabel(FORM_CATEGORY_OPTIONS, form.category)}
+            </Badge>
+          ) : null}
           {form.is_closed ? <Badge variant="secondary" className={filledBadgeClass("neutral")}>{FORM_COPY.closed}</Badge> : null}
           {mode === "mine" && form.submitted ? <Badge variant="secondary" className={filledBadgeClass("success")}>{FORM_COPY.done}</Badge> : null}
           {form.overdue ? <Badge variant="secondary" className={filledBadgeClass("danger")}>{FORM_COPY.overdue}</Badge> : null}

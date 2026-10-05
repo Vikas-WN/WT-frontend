@@ -79,6 +79,15 @@ export const sidebarIcons = {
         <path d="M13 11v2" />
       </>
     )),
+  more: ({ className = "" }: IconProps) =>
+    svg(className, (
+      <>
+        <circle cx="12" cy="12" r="10" />
+        <path d="M8 12h.01" />
+        <path d="M12 12h.01" />
+        <path d="M16 12h.01" />
+      </>
+    )),
   megaphone: ({ className = "" }: IconProps) =>
     svg(className, (
       <>

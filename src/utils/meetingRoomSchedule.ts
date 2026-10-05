@@ -121,3 +121,12 @@ export function nextFreeSlot(items: DayBooking[], day: Date, now: Date, minutes 
   }
   return cursor + need <= limit ? new Date(cursor) : null;
 }
+
+/**
+ * Why `nextFreeSlot` found nothing. "after-hours": today's booking window has closed, so the room is empty but
+ * can't be booked until tomorrow. "fully-booked": the window is still open and every gap is taken.
+ */
+export function noSlotReason(day: Date, now: Date, minutes = 30): "after-hours" | "fully-booked" {
+  const limit = startOfDay(day).getTime() + DEFAULT_END_HOUR * HOUR_MS;
+  return sameDay(day, now) && now.getTime() + minutes * 60_000 > limit ? "after-hours" : "fully-booked";
+}

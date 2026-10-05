@@ -14,7 +14,7 @@ export type NavChild = {
 
 export type NavGroup = {
   kind: "group";
-  id: "employee" | "projects" | "personal" | "engage";
+  id: "employee" | "projects" | "personal" | "engage" | "more";
   label: string;
   icon: SidebarIconName;
   children: NavChild[];
@@ -39,6 +39,16 @@ export type NavExpandable = {
 };
 
 export type NavItem = NavGroup | NavLink | NavExpandable;
+
+const MORE_ROLES_NO_OFFICE_ADMIN = [
+  "ROLE_EMPLOYEE",
+  "ROLE_AM",
+  "ROLE_MANAGER",
+  "ROLE_DM",
+  "ROLE_HR",
+  "ROLE_ADMIN",
+  "ROLE_FINANCE",
+];
 
 const ENGAGE_ROLES = [
   "ROLE_EMPLOYEE",
@@ -307,53 +317,19 @@ export const dashboardNavigation: NavItem[] = [
     ],
     icon: "calendarCheck",
   },
-  {
-    kind: "link",
-    id: "bug-reports",
-    label: "Bug Reports",
-    // Everyone can report and follow their own; HR/Admin triage everyone's inside the page.
-    roles: [
-      "ROLE_EMPLOYEE",
-      "ROLE_AM",
-      "ROLE_MANAGER",
-      "ROLE_DM",
-      "ROLE_OFFICE_ADMIN",
-      "ROLE_HR",
-      "ROLE_ADMIN",
-      "ROLE_FINANCE",
-    ],
-    icon: "bug",
-  },
   { kind: "link", id: "apps", label: "Apps", roles: ["ROLE_ADMIN"], icon: "code" },
+  // Rarely-needed destinations live together so the main menu stays short. Ids/routes are unchanged.
   {
-    kind: "link",
-    id: "referral",
-    label: "Referral",
-    roles: [
-      "ROLE_EMPLOYEE",
-      "ROLE_AM",
-      "ROLE_MANAGER",
-      "ROLE_DM",
-      "ROLE_HR",
-      "ROLE_ADMIN",
-      "ROLE_FINANCE",
+    kind: "group",
+    id: "more",
+    label: "More",
+    icon: "more",
+    children: [
+      { id: "referral", label: "Referral", roles: MORE_ROLES_NO_OFFICE_ADMIN, icon: "referral" },
+      // Everyone can report and follow their own; HR/Admin triage everyone's inside the page.
+      { id: "bug-reports", label: "Bug Reports", roles: ENGAGE_ROLES, icon: "bug" },
+      { id: "guide", label: "Help & Guide", roles: MORE_ROLES_NO_OFFICE_ADMIN, icon: "bookUser" },
     ],
-    icon: "referral",
-  },
-  {
-    kind: "link",
-    id: "guide",
-    label: "Help & Guide",
-    roles: [
-      "ROLE_EMPLOYEE",
-      "ROLE_AM",
-      "ROLE_MANAGER",
-      "ROLE_DM",
-      "ROLE_HR",
-      "ROLE_ADMIN",
-      "ROLE_FINANCE",
-    ],
-    icon: "bookUser",
   },
   {
     kind: "link",
@@ -453,7 +429,7 @@ export function getDashboardSectionLabel(sectionId: string): string | undefined 
 }
 
 /** Map nav id to sidebar group id for accordion auto-expand. */
-export function navGroupForSection(sectionId: string): "employee" | "projects" | "personal" | "engage" | null {
+export function navGroupForSection(sectionId: string): "employee" | "projects" | "personal" | "engage" | "more" | null {
   for (const item of dashboardNavigation) {
     if (item.kind !== "group") continue;
     if (item.children.some((child) => child.id === sectionId)) return item.id;
@@ -462,7 +438,7 @@ export function navGroupForSection(sectionId: string): "employee" | "projects" |
 }
 
 /** Expandable sections that participate in the accordion (groups + reports + learning). */
-export type AccordionSectionId = "employee" | "projects" | "personal" | "engage" | "reports" | "learning";
+export type AccordionSectionId = "employee" | "projects" | "personal" | "engage" | "more" | "reports" | "learning";
 
 export function accordionSectionForPathname(pathname: string, activeSection: string): AccordionSectionId | null {
   const group = navGroupForSection(activeSection);
@@ -488,6 +464,8 @@ const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   announcements: "Announcements",
   events: "Events",
   forms: "Forms",
+  "bug-reports": "Bug Reports",
+  referral: "Referral",
 };
 
 function groupChildPageTitle(groupLabel: string, childLabel: string): string {

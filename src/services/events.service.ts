@@ -7,14 +7,30 @@ import type {
   EventUpdatePayload,
   RsvpChoice,
 } from "@/types/event";
+import { listQuery, type ListParams, type Paged } from "@/types/paged";
+import { LIST_PAGE_SIZE } from "@/constants/contentCategories";
+
+export interface EventListParams extends Omit<ListParams, "category"> {
+  includePast?: boolean;
+  organising?: boolean;
+  eventType?: string;
+}
 
 const JSON_BODY = { contentType: "application/json" } as const;
 
 export const eventService = {
-  /** Events I'm invited to or organise (upcoming unless `includePast`). */
-  list(includePast = false) {
-    return apiClient.get<ApiEnvelope<AppEvent[]>>(endpoints.events.root, {
-      query: includePast ? { include_past: "true" } : undefined,
+  /** Events I'm invited to or organise (upcoming unless `includePast`), one page at a time. */
+  list(params: EventListParams = {}) {
+    const { includePast, organising, eventType, ...rest } = params;
+    return apiClient.get<ApiEnvelope<Paged<AppEvent>>>(endpoints.events.root, {
+      query: listQuery({
+        ...rest,
+        include_past: includePast,
+        organising,
+        event_type: eventType,
+        page: rest.page ?? 0,
+        size: rest.size ?? LIST_PAGE_SIZE,
+      }),
     });
   },
 

@@ -1,5 +1,7 @@
 import type { AudienceSpec } from "@/types/audience";
 
+export type AnnouncementCategory = "GENERAL" | "POLICY" | "HR" | "IT" | "OFFICE" | "CELEBRATION" | "URGENT";
+
 export interface AnnouncementAuthor {
   name: string;
   email: string;
@@ -9,6 +11,7 @@ export interface Announcement {
   id: number;
   title: string;
   body: string;
+  category: AnnouncementCategory;
   is_pinned: boolean;
   /** dd/mm/yyyy, or null when it never expires. */
   expires_on: string | null;
@@ -30,6 +33,7 @@ export interface Announcement {
 export interface AnnouncementCreatePayload {
   title: string;
   body: string;
+  category: AnnouncementCategory;
   is_pinned: boolean;
   expires_on?: string | null;
   audience: AudienceSpec;
@@ -40,6 +44,7 @@ export interface AnnouncementCreatePayload {
 export interface AnnouncementUpdatePayload {
   title?: string;
   body?: string;
+  category?: AnnouncementCategory;
   is_pinned?: boolean;
   is_archived?: boolean;
   expires_on?: string | null;

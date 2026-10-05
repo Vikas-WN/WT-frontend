@@ -247,7 +247,7 @@ function normalizeWhosOutDates(data: WhosOutData): WhosOutData {
 }
 
 export interface SearchHit {
-  kind: "employee" | "project" | "client";
+  kind: "employee" | "project" | "client" | "announcement" | "event" | "form";
   id: string;
   title: string;
   subtitle: string | null;
@@ -263,6 +263,10 @@ export interface GlobalSearchResults {
   employees: SearchHit[];
   projects: SearchHit[];
   clients: SearchHit[];
+  /** Content the person can already open. Absent when talking to an older backend. */
+  announcements?: SearchHit[];
+  events?: SearchHit[];
+  forms?: SearchHit[];
   total: number;
 }
 

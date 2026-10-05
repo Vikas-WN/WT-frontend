@@ -11,6 +11,7 @@ import type { MeetingRoom, MeetingRoomBooking } from "@/types/meetingRoom";
 import {
   formatClock,
   nextFreeSlot,
+  noSlotReason,
   roomStatus,
   sameDay,
   type DayBooking,
@@ -27,6 +28,11 @@ const STATUS_TONE: Record<RoomStatusKind, keyof typeof import("@/components/dash
 const VISIBLE_BOOKINGS = 3;
 
 /** One room as a gallery slide: live status, the day's timeline, the next bookings, and a one-tap Book. */
+const NO_SLOT_COPY = {
+  "after-hours": "Booking hours are over today",
+  "fully-booked": "Fully booked today",
+} as const;
+
 export function RoomCard({
   room,
   items,
@@ -127,7 +133,7 @@ export function RoomCard({
                 Next free <span className="font-semibold text-wt-text">{formatClock(slot)}</span>
               </>
             ) : (
-              "No free slot left"
+              NO_SLOT_COPY[noSlotReason(day, now)]
             )}
           </p>
           <Button type="button" variant="brand" size="sm" onClick={() => onBook(room, slot)}>

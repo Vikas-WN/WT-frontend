@@ -14,6 +14,8 @@ export interface FormQuestion {
 export type AnswerValue = string | string[] | number | boolean;
 export type FormAnswers = Record<string, AnswerValue>;
 
+export type FormCategory = "SURVEY" | "FEEDBACK" | "REGISTRATION" | "REQUEST" | "COMPLIANCE" | "OTHER";
+
 export interface FormPerson {
   name: string;
   email: string;
@@ -23,6 +25,7 @@ export interface FormSummary {
   id: number;
   title: string;
   description: string | null;
+  category: FormCategory;
   /** dd/mm/yyyy */
   due_date: string | null;
   is_closed: boolean;
@@ -71,6 +74,7 @@ export interface FormResponses {
 export interface FormCreatePayload {
   title: string;
   description?: string | null;
+  category: FormCategory;
   questions: FormQuestion[];
   audience: AudienceSpec;
   due_date?: string | null;
@@ -80,6 +84,7 @@ export interface FormCreatePayload {
 export interface FormUpdatePayload {
   title?: string;
   description?: string | null;
+  category?: FormCategory;
   due_date?: string | null;
   is_closed?: boolean;
 }

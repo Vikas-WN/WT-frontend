@@ -5,13 +5,14 @@ import { useState } from "react";
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
 import { EMPTY_POLL, isPollComplete, PollBuilder } from "@/components/dashboard/announcements/PollBuilder";
 import { AudiencePicker, isAudienceComplete } from "@/components/audience/AudiencePicker";
-import { DatePickerField, InputField, TextAreaField } from "@/components/dashboard/ui/forms";
+import { DatePickerField, InputField, SelectField, TextAreaField } from "@/components/dashboard/ui/forms";
 import { ANNOUNCEMENT_COPY, POLL_COPY } from "@/constants/announcements";
 import { AUDIENCE_COPY } from "@/constants/audience";
 import { useAudienceOptions, useCreateAnnouncement } from "@/hooks/announcements/useAnnouncements";
 import { formatApiDate } from "@/utils/apiDate";
 import { EMPTY_AUDIENCE, type AudienceScope, type AudienceSpec } from "@/types/audience";
-import type { PollCreatePayload } from "@/types/announcement";
+import type { AnnouncementCategory, PollCreatePayload } from "@/types/announcement";
+import { ANNOUNCEMENT_CATEGORY_OPTIONS } from "@/constants/contentCategories";
 
 const MIN_LENGTH = 3;
 
@@ -41,6 +42,7 @@ export function AnnouncementComposerDialog({ onClose }: { onClose: () => void })
   const [expiresOn, setExpiresOn] = useState("");
   const [audience, setAudience] = useState<AudienceSpec | null>(null);
   const [poll, setPoll] = useState<PollCreatePayload | null>(null);
+  const [category, setCategory] = useState<AnnouncementCategory>("GENERAL");
 
   // A manager can't send company-wide, so start on the first scope the server allows.
   const firstScope: AudienceScope = options.data?.scopes[0] ?? "ALL";
@@ -61,6 +63,7 @@ export function AnnouncementComposerDialog({ onClose }: { onClose: () => void })
             title: title.trim(),
             body: body.trim(),
             is_pinned: pinned,
+            category,
             expires_on: expiresOn || null,
             audience: effective,
             notify_by_email: emailToo,
@@ -90,6 +93,13 @@ export function AnnouncementComposerDialog({ onClose }: { onClose: () => void })
           rows={5}
           required
           placeholder={ANNOUNCEMENT_COPY.bodyPlaceholder}
+        />
+
+        <SelectField
+          label={ANNOUNCEMENT_COPY.categoryLabel}
+          value={category}
+          options={ANNOUNCEMENT_CATEGORY_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
+          onChange={(value) => setCategory(value as AnnouncementCategory)}
         />
 
         {options.isLoading ? (

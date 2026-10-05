@@ -2,7 +2,7 @@ import type { BADGE_TONE } from "@/components/dashboard/ui/badgeTones";
 import type { EventType, RsvpChoice } from "@/types/event";
 
 export const EVENT_QUERY_KEYS = {
-  list: (includePast: boolean) => ["events", "list", includePast] as const,
+  list: (params: object) => ["events", "list", params] as const,
   attendees: (id: number) => ["events", "attendees", id] as const,
   all: ["events"] as const,
 };
@@ -29,6 +29,12 @@ export const EVENT_COPY = {
   pageTitle: "Events",
   pageDescription: "What's coming up, and your RSVP — plus events you organise.",
   tabUpcoming: "Upcoming",
+  tabPast: "Past",
+  emptyPastTitle: "No past events",
+  emptyPastDescription: "Events that have finished will show up here.",
+  searchPlaceholder: "Search events",
+  linkedNotice: "Showing the event you opened.",
+  showAll: "Show all",
   tabOrganising: "Organising",
   create: "New event",
   emptyUpcomingTitle: "Nothing coming up",

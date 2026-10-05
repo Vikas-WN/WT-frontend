@@ -1,11 +1,12 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ApiError } from "@/api/error";
 import { ANNOUNCEMENT_QUERY_KEYS, ANNOUNCEMENT_REFRESH_MS } from "@/constants/announcements";
 import { notifyError, notifySuccess } from "@/lib/notify";
 import { announcementService } from "@/services/announcements.service";
+import { EMPTY_PAGE, type ListParams } from "@/types/paged";
 import type { AnnouncementCreatePayload, AnnouncementUpdatePayload } from "@/types/announcement";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 
@@ -13,11 +14,12 @@ function apiErrorMessage(error: unknown, fallback: string): string {
   return toUserFriendlyApiErrorMessage(error, error instanceof ApiError ? error.message : fallback);
 }
 
-export function useAnnouncementsFeed(enabled = true) {
+export function useAnnouncementsFeed(params: ListParams & { unread?: boolean } = {}, enabled = true) {
   return useQuery({
-    queryKey: ANNOUNCEMENT_QUERY_KEYS.feed,
+    queryKey: ANNOUNCEMENT_QUERY_KEYS.feedPage(params),
     enabled,
-    queryFn: async () => (await announcementService.feed()).data ?? [],
+    placeholderData: keepPreviousData,
+    queryFn: async () => (await announcementService.feed(params)).data ?? EMPTY_PAGE,
     staleTime: 30_000,
     refetchInterval: ANNOUNCEMENT_REFRESH_MS,
     refetchOnWindowFocus: "always",
@@ -33,11 +35,12 @@ export function useUnreadAnnouncements() {
   });
 }
 
-export function useManagedAnnouncements(enabled: boolean) {
+export function useManagedAnnouncements(enabled: boolean, params: ListParams = {}) {
   return useQuery({
-    queryKey: ANNOUNCEMENT_QUERY_KEYS.managed,
+    queryKey: ANNOUNCEMENT_QUERY_KEYS.managedPage(params),
     enabled,
-    queryFn: async () => (await announcementService.managed()).data ?? [],
+    placeholderData: keepPreviousData,
+    queryFn: async () => (await announcementService.managed(params)).data ?? EMPTY_PAGE,
     staleTime: 30_000,
   });
 }

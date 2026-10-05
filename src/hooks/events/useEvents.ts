@@ -1,11 +1,12 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ApiError } from "@/api/error";
 import { EVENT_QUERY_KEYS, EVENT_REFRESH_MS } from "@/constants/events";
 import { notifyError, notifySuccess } from "@/lib/notify";
-import { eventService } from "@/services/events.service";
+import { eventService, type EventListParams } from "@/services/events.service";
+import { EMPTY_PAGE } from "@/types/paged";
 import type { EventCreatePayload, EventUpdatePayload, RsvpChoice } from "@/types/event";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 
@@ -13,10 +14,11 @@ function apiErrorMessage(error: unknown, fallback: string): string {
   return toUserFriendlyApiErrorMessage(error, error instanceof ApiError ? error.message : fallback);
 }
 
-export function useEvents(includePast = false) {
+export function useEvents(params: EventListParams = {}) {
   return useQuery({
-    queryKey: EVENT_QUERY_KEYS.list(includePast),
-    queryFn: async () => (await eventService.list(includePast)).data ?? [],
+    queryKey: EVENT_QUERY_KEYS.list(params),
+    placeholderData: keepPreviousData,
+    queryFn: async () => (await eventService.list(params)).data ?? EMPTY_PAGE,
     staleTime: 30_000,
     refetchInterval: EVENT_REFRESH_MS,
     refetchOnWindowFocus: "always",

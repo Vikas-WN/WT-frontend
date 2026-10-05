@@ -7,6 +7,9 @@ import { AuthorAvatar } from "@/components/dashboard/announcements/AuthorAvatar"
 import { PollVoteBlock } from "@/components/dashboard/announcements/PollVoteBlock";
 import { ANNOUNCEMENT_COLLAPSE_CHARS, ANNOUNCEMENT_COPY } from "@/constants/announcements";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
+import { ANNOUNCEMENT_CATEGORY_OPTIONS, categoryLabel } from "@/constants/contentCategories";
 import type { Announcement } from "@/types/announcement";
 import { formatApiDateTimeDisplay } from "@/utils/apiDate";
 
@@ -42,6 +45,11 @@ export function AnnouncementCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <h3 className="text-[0.9375rem] font-semibold text-wt-text">{announcement.title}</h3>
+            {announcement.category !== "GENERAL" ? (
+              <Badge variant="secondary" className={filledBadgeClass(ANNOUNCEMENT_CATEGORY_OPTIONS.find((o) => o.value === announcement.category)?.tone ?? "neutral")}>
+                {categoryLabel(ANNOUNCEMENT_CATEGORY_OPTIONS, announcement.category)}
+              </Badge>
+            ) : null}
             {!announcement.is_read ? (
               <span className="rounded-full bg-[var(--wt-brand)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
                 {ANNOUNCEMENT_COPY.unread}
