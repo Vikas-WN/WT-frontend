@@ -2,6 +2,13 @@
 
 import { InputField } from "@/components/dashboard/ui/forms";
 
+/** The full name when the segment is wide, a short one when it is narrow, and just the number when tiny. */
+function segmentLabel(full: string, short: string, percent: number, shown: string): string {
+  if (percent >= 28) return `${full} ${shown}%`;
+  if (percent >= 9) return `${short} ${shown}%`;
+  return `${shown}%`;
+}
+
 /** KPIs vs WebKnot values always add up to 100% — drag the handle or type
  *  either number and the other follows (default 90 / 10). */
 export function WeightSplit({
@@ -20,11 +27,11 @@ export function WeightSplit({
   return (
     <div className="space-y-4">
       <div className="flex h-12 overflow-hidden rounded-xl border border-wt-border text-sm font-semibold" aria-hidden>
-        <div className="flex items-center justify-center bg-[var(--wt-brand)] text-white transition-all" style={{ width: `${kpiNum}%` }}>
-          {kpiNum >= 12 ? `KPIs ${kpi}%` : null}
+        <div className="flex items-center justify-center overflow-hidden whitespace-nowrap bg-[var(--wt-brand)] px-1 text-white transition-all" style={{ width: `${kpiNum}%` }}>
+          {segmentLabel("KPIs", "KPIs", kpiNum, kpi)}
         </div>
-        <div className="flex flex-1 items-center justify-center bg-amber-400/90 text-amber-950">
-          {100 - kpiNum >= 12 ? `WebKnot values ${values}%` : null}
+        <div className="flex flex-1 items-center justify-center overflow-hidden whitespace-nowrap bg-amber-400/90 px-1 text-amber-950">
+          {segmentLabel("WebKnot values", "Values", 100 - kpiNum, values)}
         </div>
       </div>
       <input

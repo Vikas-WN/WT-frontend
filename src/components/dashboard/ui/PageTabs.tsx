@@ -48,7 +48,8 @@ export function PageTabs({
       aria-label={ariaLabel}
       variant={listVariant}
       className={cn(
-        listVariant === "line" && "h-auto w-full justify-start overflow-x-auto",
+        listVariant === "line" &&
+          "h-auto w-full justify-start overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         listVariant === "default" && "w-fit"
       )}
     >
