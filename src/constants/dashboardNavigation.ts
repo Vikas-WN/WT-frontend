@@ -14,7 +14,7 @@ export type NavChild = {
 
 export type NavGroup = {
   kind: "group";
-  id: "employee" | "projects" | "personal";
+  id: "employee" | "projects" | "personal" | "engage";
   label: string;
   icon: SidebarIconName;
   children: NavChild[];
@@ -39,6 +39,17 @@ export type NavExpandable = {
 };
 
 export type NavItem = NavGroup | NavLink | NavExpandable;
+
+const ENGAGE_ROLES = [
+  "ROLE_EMPLOYEE",
+  "ROLE_AM",
+  "ROLE_MANAGER",
+  "ROLE_DM",
+  "ROLE_OFFICE_ADMIN",
+  "ROLE_HR",
+  "ROLE_ADMIN",
+  "ROLE_FINANCE",
+];
 
 export const dashboardNavigation: NavItem[] = [
   {
@@ -225,6 +236,19 @@ export const dashboardNavigation: NavItem[] = [
       },
     ],
   },
+  // Announcements, Events and Forms are all "things sent to people", so they share one group
+  // instead of three top-level rows. Child ids stay the same, so routes and notifications are unchanged.
+  {
+    kind: "group",
+    id: "engage",
+    label: "Engage",
+    icon: "megaphone",
+    children: [
+      { id: "announcements", label: "Announcements", roles: ENGAGE_ROLES, icon: "megaphone" },
+      { id: "events", label: "Events", roles: ENGAGE_ROLES, icon: "ticket" },
+      { id: "forms", label: "Forms", roles: ENGAGE_ROLES, icon: "clipboardList" },
+    ],
+  },
   { kind: "link", id: "resumes", label: "Resumes", roles: ["ROLE_AM"], icon: "fileText" },
   // Background Verification stays removed from the sidebar per the user's
   // earlier request (still reachable by direct URL — background-verification
@@ -282,54 +306,6 @@ export const dashboardNavigation: NavItem[] = [
       "ROLE_FINANCE",
     ],
     icon: "calendarCheck",
-  },
-  {
-    kind: "link",
-    id: "forms",
-    label: "Forms",
-    roles: [
-      "ROLE_EMPLOYEE",
-      "ROLE_AM",
-      "ROLE_MANAGER",
-      "ROLE_DM",
-      "ROLE_OFFICE_ADMIN",
-      "ROLE_HR",
-      "ROLE_ADMIN",
-      "ROLE_FINANCE",
-    ],
-    icon: "clipboardList",
-  },
-  {
-    kind: "link",
-    id: "events",
-    label: "Events",
-    roles: [
-      "ROLE_EMPLOYEE",
-      "ROLE_AM",
-      "ROLE_MANAGER",
-      "ROLE_DM",
-      "ROLE_OFFICE_ADMIN",
-      "ROLE_HR",
-      "ROLE_ADMIN",
-      "ROLE_FINANCE",
-    ],
-    icon: "ticket",
-  },
-  {
-    kind: "link",
-    id: "announcements",
-    label: "Announcements",
-    roles: [
-      "ROLE_EMPLOYEE",
-      "ROLE_AM",
-      "ROLE_MANAGER",
-      "ROLE_DM",
-      "ROLE_OFFICE_ADMIN",
-      "ROLE_HR",
-      "ROLE_ADMIN",
-      "ROLE_FINANCE",
-    ],
-    icon: "megaphone",
   },
   {
     kind: "link",
@@ -477,7 +453,7 @@ export function getDashboardSectionLabel(sectionId: string): string | undefined 
 }
 
 /** Map nav id to sidebar group id for accordion auto-expand. */
-export function navGroupForSection(sectionId: string): "employee" | "projects" | "personal" | null {
+export function navGroupForSection(sectionId: string): "employee" | "projects" | "personal" | "engage" | null {
   for (const item of dashboardNavigation) {
     if (item.kind !== "group") continue;
     if (item.children.some((child) => child.id === sectionId)) return item.id;
@@ -486,7 +462,7 @@ export function navGroupForSection(sectionId: string): "employee" | "projects" |
 }
 
 /** Expandable sections that participate in the accordion (groups + reports + learning). */
-export type AccordionSectionId = "employee" | "projects" | "personal" | "reports" | "learning";
+export type AccordionSectionId = "employee" | "projects" | "personal" | "engage" | "reports" | "learning";
 
 export function accordionSectionForPathname(pathname: string, activeSection: string): AccordionSectionId | null {
   const group = navGroupForSection(activeSection);
@@ -509,6 +485,9 @@ const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   "leave-team": "Leave Requests",
   "exit-interview": "Exit Survey",
   guide: "Help & Guide",
+  announcements: "Announcements",
+  events: "Events",
+  forms: "Forms",
 };
 
 function groupChildPageTitle(groupLabel: string, childLabel: string): string {
