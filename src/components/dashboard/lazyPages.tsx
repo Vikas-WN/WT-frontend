@@ -51,6 +51,30 @@ export const LazyMeetingRoomsPageClient = lazyPage(
   "Loading meeting rooms…"
 );
 
+export const LazyFormsPageClient = lazyPage(
+  () => import("@/components/dashboard/forms/FormsPageClient"),
+  "FormsPageClient",
+  "Loading forms…"
+);
+
+export const LazyEventsPageClient = lazyPage(
+  () => import("@/components/dashboard/events/EventsPageClient"),
+  "EventsPageClient",
+  "Loading events…"
+);
+
+export const LazyAnnouncementsPageClient = lazyPage(
+  () => import("@/components/dashboard/announcements/AnnouncementsPageClient"),
+  "AnnouncementsPageClient",
+  "Loading announcements…"
+);
+
+export const LazyBugReportsPageClient = lazyPage(
+  () => import("@/components/dashboard/bug-reports/BugReportsPageClient"),
+  "BugReportsPageClient",
+  "Loading bug reports…"
+);
+
 export const LazyReportsPageClient = lazyPage(
   () => import("@/components/dashboard/reports/ReportsPageClient"),
   "ReportsPageClient",

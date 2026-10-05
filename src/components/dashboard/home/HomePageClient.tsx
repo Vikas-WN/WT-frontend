@@ -1,30 +1,26 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import {
   CalendarDays,
   CalendarRange,
-  Check,
   ClipboardCheck,
   GraduationCap,
   LayoutGrid,
   Plane,
-  Search,
-  Settings2,
 } from "lucide-react";
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { PageHero } from "@/components/dashboard/ui/PageHero";
+import { HomeHeader } from "@/components/dashboard/home/HomeHeader";
+import { cellsOf, useHomeGridShape } from "@/hooks/dashboard/useHomeGridShape";
 import { useCommandPalette } from "@/components/dashboard/CommandPalette";
 import { HomeCard, CardMessage, CardSkeleton } from "@/components/dashboard/home/HomeCard";
 import { CelebrationsCard } from "@/components/dashboard/home/CelebrationsCard";
+import { HomeUpdatesGallery } from "@/components/dashboard/home/HomeUpdatesGallery";
 import { TodaysCelebrationsBanner } from "@/components/dashboard/home/TodaysCelebrationsBanner";
 import { AttendanceCard } from "@/components/dashboard/home/AttendanceCard";
 import { DashboardWidgetFrame } from "@/components/dashboard/home/DashboardWidgetFrame";
-import { AddWidgetMenu } from "@/components/dashboard/home/AddWidgetMenu";
 import { useHomeDashboardLayout } from "@/hooks/dashboard/useHomeDashboardLayout";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import {
   hrmsService,
@@ -533,48 +529,34 @@ export function HomePageClient() {
     .filter((w) => widgetRegistry[w.id]?.eligible && w.hidden)
     .map((w) => ({ id: w.id, title: HOME_WIDGET_TITLES[w.id] ?? w.id }));
 
+  // Desktop: every widget is always on screen. Columns follow the window width and rows follow how many widgets
+  // there are, so the grid fills the window exactly — nothing to page through or scroll.
+  const shape = useHomeGridShape();
+  const cells = cellsOf(visibleLayout);
+  const columns = shape.columnsFor(cells);
+  const rows = Math.max(1, Math.ceil(cells / columns));
+
   return (
-    <DashboardPageShell>
-      <PageHero
-        surface
-        raw
+    <DashboardPageShell
+      className={cn(
+        "lg:flex lg:h-full lg:flex-col lg:space-y-0 lg:gap-4 lg:overflow-hidden lg:!px-6 lg:!py-4",
+        !shape.fixed && "space-y-4"
+      )}
+    >
+      <HomeHeader
         eyebrow={today.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
         title={`${greeting()}, ${firstName}`}
-        description="Here's where things stand across your work today."
-        action={
-          <>
-            <Button variant="brand" size="sm" render={<Link href={`${DASHBOARD_ROUTES.leave}?tab=my`} />}>
-              <Plane className="size-4" /> Apply for leave
-            </Button>
-            <Button variant="outline" size="sm" render={<Link href={DASHBOARD_ROUTES.timelog} />}>
-              <CalendarDays className="size-4" /> Log time
-            </Button>
-            <Button variant="outline" size="sm" onClick={openSearch}>
-              <Search className="size-4" /> Search
-            </Button>
-          </>
-        }
+        editMode={editMode}
+        onEditModeChange={setEditMode}
+        hiddenWidgets={hiddenWidgets}
+        onShowWidget={(id) => setHidden(id, false)}
+        onReset={resetLayout}
+        onSearch={openSearch}
       />
 
-      <TodaysCelebrationsBanner />
+      <HomeUpdatesGallery />
 
-      <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
-        {editMode ? (
-          <>
-            <AddWidgetMenu hiddenWidgets={hiddenWidgets} onShow={(id) => setHidden(id, false)} />
-            <Button variant="outline" size="sm" onClick={resetLayout}>
-              Reset layout
-            </Button>
-            <Button variant="brand" size="sm" onClick={() => setEditMode(false)}>
-              <Check className="size-4" /> Done
-            </Button>
-          </>
-        ) : (
-          <Button variant="outline" size="sm" onClick={() => setEditMode(true)}>
-            <Settings2 className="size-4" /> Customize
-          </Button>
-        )}
-      </div>
+      <TodaysCelebrationsBanner />
 
       {visibleLayout.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-wt-border p-8 text-center text-sm text-wt-text-muted">
@@ -582,7 +564,10 @@ export function HomePageClient() {
           {editMode ? "Use “Add widget” above to bring one back." : "Click “Customize” to add one back."}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div
+          className="grid gap-4 sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-flow-dense lg:grid-cols-[repeat(var(--home-cols),minmax(0,1fr))] lg:grid-rows-[repeat(var(--home-rows),minmax(0,1fr))]"
+          style={{ "--home-cols": columns, "--home-rows": rows } as React.CSSProperties}
+        >
           {visibleLayout.map((w) => (
             <DashboardWidgetFrame
               key={w.id}

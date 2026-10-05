@@ -12,7 +12,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Search, Users, FolderKanban, Building2, ArrowRight, X } from "lucide-react";
+import { Search, Users, FolderKanban, Building2, ArrowRight, X, Megaphone, CalendarHeart, ClipboardList } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/dashboard/ui/profile";
@@ -64,6 +64,9 @@ function flattenPages(items: NavItem[]): PageHit[] {
 
 function hrefForHit(hit: SearchHit): string {
   if (hit.kind === "employee") return employeeDirectoryProfilePath(hit.ref);
+  if (hit.kind === "announcement") return `${DASHBOARD_ROUTES.announcements}?announcementId=${encodeURIComponent(hit.ref)}`;
+  if (hit.kind === "event") return `${DASHBOARD_ROUTES.events}?eventId=${encodeURIComponent(hit.ref)}`;
+  if (hit.kind === "form") return `${DASHBOARD_ROUTES.forms}?formId=${encodeURIComponent(hit.ref)}`;
   if (hit.kind === "project") {
     return `${DASHBOARD_ROUTES.allocation}?project=${encodeURIComponent(hit.ref)}`;
   }
@@ -74,10 +77,22 @@ const HIT_TILE: Record<SearchHit["kind"], string> = {
   employee: "bg-indigo-500/12 text-indigo-600 dark:text-indigo-300",
   project: "bg-amber-500/12 text-amber-600 dark:text-amber-300",
   client: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-300",
+  announcement: "bg-sky-500/12 text-sky-600 dark:text-sky-300",
+  event: "bg-violet-500/12 text-violet-600 dark:text-violet-300",
+  form: "bg-rose-500/12 text-rose-600 dark:text-rose-300",
 };
 
+const HIT_ICON = {
+  employee: Users,
+  project: FolderKanban,
+  client: Building2,
+  announcement: Megaphone,
+  event: CalendarHeart,
+  form: ClipboardList,
+} as const;
+
 function HitIcon({ kind }: { kind: SearchHit["kind"] }) {
-  const Icon = kind === "employee" ? Users : kind === "project" ? FolderKanban : Building2;
+  const Icon = HIT_ICON[kind];
   return (
     <span
       className={cn(
@@ -94,6 +109,9 @@ const GROUP_LABEL: Record<SearchHit["kind"], string> = {
   employee: "People",
   project: "Projects",
   client: "Clients",
+  announcement: "Announcements",
+  event: "Events",
+  form: "Forms",
 };
 
 /** Split "… · Skills: Python, Django" into a plain lead + skill chips. */
@@ -190,6 +208,9 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
           ...(data?.employees ?? []),
           ...(data?.projects ?? []),
           ...(data?.clients ?? []),
+          ...(data?.announcements ?? []),
+          ...(data?.events ?? []),
+          ...(data?.forms ?? []),
         ]);
         setStatus("done");
       } catch {
@@ -264,9 +285,9 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
         : status === "error"
           ? "Couldn't run the search. Check your connection and try again."
           : q.length >= 2 && status === "done" && results.length === 0
-            ? `Nothing matches "${q}" — try a name, skill, phone number, project or client.`
+            ? `Nothing matches "${q}" — try a name, project, announcement, event or form.`
             : q.length === 0 && pagesShown.length === 0
-              ? "Search anyone by name, skill or phone — plus projects and clients."
+              ? "Search announcements, events, forms and more — plus people, projects and clients where you have access."
               : null;
 
   const firstResultIndex = pagesShown.length;
@@ -304,7 +325,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                     setQuery(e.target.value);
                     setActiveIndex(0);
                   }}
-                  placeholder="Search anyone by name, skill, phone — plus projects & clients…"
+                  placeholder="Search people, projects, announcements, events and forms…"
                   className="min-w-0 flex-1 bg-transparent text-[15px] text-wt-text outline-none placeholder:text-wt-text-faint"
                   autoComplete="off"
                   spellCheck={false}

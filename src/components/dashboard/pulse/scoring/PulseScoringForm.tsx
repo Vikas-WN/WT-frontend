@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { BonusFields } from "@/components/dashboard/pulse/scoring/BonusFields";
 import { WeightSplit } from "@/components/dashboard/pulse/scoring/WeightSplit";
-import { SCORING_FIELDS, maxScore, previewScore, round2, toForm, toPayload, type ScoringForm } from "@/components/dashboard/pulse/scoring/scoringMath";
+import { SCORE_CEILING, SCORING_FIELDS, maxScore, previewScore, round2, toForm, toPayload, uncappedMaxScore, type ScoringForm } from "@/components/dashboard/pulse/scoring/scoringMath";
 import { InputField } from "@/components/dashboard/ui/forms";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { Button } from "@/components/ui/button";
@@ -59,11 +59,25 @@ function ScoringEditor({ saved }: { saved: PulseScoreSettings }) {
       <div className="grid gap-4 sm:grid-cols-2">
         <InputField label="Promotion-eligible at score" type="number" value={form.promotion_min_score} onChange={(v) => set("promotion_min_score", v)} />
         {payload ? (
-          <div className="rounded-xl border border-wt-border bg-wt-surface-2/50 p-3 text-xs text-wt-text-muted">
-            Highest reachable score: <span className="font-semibold text-wt-text">{maxScore(payload)}</span>
-            <br />
-            Example (KPI 4.0, values 4.0, 2 certifications, 1 recognition):{" "}
-            <span className="font-semibold text-wt-text">{previewScore(payload, 4, 4, 2, 1)}</span>
+          <div className="space-y-1.5 rounded-xl border border-wt-border bg-wt-surface-2/50 p-3 text-xs text-wt-text-muted">
+            <p>
+              Highest reachable score:{" "}
+              <span className="font-semibold text-wt-text">{maxScore(payload).toFixed(2)}</span>
+              <span className="text-wt-text-faint"> — scores never go above {SCORE_CEILING}, bonuses included</span>
+            </p>
+            {uncappedMaxScore(payload) > SCORE_CEILING ? (
+              <p className="text-wt-text-faint">
+                These bonus rates would reach {uncappedMaxScore(payload).toFixed(2)} without that limit; anything over {SCORE_CEILING} is held at {SCORE_CEILING}.
+              </p>
+            ) : null}
+            <p>
+              Example (KPI 4.0, values 4.0, 2 certifications, 1 recognition):{" "}
+              <span className="font-semibold text-wt-text">{previewScore(payload, 4, 4, 2, 1).toFixed(2)}</span>
+            </p>
+            <p>
+              Perfect review (KPI 5.0, values 5.0, 4 certifications, 4 recognitions):{" "}
+              <span className="font-semibold text-wt-text">{previewScore(payload, 5, 5, 4, 4).toFixed(2)}</span>
+            </p>
           </div>
         ) : null}
       </div>

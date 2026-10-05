@@ -41,6 +41,7 @@ import { applyResolvedTheme } from "@/utils/dashboard/theme";
 import { readSidebarCollapsed, writeSidebarCollapsed } from "@/utils/dashboard/sidebarPrefs";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { AccountMenu } from "@/components/dashboard/AccountMenu";
+import { ReportBugButton } from "@/components/dashboard/bug-reports/ReportBugButton";
 import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
 import { useUserPreferences } from "@/context/UserPreferencesContext";
@@ -498,6 +499,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 clearSelectionOnEmptyInput={false}
               />
             ) : null}
+            <ReportBugButton />
             <details
               ref={notificationsPanelRef}
               className="group relative"

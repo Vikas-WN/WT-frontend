@@ -34,7 +34,7 @@ export function HomeCard({
     <section
       className={cn(
         CONTENT_CARD_CLASS,
-        "flex h-full flex-col p-4 sm:p-5",
+        "flex h-full min-h-0 flex-col overflow-hidden p-4 sm:p-5 lg:p-4",
         featured &&
           "border-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)] bg-[var(--wt-brand-soft)] dark:bg-[var(--wt-brand-soft)]",
         className
@@ -64,7 +64,7 @@ export function HomeCard({
           </button>
         ) : null}
       </div>
-      <div className="mt-3 min-h-0 flex-1">{children}</div>
+      <div className="wt-tile-body mt-2.5 min-h-0 flex-1 lg:overflow-y-auto lg:overscroll-contain">{children}</div>
     </section>
   );
 }

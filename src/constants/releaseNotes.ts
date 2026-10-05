@@ -34,6 +34,43 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-05-01",
+    releasedOn: "2026-10-05",
+    title: "Polls, forms, search and a one-screen Home",
+    highlights: [
+      {
+        area: "Search",
+        title: "Find things faster",
+        description:
+          "Each list now has search, category filters and pages. Announcements and forms can be filed under a category, and Cmd/Ctrl+K search now finds them too.",
+      },
+      {
+        area: "Home",
+        title: "What's happening, right under your greeting",
+        description:
+          "Forms to fill, upcoming events and new announcements drift across the top of Home. Hover to pause, or scroll them yourself.",
+      },
+      {
+        area: "Announcements",
+        title: "Add a poll to an announcement",
+        description:
+          "Ask a question with up to 10 options. People vote right in the announcement and see live results; HR, Admin and the poster can see who voted for what, and download it as a PDF.",
+      },
+      {
+        area: "Forms",
+        title: "Send a form to the people you choose",
+        description:
+          "Build a short form, pick who should fill it, and track who has answered. Anyone can edit their answers until it closes.",
+      },
+      {
+        area: "Home",
+        title: "Everything on one screen",
+        description:
+          "Home now fits your window with no scrolling. If you have more widgets than fit, use the arrows at the top to flip to the next screen. The side menu also starts collapsed.",
+      },
+    ],
+  },
+  {
     id: "2026-09-30-01",
     releasedOn: "2026-09-30",
     title: "Leave planning, shared Pulse reviews and more",

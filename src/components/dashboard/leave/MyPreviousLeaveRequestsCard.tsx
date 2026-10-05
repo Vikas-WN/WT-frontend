@@ -178,7 +178,7 @@ export function MyPreviousLeaveRequestsCard({
                       </TableCell>
                       <TableCell className="px-3 py-2.5">
                         <div className="flex flex-col items-start gap-1">
-                          <LeaveRequestStatusBadge status={finalStatus} />
+                          <LeaveRequestStatusBadge status={finalStatus} request={rowRecord} />
                           {rejectionReason ? (
                             <p
                               className="max-w-[14rem] truncate text-xs text-rose-700/90"

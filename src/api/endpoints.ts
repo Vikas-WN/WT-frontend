@@ -178,6 +178,43 @@ export const endpoints = {
     importCsv: `${api}/assets/import-csv`,
   },
 
+  forms: {
+    root: `${api}/forms`,
+    managed: `${api}/forms/managed`,
+    byId: (id: number | string) => `${api}/forms/${encodeURIComponent(id)}`,
+    submit: (id: number | string) => `${api}/forms/${encodeURIComponent(id)}/submit`,
+    responses: (id: number | string) => `${api}/forms/${encodeURIComponent(id)}/responses`,
+    responsesCsv: (id: number | string) => `${api}/forms/${encodeURIComponent(id)}/responses.csv`,
+    remind: (id: number | string) => `${api}/forms/${encodeURIComponent(id)}/remind`,
+  },
+
+  events: {
+    root: `${api}/events`,
+    byId: (id: number | string) => `${api}/events/${encodeURIComponent(id)}`,
+    rsvp: (id: number | string) => `${api}/events/${encodeURIComponent(id)}/rsvp`,
+    attendees: (id: number | string) => `${api}/events/${encodeURIComponent(id)}/attendees`,
+  },
+
+  announcements: {
+    root: `${api}/announcements`,
+    managed: `${api}/announcements/managed`,
+    unreadCount: `${api}/announcements/unread-count`,
+    byId: (id: number | string) => `${api}/announcements/${encodeURIComponent(id)}`,
+    readById: (id: number | string) => `${api}/announcements/${encodeURIComponent(id)}/read`,
+    voteById: (id: number | string) => `${api}/announcements/${encodeURIComponent(id)}/vote`,
+    pollResultsById: (id: number | string) => `${api}/announcements/${encodeURIComponent(id)}/poll-results`,
+  },
+
+  audience: {
+    options: `${api}/audience/options`,
+  },
+
+  bugReports: {
+    root: `${api}/bug-reports`,
+    mine: `${api}/bug-reports/mine`,
+    byId: (id: number | string) => `${api}/bug-reports/${encodeURIComponent(id)}`,
+  },
+
   meetingRooms: {
     root: `${api}/meeting-rooms`,
     byId: (id: number | string) => `${api}/meeting-rooms/${encodeURIComponent(id)}`,

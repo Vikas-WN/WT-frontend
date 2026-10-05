@@ -210,7 +210,7 @@ export function HrWfhRequestsPanel({
                         {formatApiDateDisplay(toDate) || "—"}
                       </TableCell>
                       <TableCell className="px-3 py-2.5 whitespace-nowrap">
-                        <LeaveRequestStatusBadge status={finalStatus} />
+                        <LeaveRequestStatusBadge status={finalStatus} request={rowRecord} />
                       </TableCell>
                       <TableCell className="px-3 py-2.5 whitespace-nowrap">
                         <LeaveManagerEmailsCell

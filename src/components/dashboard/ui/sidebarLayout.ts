@@ -35,7 +35,7 @@ export const SIDEBAR_BRAND_WRAP_CLASS =
   "mb-3 shrink-0 border-b border-[var(--wt-sidebar-border)] px-1 pb-3.5";
 
 export function sidebarBrandWrapClass(collapsed: boolean) {
-  return cn(SIDEBAR_BRAND_WRAP_CLASS, collapsed && "lg:mb-2.5 lg:px-0 lg:pb-3");
+  return cn(SIDEBAR_BRAND_WRAP_CLASS, collapsed && "lg:mb-2 lg:px-0 lg:pb-2.5");
 }
 
 export const SIDEBAR_BRAND_ROW_CLASS = "flex items-center gap-2";
@@ -51,7 +51,7 @@ export const SIDEBAR_COLLAPSE_TOGGLE_CLASS =
   "flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent text-[var(--wt-sidebar-text-muted)] transition-colors duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:border-[var(--wt-sidebar-border)] hover:bg-[var(--wt-sidebar-hover-bg)] hover:text-[var(--wt-sidebar-text)] max-lg:hidden";
 
 export const SIDEBAR_NAV_CLASS =
-  "wt-sidebar-nav min-h-0 min-w-0 flex-1 space-y-1 overflow-x-hidden overflow-y-auto px-0.5 pb-2 pt-1";
+  "wt-sidebar-nav min-h-0 min-w-0 flex-1 space-y-1 [@media(max-height:820px)]:space-y-0.5 overflow-x-hidden overflow-y-auto px-0.5 pb-2 pt-1";
 
 export const SIDEBAR_GROUP_STACK_CLASS = "space-y-0.5";
 
@@ -126,7 +126,7 @@ const SIDEBAR_IDLE_CLASS =
 
 function sidebarCollapsedItemClass(collapsed: boolean) {
   return collapsed
-    ? "lg:mx-auto lg:h-10 lg:w-10 lg:min-h-10 lg:justify-center lg:gap-0 lg:px-0 lg:py-0"
+    ? "lg:mx-auto lg:h-10 lg:w-10 lg:min-h-10 lg:justify-center lg:gap-0 lg:px-0 lg:py-0 [@media(max-height:820px)]:lg:h-9 [@media(max-height:820px)]:lg:min-h-9 [@media(max-height:820px)]:lg:w-9"
     : undefined;
 }
 

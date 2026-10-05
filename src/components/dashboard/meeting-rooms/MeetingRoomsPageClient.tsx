@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Repeat } from "lucide-react";
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { PageHero } from "@/components/dashboard/ui/PageHero";
@@ -19,7 +19,6 @@ import {
 } from "@/components/dashboard/ui/wtTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/context/AuthContext";
 import { formatApiDateTimeDisplay } from "@/utils/apiDate";
 import {
@@ -29,6 +28,8 @@ import {
   useMyMeetingRoomBookings,
 } from "@/hooks/meeting-rooms/useMeetingRooms";
 import { BookRoomDialog } from "@/components/dashboard/meeting-rooms/BookRoomDialog";
+import { CancelBookingDialog } from "@/components/dashboard/meeting-rooms/CancelBookingDialog";
+import { MEETING_ROOM_REPEAT_COPY } from "@/constants/meetingRooms";
 import { DayScheduleView } from "@/components/dashboard/meeting-rooms/DayScheduleView";
 import { RoomFormDialog } from "@/components/dashboard/meeting-rooms/RoomFormDialog";
 import type { MeetingRoom, MeetingRoomBooking } from "@/types/meetingRoom";
@@ -73,6 +74,11 @@ function MyBookingsSection() {
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-wt-text">
                   {b.title} <span className="font-normal text-wt-text-muted">· {b.room_name}</span>
+                  {b.series_id ? (
+                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-wt-surface-3 px-2 py-0.5 align-middle text-[11px] font-medium text-wt-text-muted">
+                      <Repeat className="size-3" aria-hidden /> {MEETING_ROOM_REPEAT_COPY.repeatBadge}
+                    </span>
+                  ) : null}
                 </p>
                 <p className="mt-0.5 text-xs text-wt-text-muted">
                   {formatApiDateTimeDisplay(b.start_time)} – {formatApiDateTimeDisplay(b.end_time)}
@@ -101,18 +107,13 @@ function MyBookingsSection() {
         <BookRoomDialog room={editingRoom} booking={editing} onClose={() => setEditing(null)} />
       ) : null}
 
-      <ConfirmDialog
-        open={pendingCancel != null}
-        title="Cancel this booking?"
-        description={pendingCancel ? `${pendingCancel.title} · ${pendingCancel.room_name}` : undefined}
-        confirmLabel="Cancel booking"
-        cancelLabel="Keep it"
-        tone="danger"
+      <CancelBookingDialog
+        booking={pendingCancel}
         loading={cancelBooking.isPending}
-        onCancel={() => setPendingCancel(null)}
-        onConfirm={() => {
+        onClose={() => setPendingCancel(null)}
+        onConfirm={(scope) => {
           if (!pendingCancel) return;
-          cancelBooking.mutate(pendingCancel.id, { onSuccess: () => setPendingCancel(null) });
+          cancelBooking.mutate({ id: pendingCancel.id, scope }, { onSuccess: () => setPendingCancel(null) });
         }}
       />
     </ManagementListCard>

@@ -2264,3 +2264,12 @@ a:focus:not(:focus-visible) {
     @apply font-sans;
   }
 }
+/* Home tiles: when a tile is shorter than its content, the content scrolls inside it with the scrollbar hidden. */
+@media (min-width: 1024px) {
+  .wt-tile-body {
+    scrollbar-width: none;
+  }
+  .wt-tile-body::-webkit-scrollbar {
+    display: none;
+  }
+}

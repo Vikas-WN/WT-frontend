@@ -67,7 +67,7 @@ function SidebarSearchTrigger({
         onClick={onOpen}
         aria-label="Search"
         title={`Search (${mod}+K)`}
-        className="mx-auto flex size-10 items-center justify-center rounded-xl border border-[var(--wt-sidebar-border)] bg-[var(--wt-sidebar-hover-bg)] text-[var(--wt-sidebar-text-muted)] transition-colors hover:bg-[var(--wt-sidebar-surface-2)] hover:text-[var(--wt-sidebar-text)]"
+        className="mx-auto flex size-10 items-center justify-center [@media(max-height:820px)]:size-9 rounded-xl border border-[var(--wt-sidebar-border)] bg-[var(--wt-sidebar-hover-bg)] text-[var(--wt-sidebar-text-muted)] transition-colors hover:bg-[var(--wt-sidebar-surface-2)] hover:text-[var(--wt-sidebar-text)]"
       >
         <Search className="size-4" aria-hidden />
       </button>
@@ -333,18 +333,20 @@ export function DashboardSidebar({
         <div className={sidebarBrandWrapClass(showCollapsed)}>
           <div className={sidebarBrandRowClass(showCollapsed)}>
             {showCollapsed ? (
-              <div className="flex w-full flex-col items-center gap-2 lg:gap-2.5">
+              // The logo is the expand control: a separate chevron under it cost a whole row on short screens.
+              <button
+                type="button"
+                className="group relative flex w-full cursor-pointer items-center justify-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)]"
+                onClick={onToggleCollapsed}
+                aria-label="Expand sidebar"
+                title="Expand sidebar"
+                aria-expanded={false}
+              >
                 <WebTrakBrand variant="sidebar" compact className="w-full" />
-                <button
-                  type="button"
-                  className={SIDEBAR_COLLAPSE_TOGGLE_CLASS}
-                  onClick={onToggleCollapsed}
-                  aria-label="Expand sidebar"
-                  aria-expanded={false}
-                >
-                  <IconChevronRight className="size-4" />
-                </button>
-              </div>
+                <span className="absolute -right-1 top-1/2 grid size-4 -translate-y-1/2 place-items-center rounded-full border border-[var(--wt-sidebar-border)] bg-[var(--wt-sidebar-surface-2)] text-[var(--wt-sidebar-text-muted)] opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 max-lg:hidden">
+                  <IconChevronRight className="size-3" />
+                </span>
+              </button>
             ) : (
               <>
                 <WebTrakBrand variant="sidebar" className="min-w-0 flex-1" />

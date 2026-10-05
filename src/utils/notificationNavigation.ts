@@ -250,6 +250,16 @@ export function notificationCategoryLabel(
       return "Internship";
     case "ANNOUNCEMENT":
       return "Announcement";
+    case "BUG_REPORTED":
+    case "BUG_UPDATED":
+      return "Bug report";
+    case "EVENT_INVITE":
+    case "EVENT_UPDATED":
+    case "EVENT_REMINDER":
+      return "Event";
+    case "FORM_REQUEST":
+    case "FORM_REMINDER":
+      return "Form";
     case "BIRTHDAY_WISH":
       return "Birthday";
     case "EMPLOYEE_ID_UPDATED":
@@ -437,8 +447,29 @@ export function resolveNotificationHref(
     case "POLICY_PENDING_REMINDER":
       return DASHBOARD_ROUTES.profile;
 
-    case "ANNOUNCEMENT":
-      return DASHBOARD_ROUTES.profile;
+    case "ANNOUNCEMENT": {
+      const id = readNotificationMessage(row).match(/announcement\s*#\s*(\d+)/i)?.[1];
+      return id ? `${DASHBOARD_ROUTES.announcements}?announcementId=${id}` : DASHBOARD_ROUTES.announcements;
+    }
+
+    case "FORM_REQUEST":
+    case "FORM_REMINDER": {
+      const id = readNotificationMessage(row).match(/form\s*#\s*(\d+)/i)?.[1];
+      return id ? `${DASHBOARD_ROUTES.forms}?formId=${id}` : DASHBOARD_ROUTES.forms;
+    }
+
+    case "EVENT_INVITE":
+    case "EVENT_UPDATED":
+    case "EVENT_REMINDER": {
+      const id = readNotificationMessage(row).match(/event\s*#\s*(\d+)/i)?.[1];
+      return id ? `${DASHBOARD_ROUTES.events}?eventId=${id}` : DASHBOARD_ROUTES.events;
+    }
+
+    case "BUG_REPORTED":
+    case "BUG_UPDATED": {
+      const bugId = readNotificationMessage(row).match(/bug\s*#\s*(\d+)/i)?.[1];
+      return bugId ? `${DASHBOARD_ROUTES["bug-reports"]}?bugId=${bugId}` : DASHBOARD_ROUTES["bug-reports"];
+    }
 
     case "EMPLOYEE_ID_UPDATED":
       return DASHBOARD_ROUTES.profile;
