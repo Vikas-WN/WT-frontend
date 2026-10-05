@@ -30,20 +30,25 @@ export function BookRoomDialog({
   room,
   onClose,
   defaultDate,
+  defaultStartTime,
+  defaultEndTime,
   booking,
 }: {
   room: MeetingRoom;
   onClose: () => void;
   /** dd/mm/yyyy — the day the user was viewing when they hit "Book". */
   defaultDate?: string;
+  /** "HH:MM" — a suggested slot (the room's next free half hour) so a booking is one tap away. */
+  defaultStartTime?: string;
+  defaultEndTime?: string;
   /** Edit this existing booking instead of making a new one. */
   booking?: MeetingRoomBooking;
 }) {
   const editing = booking != null;
   const initialStart = booking ? splitApiDateTime(booking.start_time) : null;
   const [date, setDate] = useState(initialStart?.date || defaultDate || formatApiDate(new Date()));
-  const [startTime, setStartTime] = useState(initialStart?.time ?? "");
-  const [endTime, setEndTime] = useState(booking ? splitApiDateTime(booking.end_time).time : "");
+  const [startTime, setStartTime] = useState(initialStart?.time ?? defaultStartTime ?? "");
+  const [endTime, setEndTime] = useState(booking ? splitApiDateTime(booking.end_time).time : (defaultEndTime ?? ""));
   const [title, setTitle] = useState(booking?.title ?? "");
   const [attendees, setAttendees] = useState(booking?.attendees ?? "");
   const [notes, setNotes] = useState(booking?.notes ?? "");
