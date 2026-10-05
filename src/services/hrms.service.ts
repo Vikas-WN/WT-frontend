@@ -6,6 +6,7 @@ import type { OffboardListData, OffboardListQuery } from "@/types/offboard";
 import { parseAllocationListRows } from "@/utils/allocationList";
 import {
   ONBOARD_DATE_FIELDS,
+  apiDateToInputValue,
   applyApiDateFields,
   applyApiDateQuery,
   requireApiDateParam,
@@ -212,6 +213,35 @@ export interface WhosOutData {
   scope: "team" | "org";
   people: WhosOutPerson[];
   holidays: WhosOutHoliday[];
+}
+
+/**
+ * The API serialises every date as dd/mm/yyyy (DATE_API_CONTRACT.md), but the Who's Out
+ * views bucket and compare days as ISO yyyy-mm-dd strings. Left as-is, every entry fell
+ * outside the month and the page and Home card both reported "everyone's in".
+ */
+function whosOutIsoDate(value: string): string {
+  return apiDateToInputValue(value) || value;
+}
+
+function normalizeWhosOutDates(data: WhosOutData): WhosOutData {
+  return {
+    ...data,
+    from_date: whosOutIsoDate(data.from_date),
+    to_date: whosOutIsoDate(data.to_date),
+    people: (data.people ?? []).map((person) => ({
+      ...person,
+      entries: (person.entries ?? []).map((entry) => ({
+        ...entry,
+        from_date: whosOutIsoDate(entry.from_date),
+        to_date: whosOutIsoDate(entry.to_date),
+      })),
+    })),
+    holidays: (data.holidays ?? []).map((holiday) => ({
+      ...holiday,
+      date: whosOutIsoDate(holiday.date),
+    })),
+  };
 }
 
 export interface SearchHit {
@@ -1426,7 +1456,7 @@ export const hrmsService = {
   },
 
   /** Who's-out team calendar: approved leave / WFH + holidays over a range. */
-  getWhosOut(params: {
+  async getWhosOut(params: {
     from?: string;
     to?: string;
     scope?: "team" | "org";
@@ -1435,7 +1465,8 @@ export const hrmsService = {
     const query = Object.fromEntries(
       Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")
     ) as Record<string, string>;
-    return apiClient.get<ApiEnvelope<WhosOutData>>(endpoints.whosOut, { query });
+    const res = await apiClient.get<ApiEnvelope<WhosOutData>>(endpoints.whosOut, { query });
+    return res.data ? { ...res, data: normalizeWhosOutDates(res.data) } : res;
   },
 
   /** Recurring birthdays & work anniversaries — org-wide, every role. */
