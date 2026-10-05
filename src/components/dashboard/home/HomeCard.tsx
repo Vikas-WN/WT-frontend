@@ -64,7 +64,7 @@ export function HomeCard({
           </button>
         ) : null}
       </div>
-      <div className="mt-3 min-h-0 flex-1 lg:overflow-y-auto lg:overscroll-contain">{children}</div>
+      <div className="wt-tile-body mt-2.5 min-h-0 flex-1 lg:overflow-y-auto lg:overscroll-contain">{children}</div>
     </section>
   );
 }

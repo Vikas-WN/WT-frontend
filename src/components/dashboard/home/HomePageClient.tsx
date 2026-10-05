@@ -12,7 +12,7 @@ import {
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { HomeHeader } from "@/components/dashboard/home/HomeHeader";
-import { paginateWidgets, useHomeGridShape } from "@/hooks/dashboard/useHomeGridShape";
+import { cellsOf, useHomeGridShape } from "@/hooks/dashboard/useHomeGridShape";
 import { useCommandPalette } from "@/components/dashboard/CommandPalette";
 import { HomeCard, CardMessage, CardSkeleton } from "@/components/dashboard/home/HomeCard";
 import { CelebrationsCard } from "@/components/dashboard/home/CelebrationsCard";
@@ -145,8 +145,6 @@ export function HomePageClient() {
   const canSeeOrgOut = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
   const [editMode, setEditMode] = useState(false);
   const [draggedWidgetId, setDraggedWidgetId] = useState<string | null>(null);
-  // UI-only: which screen of widgets is showing.
-  const [page, setPage] = useState(0);
   const { layout, reorder, toggleSize, setHidden, resetLayout } = useHomeDashboardLayout(HOME_WIDGET_IDS);
   const firstName = (user?.name ?? "").trim().split(/\s+/)[0] || "there";
 
@@ -531,13 +529,12 @@ export function HomePageClient() {
     .filter((w) => widgetRegistry[w.id]?.eligible && w.hidden)
     .map((w) => ({ id: w.id, title: HOME_WIDGET_TITLES[w.id] ?? w.id }));
 
-  // Desktop: the grid exactly fills the window and extra widgets move to the next screen — no page scroll.
+  // Desktop: every widget is always on screen. Columns follow the window width and rows follow how many widgets
+  // there are, so the grid fills the window exactly — nothing to page through or scroll.
   const shape = useHomeGridShape();
-  const screens = shape.fixed
-    ? paginateWidgets(visibleLayout, shape.columns * shape.rows, shape.columns)
-    : [visibleLayout];
-  const screenIndex = Math.min(page, screens.length - 1);
-  const shown = screens[screenIndex] ?? [];
+  const cells = cellsOf(visibleLayout);
+  const columns = shape.columnsFor(cells);
+  const rows = Math.max(1, Math.ceil(cells / columns));
 
   return (
     <DashboardPageShell
@@ -555,9 +552,6 @@ export function HomePageClient() {
         onShowWidget={(id) => setHidden(id, false)}
         onReset={resetLayout}
         onSearch={openSearch}
-        page={screenIndex}
-        pages={screens.length}
-        onPageChange={setPage}
       />
 
       <HomeUpdatesGallery />
@@ -572,9 +566,9 @@ export function HomePageClient() {
       ) : (
         <div
           className="grid gap-4 sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-flow-dense lg:grid-cols-[repeat(var(--home-cols),minmax(0,1fr))] lg:grid-rows-[repeat(var(--home-rows),minmax(0,1fr))]"
-          style={{ "--home-cols": shape.columns, "--home-rows": shape.rows } as React.CSSProperties}
+          style={{ "--home-cols": columns, "--home-rows": rows } as React.CSSProperties}
         >
-          {shown.map((w) => (
+          {visibleLayout.map((w) => (
             <DashboardWidgetFrame
               key={w.id}
               id={w.id}
