@@ -188,6 +188,11 @@ export const endpoints = {
     remind: (id: number | string) => `${api}/forms/${encodeURIComponent(id)}/remind`,
   },
 
+  quickActions: {
+    byToken: (token: string) => `${api}/quick-actions/${encodeURIComponent(token)}`,
+    decision: (token: string) => `${api}/quick-actions/${encodeURIComponent(token)}/decision`,
+  },
+
   calendar: {
     feedInfo: `${api}/calendar/feed-info`,
     regenerate: `${api}/calendar/feed/regenerate`,

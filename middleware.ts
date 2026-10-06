@@ -10,6 +10,7 @@ export function middleware(request: NextRequest) {
   const isPublic =
     pathname.startsWith("/login") ||
     pathname.startsWith("/exit-survey") ||
+    pathname.startsWith("/quick-action") ||
     pathname.startsWith("/api-docs") ||
     pathname.startsWith("/api/") ||
     pathname.startsWith("/_next/") ||

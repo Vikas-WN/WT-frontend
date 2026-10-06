@@ -2313,3 +2313,27 @@ a:focus:not(:focus-visible) {
     scroll-behavior: auto !important;
   }
 }
+
+/* ── Motion primitives (reused across the app) ──────────────────────────────────────────────────────────────────── */
+@keyframes wt-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes wt-pop {
+  0% { opacity: 0; transform: scale(0.6); }
+  60% { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes wt-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes wt-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--wt-ring-color, var(--wt-brand)) 40%, transparent); }
+  100% { box-shadow: 0 0 0 18px color-mix(in srgb, var(--wt-ring-color, var(--wt-brand)) 0%, transparent); }
+}
+.wt-fade-up { animation: wt-fade-up 420ms var(--wt-ease) both; }
+.wt-pop { animation: wt-pop 520ms var(--wt-ease) both; }
+.wt-draw { stroke-dasharray: 32; stroke-dashoffset: 32; animation: wt-draw 520ms 180ms var(--wt-ease) forwards; }
+.wt-ring { animation: wt-ring 900ms 120ms var(--wt-ease-out) 1; }
+/* Stagger children: set --i on each child (0, 1, 2…). */
+.wt-stagger > * { animation: wt-fade-up 420ms var(--wt-ease) both; animation-delay: calc(var(--i, 0) * 55ms); }
