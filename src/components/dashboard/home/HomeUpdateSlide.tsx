@@ -14,7 +14,18 @@ import { cn } from "@/lib/utils";
 import { eventDateParts, formatEventRange } from "@/utils/eventTime";
 
 const SLIDE_CLASS =
-  "wt-lift group flex h-full w-full flex-col gap-1.5 rounded-2xl border border-wt-border bg-wt-surface-1 p-3.5 shadow-[var(--wt-shadow-sm)]";
+  "wt-lift group relative overflow-hidden flex h-full w-full flex-col gap-1.5 rounded-2xl border border-wt-border bg-wt-surface-1 p-3.5 shadow-[var(--wt-shadow-sm)]";
+
+/** A thin colour line along the top edge tells the kind apart at a glance. */
+const ACCENT: Record<HomeUpdate["kind"], string> = {
+  form: "bg-rose-500",
+  event: "bg-violet-500",
+  announcement: "bg-sky-500",
+};
+
+function Accent({ kind }: { kind: HomeUpdate["kind"] }) {
+  return <span aria-hidden className={cn("absolute inset-x-0 top-0 h-[3px] opacity-80", ACCENT[kind])} />;
+}
 
 function Kind({ icon, label, tone }: { icon: React.ReactNode; label: string; tone?: string }) {
   return (
@@ -31,6 +42,7 @@ export function HomeUpdateSlide({ update }: { update: HomeUpdate }) {
     const { form } = update;
     return (
       <Link href={`${DASHBOARD_ROUTES.forms}?formId=${form.id}`} className={SLIDE_CLASS}>
+        <Accent kind="form" />
         <Kind icon={<ClipboardList className="size-3.5" />} label={COPY.form} />
         <p className="line-clamp-2 text-sm font-semibold text-wt-text">{form.title}</p>
         <p className={cn("mt-auto text-xs", form.overdue ? "font-medium text-rose-600 dark:text-rose-400" : "text-wt-text-muted")}>
@@ -46,6 +58,7 @@ export function HomeUpdateSlide({ update }: { update: HomeUpdate }) {
     const tone = EVENT_TYPE_OPTIONS.find((option) => option.value === event.event_type)?.tone ?? "neutral";
     return (
       <Link href={`${DASHBOARD_ROUTES.events}?eventId=${event.id}`} className={cn(SLIDE_CLASS, "flex-row gap-3")}>
+        <Accent kind="event" />
         <div className="flex size-12 shrink-0 flex-col items-center justify-center rounded-xl bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]">
           <span className="text-lg font-bold leading-none">{date.day}</span>
           <span className="text-[10px] font-semibold">{date.month}</span>
@@ -72,6 +85,7 @@ export function HomeUpdateSlide({ update }: { update: HomeUpdate }) {
   const { announcement } = update;
   return (
     <Link href={`${DASHBOARD_ROUTES.announcements}?announcementId=${announcement.id}`} className={SLIDE_CLASS}>
+      <Accent kind="announcement" />
       <div className="flex items-center justify-between gap-2">
         <Kind icon={<Megaphone className="size-3.5" />} label={COPY.announcement} />
         {!announcement.is_read ? (

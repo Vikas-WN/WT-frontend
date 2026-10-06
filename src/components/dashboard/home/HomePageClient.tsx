@@ -15,6 +15,7 @@ import { HomeHeader } from "@/components/dashboard/home/HomeHeader";
 import { AnimatedBar } from "@/components/motion/AnimatedBar";
 import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import { cellsOf, useHomeGridShape } from "@/hooks/dashboard/useHomeGridShape";
+import { useHomeAttention } from "@/hooks/dashboard/useHomeAttention";
 import { useCommandPalette } from "@/components/dashboard/CommandPalette";
 import { HomeCard, CardMessage, CardSkeleton } from "@/components/dashboard/home/HomeCard";
 import { CelebrationsCard } from "@/components/dashboard/home/CelebrationsCard";
@@ -303,6 +304,7 @@ export function HomePageClient() {
       node: (
         <HomeCard
           title="Pending approvals"
+          tone="amber"
           icon={<ClipboardCheck className="size-4" />}
           href={DASHBOARD_ROUTES["leave-team"]}
           cta="Review"
@@ -330,6 +332,7 @@ export function HomePageClient() {
       node: (
         <HomeCard
           title="My leave balance"
+          tone="emerald"
           icon={<Plane className="size-4" />}
           href={`${DASHBOARD_ROUTES.leave}?tab=my`}
           cta="Details"
@@ -374,6 +377,7 @@ export function HomePageClient() {
       node: (
         <HomeCard
           title="My learning"
+          tone="violet"
           icon={<GraduationCap className="size-4" />}
           href={DASHBOARD_ROUTES.learning}
           cta="Open"
@@ -421,6 +425,7 @@ export function HomePageClient() {
       node: (
         <HomeCard
           title="Who's out today"
+          tone="amber"
           icon={<CalendarRange className="size-4" />}
           href={DASHBOARD_ROUTES["whos-out"]}
           cta="Calendar"
@@ -456,6 +461,7 @@ export function HomePageClient() {
       node: (
         <HomeCard
           title="My projects"
+          tone="sky"
           icon={<LayoutGrid className="size-4" />}
           href={DASHBOARD_ROUTES["my-allocations"]}
           cta="Allocations"
@@ -489,6 +495,7 @@ export function HomePageClient() {
       node: (
         <HomeCard
           title="Upcoming holidays"
+          tone="rose"
           icon={<CalendarDays className="size-4" />}
           href={DASHBOARD_ROUTES["annual-calendar"]}
           cta="Calendar"
@@ -531,6 +538,7 @@ export function HomePageClient() {
   // Desktop: every widget is always on screen. Columns follow the window width and rows follow how many widgets
   // there are, so the grid fills the window exactly — nothing to page through or scroll.
   const shape = useHomeGridShape();
+  const attention = useHomeAttention(approvals.data ?? null);
   const cells = cellsOf(visibleLayout);
   const columns = shape.columnsFor(cells);
   const rows = Math.max(1, Math.ceil(cells / columns));
@@ -545,6 +553,7 @@ export function HomePageClient() {
       <HomeHeader
         eyebrow={today.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
         title={`${greeting()}, ${firstName}`}
+        subtitle={attention}
         editMode={editMode}
         onEditModeChange={setEditMode}
         hiddenWidgets={hiddenWidgets}
