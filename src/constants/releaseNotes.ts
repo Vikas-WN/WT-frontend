@@ -34,6 +34,19 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-06-04",
+    releasedOn: "2026-10-06",
+    title: "Use WebTrak on several devices at once",
+    highlights: [
+      {
+        area: "Signing in",
+        title: "Signing in on another device no longer signs you out here",
+        description:
+          "Your laptop, phone, browser and the desktop app each keep their own session. Signing out on one, or leaving one idle, leaves the others signed in. You are still signed out after 4 hours with no activity on that device.",
+      },
+    ],
+  },
+  {
     id: "2026-10-06-03",
     releasedOn: "2026-10-06",
     title: "Fewer unexpected sign-outs",

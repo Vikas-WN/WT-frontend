@@ -93,6 +93,7 @@ export class HttpClient {
   private authTokenGetter?: () => string | null | undefined;
   private onUnauthorized?: () => void;
   private tokenRefresher?: () => Promise<RefreshResult>;
+  private sessionVerifier?: () => Promise<"valid" | "invalid" | "unknown">;
   private refreshInFlight: Promise<RefreshResult> | null = null;
   private requestInterceptors: RequestInterceptor[] = [];
   private responseInterceptors: ResponseInterceptor[] = [];
@@ -117,6 +118,14 @@ export class HttpClient {
    */
   setTokenRefresher(refresher: () => Promise<RefreshResult>) {
     this.tokenRefresher = refresher;
+  }
+
+  /**
+   * Registers a check of the session itself (not of one endpoint). A 401 that still comes back after a successful
+   * refresh may just be that endpoint refusing; we only sign the person out when this check says the session is gone.
+   */
+  setSessionVerifier(verifier: () => Promise<"valid" | "invalid" | "unknown">) {
+    this.sessionVerifier = verifier;
   }
 
   /**
@@ -245,9 +254,15 @@ export class HttpClient {
                 ? payload
                 : "";
           const reason = sessionLogoutReasonFromApiDetail(detail);
-          // Prefer idle/expired messaging. Avoid "Session Ended" on generic refresh races —
-          // attemptTokenRefresh already tried /auth/me; if we still failed, logout as server.
-          dispatchSessionLogout(reason ?? "server");
+          // The server explicitly said idle/expired: believe it. A bare 401 after we already refreshed successfully is
+          // ambiguous (one endpoint can say 401 for its own reasons), so ask the session itself before signing out.
+          if (reason === null && __isRetry && this.sessionVerifier) {
+            const verdict = await this.sessionVerifier().catch((): "unknown" => "unknown");
+            if (verdict === "invalid") dispatchSessionLogout("server");
+          } else {
+            // Prefer idle/expired messaging; otherwise the refresh was refused, so the session really is gone.
+            dispatchSessionLogout(reason ?? "server");
+          }
         }
 
         const serverUnavailable =

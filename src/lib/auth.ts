@@ -214,6 +214,13 @@ export async function attemptTokenRefresh(): Promise<boolean | "unavailable"> {
 
 export function initAuthClient(): void {
   apiClient.setTokenRefresher(attemptTokenRefresh);
+  apiClient.setSessionVerifier(async () => {
+    try {
+      return (await fetchMeKeepingTransientErrors()) ? "valid" : "invalid";
+    } catch {
+      return "unknown";
+    }
+  });
 }
 
 /**
