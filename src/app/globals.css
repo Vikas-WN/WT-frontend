@@ -2273,3 +2273,41 @@ a:focus:not(:focus-visible) {
     display: none;
   }
 }
+
+/* ── UI polish pass ─────────────────────────────────────────────────────────────────────────────────────────────── */
+
+/* Brand-tinted text selection. */
+::selection {
+  background: color-mix(in srgb, var(--wt-brand) 28%, transparent);
+}
+
+/* One consistent, visible keyboard focus ring for every interactive element that doesn't draw its own. */
+:where(a, button, [role="button"], summary, input, select, textarea):focus-visible {
+  outline: 2px solid var(--wt-brand);
+  outline-offset: 2px;
+}
+
+/* Buttons feel pressed: a tiny scale on mouse-down, only where hover exists (not on touch). */
+@media (hover: hover) {
+  :where(button, [role="button"], a[data-slot="button"]):not(:disabled):active {
+    transform: scale(0.985);
+  }
+}
+
+/* Slim, quiet scrollbars in the main page area. */
+.wt-page-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--wt-text-muted, #64748b) 35%, transparent) transparent;
+}
+
+/* Page content eases in; people who ask for less motion get none of it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

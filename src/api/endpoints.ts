@@ -188,6 +188,12 @@ export const endpoints = {
     remind: (id: number | string) => `${api}/forms/${encodeURIComponent(id)}/remind`,
   },
 
+  calendar: {
+    feedInfo: `${api}/calendar/feed-info`,
+    regenerate: `${api}/calendar/feed/regenerate`,
+    eventIcs: (id: number | string) => `${api}/calendar/events/${encodeURIComponent(id)}.ics`,
+  },
+
   events: {
     root: `${api}/events`,
     byId: (id: number | string) => `${api}/events/${encodeURIComponent(id)}`,

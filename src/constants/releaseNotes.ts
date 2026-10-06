@@ -34,6 +34,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-06-01",
+    releasedOn: "2026-10-06",
+    title: "Calendar sync and a roomier look",
+    highlights: [
+      {
+        area: "Calendar",
+        title: "See WebTrak in Google or Apple Calendar",
+        description:
+          "On the Events page, choose Sync calendar to add your events, room bookings and approved leave to your own calendar. Every event also has an Add to calendar option.",
+      },
+      {
+        area: "Look and feel",
+        title: "More room, less clutter",
+        description:
+          "Pages use the width of your screen better, spacing is tighter, and buttons and keyboard focus are clearer.",
+      },
+    ],
+  },
+  {
     id: "2026-10-05-01",
     releasedOn: "2026-10-05",
     title: "Polls, forms, search and a one-screen Home",

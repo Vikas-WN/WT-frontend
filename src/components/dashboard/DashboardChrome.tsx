@@ -669,7 +669,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
           {/* Cap content width on very large / TV screens so line lengths, forms
               and tables stay readable instead of stretching edge-to-edge. Below
               ~2000px viewport this has no visible effect. */}
-          <div className="mx-auto w-full max-w-[1800px]">{children}</div>
+          <div className="mx-auto w-full max-w-[2000px]">{children}</div>
         </div>
       </div>
     </div>

@@ -31,7 +31,7 @@ export function PageHero({
   return (
     <header
       className={cn(
-        "relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between",
+        "relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between",
         surface && "overflow-hidden rounded-3xl border border-wt-border bg-wt-surface-1 px-5 py-6 sm:px-8 sm:py-8",
         className
       )}

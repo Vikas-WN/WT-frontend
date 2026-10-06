@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 
 /** Generous page rhythm — avoids cramped stacks. */
-export const PAGE_STACK_CLASS = "space-y-8";
+export const PAGE_STACK_CLASS = "space-y-6";
 export const SECTION_STACK_CLASS = PAGE_STACK_CLASS;
 export const SECTION_HEADER_CLASS =
   "mb-5 border-b border-wt-border pb-4 dark:border-wt-border/80";
@@ -14,9 +14,9 @@ export const SECTION_DESCRIPTION_CLASS =
 
 /** Primary content card used on tabbed pages (Leave, Timelog, etc.). */
 export const CONTENT_CARD_CLASS = cn(
-  "wt-surface-card overflow-hidden rounded-3xl border border-wt-border bg-wt-surface-1 shadow-[var(--wt-shadow-sm)]",
+  "wt-surface-card overflow-hidden rounded-2xl border border-wt-border bg-wt-surface-1 shadow-[var(--wt-shadow-sm)]",
   "transition-[box-shadow,transform,border-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)]",
-  "hover:-translate-y-0.5 hover:shadow-[var(--wt-shadow-md)] dark:border-wt-border dark:bg-wt-surface-1 dark:shadow-none dark:hover:translate-y-0 dark:hover:shadow-none"
+  "hover:shadow-[var(--wt-shadow-md)] dark:border-wt-border dark:bg-wt-surface-1 dark:shadow-none dark:hover:shadow-none"
 );
 
 /** Nested panel inside a content card — clear structure on pitch-black. */
@@ -40,15 +40,15 @@ export const INFO_BANNER_BODY_CLASS = "mt-1.5 leading-relaxed text-wt-text-muted
 export const DEFAULT_TABLE_MAX_HEIGHT = "max-h-[min(65vh,560px)]";
 
 /** Card shell zones — shared horizontal padding with matched vertical rhythm. */
-export const CARD_HEADER_CLASS = "px-5 py-5 sm:px-8 sm:py-6";
-export const CARD_TOOLBAR_CLASS = "px-5 py-5 sm:px-8 sm:py-6";
-export const CARD_CONTENT_CLASS = "p-5 sm:p-8";
-export const CARD_CONTENT_BELOW_TOOLBAR_CLASS = "px-5 pb-5 pt-0 sm:px-8 sm:pb-8";
-export const CARD_FOOTER_CLASS = "px-5 py-5 sm:px-8 sm:py-6";
-export const CARD_STACK_CLASS = "space-y-8";
+export const CARD_HEADER_CLASS = "px-5 py-4 sm:px-6 sm:py-5";
+export const CARD_TOOLBAR_CLASS = "px-5 py-4 sm:px-6 sm:py-5";
+export const CARD_CONTENT_CLASS = "p-5 sm:p-6";
+export const CARD_CONTENT_BELOW_TOOLBAR_CLASS = "px-5 pb-5 pt-0 sm:px-6 sm:pb-6";
+export const CARD_FOOTER_CLASS = "px-5 py-4 sm:px-6 sm:py-5";
+export const CARD_STACK_CLASS = "space-y-6";
 export const CARD_TOOLBAR_INNER_CLASS =
   "flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between";
-export const CARD_CONTENT_STACK_CLASS = "space-y-7";
+export const CARD_CONTENT_STACK_CLASS = "space-y-6";
 
 /** Dense management list cards — slightly tighter than page cards, still breathable. */
 export const CARD_HEADER_COMPACT_CLASS = "px-5 py-4 sm:px-6";
