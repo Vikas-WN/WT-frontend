@@ -6,6 +6,18 @@ import { ChevronRight } from "lucide-react";
 import { CONTENT_CARD_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { cn } from "@/lib/utils";
 
+export type HomeTone = "brand" | "emerald" | "amber" | "violet" | "rose" | "sky";
+
+/** Tinted icon-tile colours, readable in light and dark. */
+const TONE_TILE: Record<HomeTone, string> = {
+  brand: "bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]",
+  emerald: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400",
+  amber: "bg-amber-500/14 text-amber-700 dark:text-amber-400",
+  violet: "bg-violet-500/12 text-violet-700 dark:text-violet-300",
+  rose: "bg-rose-500/12 text-rose-700 dark:text-rose-300",
+  sky: "bg-sky-500/12 text-sky-700 dark:text-sky-300",
+};
+
 export function HomeCard({
   title,
   icon,
@@ -17,6 +29,7 @@ export function HomeCard({
    *  that are genuinely more actionable than the rest (e.g. pending
    *  approvals) — spend sparingly, at most one or two per page. */
   featured = false,
+  tone = "brand",
   className,
 }: {
   title: string;
@@ -28,6 +41,8 @@ export function HomeCard({
   onAction?: () => void;
   children: React.ReactNode;
   featured?: boolean;
+  /** Colour of the icon tile. */
+  tone?: HomeTone;
   className?: string;
 }) {
   return (
@@ -35,14 +50,17 @@ export function HomeCard({
       className={cn(
         CONTENT_CARD_CLASS,
         "flex h-full min-h-0 flex-col overflow-hidden p-4 sm:p-5 lg:p-4",
+        (href || onAction) && "wt-lift",
         featured &&
-          "border-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)] bg-[var(--wt-brand-soft)] dark:bg-[var(--wt-brand-soft)]",
+          "shadow-[inset_3px_0_0_var(--wt-brand)] border-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)] bg-[var(--wt-brand-soft)] dark:bg-[var(--wt-brand-soft)]",
         className
       )}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <span className={featured ? "text-[var(--wt-brand)]" : "text-wt-text-muted"}>{icon}</span>
+          <span className={cn("grid size-7 shrink-0 place-items-center rounded-lg", TONE_TILE[tone])} aria-hidden>
+            {icon}
+          </span>
           <h2 className="truncate text-sm font-semibold text-wt-text">{title}</h2>
         </div>
         {href ? (

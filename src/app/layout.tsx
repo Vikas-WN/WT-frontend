@@ -3,6 +3,9 @@ import localFont from "next/font/local";
 import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
 import { ActionSplashHost } from "@/components/ui/ActionSplash";
+import { PwaHost } from "@/components/pwa/PwaHost";
+import { RouteProgress } from "@/components/motion/RouteProgress";
+import { Suspense } from "react";
 import { themeInitScript } from "@/components/shared/ThemeInitScript";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -49,7 +52,10 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#070b14",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f8fb" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0d12" },
+  ],
 };
 
 export default function RootLayout({
@@ -74,6 +80,10 @@ export default function RootLayout({
         <AuthProvider>{children}</AuthProvider>
         <Toaster />
         <ActionSplashHost />
+        <PwaHost />
+        <Suspense fallback={null}>
+          <RouteProgress />
+        </Suspense>
       </body>
     </html>
   );

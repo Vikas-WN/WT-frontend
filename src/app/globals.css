@@ -34,11 +34,11 @@
   /* Surface — a calm, low-saturation canvas so white cards lift off it with a
      hairline + soft shadow instead of tint. (Was a saturated blue-gray that,
      with the page-top brand gradient on top, read as a muddy blue band.) */
-  --wt-bg: #f8f9fc;
-  --wt-page-bg: #f4f6fa;
+  --wt-bg: #f7f8fb;
+  --wt-page-bg: #f3f5f9;
   --wt-surface-1: #ffffff;
-  --wt-surface-2: #f8fafc;
-  --wt-surface-3: #eff2f7;
+  --wt-surface-2: #f7f9fc;
+  --wt-surface-3: #edf0f6;
 
   /* Sidebar — deliberately fixed dark regardless of the app's light/dark
      theme (Vercel/Linear-style structural contrast against the light
@@ -61,14 +61,14 @@
   --wt-text-faint: #5b6779;
 
   /* Border — hairlines with enough weight to define a card edge on the canvas */
-  --wt-border: rgba(15, 23, 42, 0.08);
-  --wt-border-md: rgba(15, 23, 42, 0.15);
+  --wt-border: rgba(15, 23, 42, 0.075);
+  --wt-border-md: rgba(15, 23, 42, 0.14);
 
   /* Elevation — neutral, layered and soft. Cards rest on a hairline plus a 1px
      contact shadow; overlays get a long, low-opacity ambient shadow. */
-  --wt-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
-  --wt-shadow-md: 0 1px 2px rgba(16, 24, 40, 0.05), 0 4px 12px -2px rgba(16, 24, 40, 0.07);
-  --wt-shadow-lg: 0 2px 4px -1px rgba(16, 24, 40, 0.05), 0 16px 32px -8px rgba(16, 24, 40, 0.12);
+  --wt-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04), 0 0 0 0.5px rgba(16, 24, 40, 0.02);
+  --wt-shadow-md: 0 1px 2px rgba(16, 24, 40, 0.04), 0 6px 16px -4px rgba(16, 24, 40, 0.08);
+  --wt-shadow-lg: 0 2px 4px -1px rgba(16, 24, 40, 0.05), 0 20px 40px -12px rgba(16, 24, 40, 0.16);
 
   /* Accent glow — brand-tinted (not indigo/violet) */
   --wt-glow-indigo: 0 4px 14px rgba(53, 80, 149, 0.18);
@@ -132,63 +132,65 @@
 :is(.dark, [data-theme="dark"]) {
   color-scheme: dark;
 
-  /* Pitch-black canvas — void → raised → inset → hover */
-  --wt-bg: #000000;
-  --wt-page-bg: #000000;
-  --wt-surface-1: #0a0a0a;
-  --wt-surface-2: #111111;
-  --wt-surface-3: #1a1a1a;
+  /* Graphite canvas (not pure black): a cool, slightly blue-grey ladder — canvas → card → raised → hover — where each
+     step is visibly lighter, so cards read as surfaces and borders as hairlines instead of everything melting into void. */
+  --wt-bg: #0b0d12;
+  --wt-page-bg: #0b0d12;
+  --wt-surface-1: #12151c;
+  --wt-surface-2: #181c25;
+  --wt-surface-3: #1f242f;
 
-  --wt-text: #f5f5f5;
-  --wt-text-muted: #a3a3a3;
-  --wt-text-faint: #737373;
+  --wt-text: #eef0f4;
+  --wt-text-muted: #a0a8b6;
+  --wt-text-faint: #77808f;
 
-  --wt-border: rgba(255, 255, 255, 0.06);
-  --wt-border-md: rgba(255, 255, 255, 0.11);
+  --wt-border: rgba(255, 255, 255, 0.085);
+  --wt-border-md: rgba(255, 255, 255, 0.15);
 
-  --wt-shadow-sm: none;
-  --wt-shadow-md: 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --wt-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --wt-shadow-md: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 8px 24px -10px rgba(0, 0, 0, 0.6);
+  --wt-shadow-lg: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 24px 48px -16px rgba(0, 0, 0, 0.7);
 
   --wt-glow-indigo: none;
   --wt-glow-violet: none;
 
-  --wt-brand: #6b8fc4;
-  --wt-brand-hover: #7ea0d4;
-  --wt-brand-active: #5a7fb5;
-  --wt-brand-text: #ffffff;
+  --wt-brand: #7d9fdb;
+  --wt-brand-hover: #92b0e4;
+  --wt-brand-active: #6b8fcd;
+  --wt-brand-text: #0a1226;
   --wt-brand-soft: color-mix(in srgb, var(--wt-brand) 18%, transparent);
   --wt-brand-muted: color-mix(in srgb, var(--wt-brand) 24%, transparent);
 
   --ring: var(--wt-brand);
 
-  --background: #000000;
-  --foreground: #f5f5f5;
-  --card: #0a0a0a;
-  --card-foreground: #f5f5f5;
-  --popover: #0a0a0a;
-  --popover-foreground: #f5f5f5;
+  --background: #0b0d12;
+  --foreground: #eef0f4;
+  --card: #12151c;
+  --card-foreground: #eef0f4;
+  --popover: #181c25;
+  --popover-foreground: #eef0f4;
   --primary: var(--wt-brand);
   --primary-foreground: var(--wt-brand-text);
-  --secondary: #111111;
-  --secondary-foreground: #f5f5f5;
-  --muted: #111111;
-  --muted-foreground: #a3a3a3;
-  --accent: #1a1a1a;
-  --accent-foreground: #f5f5f5;
+  --secondary: #181c25;
+  --secondary-foreground: #eef0f4;
+  --muted: #181c25;
+  --muted-foreground: #a0a8b6;
+  --accent: #1f242f;
+  --accent-foreground: #eef0f4;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.085);
+  --input: rgba(255, 255, 255, 0.1);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: #000000;
-  --sidebar-foreground: #f5f5f5;
+  --sidebar: #0b0d12;
+  --sidebar-foreground: #eef0f4;
   --sidebar-primary: var(--wt-brand);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #141414;
-  --sidebar-accent-foreground: #f5f5f5;
+  --sidebar-accent: #181c25;
+  --sidebar-accent-foreground: #eef0f4;
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: var(--wt-brand);
 }
@@ -2272,4 +2274,193 @@ a:focus:not(:focus-visible) {
   .wt-tile-body::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* ── UI polish pass ─────────────────────────────────────────────────────────────────────────────────────────────── */
+
+/* Brand-tinted text selection. */
+::selection {
+  background: color-mix(in srgb, var(--wt-brand) 28%, transparent);
+}
+
+/* One consistent, visible keyboard focus ring for every interactive element that doesn't draw its own. */
+:where(a, button, [role="button"], summary, input, select, textarea):focus-visible {
+  outline: 2px solid var(--wt-brand);
+  outline-offset: 2px;
+}
+
+/* Buttons feel pressed: a tiny scale on mouse-down, only where hover exists (not on touch). */
+@media (hover: hover) {
+  :where(button, [role="button"], a[data-slot="button"]):not(:disabled):active {
+    transform: scale(0.985);
+  }
+}
+
+/* Slim, quiet scrollbars in the main page area. */
+.wt-page-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--wt-text-muted, #64748b) 35%, transparent) transparent;
+}
+
+/* Page content eases in; people who ask for less motion get none of it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Motion primitives (reused across the app) ──────────────────────────────────────────────────────────────────── */
+@keyframes wt-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes wt-pop {
+  0% { opacity: 0; transform: scale(0.6); }
+  60% { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes wt-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes wt-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--wt-ring-color, var(--wt-brand)) 40%, transparent); }
+  100% { box-shadow: 0 0 0 18px color-mix(in srgb, var(--wt-ring-color, var(--wt-brand)) 0%, transparent); }
+}
+.wt-fade-up { animation: wt-fade-up 420ms var(--wt-ease) both; }
+.wt-pop { animation: wt-pop 520ms var(--wt-ease) both; }
+.wt-draw { stroke-dasharray: 32; stroke-dashoffset: 32; animation: wt-draw 520ms 180ms var(--wt-ease) forwards; }
+.wt-ring { animation: wt-ring 900ms 120ms var(--wt-ease-out) 1; }
+/* Stagger children: set --i on each child (0, 1, 2…). */
+.wt-stagger > * { animation: wt-fade-up 420ms var(--wt-ease) both; animation-delay: calc(var(--i, 0) * 55ms); }
+
+/* ── Designer-grade motion & depth ──────────────────────────────────────────────────────────────────────────────── */
+
+/* Skeletons shimmer instead of blinking: a soft highlight sweeps across every placeholder. */
+.animate-pulse:not(.rounded-full) {
+  animation: none;
+  position: relative;
+  overflow: hidden;
+}
+.animate-pulse:not(.rounded-full)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--wt-text) 7%, transparent), transparent);
+  animation: wt-sweep 1.5s var(--wt-ease) infinite;
+}
+@keyframes wt-sweep {
+  to { transform: translateX(100%); }
+}
+
+/* Dialogs rise and settle; the backdrop fades. Ends at the resting state, so it never leaves a transform behind. */
+@keyframes wt-overlay-in { from { opacity: 0; } }
+@keyframes wt-modal-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.975); }
+}
+.wt-modal-overlay { animation: wt-overlay-in 200ms var(--wt-ease) backwards; }
+.wt-modal-panel { animation: wt-modal-in 340ms var(--wt-ease) backwards; }
+
+/* Page content arrives in a gentle cascade (first eight blocks), not all at once. */
+@keyframes wt-rise {
+  from { opacity: 0; transform: translateY(12px); }
+}
+.wt-page-enter > :nth-child(n + 2):nth-child(-n + 9) { animation: wt-rise 520ms var(--wt-ease) backwards; }
+.wt-page-enter > :nth-child(3) { animation-delay: 40ms; }
+.wt-page-enter > :nth-child(4) { animation-delay: 80ms; }
+.wt-page-enter > :nth-child(5) { animation-delay: 120ms; }
+.wt-page-enter > :nth-child(6) { animation-delay: 160ms; }
+.wt-page-enter > :nth-child(7) { animation-delay: 200ms; }
+.wt-page-enter > :nth-child(8) { animation-delay: 240ms; }
+.wt-page-enter > :nth-child(9) { animation-delay: 280ms; }
+
+/* Interactive cards lift a touch under the pointer and settle when pressed. */
+@media (hover: hover) {
+  .wt-lift {
+    transition: transform var(--wt-duration) var(--wt-ease), box-shadow var(--wt-duration) var(--wt-ease), border-color var(--wt-duration) var(--wt-ease);
+  }
+  .wt-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--wt-shadow-md);
+    border-color: var(--wt-border-md);
+  }
+  .wt-lift:active {
+    transform: translateY(0) scale(0.995);
+  }
+}
+
+/* Primary buttons catch the light: a soft sheen sweeps across on hover. */
+.wt-sheen { position: relative; overflow: hidden; isolation: isolate; }
+.wt-sheen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  transform: translateX(-120%);
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.28) 50%, transparent 70%);
+  transition: transform 700ms var(--wt-ease);
+}
+@media (hover: hover) {
+  .wt-sheen:hover:not(:disabled)::before { transform: translateX(120%); }
+}
+
+/* Route-change progress bar (top of the screen). */
+.wt-route-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 400;
+  height: 2px;
+  pointer-events: none;
+  transform-origin: left;
+  background: linear-gradient(90deg, var(--wt-brand), color-mix(in srgb, var(--wt-brand) 55%, white));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--wt-brand) 60%, transparent);
+}
+.wt-route-progress[data-state="running"] { animation: wt-route-run 8s cubic-bezier(0.1, 0.7, 0.2, 1) forwards; }
+.wt-route-progress[data-state="done"] { animation: wt-route-done 380ms var(--wt-ease) forwards; }
+@keyframes wt-route-run { from { transform: scaleX(0); opacity: 1; } to { transform: scaleX(0.92); opacity: 1; } }
+@keyframes wt-route-done { from { transform: scaleX(0.92); opacity: 1; } 60% { transform: scaleX(1); opacity: 1; } to { transform: scaleX(1); opacity: 0; } }
+
+/* Numbers don't jitter as they count. */
+.wt-num { font-variant-numeric: tabular-nums; }
+
+/* Sidebar items nudge their icon on hover. */
+@media (hover: hover) {
+  .wt-sidebar-nav-item svg { transition: transform var(--wt-duration) var(--wt-ease); }
+  .wt-sidebar-nav-item:hover svg { transform: translateX(1px) scale(1.08); }
+}
+
+/* Table rows respond to the pointer; form controls acknowledge hover before focus. */
+tbody tr { transition: background-color var(--wt-duration-fast) var(--wt-ease); }
+@media (hover: hover) {
+  tbody tr:hover { background-color: color-mix(in srgb, var(--wt-text) 3.5%, transparent); }
+  :where(input:not([type="checkbox"], [type="radio"], [type="range"]), textarea, select):not(:focus, :disabled):hover {
+    border-color: var(--wt-border-md);
+  }
+}
+
+/* Quiet tables (e.g. the directory): per-row editors look like plain text until you hover the row or focus them,
+   so a page of 100 people reads as a list, not a wall of form fields. */
+.wt-table-quiet tbody td [data-slot="input-group"],
+.wt-table-quiet tbody td [data-slot="select-trigger"],
+.wt-table-quiet tbody td select {
+  border-color: transparent;
+  background-color: transparent;
+  box-shadow: none;
+  transition: border-color var(--wt-duration-fast) var(--wt-ease), background-color var(--wt-duration-fast) var(--wt-ease);
+}
+.wt-table-quiet tbody tr:hover td [data-slot="input-group"],
+.wt-table-quiet tbody tr:hover td [data-slot="select-trigger"],
+.wt-table-quiet tbody tr:hover td select {
+  border-color: var(--wt-border);
+}
+.wt-table-quiet tbody td [data-slot="input-group"]:focus-within,
+.wt-table-quiet tbody td [data-slot="select-trigger"][aria-expanded="true"],
+.wt-table-quiet tbody td select:focus {
+  border-color: var(--wt-brand);
+  background-color: var(--wt-surface-1);
 }

@@ -34,6 +34,56 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-06-02",
+    releasedOn: "2026-10-06",
+    title: "Approve from your email, and install WebTrak",
+    highlights: [
+      {
+        area: "Look and feel",
+        title: "Smoother motion everywhere",
+        description:
+          "Tabs glide between sections, pages and dialogs ease in, numbers count up, loading placeholders shimmer, and a thin bar shows when a page is loading.",
+      },
+      {
+        area: "Approvals",
+        title: "Review and decide from the email",
+        description:
+          "Leave request emails now have a Review & decide button. It opens a small page where managers can approve, or reject with a reason, without searching through WebTrak. Approving also works straight from the notification list.",
+      },
+      {
+        area: "App",
+        title: "Install WebTrak on your phone or computer",
+        description:
+          "Add WebTrak to your home screen or dock to open it like an app, with shortcuts for leave, time, rooms and news. If you lose your connection, a friendly offline page and banner tell you what's happening.",
+      },
+    ],
+  },
+  {
+    id: "2026-10-06-01",
+    releasedOn: "2026-10-06",
+    title: "Calendar sync and a roomier look",
+    highlights: [
+      {
+        area: "Look and feel",
+        title: "A cleaner dark mode",
+        description:
+          "Dark mode now uses soft graphite instead of pure black, so cards and borders stand out and text is easier on the eyes. Light mode got crisper edges and softer shadows.",
+      },
+      {
+        area: "Calendar",
+        title: "See WebTrak in Google or Apple Calendar",
+        description:
+          "On the Events page, choose Sync calendar to add your events, room bookings and approved leave to your own calendar. Every event also has an Add to calendar option.",
+      },
+      {
+        area: "Look and feel",
+        title: "More room, less clutter",
+        description:
+          "Pages use the width of your screen better, spacing is tighter, and buttons and keyboard focus are clearer.",
+      },
+    ],
+  },
+  {
     id: "2026-10-05-01",
     releasedOn: "2026-10-05",
     title: "Polls, forms, search and a one-screen Home",

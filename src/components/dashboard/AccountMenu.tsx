@@ -171,7 +171,7 @@ export function AccountMenu({
                   Appearance
                 </p>
                 <div
-                  className="grid grid-cols-3 gap-1 rounded-xl bg-wt-surface-2 p-1 dark:bg-black/40"
+                  className="grid grid-cols-3 gap-1 rounded-xl bg-wt-surface-2 p-1 dark:bg-wt-surface-3/70"
                   role="radiogroup"
                   aria-label="Theme"
                 >

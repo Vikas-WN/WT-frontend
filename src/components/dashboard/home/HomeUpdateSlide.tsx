@@ -14,7 +14,18 @@ import { cn } from "@/lib/utils";
 import { eventDateParts, formatEventRange } from "@/utils/eventTime";
 
 const SLIDE_CLASS =
-  "group flex h-full w-full flex-col gap-1.5 rounded-2xl border border-wt-border bg-wt-surface-1 p-3.5 shadow-[var(--wt-shadow-sm)] transition-shadow hover:shadow-[var(--wt-shadow-md)]";
+  "wt-lift group relative overflow-hidden flex h-full w-full flex-col gap-1.5 rounded-2xl border border-wt-border bg-wt-surface-1 p-3.5 shadow-[var(--wt-shadow-sm)]";
+
+/** A thin colour line along the top edge tells the kind apart at a glance. */
+const ACCENT: Record<HomeUpdate["kind"], string> = {
+  form: "bg-rose-500",
+  event: "bg-violet-500",
+  announcement: "bg-sky-500",
+};
+
+function Accent({ kind }: { kind: HomeUpdate["kind"] }) {
+  return <span aria-hidden className={cn("absolute inset-x-0 top-0 h-[3px] opacity-80", ACCENT[kind])} />;
+}
 
 function Kind({ icon, label, tone }: { icon: React.ReactNode; label: string; tone?: string }) {
   return (
@@ -31,8 +42,9 @@ export function HomeUpdateSlide({ update }: { update: HomeUpdate }) {
     const { form } = update;
     return (
       <Link href={`${DASHBOARD_ROUTES.forms}?formId=${form.id}`} className={SLIDE_CLASS}>
+        <Accent kind="form" />
         <Kind icon={<ClipboardList className="size-3.5" />} label={COPY.form} />
-        <p className="line-clamp-2 text-sm font-semibold text-wt-text">{form.title}</p>
+        <p className="line-clamp-2 shrink-0 text-sm font-semibold text-wt-text">{form.title}</p>
         <p className={cn("mt-auto text-xs", form.overdue ? "font-medium text-rose-600 dark:text-rose-400" : "text-wt-text-muted")}>
           {form.overdue ? COPY.overdue : form.due_date ? `${COPY.due} ${form.due_date}` : `From ${form.created_by.name}`} ·{" "}
           <span className="font-medium text-[var(--wt-brand)]">{COPY.fillIn}</span>
@@ -46,15 +58,15 @@ export function HomeUpdateSlide({ update }: { update: HomeUpdate }) {
     const tone = EVENT_TYPE_OPTIONS.find((option) => option.value === event.event_type)?.tone ?? "neutral";
     return (
       <Link href={`${DASHBOARD_ROUTES.events}?eventId=${event.id}`} className={cn(SLIDE_CLASS, "flex-row gap-3")}>
+        <Accent kind="event" />
         <div className="flex size-12 shrink-0 flex-col items-center justify-center rounded-xl bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]">
           <span className="text-lg font-bold leading-none">{date.day}</span>
           <span className="text-[10px] font-semibold">{date.month}</span>
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <Kind icon={<CalendarHeart className="size-3.5" />} label={COPY.event} />
-          <p className="line-clamp-1 text-sm font-semibold text-wt-text">{event.title}</p>
-          <p className="truncate text-xs text-wt-text-muted">{formatEventRange(event.start_time, event.end_time)}</p>
-          <p className="mt-auto text-xs">
+          <div className="flex shrink-0 items-center justify-between gap-2">
+            <Kind icon={<CalendarHeart className="size-3.5" />} label={COPY.event} />
+            <span className="shrink-0 text-xs">
             {event.my_response === "GOING" ? (
               <Badge variant="secondary" className={filledBadgeClass("success")}>{COPY.going}</Badge>
             ) : event.invited && event.my_response === null && event.rsvp_open ? (
@@ -64,7 +76,10 @@ export function HomeUpdateSlide({ update }: { update: HomeUpdate }) {
                 {EVENT_TYPE_OPTIONS.find((option) => option.value === event.event_type)?.label}
               </Badge>
             )}
-          </p>
+            </span>
+          </div>
+          <p className="shrink-0 truncate text-sm font-semibold text-wt-text">{event.title}</p>
+          <p className="shrink-0 truncate text-xs text-wt-text-muted">{formatEventRange(event.start_time, event.end_time)}</p>
         </div>
       </Link>
     );
@@ -72,15 +87,16 @@ export function HomeUpdateSlide({ update }: { update: HomeUpdate }) {
   const { announcement } = update;
   return (
     <Link href={`${DASHBOARD_ROUTES.announcements}?announcementId=${announcement.id}`} className={SLIDE_CLASS}>
+      <Accent kind="announcement" />
       <div className="flex items-center justify-between gap-2">
         <Kind icon={<Megaphone className="size-3.5" />} label={COPY.announcement} />
         {!announcement.is_read ? (
-          <span className="rounded-full bg-[var(--wt-brand)] px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white">{COPY.newBadge}</span>
+          <span className="rounded-full bg-[var(--wt-brand)] px-1.5 py-0.5 text-[9px] font-semibold uppercase text-[var(--wt-brand-text)]">{COPY.newBadge}</span>
         ) : (
           <span className="text-[11px] text-wt-text-faint">{categoryLabel(ANNOUNCEMENT_CATEGORY_OPTIONS, announcement.category)}</span>
         )}
       </div>
-      <p className="line-clamp-1 text-sm font-semibold text-wt-text">{announcement.title}</p>
+      <p className="line-clamp-1 shrink-0 text-sm font-semibold text-wt-text">{announcement.title}</p>
       <p className="line-clamp-2 text-xs text-wt-text-muted">{announcement.body}</p>
     </Link>
   );

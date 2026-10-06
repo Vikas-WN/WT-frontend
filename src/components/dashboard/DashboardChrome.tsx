@@ -15,9 +15,11 @@ import {
   dedupeLeaveRequestNotifications,
 } from "@/utils/notifications";
 import { toPagedRows } from "@/utils/apiRows";
+import { NotificationQuickActions } from "@/components/dashboard/NotificationQuickActions";
 import {
   notificationCategoryLabel,
   notificationGroupLabel,
+  notificationType,
   resolveNotificationHref,
   NOTIFICATION_GROUP_ORDER,
 } from "@/utils/notificationNavigation";
@@ -120,6 +122,8 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
   // request does not exist, so nothing was found to open (BUG_ID_333).
   const notificationRoles = allRoles.length ? allRoles : userRoles;
   const hasHrAccess = userRoles.includes("ROLE_HR") || userRoles.includes("ROLE_ADMIN");
+  // Leave-request notifications only ever go to approvers, so any of these roles may approve from the dropdown.
+  const canActOnRequests = notificationRoles.some((role) => ["ROLE_HR", "ROLE_ADMIN", "ROLE_MANAGER", "ROLE_DM"].includes(role));
   const hasManagerAccess = userRoles.includes("ROLE_MANAGER");
   const hasDmAccess = userRoles.includes("ROLE_DM");
   const hasAccountManagerAccess = userRoles.includes("ROLE_AM");
@@ -463,7 +467,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         onConfirm={() => void confirmLogout()}
       />
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-wt-page-bg dark:bg-black">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-wt-page-bg">
         <AppChromeHeader>
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <button
@@ -617,6 +621,13 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                                 <p className="font-medium text-wt-text text-sm mt-1">{title}</p>
                               ) : null}
                               <p className="text-xs text-wt-text-muted line-clamp-2 mt-0.5 leading-relaxed">{message}</p>
+                              {!isRead && notificationType(row) === "LEAVE_REQUEST" && canActOnRequests ? (
+                                <NotificationQuickActions
+                                  message={message}
+                                  reviewHref={href}
+                                  onDone={() => void loadNotifications()}
+                                />
+                              ) : null}
                             </div>
                             {!isRead && id ? (
                               <button
@@ -669,7 +680,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
           {/* Cap content width on very large / TV screens so line lengths, forms
               and tables stay readable instead of stretching edge-to-edge. Below
               ~2000px viewport this has no visible effect. */}
-          <div className="mx-auto w-full max-w-[1800px]">{children}</div>
+          <div className="mx-auto w-full max-w-[2000px] lg:h-full">{children}</div>
         </div>
       </div>
     </div>

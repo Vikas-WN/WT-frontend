@@ -12,6 +12,7 @@ import {
   MODAL_PANEL_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
 import { Button } from "@/components/ui/button";
+import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import type { AttendanceBucket, AttendanceSnapshot } from "@/services/hrms.service";
 import { cn } from "@/lib/utils";
 
@@ -19,21 +20,24 @@ type BucketKey = "office" | "work_from_home" | "on_leave";
 
 const BUCKET_META: Record<
   BucketKey,
-  { label: string; icon: React.ReactNode; tone: string }
+  { label: string; short: string; icon: React.ReactNode; tone: string }
 > = {
   office: {
     label: "In Office",
-    icon: <Building2 className="size-4" />,
+    short: "Office",
+    icon: <Building2 className="size-3.5" />,
     tone: "text-[var(--wt-brand)] bg-[var(--wt-brand-soft)]",
   },
   work_from_home: {
     label: "Work From Home",
-    icon: <HomeIcon className="size-4" />,
+    short: "Remote",
+    icon: <HomeIcon className="size-3.5" />,
     tone: "text-emerald-700 dark:text-emerald-400 bg-emerald-500/12",
   },
   on_leave: {
     label: "On Leave",
-    icon: <CalendarOff className="size-4" />,
+    short: "On leave",
+    icon: <CalendarOff className="size-3.5" />,
     tone: "text-amber-700 dark:text-amber-400 bg-amber-500/12",
   },
 };
@@ -117,7 +121,7 @@ function BucketDialog({
   );
 }
 
-function StatRow({
+function StatTile({
   bucketKey,
   bucket,
   onOpen,
@@ -127,28 +131,27 @@ function StatRow({
   onOpen: () => void;
 }) {
   const meta = BUCKET_META[bucketKey];
+  const names = bucket.employees
+    .slice(0, 2)
+    .map((e) => e.name.split(" ")[0])
+    .join(", ");
   return (
     <button
       type="button"
       onClick={onOpen}
       disabled={bucket.count === 0}
-      className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-wt-surface-2 disabled:cursor-default disabled:hover:bg-transparent"
+      className="group flex min-w-0 flex-col justify-between gap-1 rounded-xl border border-wt-border bg-wt-surface-2/60 p-3 text-left transition-[background-color,border-color,transform] duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:border-wt-border-md hover:bg-wt-surface-2 active:scale-[0.98] disabled:cursor-default disabled:hover:bg-wt-surface-2/60"
     >
-      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", meta.tone)}>
-        {meta.icon}
+      <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-wt-text-muted">
+        <span className={cn("grid size-6 shrink-0 place-items-center rounded-lg", meta.tone)}>{meta.icon}</span>
+        <span className="truncate">{meta.short}</span>
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium text-wt-text">{meta.label}</span>
-        <span className="block truncate text-xs text-wt-text-muted">
-          {bucket.employees
-            .slice(0, 2)
-            .map((e) => e.name.split(" ")[0])
-            .join(", ") || "None today"}
-          {bucket.count > 2 ? ` +${bucket.count - 2} more` : ""}
-        </span>
+      <span className="text-3xl font-semibold leading-none tabular-nums text-wt-text">
+        <AnimatedNumber value={bucket.count} />
       </span>
-      <span className="shrink-0 text-2xl font-semibold tabular-nums text-wt-text">
-        {bucket.count}
+      <span className="truncate text-xs text-wt-text-muted">
+        {names || "None today"}
+        {bucket.count > 2 ? ` +${bucket.count - 2}` : ""}
       </span>
     </button>
   );
@@ -173,18 +176,10 @@ export function AttendanceCard({
       ) : status === "error" || !data ? (
         <CardMessage text="Unavailable" />
       ) : (
-        <div className="space-y-0.5">
-          <StatRow bucketKey="office" bucket={data.office} onOpen={() => setOpenBucket("office")} />
-          <StatRow
-            bucketKey="work_from_home"
-            bucket={data.work_from_home}
-            onOpen={() => setOpenBucket("work_from_home")}
-          />
-          <StatRow
-            bucketKey="on_leave"
-            bucket={data.on_leave}
-            onOpen={() => setOpenBucket("on_leave")}
-          />
+        <div className="grid h-full grid-cols-3 gap-2.5">
+          <StatTile bucketKey="office" bucket={data.office} onOpen={() => setOpenBucket("office")} />
+          <StatTile bucketKey="work_from_home" bucket={data.work_from_home} onOpen={() => setOpenBucket("work_from_home")} />
+          <StatTile bucketKey="on_leave" bucket={data.on_leave} onOpen={() => setOpenBucket("on_leave")} />
         </div>
       )}
 

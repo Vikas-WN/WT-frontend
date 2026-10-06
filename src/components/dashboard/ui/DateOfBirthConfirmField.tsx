@@ -64,7 +64,7 @@ export function DateOfBirthConfirmField({
       )}
     >
       <div className="mb-3 flex items-center gap-2">
-        <span className="flex size-9 items-center justify-center rounded-xl bg-[var(--wt-brand)] text-white shadow-sm">
+        <span className="flex size-9 items-center justify-center rounded-xl bg-[var(--wt-brand)] text-[var(--wt-brand-text)] shadow-sm">
           <Cake className="size-4" />
         </span>
         <div>
@@ -86,7 +86,7 @@ export function DateOfBirthConfirmField({
         <div
           className={cn(
             "mt-3 rounded-xl border px-3.5 py-3 transition-all duration-[var(--wt-duration)]",
-            "border-[color-mix(in_srgb,var(--wt-brand)_28%,var(--wt-border))] bg-wt-surface-1/90 dark:bg-black/25"
+            "border-[color-mix(in_srgb,var(--wt-brand)_28%,var(--wt-border))] bg-wt-surface-1/90 dark:bg-wt-surface-3/50"
           )}
         >
           <p className="text-sm text-wt-text">

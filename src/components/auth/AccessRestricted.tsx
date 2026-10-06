@@ -79,7 +79,7 @@ export function AccessRestricted({
           <div className="mt-8 text-center animate-fade-in-up delay-400">
             <Link
               href={backHref}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-[var(--wt-brand)] rounded-xl hover:bg-[var(--wt-brand)]/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)] focus-visible:ring-offset-2"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-[var(--wt-brand-text)] bg-[var(--wt-brand)] rounded-xl hover:bg-[var(--wt-brand)]/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)] focus-visible:ring-offset-2"
             >
               <ArrowLeft className="size-4" />
               {backLabel}

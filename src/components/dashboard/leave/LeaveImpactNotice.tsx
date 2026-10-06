@@ -21,6 +21,7 @@ export function LeaveImpactNotice({
   if (!enabled || (!data && !isFetching)) return null;
   if (!data) return <p className="mt-4 text-xs text-wt-text-muted">Checking against your balance…</p>;
 
+  if (!data.message) return null;
   const lop = data.lop_days > 0;
   const Icon = lop ? TriangleAlert : CheckCircle2;
   return (

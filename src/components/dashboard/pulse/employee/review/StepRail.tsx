@@ -38,7 +38,7 @@ export function StepRail({
             <span
               className={cn(
                 "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                complete ? "bg-emerald-500 text-white" : isActive ? "bg-[var(--wt-brand)] text-white" : "bg-wt-surface-3 text-wt-text-muted"
+                complete ? "bg-emerald-500 text-white" : isActive ? "bg-[var(--wt-brand)] text-[var(--wt-brand-text)]" : "bg-wt-surface-3 text-wt-text-muted"
               )}
             >
               {complete ? <Check className="size-4" aria-hidden /> : i + 1}

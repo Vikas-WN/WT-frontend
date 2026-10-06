@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Plus } from "lucide-react";
+import { CalendarSync, Plus } from "lucide-react";
 
+import { CalendarSyncDialog } from "@/components/dashboard/calendar/CalendarSyncDialog";
 import { EventAttendeesDialog } from "@/components/dashboard/events/EventAttendeesDialog";
 import { EventCard } from "@/components/dashboard/events/EventCard";
 import { EventComposerDialog } from "@/components/dashboard/events/EventComposerDialog";
@@ -15,6 +16,7 @@ import { PageHero } from "@/components/dashboard/ui/PageHero";
 import { PageTabs, type PageTabItem } from "@/components/dashboard/ui/PageTabs";
 import { Button } from "@/components/ui/button";
 import { ANNOUNCEMENT_POSTER_ROLES } from "@/constants/announcements";
+import { CALENDAR_COPY } from "@/constants/calendar";
 import { LIST_FILTER_COPY } from "@/constants/contentCategories";
 import { EVENT_COPY, EVENT_TYPE_OPTIONS } from "@/constants/events";
 import { useAuth } from "@/context/AuthContext";
@@ -31,6 +33,7 @@ export function EventsPageClient() {
 
   const [tab, setTab] = useState<Tab>("upcoming");
   const [composing, setComposing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [viewing, setViewing] = useState<AppEvent | null>(null);
   // UI-only: leave the single-event view that a notification link opens.
   const [showAll, setShowAll] = useState(false);
@@ -74,11 +77,16 @@ export function EventsPageClient() {
         title={EVENT_COPY.pageTitle}
         description={EVENT_COPY.pageDescription}
         action={
-          canCreate ? (
-            <Button type="button" variant="brand" onClick={() => setComposing(true)}>
-              <Plus className="size-4" /> {EVENT_COPY.create}
+          <>
+            <Button type="button" variant="outline" onClick={() => setSyncing(true)}>
+              <CalendarSync className="size-4" /> {CALENDAR_COPY.syncButton}
             </Button>
-          ) : undefined
+            {canCreate ? (
+              <Button type="button" variant="brand" onClick={() => setComposing(true)}>
+                <Plus className="size-4" /> {EVENT_COPY.create}
+              </Button>
+            ) : null}
+          </>
         }
       />
       <PageTabs value={tab} onValueChange={(value) => changeTab(value as Tab)} items={tabs} />
@@ -148,6 +156,7 @@ export function EventsPageClient() {
         />
       ) : null}
 
+      {syncing ? <CalendarSyncDialog onClose={() => setSyncing(false)} /> : null}
       {composing ? <EventComposerDialog onClose={() => setComposing(false)} /> : null}
       {viewing ? <EventAttendeesDialog event={viewing} onClose={() => setViewing(null)} /> : null}
     </DashboardPageShell>

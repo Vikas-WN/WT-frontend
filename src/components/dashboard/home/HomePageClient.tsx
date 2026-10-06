@@ -12,7 +12,10 @@ import {
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { HomeHeader } from "@/components/dashboard/home/HomeHeader";
+import { AnimatedBar } from "@/components/motion/AnimatedBar";
+import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import { cellsOf, useHomeGridShape } from "@/hooks/dashboard/useHomeGridShape";
+import { useHomeAttention } from "@/hooks/dashboard/useHomeAttention";
 import { useCommandPalette } from "@/components/dashboard/CommandPalette";
 import { HomeCard, CardMessage, CardSkeleton } from "@/components/dashboard/home/HomeCard";
 import { CelebrationsCard } from "@/components/dashboard/home/CelebrationsCard";
@@ -124,12 +127,7 @@ function LeaveSplitBar({ values }: { values: number[] }) {
 function ProgressBar({ value, max }: { value: number; max: number }) {
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
-    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-wt-surface-3">
-      <div
-        className="h-full rounded-full bg-[var(--wt-brand)] transition-[width] duration-500 ease-[var(--wt-ease)]"
-        style={{ width: `${pct}%` }}
-      />
-    </div>
+    <AnimatedBar percent={pct} className="mt-3 h-1.5" />
   );
 }
 
@@ -306,6 +304,7 @@ export function HomePageClient() {
       node: (
         <HomeCard
           title="Pending approvals"
+          tone="amber"
           icon={<ClipboardCheck className="size-4" />}
           href={DASHBOARD_ROUTES["leave-team"]}
           cta="Review"
@@ -319,7 +318,7 @@ export function HomePageClient() {
             <p className="text-sm text-wt-text-muted">Nothing waiting on you. 🎉</p>
           ) : (
             <p className="text-3xl font-semibold tabular-nums text-wt-text">
-              {approvals.data}
+              <AnimatedNumber value={approvals.data} />
               <span className="ml-2 align-middle text-sm font-normal text-wt-text-muted">
                 awaiting your review
               </span>
@@ -333,6 +332,7 @@ export function HomePageClient() {
       node: (
         <HomeCard
           title="My leave balance"
+          tone="emerald"
           icon={<Plane className="size-4" />}
           href={`${DASHBOARD_ROUTES.leave}?tab=my`}
           cta="Details"
@@ -351,7 +351,7 @@ export function HomePageClient() {
                 ].map((b) => (
                   <div key={b.label}>
                     <p className="text-2xl font-semibold tabular-nums text-wt-text">
-                      {Number(b.value ?? 0)}
+                      <AnimatedNumber value={Number(b.value ?? 0)} decimals={Number.isInteger(Number(b.value ?? 0)) ? 0 : 1} />
                     </p>
                     <p className="mt-0.5 flex items-center gap-1.5 text-xs text-wt-text-muted">
                       <span className={cn("size-1.5 rounded-full", b.dot)} aria-hidden />
@@ -377,6 +377,7 @@ export function HomePageClient() {
       node: (
         <HomeCard
           title="My learning"
+          tone="violet"
           icon={<GraduationCap className="size-4" />}
           href={DASHBOARD_ROUTES.learning}
           cta="Open"
@@ -396,7 +397,9 @@ export function HomePageClient() {
                   { label: "In progress", value: learning.data.in_progress_count },
                 ].map((b) => (
                   <div key={b.label}>
-                    <p className="text-2xl font-semibold tabular-nums text-wt-text">{b.value}</p>
+                    <p className="text-2xl font-semibold tabular-nums text-wt-text">
+                      <AnimatedNumber value={Number(b.value ?? 0)} />
+                    </p>
                     <p className="text-xs text-wt-text-muted">{b.label}</p>
                   </div>
                 ))}
@@ -422,6 +425,7 @@ export function HomePageClient() {
       node: (
         <HomeCard
           title="Who's out today"
+          tone="amber"
           icon={<CalendarRange className="size-4" />}
           href={DASHBOARD_ROUTES["whos-out"]}
           cta="Calendar"
@@ -457,6 +461,7 @@ export function HomePageClient() {
       node: (
         <HomeCard
           title="My projects"
+          tone="sky"
           icon={<LayoutGrid className="size-4" />}
           href={DASHBOARD_ROUTES["my-allocations"]}
           cta="Allocations"
@@ -490,6 +495,7 @@ export function HomePageClient() {
       node: (
         <HomeCard
           title="Upcoming holidays"
+          tone="rose"
           icon={<CalendarDays className="size-4" />}
           href={DASHBOARD_ROUTES["annual-calendar"]}
           cta="Calendar"
@@ -532,6 +538,7 @@ export function HomePageClient() {
   // Desktop: every widget is always on screen. Columns follow the window width and rows follow how many widgets
   // there are, so the grid fills the window exactly — nothing to page through or scroll.
   const shape = useHomeGridShape();
+  const attention = useHomeAttention(approvals.data ?? null);
   const cells = cellsOf(visibleLayout);
   const columns = shape.columnsFor(cells);
   const rows = Math.max(1, Math.ceil(cells / columns));
@@ -539,13 +546,14 @@ export function HomePageClient() {
   return (
     <DashboardPageShell
       className={cn(
-        "lg:flex lg:h-full lg:flex-col lg:space-y-0 lg:gap-4 lg:overflow-hidden lg:!px-6 lg:!py-4",
+        "lg:flex lg:min-h-full lg:flex-col lg:space-y-0 lg:gap-4 lg:!px-6 lg:!py-4",
         !shape.fixed && "space-y-4"
       )}
     >
       <HomeHeader
         eyebrow={today.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
         title={`${greeting()}, ${firstName}`}
+        subtitle={attention}
         editMode={editMode}
         onEditModeChange={setEditMode}
         hiddenWidgets={hiddenWidgets}
@@ -565,7 +573,7 @@ export function HomePageClient() {
         </div>
       ) : (
         <div
-          className="grid gap-4 sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-flow-dense lg:grid-cols-[repeat(var(--home-cols),minmax(0,1fr))] lg:grid-rows-[repeat(var(--home-rows),minmax(0,1fr))]"
+          className="grid gap-4 sm:grid-cols-2 lg:flex-1 lg:grid-flow-dense lg:grid-cols-[repeat(var(--home-cols),minmax(0,1fr))] lg:grid-rows-[repeat(var(--home-rows),minmax(10rem,1fr))]"
           style={{ "--home-cols": columns, "--home-rows": rows } as React.CSSProperties}
         >
           {visibleLayout.map((w) => (

@@ -126,7 +126,7 @@ export function TodaysCelebrationsBanner() {
     <div className="mb-6 rounded-2xl border border-[var(--wt-brand)]/25 bg-[linear-gradient(145deg,color-mix(in_srgb,var(--wt-brand)_10%,var(--wt-surface-1)),var(--wt-surface-1)_60%)] p-5 shadow-sm">
       {myEntry ? (
         <div className="mb-4 flex items-center gap-3">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--wt-brand)] text-white shadow-sm">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--wt-brand)] text-[var(--wt-brand-text)] shadow-sm">
             {myEntry.kind === "birthday" ? (
               <Cake className="size-5" aria-hidden />
             ) : (

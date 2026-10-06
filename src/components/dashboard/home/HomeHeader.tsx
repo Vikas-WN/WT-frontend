@@ -10,6 +10,8 @@ import { DASHBOARD_ROUTES } from "@/constants/routes";
 interface HomeHeaderProps {
   eyebrow: string;
   title: string;
+  /** One line under the greeting, e.g. what is waiting. */
+  subtitle?: string | null;
   editMode: boolean;
   onEditModeChange: (editing: boolean) => void;
   hiddenWidgets: { id: string; title: string }[];
@@ -22,6 +24,7 @@ interface HomeHeaderProps {
 export function HomeHeader({
   eyebrow,
   title,
+  subtitle,
   editMode,
   onEditModeChange,
   hiddenWidgets,
@@ -34,6 +37,7 @@ export function HomeHeader({
       <div className="min-w-0">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--wt-brand)]">{eyebrow}</p>
         <h1 className="truncate text-xl font-bold tracking-[-0.02em] text-wt-text sm:text-2xl">{title}</h1>
+        {subtitle ? <p className="mt-0.5 truncate text-sm text-wt-text-muted">{subtitle}</p> : null}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {editMode ? (

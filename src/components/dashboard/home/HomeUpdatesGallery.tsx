@@ -40,7 +40,7 @@ export function HomeUpdatesGallery() {
         role="list"
       >
         {items.map((update) => (
-          <div key={update.key} role="listitem" className="h-[7.25rem] w-[17.5rem] shrink-0 [@media(max-height:780px)]:h-[5.25rem] [@media(max-height:780px)]:w-[15rem]">
+          <div key={update.key} role="listitem" className="h-[7.25rem] w-[17.5rem] shrink-0 [@media(max-height:780px)]:h-[5.75rem] [@media(max-height:780px)]:w-[15rem]">
             <HomeUpdateSlide update={update} />
           </div>
         ))}

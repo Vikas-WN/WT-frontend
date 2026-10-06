@@ -10,11 +10,14 @@ export function middleware(request: NextRequest) {
   const isPublic =
     pathname.startsWith("/login") ||
     pathname.startsWith("/exit-survey") ||
+    pathname.startsWith("/quick-action") ||
     pathname.startsWith("/api-docs") ||
     pathname.startsWith("/api/") ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico" ||
     pathname === "/manifest.webmanifest" ||
+    pathname === "/sw.js" ||
+    pathname === "/offline.html" ||
     PUBLIC_STATIC_FILE.test(pathname);
 
   if (isPublic) {

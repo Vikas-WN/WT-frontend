@@ -224,6 +224,7 @@ export function CelebrationsCard({
   return (
     <HomeCard
       title="Celebrations"
+      tone="rose"
       icon={<Cake className="size-4" />}
       cta="View all"
       onAction={() => setDialogOpen(true)}

@@ -33,6 +33,7 @@ import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { ManagementListCard, ManagementListContent } from "@/components/dashboard/ui/ManagementListCard";
 import { FieldLabel, SelectField } from "@/components/dashboard/ui/forms";
 import { SearchInput } from "@/components/dashboard/ui/SearchInput";
+import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   cleanEmployeeName,
@@ -75,6 +76,13 @@ const LIST_COLUMNS: Array<{ key: string; label: string }> = [
   { key: "work_mode", label: "Mode" },
   { key: "status", label: "Status" },
 ];
+
+const STAT_DOT = {
+  emerald: "bg-emerald-500",
+  brand: "bg-[var(--wt-brand)]",
+  amber: "bg-amber-500",
+  muted: "bg-wt-text-faint",
+} as const;
 
 const DIRECTORY_STATS = [
   { key: "online", label: "Online", tone: "emerald" as const },
@@ -369,23 +377,17 @@ export function EmployeeDirectoryPageClient() {
               return (
                 <div
                   key={stat.key}
-                  className={cn(
-                    "relative overflow-hidden rounded-2xl border px-4 py-3 shadow-sm transition-transform duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:-translate-y-0.5",
-                    stat.tone === "emerald" &&
-                      "border-emerald-500/20 bg-gradient-to-br from-emerald-500/12 to-wt-surface-1",
-                    stat.tone === "brand" &&
-                      "border-[color-mix(in_srgb,var(--wt-brand)_22%,transparent)] bg-gradient-to-br from-[color-mix(in_srgb,var(--wt-brand)_10%,transparent)] to-wt-surface-1",
-                    stat.tone === "amber" &&
-                      "border-amber-500/20 bg-gradient-to-br from-amber-500/12 to-wt-surface-1",
-                    stat.tone === "muted" && "border-wt-border bg-wt-surface-1"
-                  )}
+                  className="wt-lift flex items-center justify-between gap-3 rounded-2xl border border-wt-border bg-wt-surface-1 px-4 py-3.5 shadow-[var(--wt-shadow-sm)]"
                 >
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-wt-text-faint">
-                    {stat.label}
-                  </p>
-                  <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-wt-text">
-                    {value}
-                  </p>
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-wt-text-muted">
+                      <span className={cn("size-2 rounded-full", STAT_DOT[stat.tone], stat.key === "online" && "animate-pulse-slow")} aria-hidden />
+                      {stat.label}
+                    </p>
+                    <p className="mt-1.5 text-3xl font-semibold leading-none tracking-tight text-wt-text">
+                      <AnimatedNumber value={Number(value) || 0} />
+                    </p>
+                  </div>
                 </div>
               );
             })}
@@ -497,6 +499,7 @@ export function EmployeeDirectoryPageClient() {
             >
               <>
                 <div className="wt-detail-scroll-section min-h-0 overflow-hidden rounded-2xl border border-wt-border/80">
+                  <div className="wt-table-quiet">
                   <ScrollableTable scrollChain maxHeightClass="max-h-[min(68vh,640px)]">
                     <WtTable className="w-full min-w-[820px] text-sm">
                       <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
@@ -724,6 +727,7 @@ export function EmployeeDirectoryPageClient() {
                       </TableBody>
                     </WtTable>
                   </ScrollableTable>
+                  </div>
                 </div>
                 <ListPagination
                   className="mt-3"

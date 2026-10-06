@@ -28,22 +28,22 @@ function calendarCellClass(day: CalendarDayInfo, isSelected: boolean): string {
   const selected = isSelected && !day.isFuture;
 
   if (day.isFuture) {
-    return "cursor-not-allowed border-wt-border-md bg-wt-surface-2 text-wt-text-faint opacity-60";
+    return "cursor-not-allowed border-transparent bg-transparent text-wt-text-faint opacity-45";
   }
 
   if (hasEntries) {
     return cn(
-      "border-emerald-200 bg-emerald-50 hover:bg-emerald-100 dark:border-emerald-500/35 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20",
-      selected && "border-[var(--wt-brand)] bg-emerald-100 dark:bg-emerald-500/25",
-      day.isToday && "border-2 border-[var(--wt-brand)]"
+      "border-emerald-500/25 bg-emerald-500/[0.07] hover:bg-emerald-500/[0.13]",
+      selected && "border-[var(--wt-brand)] bg-emerald-500/[0.14]",
+      day.isToday && "ring-2 ring-[color-mix(in_srgb,var(--wt-brand)_45%,transparent)]"
     );
   }
 
   if (hasDrafts) {
     return cn(
-      "border-amber-200 bg-amber-50 hover:bg-amber-100 dark:border-amber-600/35 dark:bg-amber-600/10 dark:hover:bg-amber-600/20",
-      selected && "border-[var(--wt-brand)] bg-amber-100 dark:bg-amber-600/20",
-      day.isToday && "border-2 border-[var(--wt-brand)]"
+      "border-amber-500/30 bg-amber-500/[0.08] hover:bg-amber-500/[0.14]",
+      selected && "border-[var(--wt-brand)] bg-amber-500/[0.16]",
+      day.isToday && "ring-2 ring-[color-mix(in_srgb,var(--wt-brand)_45%,transparent)]"
     );
   }
 
@@ -52,10 +52,10 @@ function calendarCellClass(day: CalendarDayInfo, isSelected: boolean): string {
   }
 
   if (day.isToday) {
-    return "border-2 border-[var(--wt-brand)] bg-wt-surface-1 hover:bg-wt-surface-2";
+    return "border-[var(--wt-brand)] bg-wt-surface-1 ring-2 ring-[color-mix(in_srgb,var(--wt-brand)_30%,transparent)] hover:bg-wt-surface-2";
   }
 
-  return "border-wt-border bg-wt-surface-1 hover:bg-wt-surface-2";
+  return "border-wt-border bg-wt-surface-1 hover:border-wt-border-md hover:bg-wt-surface-2";
 }
 
 export function TimelogCalendar({
@@ -125,7 +125,10 @@ export function TimelogCalendar({
 
   return (
     <div className="w-full">
-      <div className="mb-4 flex items-center justify-end">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <h3 className="text-xl font-semibold tracking-tight text-wt-text">
+          {MONTH_OPTIONS[viewMonth]} <span className="text-wt-text-muted">{viewYear}</span>
+        </h3>
         <div className="flex flex-wrap items-end gap-2">
           <Button
             variant="outline"
@@ -197,9 +200,9 @@ export function TimelogCalendar({
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-[3px]">
+      <div className="grid grid-cols-7 gap-1.5">
         {DAYS_OF_WEEK.map((d) => (
-          <div key={d} className="py-1.5 text-center text-xs font-medium text-wt-text-muted">
+          <div key={d} className="py-2 text-center text-[11px] font-semibold uppercase tracking-wider text-wt-text-faint">
             {d}
           </div>
         ))}
@@ -211,7 +214,7 @@ export function TimelogCalendar({
             <div
               key={day.dateKey}
               className={cn(
-                "relative flex min-h-20 cursor-pointer flex-col rounded-xl border p-1.5 transition-colors",
+                "relative flex min-h-[5.25rem] cursor-pointer flex-col rounded-xl border p-2 transition-[background-color,border-color,box-shadow,transform] duration-[var(--wt-duration)] ease-[var(--wt-ease)] active:scale-[0.98]",
                 !day.isCurrentMonth && "opacity-35",
                 calendarCellClass(day, isSelected)
               )}
@@ -220,8 +223,9 @@ export function TimelogCalendar({
               <div className="flex items-center justify-between">
                 <span
                   className={cn(
-                    "text-sm leading-none font-medium text-wt-text",
-                    hasEntries && "font-semibold text-emerald-600 dark:text-emerald-400"
+                    "grid size-6 place-items-center rounded-full text-sm leading-none font-medium text-wt-text",
+                    hasEntries && "font-semibold text-emerald-700 dark:text-emerald-400",
+                    day.isToday && "bg-[var(--wt-brand)] font-semibold text-[var(--wt-brand-text)]"
                   )}
                 >
                   {day.day}
@@ -234,7 +238,7 @@ export function TimelogCalendar({
                 <div className="mt-1 flex flex-col gap-0.5">
                   {hasEntries ? (
                     <>
-                      <span className="text-xs leading-tight font-semibold text-emerald-600 dark:text-emerald-400">
+                      <span className="w-fit rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-xs leading-tight font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">
                         {day.totalHours}h
                       </span>
                       <span className="text-xs leading-tight font-medium text-wt-text-muted">

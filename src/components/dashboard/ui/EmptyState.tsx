@@ -14,12 +14,12 @@ export function EmptyState({ title, description, icon, className, action }: Empt
   return (
     <div
       className={cn(
-        "relative flex flex-col items-center justify-center overflow-hidden rounded-3xl border border-dashed border-wt-border bg-wt-surface-2/40 px-8 py-16 text-center dark:border-wt-border-md dark:bg-wt-surface-2",
+        "relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-wt-border bg-wt-surface-2/40 px-6 py-10 text-center dark:border-wt-border-md dark:bg-wt-surface-2",
         className
       )}
       role="status"
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,color-mix(in_srgb,var(--wt-brand)_8%,transparent),transparent_65%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,color-mix(in_srgb,var(--wt-brand)_6%,transparent),transparent_70%)]" />
       <div className="relative">
         {icon ? (
           <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--wt-brand)_12%,var(--wt-surface-3))] text-[var(--wt-brand)]">

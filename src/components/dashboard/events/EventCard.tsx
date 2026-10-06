@@ -3,6 +3,7 @@
 import { MapPin, Users } from "lucide-react";
 
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
+import { AddToCalendarMenu } from "@/components/dashboard/calendar/AddToCalendarMenu";
 import { RsvpButtons } from "@/components/dashboard/events/RsvpButtons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,7 @@ export function EventCard({
     <article
       id={`event-${event.id}`}
       className={cn(
-        "flex h-full flex-col rounded-2xl border bg-wt-surface-1 p-4 shadow-[var(--wt-shadow-sm)] transition-shadow hover:shadow-[var(--wt-shadow-md)] sm:p-5",
+        "wt-lift flex h-full flex-col rounded-2xl border bg-wt-surface-1 p-4 shadow-[var(--wt-shadow-sm)] sm:p-5",
         event.is_cancelled && "opacity-70",
         highlighted ? "border-[var(--wt-brand)] ring-2 ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)]" : "border-wt-border"
       )}
@@ -99,6 +100,8 @@ export function EventCard({
         ) : (
           <p className="text-xs text-wt-text-faint">{EVENT_COPY.organisedBy} you</p>
         )}
+
+        {!event.is_cancelled ? <AddToCalendarMenu event={event} /> : null}
 
         {onManage && event.can_manage ? (
           <Button type="button" size="sm" variant="outline" className="w-full" onClick={() => onManage(event)}>

@@ -35,7 +35,7 @@ export function AnnouncementCard({
       id={`announcement-${announcement.id}`}
       onClick={open}
       className={cn(
-        "group relative rounded-2xl border bg-wt-surface-1 p-4 shadow-[var(--wt-shadow-sm)] transition-shadow hover:shadow-[var(--wt-shadow-md)] sm:p-5",
+        "wt-lift group relative rounded-2xl border bg-wt-surface-1 p-4 shadow-[var(--wt-shadow-sm)] sm:p-5",
         announcement.is_pinned && "border-[color-mix(in_srgb,var(--wt-brand)_30%,transparent)]",
         highlighted ? "border-[var(--wt-brand)] ring-2 ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)]" : "border-wt-border"
       )}
@@ -51,7 +51,7 @@ export function AnnouncementCard({
               </Badge>
             ) : null}
             {!announcement.is_read ? (
-              <span className="rounded-full bg-[var(--wt-brand)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+              <span className="rounded-full bg-[var(--wt-brand)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--wt-brand-text)]">
                 {ANNOUNCEMENT_COPY.unread}
               </span>
             ) : null}

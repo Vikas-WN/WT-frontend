@@ -71,7 +71,7 @@ export function KpiStep({ api, ctx }: { api: ReviewFormApi; ctx: ReviewContext }
               className={cn(
                 "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
                 g.key === group.key
-                  ? "border-[var(--wt-brand)] bg-[var(--wt-brand)] text-white"
+                  ? "border-[var(--wt-brand)] bg-[var(--wt-brand)] text-[var(--wt-brand-text)]"
                   : "border-wt-border bg-wt-surface-1 text-wt-text-muted hover:border-[var(--wt-brand)]/40"
               )}
             >

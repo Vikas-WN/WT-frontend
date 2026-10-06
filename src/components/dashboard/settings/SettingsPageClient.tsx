@@ -249,7 +249,7 @@ export function SettingsPageClient() {
                       className={cn(
                         "mb-3 flex size-9 items-center justify-center rounded-xl transition-colors",
                         selected
-                          ? "bg-[var(--wt-brand)] text-white"
+                          ? "bg-[var(--wt-brand)] text-[var(--wt-brand-text)]"
                           : "bg-wt-surface-1 text-wt-text-muted group-hover:text-[var(--wt-brand)] dark:bg-wt-surface-3"
                       )}
                     >

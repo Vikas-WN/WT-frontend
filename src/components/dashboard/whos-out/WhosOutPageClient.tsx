@@ -513,7 +513,7 @@ function MonthGrid({
                 className={cn(
                   "inline-flex size-5 items-center justify-center rounded-full text-xs",
                   day === todayIso
-                    ? "bg-[var(--wt-brand)] font-semibold text-white"
+                    ? "bg-[var(--wt-brand)] font-semibold text-[var(--wt-brand-text)]"
                     : "text-wt-text-muted"
                 )}
               >

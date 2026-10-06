@@ -1,0 +1,16 @@
+#!/bin/bash
+# After installing WebTrak.app, put it in the Dock of whoever is logged in (best effort: never fails the install).
+APP="/Applications/WebTrak.app"
+[ -d "$APP" ] || exit 0
+
+CONSOLE_USER="$(/usr/bin/stat -f%Su /dev/console 2>/dev/null)"
+if [ -z "$CONSOLE_USER" ] || [ "$CONSOLE_USER" = "root" ] || [ "$CONSOLE_USER" = "loginwindow" ]; then
+  exit 0
+fi
+
+if ! /usr/bin/sudo -u "$CONSOLE_USER" /usr/bin/defaults read com.apple.dock persistent-apps 2>/dev/null | /usr/bin/grep -q "WebTrak.app"; then
+  /usr/bin/sudo -u "$CONSOLE_USER" /usr/bin/defaults write com.apple.dock persistent-apps -array-add \
+    '<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>/Applications/WebTrak.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>' || true
+  /usr/bin/killall Dock 2>/dev/null || true
+fi
+exit 0
