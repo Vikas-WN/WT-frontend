@@ -8,6 +8,18 @@ const nextConfig: NextConfig = {
   // has to be pushed to the registry and pulled onto the server every time.
   output: "standalone",
   devIndicators: false,
+  async headers() {
+    return [
+      {
+        // The service worker must always be re-checked so a deploy reaches people promptly.
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+    ];
+  },
   // Turbopack is enabled via `pnpm dev` (`next dev --turbopack`).
   experimental: {
     optimizePackageImports: [

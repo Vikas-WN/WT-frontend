@@ -16,6 +16,8 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico" ||
     pathname === "/manifest.webmanifest" ||
+    pathname === "/sw.js" ||
+    pathname === "/offline.html" ||
     PUBLIC_STATIC_FILE.test(pathname);
 
   if (isPublic) {

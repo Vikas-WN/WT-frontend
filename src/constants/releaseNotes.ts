@@ -34,6 +34,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-06-02",
+    releasedOn: "2026-10-06",
+    title: "Approve from your email, and install WebTrak",
+    highlights: [
+      {
+        area: "Approvals",
+        title: "Review and decide from the email",
+        description:
+          "Leave request emails now have a Review & decide button. It opens a small page where managers can approve, or reject with a reason, without searching through WebTrak. Approving also works straight from the notification list.",
+      },
+      {
+        area: "App",
+        title: "Install WebTrak on your phone or computer",
+        description:
+          "Add WebTrak to your home screen or dock to open it like an app, with shortcuts for leave, time, rooms and news. If you lose your connection, a friendly offline page and banner tell you what's happening.",
+      },
+    ],
+  },
+  {
     id: "2026-10-06-01",
     releasedOn: "2026-10-06",
     title: "Calendar sync and a roomier look",
