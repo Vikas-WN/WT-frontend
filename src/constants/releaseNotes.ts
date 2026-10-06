@@ -34,6 +34,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-07-01",
+    releasedOn: "2026-10-07",
+    title: "Changed your mind? Undo and cancel for leave and requests",
+    highlights: [
+      {
+        area: "Approvals",
+        title: "Managers can undo an approval or rejection for 24 hours",
+        description:
+          "If you approve or reject a request by mistake, use Undo next to it within 24 hours. It goes back to Pending and the employee is told. After 24 hours the decision is final.",
+      },
+      {
+        area: "My requests",
+        title: "Cancel an approved leave or WFH before it starts",
+        description:
+          "Pending requests can still be edited or deleted. Once approved you can cancel until the start date, and your balance is restored. After it has started, ask HR to cancel it; HR cancelling notifies you and your manager.",
+      },
+    ],
+  },
+  {
     id: "2026-10-06-04",
     releasedOn: "2026-10-06",
     title: "Use WebTrak on several devices at once",

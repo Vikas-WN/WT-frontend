@@ -1,5 +1,6 @@
 "use client";
 
+import { REQUEST_REVERSAL_COPY } from "@/constants/requestReversal";
 import { useCallback } from "react";
 
 import { apiClient } from "@/api/httpClient";
@@ -16,6 +17,7 @@ import {
   isAlreadyDecidedUserRequestError,
   isEmployeeEditableUserRequest,
   resolveUserRequestId,
+  cancelUserRequest,
   revokeOwnedUserRequest,
   updateOwnedUserRequest,
 } from "@/utils/userRequest";
@@ -43,6 +45,7 @@ export interface WfhRequestActions {
   cancelEdit: () => void;
   editRow: (row: Record<string, unknown>) => void;
   revokeRow: (requestId: string) => void;
+  cancelRow: (requestId: string) => void;
   refresh: () => void;
 }
 
@@ -195,5 +198,22 @@ export function useWfhRequestActions(params: WfhRequestActionsParams): WfhReques
     [runAction, reloadRequests]
   );
 
-  return { submit, cancelEdit, editRow, revokeRow, refresh };
+  const cancelRow = useCallback(
+    (requestId: string) =>
+      confirm({
+        title: REQUEST_REVERSAL_COPY.cancelTitle,
+        description: REQUEST_REVERSAL_COPY.cancelDescriptionEmployee,
+        confirmLabel: REQUEST_REVERSAL_COPY.cancelConfirm,
+        tone: "danger",
+        run: () =>
+          runAction("Cancel work-from-home request", async () => {
+            await cancelUserRequest(Number(requestId));
+            invalidateBalance();
+            await reloadRequests();
+          }),
+      }),
+    [confirm, runAction, reloadRequests, invalidateBalance]
+  );
+
+  return { submit, cancelEdit, editRow, revokeRow, cancelRow, refresh };
 }

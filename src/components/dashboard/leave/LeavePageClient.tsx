@@ -147,6 +147,7 @@ import {
   resolveUserRequestId,
   isAlreadyDecidedUserRequestError,
   isDeletedUserRequestError,
+  cancelUserRequest,
   revokeOwnedUserRequest,
   hrTeamActionBlockedHint,
   updateOwnedUserRequest,
@@ -158,6 +159,8 @@ import { useNonOptionalHolidayDates } from "@/hooks/leave/useNonOptionalHolidayD
 import { useSelfProfile } from "@/hooks/useSelfProfile";
 import { buildUserRequestBody } from "@/utils/leaveRequestPayload";
 import { activeAllocationsRequireClientApproval, isTalentPoolLeaveRouting } from "@/utils/leaveAllocations";
+import { RequestReversalActions } from "@/components/dashboard/leave/RequestReversalActions";
+import { REQUEST_REVERSAL_COPY } from "@/constants/requestReversal";
 import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSummary";
 import { LeaveBalanceForecastWidget } from "@/components/dashboard/leave/LeaveBalanceForecastWidget";
 import { LeaveMonthlyOutlook } from "@/components/dashboard/leave/LeaveMonthlyOutlook";
@@ -2281,6 +2284,20 @@ export function LeavePageClient() {
                                       setEditingLeaveRequestId(requestId);
                                       setRequestViewTab("request");
                                     }}
+                                    onCancel={(requestId) =>
+                                      setConfirmState({
+                                        title: REQUEST_REVERSAL_COPY.cancelTitle,
+                                        description: REQUEST_REVERSAL_COPY.cancelDescriptionEmployee,
+                                        confirmLabel: REQUEST_REVERSAL_COPY.cancelConfirm,
+                                        tone: "danger",
+                                        run: () =>
+                                          runAction("Cancel leave request", async () => {
+                                            await cancelUserRequest(Number(requestId));
+                                            invalidateLeaveBalance();
+                                            await loadMyLeaveRequests();
+                                          }),
+                                      })
+                                    }
                                     onRevoke={(requestId) =>
                                       setConfirmState({
                                         title: "Delete this leave request?",
@@ -2842,7 +2859,18 @@ export function LeavePageClient() {
                                             ) : blockedHint ? (
                                               <span className="text-xs text-muted-foreground">{blockedHint}</span>
                                             ) : (
-                                              <span className="text-muted-foreground/50">—</span>
+                                              <RequestReversalActions
+                                                row={row}
+                                                actorEmail={userEmail}
+                                                isHrOrAdmin={hasHrAccess}
+                                                onChanged={async () => {
+                                                  teamDecisionsRef.current.delete(requestId);
+                                                  invalidateTeamCache();
+                                                  invalidateLeaveBalance();
+                                                  await loadEmployeeRequestsForApprover(leaveSubTab === "org" ? "org" : "team", 0, 200, true);
+                                                }}
+                                                fallback={<span className="text-muted-foreground/50">—</span>}
+                                              />
                                             )}
                                           </TableCell>
                                         ) : null}

@@ -38,7 +38,8 @@ export function readApprovalDetails(
       actioner_role: text(read(entry, "actioner_role", "actionerRole")),
       actioner_name: text(read(entry, "actioner_name", "actionerName")),
       actioner_email: text(read(entry, "actioner_email", "actionerEmail")),
-      message: text(entry.message),
+      // Undo/cancel rows carry [prev=…][new=…] audit markers; they are for the log, not for people.
+      message: text(entry.message)?.replace(/\s*\[(?:prev|new)=[^\]]*\]/g, "").trim() || text(entry.message),
       acted_at: text(read(entry, "acted_at", "actedAt")),
     })
   );

@@ -35,6 +35,12 @@ import { IconPencil, IconTrash } from "@/components/dashboard/ui/icons";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { Inbox } from "lucide-react";
 import { formatUserRequestTypeLabel } from "@/utils/actionToast";
+import { Ban } from "lucide-react";
+import { REQUEST_REVERSAL_COPY } from "@/constants/requestReversal";
+import { canEmployeeCancelApproved, canHrCancelApproved } from "@/utils/userRequest";
+
+/** Today in the office time zone as yyyy-mm-dd, which is what "starts today or later" is measured against. */
+const todayInOfficeZone = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 
 type SortOption = ListSortOption<Record<string, unknown>>;
 type Pagination = ReturnType<typeof useClientPagination<Record<string, unknown>>>;
@@ -50,6 +56,7 @@ export function MyLeaveRequestsView({
   onRefresh,
   onEdit,
   onRevoke,
+  onCancel,
   emptyLabel = "No Leave Requests",
   fromDate,
   toDate,
@@ -68,6 +75,8 @@ export function MyLeaveRequestsView({
   onRefresh: () => void;
   onEdit: (row: Record<string, unknown>) => void;
   onRevoke: (requestId: string, requestType: unknown) => void;
+  /** Cancel an approved request (until it starts). */
+  onCancel?: (requestId: string, requestType: unknown) => void;
   emptyLabel?: string;
   fromDate?: string;
   toDate?: string;
@@ -232,6 +241,19 @@ export function MyLeaveRequestsView({
                             <IconTrash className="size-4" />
                           </Button>
                         </div>
+                      ) : onCancel && canEmployeeCancelApproved(row, todayInOfficeZone()) ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="xs"
+                          disabled={actionLoading || !requestId}
+                          onClick={() => onCancel(requestId, row.request_type ?? row.requestType)}
+                          className="border-rose-600/30 text-rose-700 hover:bg-rose-500/10 dark:text-rose-300"
+                        >
+                          <Ban className="size-3" aria-hidden /> {REQUEST_REVERSAL_COPY.cancel}
+                        </Button>
+                      ) : canHrCancelApproved(row) ? (
+                        <span className="text-[11px] text-wt-text-muted">{REQUEST_REVERSAL_COPY.askHr}</span>
                       ) : (
                         <span className="text-muted-foreground/50">—</span>
                       )}

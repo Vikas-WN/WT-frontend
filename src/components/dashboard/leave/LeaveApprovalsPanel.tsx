@@ -19,6 +19,8 @@ import { FormSection } from "@/components/dashboard/ui/FormSection";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { LeaveRequestStatusBadge } from "@/components/dashboard/leave/LeaveRequestStatusBadge";
+import { RequestReversalActions } from "@/components/dashboard/leave/RequestReversalActions";
+import { useAuth } from "@/context/AuthContext";
 import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
 import {
   primaryManagerInboxQueryKey,
@@ -86,6 +88,8 @@ export function LeaveApprovalsPanel({
   actionLoading: boolean;
   runAction: (label: string, fn: () => Promise<unknown>) => Promise<void>;
 }) {
+  const { user } = useAuth();
+  const isHrOrAdmin = (user?.roles ?? []).some((role) => role === "ROLE_HR" || role === "ROLE_ADMIN");
   const queryClient = useQueryClient();
   const inboxQ = usePrimaryManagerLeaveInbox(actorEmail, Boolean(actorEmail));
   const holidayDates = useNonOptionalHolidayDates();
@@ -415,7 +419,17 @@ export function LeaveApprovalsPanel({
                               ) : null}
                             </div>
                             ) : (
-                              <span className="text-xs text-wt-text-muted">—</span>
+                              <RequestReversalActions
+                                row={rowRecord}
+                                actorEmail={actorEmail}
+                                isHrOrAdmin={isHrOrAdmin}
+                                onChanged={async () => {
+                                  decisionsRef.current.delete(requestId);
+                                  setDecisionsVersion((version) => version + 1);
+                                  await refreshInbox();
+                                }}
+                                fallback={<span className="text-xs text-wt-text-muted">—</span>}
+                              />
                             )}
                           </TableCell>
                         </TableRow>

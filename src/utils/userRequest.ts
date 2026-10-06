@@ -8,7 +8,7 @@ import type { ApiEnvelope } from "@/api/httpClient";
 
 import type { ApprovalStage } from "@/types/userRequest";
 
-import { applyApiDateQuery, requireApiDateParam } from "@/utils/apiDate";
+import { apiDateToInputValue, applyApiDateQuery, requireApiDateParam } from "@/utils/apiDate";
 
 import { toPagedRows, extractFirstObjectArray } from "@/utils/apiRows";
 
@@ -1063,3 +1063,50 @@ export async function listSelfUserRequests(params: {
 }
 
 
+
+// ---- taking back a decision / cancelling an approved request ------------------------------------------------------
+
+/** Request types the backend allows undoing / cancelling (comp-off *earn* credits are an HR matter). */
+const REVERSIBLE_TYPES = new Set(["LEAVE", "OPTIONAL", "WFH", "WFH_EXCEPTION", "COMP_OFF"]);
+
+/** Seconds left to undo the latest decision on this row (server-measured), or 0 when it is final. */
+export function requestUndoSecondsLeft(row: Record<string, unknown>): number {
+  const value = Number(pickRowField(row, "undo_seconds_left", "undoSecondsLeft"));
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+/** Email of the person who made the decision that can still be undone. */
+export function requestUndoByEmail(row: Record<string, unknown>): string {
+  return String(pickRowField(row, "undo_by_email", "undoByEmail") ?? "").trim().toLowerCase();
+}
+
+/**
+ * Whether the employee can still cancel this approved request: it has to start today or later. Mirrors the backend
+ * rule; after that only HR can cancel it.
+ */
+export function canEmployeeCancelApproved(row: Record<string, unknown>, todayIso: string): boolean {
+  const type = String(pickRowField(row, "request_type", "requestType") ?? "").trim().toUpperCase();
+  if (!REVERSIBLE_TYPES.has(type) || requestRowFinalStatus(row) !== "APPROVED") return false;
+  const from = apiDateToInputValue(String(pickRowField(row, "request_from_date", "requestFromDate") ?? ""));
+  return Boolean(from) && from >= todayIso;
+}
+
+/** True for an approved request of a reversible type — what HR/Admin may cancel at any time. */
+export function canHrCancelApproved(row: Record<string, unknown>): boolean {
+  const type = String(pickRowField(row, "request_type", "requestType") ?? "").trim().toUpperCase();
+  return REVERSIBLE_TYPES.has(type) && requestRowFinalStatus(row) === "APPROVED";
+}
+
+export async function undoUserRequestDecision(userRequestId: number, message?: string): Promise<ApiEnvelope<unknown>> {
+  return apiClient.put<ApiEnvelope<unknown>>(endpoints.userRequest.undo, {
+    contentType: "application/json",
+    body: JSON.stringify({ user_request_id: Number(userRequestId), message: message?.trim() || null }),
+  });
+}
+
+export async function cancelUserRequest(userRequestId: number, reason?: string): Promise<ApiEnvelope<unknown>> {
+  return apiClient.put<ApiEnvelope<unknown>>(endpoints.userRequest.cancel, {
+    contentType: "application/json",
+    body: JSON.stringify({ user_request_id: Number(userRequestId), reason: reason?.trim() || null }),
+  });
+}

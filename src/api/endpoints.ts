@@ -121,6 +121,8 @@ export const endpoints = {
     getByEmployees: (empEmails: string, fromDate: string, toDate: string, requestType: string) =>
       `${api}/userRequest/get/${encodeURIComponent(empEmails)}/${encodeURIComponent(fromDate)}/${encodeURIComponent(toDate)}/${encodeURIComponent(requestType)}`,
     status: `${api}/userRequest/status`,
+    undo: `${api}/userRequest/undo`,
+    cancel: `${api}/userRequest/cancel`,
     leaveManagerOptions: `${api}/leave-request/manager-options`, // @deprecated — use employees.managers
     leaveRecipientOptions: `${api}/leave-request/recipient-options`, // @deprecated — CC is server-assigned
     leaveSummary: `${api}/leave-summary`,

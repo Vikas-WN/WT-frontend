@@ -13,6 +13,8 @@ export const APPROVAL_DETAILS_COPY = {
     APPROVED: "Approved by",
     REJECTED: "Rejected by",
     APPROVED_BY_DEFAULT: "Auto-approved",
+    UNDONE: "Decision undone by",
+    CANCELLED: "Cancelled by",
   },
 } as const;
 
