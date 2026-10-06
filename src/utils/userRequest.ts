@@ -1066,8 +1066,10 @@ export async function listSelfUserRequests(params: {
 
 // ---- taking back a decision / cancelling an approved request ------------------------------------------------------
 
-/** Request types the backend allows undoing / cancelling (comp-off *earn* credits are an HR matter). */
-const REVERSIBLE_TYPES = new Set(["LEAVE", "OPTIONAL", "WFH", "WFH_EXCEPTION", "COMP_OFF"]);
+/** Request types the backend allows undoing / cancelling. */
+const REVERSIBLE_TYPES = new Set(["LEAVE", "OPTIONAL", "WFH", "WFH_EXCEPTION", "COMP_OFF", "COMP_OFF_EARN"]);
+/** An approved comp-off credit is withdrawn by HR/Admin only, never by the employee. */
+const HR_ONLY_CANCEL_TYPES = new Set(["COMP_OFF_EARN"]);
 
 /** Seconds left to undo the latest decision on this row (server-measured), or 0 when it is final. */
 export function requestUndoSecondsLeft(row: Record<string, unknown>): number {
@@ -1086,7 +1088,7 @@ export function requestUndoByEmail(row: Record<string, unknown>): string {
  */
 export function canEmployeeCancelApproved(row: Record<string, unknown>, todayIso: string): boolean {
   const type = String(pickRowField(row, "request_type", "requestType") ?? "").trim().toUpperCase();
-  if (!REVERSIBLE_TYPES.has(type) || requestRowFinalStatus(row) !== "APPROVED") return false;
+  if (!REVERSIBLE_TYPES.has(type) || HR_ONLY_CANCEL_TYPES.has(type) || requestRowFinalStatus(row) !== "APPROVED") return false;
   const from = apiDateToInputValue(String(pickRowField(row, "request_from_date", "requestFromDate") ?? ""));
   return Boolean(from) && from >= todayIso;
 }

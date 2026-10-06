@@ -21,6 +21,7 @@ import { useClientPagination } from "@/hooks/useClientPagination";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { RequestReversalActions } from "@/components/dashboard/leave/RequestReversalActions";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { hrmsService } from "@/services/hrms.service";
 import { compOffService } from "@/services/compOff.service";
@@ -1573,7 +1574,22 @@ export function CompOffPageClient({
                                   </Button>
                                 </div>
                               ) : (
-                                <span className="text-muted-foreground">{"\u2014"}</span>
+                                <RequestReversalActions
+                                  row={row}
+                                  actorEmail={userEmail}
+                                  isHrOrAdmin={hasHrAccess}
+                                  onChanged={async () => {
+                                    // The page remembers decisions it just made; forget this one so the row shows its real status.
+                                    teamDecisionsRef.current.delete(id);
+                                    setTeamDecisions((prev) => {
+                                      const { [id]: _removed, ...rest } = prev;
+                                      return rest;
+                                    });
+                                    await loadTeamRequests({ force: true });
+                                    void loadBalanceAndGrants();
+                                  }}
+                                  fallback={<span className="text-muted-foreground">{"\u2014"}</span>}
+                                />
                               )}
                             </TableCell>
                           </>
