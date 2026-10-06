@@ -2442,3 +2442,25 @@ tbody tr { transition: background-color var(--wt-duration-fast) var(--wt-ease); 
     border-color: var(--wt-border-md);
   }
 }
+
+/* Quiet tables (e.g. the directory): per-row editors look like plain text until you hover the row or focus them,
+   so a page of 100 people reads as a list, not a wall of form fields. */
+.wt-table-quiet tbody td [data-slot="input-group"],
+.wt-table-quiet tbody td [data-slot="select-trigger"],
+.wt-table-quiet tbody td select {
+  border-color: transparent;
+  background-color: transparent;
+  box-shadow: none;
+  transition: border-color var(--wt-duration-fast) var(--wt-ease), background-color var(--wt-duration-fast) var(--wt-ease);
+}
+.wt-table-quiet tbody tr:hover td [data-slot="input-group"],
+.wt-table-quiet tbody tr:hover td [data-slot="select-trigger"],
+.wt-table-quiet tbody tr:hover td select {
+  border-color: var(--wt-border);
+}
+.wt-table-quiet tbody td [data-slot="input-group"]:focus-within,
+.wt-table-quiet tbody td [data-slot="select-trigger"][aria-expanded="true"],
+.wt-table-quiet tbody td select:focus {
+  border-color: var(--wt-brand);
+  background-color: var(--wt-surface-1);
+}

@@ -35,7 +35,7 @@ export function LeaveBalanceForecastWidget() {
   const forecast = forecastQ.data;
 
   return (
-    <div className="mb-6 rounded-xl border border-wt-border bg-wt-surface-2/40 p-4">
+    <div className="mb-6 rounded-2xl border border-wt-border bg-wt-surface-1 p-4 shadow-[var(--wt-shadow-sm)]">
       <div className="mb-3 flex items-center gap-2">
         <CalendarClock className="size-4 text-[var(--wt-brand)]" />
         <p className="text-sm font-semibold text-wt-text">Forecast my balance</p>

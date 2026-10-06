@@ -2,38 +2,47 @@
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import { useMyLeaveBalance } from "@/hooks/leave/useMyLeaveBalance";
 import { formatBalanceDays } from "@/utils/leaveRequestDisplay";
 import { CalendarDays, RotateCcw, User, Users, Clock, Info } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
+const TONE = {
+  brand: { tile: "bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]", card: "border-[color-mix(in_srgb,var(--wt-brand)_30%,transparent)] bg-[var(--wt-brand-soft)]" },
+  emerald: { tile: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400", card: "border-wt-border bg-wt-surface-1" },
+  sky: { tile: "bg-sky-500/12 text-sky-700 dark:text-sky-300", card: "border-wt-border bg-wt-surface-1" },
+  amber: { tile: "bg-amber-500/14 text-amber-700 dark:text-amber-400", card: "border-wt-border bg-wt-surface-1" },
+  orange: { tile: "bg-orange-500/12 text-orange-700 dark:text-orange-300", card: "border-wt-border bg-wt-surface-1" },
+} as const;
+
 function BalanceStatCard({
   label,
   amount,
   unit,
   icon: Icon,
-  className,
+  tone,
 }: {
   label: string | ReactNode;
   amount: string;
   unit: string;
   icon: LucideIcon;
-  className: string;
+  tone: keyof typeof TONE;
 }) {
+  const value = Number.parseFloat(amount);
+  const decimals = amount.includes(".") ? (amount.split(".")[1]?.length ?? 0) : 0;
   return (
-    <div
-      className={`rounded-xl border border-wt-border/40 dark:border-white/20 bg-wt-surface-1 p-6 shadow-sm ${className}`}
-    >
-      <div className="flex items-center gap-3 mb-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-wt-surface-1/70 shadow-sm ring-1 ring-wt-border/20">
-          <Icon className="size-[18px]" aria-hidden />
-        </div>
-        <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">{label}</p>
+    <div className={`wt-lift flex flex-col gap-3 rounded-2xl border p-4 shadow-[var(--wt-shadow-sm)] sm:p-5 ${TONE[tone].card}`}>
+      <div className="flex items-center gap-2.5">
+        <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${TONE[tone].tile}`}>
+          <Icon className="size-4" aria-hidden />
+        </span>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-wt-text-muted">{label}</p>
       </div>
-      <p className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
-        {amount}
-        <span className="ml-1.5 text-base font-medium text-muted-foreground/70">{unit}</span>
+      <p className="text-3xl font-semibold leading-none tracking-tight text-wt-text">
+        {Number.isFinite(value) ? <AnimatedNumber value={value} decimals={decimals} /> : amount}
+        <span className="ml-1.5 text-sm font-medium text-wt-text-faint">{unit}</span>
       </p>
     </div>
   );
@@ -97,7 +106,7 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
           }
           {...formatBalanceDays(total)}
           icon={CalendarDays}
-          className="bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]"
+          tone="brand"
         />
       ) : null}
       {showAll ? (
@@ -105,7 +114,7 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
           label="Primary"
           {...formatBalanceDays(primary)}
           icon={User}
-          className="bg-emerald-50 text-emerald-700"
+          tone="emerald"
         />
       ) : null}
       {showAll ? (
@@ -113,7 +122,7 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
           label="Secondary"
           {...formatBalanceDays(secondary)}
           icon={Users}
-          className="bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]"
+          tone="sky"
         />
       ) : null}
       {showAll ? (
@@ -121,7 +130,7 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
           label="Carry Forward"
           {...formatBalanceDays(carry_forward)}
           icon={RotateCcw}
-          className="bg-amber-50 text-amber-800"
+          tone="amber"
         />
       ) : null}
       {(showAll || isCompOffOnly) ? (
@@ -136,12 +145,12 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
           }
           {...formatBalanceDays(compOff)}
           icon={Clock}
-          className="bg-orange-50/40 text-orange-700"
+          tone="orange"
         />
       ) : null}
     </div>
     {showAll ? (
-      <p className="mt-2 text-xs text-muted-foreground">
+      <p className="mt-2 text-xs text-wt-text-muted">
         This is your balance today. You earn 1.5 leaves on the 1st of every month, and leave approved for a
         later month comes off that month — see &ldquo;Your leave, month by month&rdquo; below.
       </p>
