@@ -44,7 +44,7 @@ export function HomeUpdateSlide({ update }: { update: HomeUpdate }) {
       <Link href={`${DASHBOARD_ROUTES.forms}?formId=${form.id}`} className={SLIDE_CLASS}>
         <Accent kind="form" />
         <Kind icon={<ClipboardList className="size-3.5" />} label={COPY.form} />
-        <p className="line-clamp-2 text-sm font-semibold text-wt-text">{form.title}</p>
+        <p className="line-clamp-2 shrink-0 text-sm font-semibold text-wt-text">{form.title}</p>
         <p className={cn("mt-auto text-xs", form.overdue ? "font-medium text-rose-600 dark:text-rose-400" : "text-wt-text-muted")}>
           {form.overdue ? COPY.overdue : form.due_date ? `${COPY.due} ${form.due_date}` : `From ${form.created_by.name}`} ·{" "}
           <span className="font-medium text-[var(--wt-brand)]">{COPY.fillIn}</span>
@@ -64,10 +64,9 @@ export function HomeUpdateSlide({ update }: { update: HomeUpdate }) {
           <span className="text-[10px] font-semibold">{date.month}</span>
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <Kind icon={<CalendarHeart className="size-3.5" />} label={COPY.event} />
-          <p className="line-clamp-1 text-sm font-semibold text-wt-text">{event.title}</p>
-          <p className="truncate text-xs text-wt-text-muted">{formatEventRange(event.start_time, event.end_time)}</p>
-          <p className="mt-auto text-xs">
+          <div className="flex shrink-0 items-center justify-between gap-2">
+            <Kind icon={<CalendarHeart className="size-3.5" />} label={COPY.event} />
+            <span className="shrink-0 text-xs">
             {event.my_response === "GOING" ? (
               <Badge variant="secondary" className={filledBadgeClass("success")}>{COPY.going}</Badge>
             ) : event.invited && event.my_response === null && event.rsvp_open ? (
@@ -77,7 +76,10 @@ export function HomeUpdateSlide({ update }: { update: HomeUpdate }) {
                 {EVENT_TYPE_OPTIONS.find((option) => option.value === event.event_type)?.label}
               </Badge>
             )}
-          </p>
+            </span>
+          </div>
+          <p className="shrink-0 truncate text-sm font-semibold text-wt-text">{event.title}</p>
+          <p className="shrink-0 truncate text-xs text-wt-text-muted">{formatEventRange(event.start_time, event.end_time)}</p>
         </div>
       </Link>
     );
@@ -94,7 +96,7 @@ export function HomeUpdateSlide({ update }: { update: HomeUpdate }) {
           <span className="text-[11px] text-wt-text-faint">{categoryLabel(ANNOUNCEMENT_CATEGORY_OPTIONS, announcement.category)}</span>
         )}
       </div>
-      <p className="line-clamp-1 text-sm font-semibold text-wt-text">{announcement.title}</p>
+      <p className="line-clamp-1 shrink-0 text-sm font-semibold text-wt-text">{announcement.title}</p>
       <p className="line-clamp-2 text-xs text-wt-text-muted">{announcement.body}</p>
     </Link>
   );

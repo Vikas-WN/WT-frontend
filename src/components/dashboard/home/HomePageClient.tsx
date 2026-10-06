@@ -546,7 +546,7 @@ export function HomePageClient() {
   return (
     <DashboardPageShell
       className={cn(
-        "lg:flex lg:h-full lg:flex-col lg:space-y-0 lg:gap-4 lg:overflow-hidden lg:!px-6 lg:!py-4",
+        "lg:flex lg:min-h-full lg:flex-col lg:space-y-0 lg:gap-4 lg:!px-6 lg:!py-4",
         !shape.fixed && "space-y-4"
       )}
     >
@@ -573,7 +573,7 @@ export function HomePageClient() {
         </div>
       ) : (
         <div
-          className="grid gap-4 sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-flow-dense lg:grid-cols-[repeat(var(--home-cols),minmax(0,1fr))] lg:grid-rows-[repeat(var(--home-rows),minmax(0,1fr))]"
+          className="grid gap-4 sm:grid-cols-2 lg:flex-1 lg:grid-flow-dense lg:grid-cols-[repeat(var(--home-cols),minmax(0,1fr))] lg:grid-rows-[repeat(var(--home-rows),minmax(10rem,1fr))]"
           style={{ "--home-cols": columns, "--home-rows": rows } as React.CSSProperties}
         >
           {visibleLayout.map((w) => (
