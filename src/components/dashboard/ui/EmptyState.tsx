@@ -19,7 +19,7 @@ export function EmptyState({ title, description, icon, className, action }: Empt
       )}
       role="status"
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,color-mix(in_srgb,var(--wt-brand)_8%,transparent),transparent_65%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,color-mix(in_srgb,var(--wt-brand)_6%,transparent),transparent_70%)]" />
       <div className="relative">
         {icon ? (
           <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--wt-brand)_12%,var(--wt-surface-3))] text-[var(--wt-brand)]">

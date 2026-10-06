@@ -463,7 +463,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         onConfirm={() => void confirmLogout()}
       />
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-wt-page-bg dark:bg-black">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-wt-page-bg">
         <AppChromeHeader>
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <button

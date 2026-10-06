@@ -39,6 +39,12 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
     title: "Calendar sync and a roomier look",
     highlights: [
       {
+        area: "Look and feel",
+        title: "A cleaner dark mode",
+        description:
+          "Dark mode now uses soft graphite instead of pure black, so cards and borders stand out and text is easier on the eyes. Light mode got crisper edges and softer shadows.",
+      },
+      {
         area: "Calendar",
         title: "See WebTrak in Google or Apple Calendar",
         description:

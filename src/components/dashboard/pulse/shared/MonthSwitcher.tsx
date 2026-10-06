@@ -61,7 +61,7 @@ export function MonthSwitcher({
                     className={cn(
                       "relative rounded-lg px-2 py-2 text-center text-xs font-medium transition-colors",
                       month === value
-                        ? "bg-[var(--wt-brand)] text-white"
+                        ? "bg-[var(--wt-brand)] text-[var(--wt-brand-text)]"
                         : "text-wt-text hover:bg-wt-surface-2"
                     )}
                   >

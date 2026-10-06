@@ -75,7 +75,7 @@ export function HomeUpdateSlide({ update }: { update: HomeUpdate }) {
       <div className="flex items-center justify-between gap-2">
         <Kind icon={<Megaphone className="size-3.5" />} label={COPY.announcement} />
         {!announcement.is_read ? (
-          <span className="rounded-full bg-[var(--wt-brand)] px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white">{COPY.newBadge}</span>
+          <span className="rounded-full bg-[var(--wt-brand)] px-1.5 py-0.5 text-[9px] font-semibold uppercase text-[var(--wt-brand-text)]">{COPY.newBadge}</span>
         ) : (
           <span className="text-[11px] text-wt-text-faint">{categoryLabel(ANNOUNCEMENT_CATEGORY_OPTIONS, announcement.category)}</span>
         )}

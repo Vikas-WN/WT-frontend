@@ -58,7 +58,7 @@ function DayStrip({
             className={cn(
               "flex flex-col items-center gap-0.5 rounded-xl border px-1 py-2.5 text-center transition-colors",
               isSelected
-                ? "border-[var(--wt-brand)] bg-[var(--wt-brand)] text-white shadow-sm"
+                ? "border-[var(--wt-brand)] bg-[var(--wt-brand)] text-[var(--wt-brand-text)] shadow-sm"
                 : "border-wt-border bg-wt-surface-1 text-wt-text hover:bg-wt-surface-2",
               !isSelected && isToday && "border-[var(--wt-brand)]"
             )}
@@ -184,7 +184,7 @@ export function DayScheduleView() {
               className={cn(
                 "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
                 roomFilter === r.id
-                  ? "border-[var(--wt-brand)] bg-[var(--wt-brand)] text-white"
+                  ? "border-[var(--wt-brand)] bg-[var(--wt-brand)] text-[var(--wt-brand-text)]"
                   : "border-wt-border bg-wt-surface-1 text-wt-text-muted hover:bg-wt-surface-2"
               )}
             >

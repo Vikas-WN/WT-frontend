@@ -66,7 +66,7 @@ export function PollVoteBlock({ announcementId, poll }: { announcementId: number
                     className={cn(
                       "grid size-4 shrink-0 place-items-center border",
                       poll.multiple ? "rounded" : "rounded-full",
-                      on ? "border-[var(--wt-brand)] bg-[var(--wt-brand)] text-white" : "border-wt-border-md"
+                      on ? "border-[var(--wt-brand)] bg-[var(--wt-brand)] text-[var(--wt-brand-text)]" : "border-wt-border-md"
                     )}
                   >
                     {on ? <Check className="size-3" /> : null}

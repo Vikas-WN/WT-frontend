@@ -36,7 +36,7 @@ export function HomeCard({
         CONTENT_CARD_CLASS,
         "flex h-full min-h-0 flex-col overflow-hidden p-4 sm:p-5 lg:p-4",
         featured &&
-          "border-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)] bg-[var(--wt-brand-soft)] dark:bg-[var(--wt-brand-soft)]",
+          "shadow-[inset_3px_0_0_var(--wt-brand)] border-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)] bg-[var(--wt-brand-soft)] dark:bg-[var(--wt-brand-soft)]",
         className
       )}
     >

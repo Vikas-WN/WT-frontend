@@ -176,7 +176,7 @@ export function SkillRatingsListInput({
           type="button"
           onClick={handleAdd}
           disabled={disabled}
-          className="flex w-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-wt-border bg-wt-surface-2/70 px-4 py-6 text-center transition-colors hover:border-[color-mix(in_srgb,var(--wt-brand)_35%,var(--wt-border))] hover:bg-wt-brand-soft/40 dark:bg-black/20"
+          className="flex w-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-wt-border bg-wt-surface-2/70 px-4 py-6 text-center transition-colors hover:border-[color-mix(in_srgb,var(--wt-brand)_35%,var(--wt-border))] hover:bg-wt-brand-soft/40 dark:bg-wt-surface-3/40"
         >
           <p className="text-sm font-medium text-wt-text">Add at least one skill</p>
           <p className="text-xs text-wt-text-muted">Include a self rating from 1–5</p>
@@ -186,7 +186,7 @@ export function SkillRatingsListInput({
           {value.map((item, idx) => (
             <div
               key={idx}
-              className="flex min-w-0 items-start gap-2 rounded-xl border border-wt-border bg-wt-surface-2/80 p-2.5 transition-shadow hover:shadow-sm dark:bg-black/25"
+              className="flex min-w-0 items-start gap-2 rounded-xl border border-wt-border bg-wt-surface-2/80 p-2.5 transition-shadow hover:shadow-sm dark:bg-wt-surface-3/50"
             >
               {(() => {
                 const isCustomSkill =

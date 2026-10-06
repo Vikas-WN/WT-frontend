@@ -34,11 +34,11 @@
   /* Surface — a calm, low-saturation canvas so white cards lift off it with a
      hairline + soft shadow instead of tint. (Was a saturated blue-gray that,
      with the page-top brand gradient on top, read as a muddy blue band.) */
-  --wt-bg: #f8f9fc;
-  --wt-page-bg: #f4f6fa;
+  --wt-bg: #f7f8fb;
+  --wt-page-bg: #f3f5f9;
   --wt-surface-1: #ffffff;
-  --wt-surface-2: #f8fafc;
-  --wt-surface-3: #eff2f7;
+  --wt-surface-2: #f7f9fc;
+  --wt-surface-3: #edf0f6;
 
   /* Sidebar — deliberately fixed dark regardless of the app's light/dark
      theme (Vercel/Linear-style structural contrast against the light
@@ -61,14 +61,14 @@
   --wt-text-faint: #5b6779;
 
   /* Border — hairlines with enough weight to define a card edge on the canvas */
-  --wt-border: rgba(15, 23, 42, 0.08);
-  --wt-border-md: rgba(15, 23, 42, 0.15);
+  --wt-border: rgba(15, 23, 42, 0.075);
+  --wt-border-md: rgba(15, 23, 42, 0.14);
 
   /* Elevation — neutral, layered and soft. Cards rest on a hairline plus a 1px
      contact shadow; overlays get a long, low-opacity ambient shadow. */
-  --wt-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
-  --wt-shadow-md: 0 1px 2px rgba(16, 24, 40, 0.05), 0 4px 12px -2px rgba(16, 24, 40, 0.07);
-  --wt-shadow-lg: 0 2px 4px -1px rgba(16, 24, 40, 0.05), 0 16px 32px -8px rgba(16, 24, 40, 0.12);
+  --wt-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04), 0 0 0 0.5px rgba(16, 24, 40, 0.02);
+  --wt-shadow-md: 0 1px 2px rgba(16, 24, 40, 0.04), 0 6px 16px -4px rgba(16, 24, 40, 0.08);
+  --wt-shadow-lg: 0 2px 4px -1px rgba(16, 24, 40, 0.05), 0 20px 40px -12px rgba(16, 24, 40, 0.16);
 
   /* Accent glow — brand-tinted (not indigo/violet) */
   --wt-glow-indigo: 0 4px 14px rgba(53, 80, 149, 0.18);
@@ -132,63 +132,65 @@
 :is(.dark, [data-theme="dark"]) {
   color-scheme: dark;
 
-  /* Pitch-black canvas — void → raised → inset → hover */
-  --wt-bg: #000000;
-  --wt-page-bg: #000000;
-  --wt-surface-1: #0a0a0a;
-  --wt-surface-2: #111111;
-  --wt-surface-3: #1a1a1a;
+  /* Graphite canvas (not pure black): a cool, slightly blue-grey ladder — canvas → card → raised → hover — where each
+     step is visibly lighter, so cards read as surfaces and borders as hairlines instead of everything melting into void. */
+  --wt-bg: #0b0d12;
+  --wt-page-bg: #0b0d12;
+  --wt-surface-1: #12151c;
+  --wt-surface-2: #181c25;
+  --wt-surface-3: #1f242f;
 
-  --wt-text: #f5f5f5;
-  --wt-text-muted: #a3a3a3;
-  --wt-text-faint: #737373;
+  --wt-text: #eef0f4;
+  --wt-text-muted: #a0a8b6;
+  --wt-text-faint: #77808f;
 
-  --wt-border: rgba(255, 255, 255, 0.06);
-  --wt-border-md: rgba(255, 255, 255, 0.11);
+  --wt-border: rgba(255, 255, 255, 0.085);
+  --wt-border-md: rgba(255, 255, 255, 0.15);
 
-  --wt-shadow-sm: none;
-  --wt-shadow-md: 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --wt-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --wt-shadow-md: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 8px 24px -10px rgba(0, 0, 0, 0.6);
+  --wt-shadow-lg: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 24px 48px -16px rgba(0, 0, 0, 0.7);
 
   --wt-glow-indigo: none;
   --wt-glow-violet: none;
 
-  --wt-brand: #6b8fc4;
-  --wt-brand-hover: #7ea0d4;
-  --wt-brand-active: #5a7fb5;
-  --wt-brand-text: #ffffff;
+  --wt-brand: #7d9fdb;
+  --wt-brand-hover: #92b0e4;
+  --wt-brand-active: #6b8fcd;
+  --wt-brand-text: #0a1226;
   --wt-brand-soft: color-mix(in srgb, var(--wt-brand) 18%, transparent);
   --wt-brand-muted: color-mix(in srgb, var(--wt-brand) 24%, transparent);
 
   --ring: var(--wt-brand);
 
-  --background: #000000;
-  --foreground: #f5f5f5;
-  --card: #0a0a0a;
-  --card-foreground: #f5f5f5;
-  --popover: #0a0a0a;
-  --popover-foreground: #f5f5f5;
+  --background: #0b0d12;
+  --foreground: #eef0f4;
+  --card: #12151c;
+  --card-foreground: #eef0f4;
+  --popover: #181c25;
+  --popover-foreground: #eef0f4;
   --primary: var(--wt-brand);
   --primary-foreground: var(--wt-brand-text);
-  --secondary: #111111;
-  --secondary-foreground: #f5f5f5;
-  --muted: #111111;
-  --muted-foreground: #a3a3a3;
-  --accent: #1a1a1a;
-  --accent-foreground: #f5f5f5;
+  --secondary: #181c25;
+  --secondary-foreground: #eef0f4;
+  --muted: #181c25;
+  --muted-foreground: #a0a8b6;
+  --accent: #1f242f;
+  --accent-foreground: #eef0f4;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.085);
+  --input: rgba(255, 255, 255, 0.1);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: #000000;
-  --sidebar-foreground: #f5f5f5;
+  --sidebar: #0b0d12;
+  --sidebar-foreground: #eef0f4;
   --sidebar-primary: var(--wt-brand);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #141414;
-  --sidebar-accent-foreground: #f5f5f5;
+  --sidebar-accent: #181c25;
+  --sidebar-accent-foreground: #eef0f4;
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: var(--wt-brand);
 }

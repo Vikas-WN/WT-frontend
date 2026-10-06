@@ -61,7 +61,7 @@ export function FormResponsesDialog({ formId, onClose }: { formId: number; onClo
       type="button"
       onClick={() => setView(value)}
       aria-pressed={view === value}
-      className={cn("rounded-full px-3 py-1 text-xs font-medium transition-colors", view === value ? "bg-[var(--wt-brand)] text-white" : "bg-wt-surface-2 text-wt-text-muted hover:text-wt-text")}
+      className={cn("rounded-full px-3 py-1 text-xs font-medium transition-colors", view === value ? "bg-[var(--wt-brand)] text-[var(--wt-brand-text)]" : "bg-wt-surface-2 text-wt-text-muted hover:text-wt-text")}
     >
       {label}
     </button>

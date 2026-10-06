@@ -184,7 +184,7 @@ export function EmployeeProfileHeaderCard({
             <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0 w-full sm:w-auto">
                 {editModeLabel ? (
-                  <span className="mb-1.5 inline-flex rounded-md bg-[var(--wt-brand)] px-2 py-0.5 text-xs font-semibold text-white">
+                  <span className="mb-1.5 inline-flex rounded-md bg-[var(--wt-brand)] px-2 py-0.5 text-xs font-semibold text-[var(--wt-brand-text)]">
                     {editModeLabel}
                   </span>
                 ) : null}

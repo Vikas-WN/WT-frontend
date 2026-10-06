@@ -48,7 +48,7 @@ export function ListFilters({
             className={cn(
               "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
               chipValue === chip.value
-                ? "border-[var(--wt-brand)] bg-[var(--wt-brand)] text-white"
+                ? "border-[var(--wt-brand)] bg-[var(--wt-brand)] text-[var(--wt-brand-text)]"
                 : "border-wt-border bg-wt-surface-1 text-wt-text-muted hover:text-wt-text"
             )}
           >

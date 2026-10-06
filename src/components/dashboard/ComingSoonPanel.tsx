@@ -33,7 +33,7 @@ export function ComingSoonPanel({
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,color-mix(in_srgb,var(--wt-brand)_18%,transparent),transparent_55%)]" />
       <div className="pointer-events-none absolute -bottom-10 -left-10 size-40 rounded-full bg-[color-mix(in_srgb,var(--wt-brand)_12%,transparent)] blur-3xl" />
       <div className="relative flex flex-col items-center text-center">
-        <span className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-[var(--wt-brand)] text-white shadow-lg shadow-[color-mix(in_srgb,var(--wt-brand)_35%,transparent)]">
+        <span className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-[var(--wt-brand)] text-[var(--wt-brand-text)] shadow-lg shadow-[color-mix(in_srgb,var(--wt-brand)_35%,transparent)]">
           {icon ?? <Sparkles className="size-6" />}
         </span>
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-wt-text-faint">

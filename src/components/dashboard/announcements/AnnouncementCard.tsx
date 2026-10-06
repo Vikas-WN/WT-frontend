@@ -51,7 +51,7 @@ export function AnnouncementCard({
               </Badge>
             ) : null}
             {!announcement.is_read ? (
-              <span className="rounded-full bg-[var(--wt-brand)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+              <span className="rounded-full bg-[var(--wt-brand)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--wt-brand-text)]">
                 {ANNOUNCEMENT_COPY.unread}
               </span>
             ) : null}

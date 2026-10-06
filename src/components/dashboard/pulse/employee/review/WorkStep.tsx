@@ -41,7 +41,7 @@ function Tile({
       <span
         className={cn(
           "flex size-5 shrink-0 items-center justify-center rounded-md border",
-          selected ? "border-[var(--wt-brand)] bg-[var(--wt-brand)] text-white" : "border-wt-border-md bg-wt-surface-1"
+          selected ? "border-[var(--wt-brand)] bg-[var(--wt-brand)] text-[var(--wt-brand-text)]" : "border-wt-border-md bg-wt-surface-1"
         )}
       >
         {selected ? <Check className="size-3.5" aria-hidden /> : null}

@@ -27,7 +27,7 @@ export function WeightSplit({
   return (
     <div className="space-y-4">
       <div className="flex h-12 overflow-hidden rounded-xl border border-wt-border text-sm font-semibold" aria-hidden>
-        <div className="flex items-center justify-center overflow-hidden whitespace-nowrap bg-[var(--wt-brand)] px-1 text-white transition-all" style={{ width: `${kpiNum}%` }}>
+        <div className="flex items-center justify-center overflow-hidden whitespace-nowrap bg-[var(--wt-brand)] px-1 text-[var(--wt-brand-text)] transition-all" style={{ width: `${kpiNum}%` }}>
           {segmentLabel("KPIs", "KPIs", kpiNum, kpi)}
         </div>
         <div className="flex flex-1 items-center justify-center overflow-hidden whitespace-nowrap bg-amber-400/90 px-1 text-amber-950">

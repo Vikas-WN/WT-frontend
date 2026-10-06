@@ -185,7 +185,7 @@ export function OpportunityMultiSelect({
                           <span
                             className={`mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded border ${
                               selected
-                                ? "border-[var(--wt-brand)] bg-[var(--wt-brand)] text-white"
+                                ? "border-[var(--wt-brand)] bg-[var(--wt-brand)] text-[var(--wt-brand-text)]"
                                 : "border-wt-border text-transparent"
                             }`}
                           >
