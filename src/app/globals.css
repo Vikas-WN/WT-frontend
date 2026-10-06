@@ -2317,12 +2317,12 @@ a:focus:not(:focus-visible) {
 /* ── Motion primitives (reused across the app) ──────────────────────────────────────────────────────────────────── */
 @keyframes wt-fade-up {
   from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: none; }
 }
 @keyframes wt-pop {
   0% { opacity: 0; transform: scale(0.6); }
   60% { opacity: 1; transform: scale(1.08); }
-  100% { opacity: 1; transform: scale(1); }
+  100% { opacity: 1; transform: none; }
 }
 @keyframes wt-draw {
   to { stroke-dashoffset: 0; }
@@ -2337,3 +2337,108 @@ a:focus:not(:focus-visible) {
 .wt-ring { animation: wt-ring 900ms 120ms var(--wt-ease-out) 1; }
 /* Stagger children: set --i on each child (0, 1, 2…). */
 .wt-stagger > * { animation: wt-fade-up 420ms var(--wt-ease) both; animation-delay: calc(var(--i, 0) * 55ms); }
+
+/* ── Designer-grade motion & depth ──────────────────────────────────────────────────────────────────────────────── */
+
+/* Skeletons shimmer instead of blinking: a soft highlight sweeps across every placeholder. */
+.animate-pulse:not(.rounded-full) {
+  animation: none;
+  position: relative;
+  overflow: hidden;
+}
+.animate-pulse:not(.rounded-full)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--wt-text) 7%, transparent), transparent);
+  animation: wt-sweep 1.5s var(--wt-ease) infinite;
+}
+@keyframes wt-sweep {
+  to { transform: translateX(100%); }
+}
+
+/* Dialogs rise and settle; the backdrop fades. Ends at the resting state, so it never leaves a transform behind. */
+@keyframes wt-overlay-in { from { opacity: 0; } }
+@keyframes wt-modal-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.975); }
+}
+.wt-modal-overlay { animation: wt-overlay-in 200ms var(--wt-ease) backwards; }
+.wt-modal-panel { animation: wt-modal-in 340ms var(--wt-ease) backwards; }
+
+/* Page content arrives in a gentle cascade (first eight blocks), not all at once. */
+@keyframes wt-rise {
+  from { opacity: 0; transform: translateY(12px); }
+}
+.wt-page-enter > :nth-child(n + 2):nth-child(-n + 9) { animation: wt-rise 520ms var(--wt-ease) backwards; }
+.wt-page-enter > :nth-child(3) { animation-delay: 40ms; }
+.wt-page-enter > :nth-child(4) { animation-delay: 80ms; }
+.wt-page-enter > :nth-child(5) { animation-delay: 120ms; }
+.wt-page-enter > :nth-child(6) { animation-delay: 160ms; }
+.wt-page-enter > :nth-child(7) { animation-delay: 200ms; }
+.wt-page-enter > :nth-child(8) { animation-delay: 240ms; }
+.wt-page-enter > :nth-child(9) { animation-delay: 280ms; }
+
+/* Interactive cards lift a touch under the pointer and settle when pressed. */
+@media (hover: hover) {
+  .wt-lift {
+    transition: transform var(--wt-duration) var(--wt-ease), box-shadow var(--wt-duration) var(--wt-ease), border-color var(--wt-duration) var(--wt-ease);
+  }
+  .wt-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--wt-shadow-md);
+    border-color: var(--wt-border-md);
+  }
+  .wt-lift:active {
+    transform: translateY(0) scale(0.995);
+  }
+}
+
+/* Primary buttons catch the light: a soft sheen sweeps across on hover. */
+.wt-sheen { position: relative; overflow: hidden; isolation: isolate; }
+.wt-sheen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  transform: translateX(-120%);
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.28) 50%, transparent 70%);
+  transition: transform 700ms var(--wt-ease);
+}
+@media (hover: hover) {
+  .wt-sheen:hover:not(:disabled)::before { transform: translateX(120%); }
+}
+
+/* Route-change progress bar (top of the screen). */
+.wt-route-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 400;
+  height: 2px;
+  pointer-events: none;
+  transform-origin: left;
+  background: linear-gradient(90deg, var(--wt-brand), color-mix(in srgb, var(--wt-brand) 55%, white));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--wt-brand) 60%, transparent);
+}
+.wt-route-progress[data-state="running"] { animation: wt-route-run 8s cubic-bezier(0.1, 0.7, 0.2, 1) forwards; }
+.wt-route-progress[data-state="done"] { animation: wt-route-done 380ms var(--wt-ease) forwards; }
+@keyframes wt-route-run { from { transform: scaleX(0); opacity: 1; } to { transform: scaleX(0.92); opacity: 1; } }
+@keyframes wt-route-done { from { transform: scaleX(0.92); opacity: 1; } 60% { transform: scaleX(1); opacity: 1; } to { transform: scaleX(1); opacity: 0; } }
+
+/* Numbers don't jitter as they count. */
+.wt-num { font-variant-numeric: tabular-nums; }
+
+/* Sidebar items nudge their icon on hover. */
+@media (hover: hover) {
+  .wt-sidebar-nav-item svg { transition: transform var(--wt-duration) var(--wt-ease); }
+  .wt-sidebar-nav-item:hover svg { transform: translateX(1px) scale(1.08); }
+}
+
+/* Table rows respond to the pointer; form controls acknowledge hover before focus. */
+tbody tr { transition: background-color var(--wt-duration-fast) var(--wt-ease); }
+@media (hover: hover) {
+  tbody tr:hover { background-color: color-mix(in srgb, var(--wt-text) 3.5%, transparent); }
+  :where(input:not([type="checkbox"], [type="radio"], [type="range"]), textarea, select):not(:focus, :disabled):hover {
+    border-color: var(--wt-border-md);
+  }
+}

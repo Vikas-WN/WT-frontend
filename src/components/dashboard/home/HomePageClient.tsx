@@ -12,6 +12,8 @@ import {
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { HomeHeader } from "@/components/dashboard/home/HomeHeader";
+import { AnimatedBar } from "@/components/motion/AnimatedBar";
+import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import { cellsOf, useHomeGridShape } from "@/hooks/dashboard/useHomeGridShape";
 import { useCommandPalette } from "@/components/dashboard/CommandPalette";
 import { HomeCard, CardMessage, CardSkeleton } from "@/components/dashboard/home/HomeCard";
@@ -124,12 +126,7 @@ function LeaveSplitBar({ values }: { values: number[] }) {
 function ProgressBar({ value, max }: { value: number; max: number }) {
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
-    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-wt-surface-3">
-      <div
-        className="h-full rounded-full bg-[var(--wt-brand)] transition-[width] duration-500 ease-[var(--wt-ease)]"
-        style={{ width: `${pct}%` }}
-      />
-    </div>
+    <AnimatedBar percent={pct} className="mt-3 h-1.5" />
   );
 }
 
@@ -319,7 +316,7 @@ export function HomePageClient() {
             <p className="text-sm text-wt-text-muted">Nothing waiting on you. 🎉</p>
           ) : (
             <p className="text-3xl font-semibold tabular-nums text-wt-text">
-              {approvals.data}
+              <AnimatedNumber value={approvals.data} />
               <span className="ml-2 align-middle text-sm font-normal text-wt-text-muted">
                 awaiting your review
               </span>
@@ -351,7 +348,7 @@ export function HomePageClient() {
                 ].map((b) => (
                   <div key={b.label}>
                     <p className="text-2xl font-semibold tabular-nums text-wt-text">
-                      {Number(b.value ?? 0)}
+                      <AnimatedNumber value={Number(b.value ?? 0)} decimals={Number.isInteger(Number(b.value ?? 0)) ? 0 : 1} />
                     </p>
                     <p className="mt-0.5 flex items-center gap-1.5 text-xs text-wt-text-muted">
                       <span className={cn("size-1.5 rounded-full", b.dot)} aria-hidden />
@@ -396,7 +393,9 @@ export function HomePageClient() {
                   { label: "In progress", value: learning.data.in_progress_count },
                 ].map((b) => (
                   <div key={b.label}>
-                    <p className="text-2xl font-semibold tabular-nums text-wt-text">{b.value}</p>
+                    <p className="text-2xl font-semibold tabular-nums text-wt-text">
+                      <AnimatedNumber value={Number(b.value ?? 0)} />
+                    </p>
                     <p className="text-xs text-wt-text-muted">{b.label}</p>
                   </div>
                 ))}

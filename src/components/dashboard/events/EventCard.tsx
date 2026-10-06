@@ -43,7 +43,7 @@ export function EventCard({
     <article
       id={`event-${event.id}`}
       className={cn(
-        "flex h-full flex-col rounded-2xl border bg-wt-surface-1 p-4 shadow-[var(--wt-shadow-sm)] transition-shadow hover:shadow-[var(--wt-shadow-md)] sm:p-5",
+        "wt-lift flex h-full flex-col rounded-2xl border bg-wt-surface-1 p-4 shadow-[var(--wt-shadow-sm)] sm:p-5",
         event.is_cancelled && "opacity-70",
         highlighted ? "border-[var(--wt-brand)] ring-2 ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)]" : "border-wt-border"
       )}

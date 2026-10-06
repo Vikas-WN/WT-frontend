@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { eventDateParts, formatEventRange } from "@/utils/eventTime";
 
 const SLIDE_CLASS =
-  "group flex h-full w-full flex-col gap-1.5 rounded-2xl border border-wt-border bg-wt-surface-1 p-3.5 shadow-[var(--wt-shadow-sm)] transition-shadow hover:shadow-[var(--wt-shadow-md)]";
+  "wt-lift group flex h-full w-full flex-col gap-1.5 rounded-2xl border border-wt-border bg-wt-surface-1 p-3.5 shadow-[var(--wt-shadow-sm)]";
 
 function Kind({ icon, label, tone }: { icon: React.ReactNode; label: string; tone?: string }) {
   return (

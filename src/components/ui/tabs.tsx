@@ -44,15 +44,27 @@ const tabsListVariants = cva(
 function TabsList({
   className,
   variant = "default",
+  children,
   ...props
 }: TabsPrimitive.List.Props & VariantProps<typeof tabsListVariants>) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
       data-variant={variant}
-      className={cn(tabsListVariants({ variant }), className)}
+      className={cn(tabsListVariants({ variant }), "relative", className)}
       {...props}
-    />
+    >
+      {children}
+      <TabsPrimitive.Indicator
+        data-slot="tabs-indicator"
+        className={cn(
+          "pointer-events-none absolute z-0 transition-[left,width,top,height] duration-[360ms] ease-[var(--wt-ease)] motion-reduce:transition-none",
+          variant === "line"
+            ? "bottom-0 left-[var(--active-tab-left)] h-0.5 w-[var(--active-tab-width)] rounded-full bg-[var(--wt-brand)] group-data-vertical/tabs:hidden"
+            : "left-[var(--active-tab-left)] top-[var(--active-tab-top)] h-[var(--active-tab-height)] w-[var(--active-tab-width)] rounded-lg bg-wt-surface-1 shadow-sm ring-1 ring-wt-border dark:bg-wt-surface-3 dark:shadow-none dark:ring-wt-border-md"
+        )}
+      />
+    </TabsPrimitive.List>
   )
 }
 
@@ -61,7 +73,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
     <TabsPrimitive.Tab
       data-slot="tabs-trigger"
       className={cn(
-        "relative inline-flex flex-none cursor-pointer items-center justify-center gap-2 whitespace-nowrap text-sm font-medium",
+        "relative z-10 inline-flex flex-none cursor-pointer items-center justify-center gap-2 whitespace-nowrap text-sm font-medium",
         "transition-[color,background-color,box-shadow,opacity,border-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)]",
         "outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--wt-brand)_30%,transparent)]",
         "disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50",
@@ -72,7 +84,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
         "group-data-[variant=default]/tabs-list:h-9 group-data-[variant=default]/tabs-list:rounded-lg group-data-[variant=default]/tabs-list:border-0 group-data-[variant=default]/tabs-list:px-3.5",
         "group-data-[variant=default]/tabs-list:text-wt-text-muted",
         "group-data-[variant=default]/tabs-list:hover:text-wt-text",
-        "group-data-[variant=default]/tabs-list:data-active:bg-wt-surface-1 group-data-[variant=default]/tabs-list:data-active:text-wt-text group-data-[variant=default]/tabs-list:data-active:shadow-sm group-data-[variant=default]/tabs-list:data-active:ring-1 group-data-[variant=default]/tabs-list:data-active:ring-wt-border dark:group-data-[variant=default]/tabs-list:data-active:bg-wt-surface-3 dark:group-data-[variant=default]/tabs-list:data-active:shadow-none dark:group-data-[variant=default]/tabs-list:data-active:ring-wt-border-md",
+        "group-data-[variant=default]/tabs-list:data-active:text-wt-text",
 
         // Underline (line)
         "group-data-[variant=line]/tabs-list:h-11 group-data-[variant=line]/tabs-list:rounded-none group-data-[variant=line]/tabs-list:border-0 group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:px-4 group-data-[variant=line]/tabs-list:shadow-none",
@@ -85,7 +97,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
         "group-data-horizontal/tabs:after:inset-x-3 group-data-horizontal/tabs:after:bottom-0 group-data-horizontal/tabs:after:h-0.5 group-data-horizontal/tabs:after:rounded-full",
         "group-data-vertical/tabs:after:inset-y-2 group-data-vertical/tabs:after:left-0 group-data-vertical/tabs:after:w-0.5 group-data-vertical/tabs:after:rounded-full",
         "group-data-[variant=line]/tabs-list:after:bg-[var(--wt-brand)]",
-        "group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
+        "group-data-[variant=line]/tabs-list:after:hidden",
         "group-data-[variant=default]/tabs-list:after:hidden",
 
         className

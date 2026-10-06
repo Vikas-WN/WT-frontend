@@ -126,7 +126,7 @@ export const MODAL_OVERLAY_CLASS = cn(
 );
 export const MODAL_PANEL_CLASS = cn(
   // my-auto centers when short; min-h-0 + overflow-hidden lets the body scroll when tall.
-  "relative my-auto flex max-h-[min(90dvh,880px)] w-full min-h-0 flex-col overflow-hidden",
+  "wt-modal-panel relative my-auto flex max-h-[min(90dvh,880px)] w-full min-h-0 flex-col overflow-hidden",
   "rounded-2xl border border-wt-border bg-wt-surface-1 shadow-xl",
   "dark:border-wt-border-md dark:bg-wt-surface-1 dark:shadow-none"
 );

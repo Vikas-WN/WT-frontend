@@ -39,6 +39,12 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
     title: "Approve from your email, and install WebTrak",
     highlights: [
       {
+        area: "Look and feel",
+        title: "Smoother motion everywhere",
+        description:
+          "Tabs glide between sections, pages and dialogs ease in, numbers count up, loading placeholders shimmer, and a thin bar shows when a page is loading.",
+      },
+      {
         area: "Approvals",
         title: "Review and decide from the email",
         description:

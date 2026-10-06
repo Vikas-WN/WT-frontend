@@ -12,6 +12,7 @@ import {
   MODAL_PANEL_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
 import { Button } from "@/components/ui/button";
+import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import type { AttendanceBucket, AttendanceSnapshot } from "@/services/hrms.service";
 import { cn } from "@/lib/utils";
 
@@ -148,7 +149,7 @@ function StatRow({
         </span>
       </span>
       <span className="shrink-0 text-2xl font-semibold tabular-nums text-wt-text">
-        {bucket.count}
+        <AnimatedNumber value={bucket.count} />
       </span>
     </button>
   );
