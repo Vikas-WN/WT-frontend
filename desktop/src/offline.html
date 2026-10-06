@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0d12" />
+  <title>You're offline — WebTrak</title>
+  <style>
+    :root { color-scheme: light dark; --bg:#f7f8fb; --card:#fff; --text:#0b1220; --muted:#566074; --brand:#355095; --border:rgba(15,23,42,.1); }
+    @media (prefers-color-scheme: dark) { :root { --bg:#0b0d12; --card:#12151c; --text:#eef0f4; --muted:#a0a8b6; --brand:#7d9fdb; --border:rgba(255,255,255,.1); } }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100dvh; display:grid; place-items:center; padding:24px; background:var(--bg); color:var(--text);
+           font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { width:100%; max-width:380px; text-align:center; background:var(--card); border:1px solid var(--border); border-radius:24px;
+           padding:36px 28px; box-shadow:0 20px 40px -16px rgba(0,0,0,.25); animation: rise .5s cubic-bezier(.22,1,.36,1) both; }
+    .mark { width:64px; height:64px; margin:0 auto 20px; border-radius:20px; display:grid; place-items:center;
+            background: color-mix(in srgb, var(--brand) 14%, transparent); }
+    .mark svg { width:30px; height:30px; stroke:var(--brand); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .pulse { animation: pulse 2.2s ease-in-out infinite; }
+    h1 { margin:0 0 8px; font-size:20px; letter-spacing:-.01em; }
+    p { margin:0 0 24px; font-size:14px; line-height:1.55; color:var(--muted); }
+    button { font:inherit; font-weight:600; font-size:14px; padding:11px 22px; border:0; border-radius:12px; cursor:pointer;
+             background:var(--brand); color:#fff; transition: transform .15s, filter .15s; }
+    @media (prefers-color-scheme: dark) { button { color:#0a1226; } }
+    button:hover { filter:brightness(1.08); } button:active { transform:scale(.97); }
+    @keyframes rise { from { opacity:0; transform:translateY(14px) } to { opacity:1; transform:none } }
+    @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.45 } }
+    @media (prefers-reduced-motion: reduce) { * { animation:none !important } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="mark"><svg class="pulse" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 8.8a15 15 0 0 1 20 0"/><path d="M5 12.6a10 10 0 0 1 14 0"/><path d="M8.5 16.2a5 5 0 0 1 7 0"/><path d="M12 20h.01"/></svg></div>
+    <h1>You're offline</h1>
+    <p>WebTrak needs a connection to show your latest data. We'll be right here when you're back online.</p>
+    <button type="button" id="retry">Try again</button>
+  </main>
+  <script>var to = new URLSearchParams(location.search).get("to"); function go() { if (to) location.href = to; } document.getElementById("retry").addEventListener("click", go); addEventListener("online", go);</script>
+</body>
+</html>

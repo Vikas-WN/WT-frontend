@@ -1,0 +1,27 @@
+{
+  "name": "webtrak-desktop",
+  "productName": "WebTrak",
+  "version": "1.0.0",
+  "description": "WebTrak for desktop — leave, time, projects, rooms and company updates in their own window.",
+  "main": "src/main.js",
+  "author": {
+    "name": "Webknot Technologies",
+    "email": "it@webknot.in"
+  },
+  "homepage": "https://webtrak.webknot-dev.in",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "node scripts/write-config.cjs && electron .",
+    "config": "node scripts/write-config.cjs",
+    "build:mac": "node scripts/write-config.cjs && electron-builder --config electron-builder.config.cjs --mac pkg",
+    "build:win": "node scripts/write-config.cjs && electron-builder --config electron-builder.config.cjs --win nsis",
+    "build:linux": "node scripts/write-config.cjs && electron-builder --config electron-builder.config.cjs --linux deb",
+    "build:all": "node scripts/write-config.cjs && electron-builder --config electron-builder.config.cjs --mac pkg --win nsis --linux deb"
+  },
+  "devDependencies": {
+    "electron": "^37.2.0",
+    "electron-builder": "^26.0.12",
+    "pngjs": "^7.0.0"
+  }
+}
