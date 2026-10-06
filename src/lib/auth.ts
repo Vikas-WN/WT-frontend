@@ -10,6 +10,7 @@ import {
   dispatchSessionLogout,
   sessionLogoutReasonFromApiDetail,
 } from "@/lib/sessionLogoutBridge";
+import { isTransientStatus, retryTransient, type AttemptResult } from "@/utils/refreshPolicy";
 
 function sessionLogoutReasonFromApiError(error: ApiError): SessionLogoutReason {
   const payload = error.payload;
@@ -94,6 +95,17 @@ export async function fetchMe(): Promise<AuthUser | null> {
   }
 }
 
+/** Like fetchMe, but a network/server failure is thrown (not treated as "signed out"), so callers can tell the two apart. */
+async function fetchMeKeepingTransientErrors(): Promise<AuthUser | null> {
+  try {
+    const body = await apiClient.get<ApiResponse<AuthUser>>(endpoints.auth.me, { skipAuth: true, timeoutMs: 12_000 });
+    return body.data;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) return null;
+    throw error;
+  }
+}
+
 /**
  * Single-flight rotating refresh. Concurrent callers (HTTP 401 retry + AuthContext.refresh)
  * share one POST /auth/refresh so a rotated token is never spent twice.
@@ -107,10 +119,21 @@ async function rotateRefreshSession(): Promise<AuthUser | null> {
   refreshInFlight = (async () => {
     lastRefreshFailReason = null;
     try {
-      const body = await apiClient.post<ApiResponse<AuthUser>>(endpoints.auth.refresh, {
-        skipAuth: true,
+      // A hiccup (Wi-Fi reconnecting after sleep, a deploy, a busy server) is not the server refusing the session:
+      // ride it out with a few spaced retries instead of treating it as "signed out".
+      const outcome = await retryTransient<AuthUser | null>(async (): Promise<AttemptResult<AuthUser | null>> => {
+        try {
+          const body = await apiClient.post<ApiResponse<AuthUser>>(endpoints.auth.refresh, { skipAuth: true });
+          return { kind: "ok", value: body.data ?? null };
+        } catch (attemptError) {
+          if (attemptError instanceof ApiError && isTransientStatus(attemptError.status)) return { kind: "transient" };
+          if (attemptError instanceof TypeError) return { kind: "transient" };
+          throw attemptError;
+        }
       });
-      return body.data ?? null;
+      if (outcome.kind === "ok") return outcome.value;
+      if (outcome.kind === "transient") throw new ApiError("The server could not be reached.", 0);
+      return null;
     } catch (error) {
       if (error instanceof ApiError && error.status === 403) {
         const detail = apiErrorDetail(error);
@@ -134,10 +157,12 @@ async function rotateRefreshSession(): Promise<AuthUser | null> {
       // Refresh-token rotation race (or stale loser): another request may already
       // have set valid cookies. Prefer /auth/me over forcing a global logout.
       try {
-        const me = await fetchMe();
+        const me = await fetchMeKeepingTransientErrors();
         if (me) return me;
-      } catch {
-        /* fall through */
+      } catch (meError) {
+        // The check itself could not run (network/server): that is "unknown", not "refused".
+        if (meError instanceof ApiError && isTransientStatus(meError.status)) throw meError;
+        if (meError instanceof TypeError) throw meError;
       }
       lastRefreshFailReason = "server";
       return null;
@@ -171,14 +196,18 @@ export async function refreshSession(): Promise<AuthUser | null> {
 /**
  * Single-flight token refresh used by the HTTP client's reactive 401 handler.
  *
- * Returns true when the session was refreshed, false otherwise. Unlike
+ * Returns true when the session was refreshed, false when the server refused it, and "unavailable" when the server
+ * could not be reached (so nothing is known — never a reason to sign out). Unlike
  * refreshSession(), it does NOT dispatch a logout — the caller (httpClient)
  * decides what to do when refresh fails (surface the original 401 / logout).
  */
-export async function attemptTokenRefresh(): Promise<boolean> {
+export async function attemptTokenRefresh(): Promise<boolean | "unavailable"> {
   try {
     return Boolean(await rotateRefreshSession());
-  } catch {
+  } catch (error) {
+    // "unavailable": we could not reach the server — the session is untouched, so the caller must not sign out.
+    if (error instanceof ApiError && isTransientStatus(error.status)) return "unavailable";
+    if (error instanceof TypeError) return "unavailable";
     return false;
   }
 }

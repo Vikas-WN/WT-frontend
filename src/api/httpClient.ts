@@ -85,12 +85,15 @@ export function resolveClientApiBaseUrl(): string {
 
 const DEFAULT_BASE_URL = resolveClientApiBaseUrl();
 
+/** Outcome of a silent session refresh: renewed, refused by the server, or server unreachable. */
+export type RefreshResult = boolean | "unavailable";
+
 export class HttpClient {
   private readonly baseUrl: string;
   private authTokenGetter?: () => string | null | undefined;
   private onUnauthorized?: () => void;
-  private tokenRefresher?: () => Promise<boolean>;
-  private refreshInFlight: Promise<boolean> | null = null;
+  private tokenRefresher?: () => Promise<RefreshResult>;
+  private refreshInFlight: Promise<RefreshResult> | null = null;
   private requestInterceptors: RequestInterceptor[] = [];
   private responseInterceptors: ResponseInterceptor[] = [];
   private errorInterceptors: ErrorInterceptor[] = [];
@@ -109,9 +112,10 @@ export class HttpClient {
 
   /**
    * Registers the function used for reactive, silent token refresh on 401.
-   * Should resolve to true when the session was refreshed, false otherwise.
+   * Resolves to true when the session was refreshed, false when the server refused it, and "unavailable" when the
+   * server could not be reached (nothing is known about the session, so the caller must not sign out).
    */
-  setTokenRefresher(refresher: () => Promise<boolean>) {
+  setTokenRefresher(refresher: () => Promise<RefreshResult>) {
     this.tokenRefresher = refresher;
   }
 
@@ -119,11 +123,11 @@ export class HttpClient {
    * Runs at most one refresh at a time. Concurrent 401s all await the same
    * refresh promise, so a rotating refresh token is only spent once.
    */
-  private runSingleFlightRefresh(): Promise<boolean> {
+  private runSingleFlightRefresh(): Promise<RefreshResult> {
     if (!this.tokenRefresher) return Promise.resolve(false);
     if (!this.refreshInFlight) {
       this.refreshInFlight = this.tokenRefresher()
-        .catch(() => false)
+        .catch((): RefreshResult => "unavailable")
         .finally(() => {
           this.refreshInFlight = null;
         });
@@ -204,8 +208,13 @@ export class HttpClient {
       // refresh fails do we surface the 401 / dispatch logout below.
       if (response.status === 401 && !skipAuth && !__isRetry && this.tokenRefresher) {
         const refreshed = await this.runSingleFlightRefresh();
-        if (refreshed) {
+        if (refreshed === true) {
           return this.request<T>(path, { ...options, __isRetry: true });
+        }
+        if (refreshed === "unavailable") {
+          // We could not reach the server to renew the session. That is not the server saying the session ended,
+          // so fail this one request quietly (no sign-out) and let the next try renew it.
+          throw new ApiError("We couldn't reach the server just now. Check your connection and try again.", 0);
         }
       }
 

@@ -34,6 +34,19 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-06-03",
+    releasedOn: "2026-10-06",
+    title: "Fewer unexpected sign-outs",
+    highlights: [
+      {
+        area: "Signing in",
+        title: "A brief connection drop no longer signs you out",
+        description:
+          "If your Wi-Fi blinks or your laptop is just waking up, WebTrak now waits and reconnects quietly instead of ending your session. You are still signed out after 4 hours of no activity.",
+      },
+    ],
+  },
+  {
     id: "2026-10-06-02",
     releasedOn: "2026-10-06",
     title: "Approve from your email, and install WebTrak",
