@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 
-import type { KnotMood } from "@/components/mascot/Knot";
+import type { KnotAction, KnotCostume, KnotMood } from "@/components/mascot/Knot";
+import type { SeasonalThemeId } from "@/types/seasonal";
+import { burstSparks, launchRocket, throwPowder } from "@/lib/fireworks";
 import { PET_COPY, PET_LINES } from "@/constants/petCopy";
 import { fireConfetti } from "@/lib/confetti";
 import { PET_EVENT, type PetEventKind } from "@/lib/petEvents";
@@ -51,7 +53,17 @@ function worldFor(size: number): PetWorld {
  * Knot's brain: where it is, what it is doing and how it reacts. Position and animation run on a requestAnimationFrame loop that
  * writes straight to the DOM (no re-render per frame); only what the screen must *show* — mood, speech, hearts — is React state.
  */
-export function useKnotPet({ size, firstName }: { size: number; firstName: string | null }) {
+const COSTUMES: Record<SeasonalThemeId, KnotCostume> = { CRICKET: "cricket", DIWALI: "diwali", CHRISTMAS: "christmas", HOLI: "holi" };
+const SHAKE_REVERSALS = 4;
+const SHAKE_WINDOW_MS = 1_000;
+const SHAKE_STEP_PX = 14;
+const CRY_IMPACT = 1_150;
+const DIYA_MS = 14_000;
+const ROCKET_GAP_MS = 650;
+
+const pick = <T,>(items: readonly T[]): T => items[Math.floor(Math.random() * items.length)];
+
+export function useKnotPet({ size, firstName, season }: { size: number; firstName: string | null; season: SeasonalThemeId | null }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
 
@@ -73,6 +85,17 @@ export function useKnotPet({ size, firstName }: { size: number; firstName: strin
   const [align, setAlign] = useState<BubbleAlign>("center");
   const [hearts, setHearts] = useState<number[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [action, setAction] = useState<KnotAction>(null);
+  const [diya, setDiya] = useState<{ x: number } | null>(null);
+  const seasonRef = useRef<SeasonalThemeId | null>(season);
+  const nextPlayAt = useRef(0);
+  // The season-specific behaviour is defined further down; the loop and the poke handler reach it through these refs.
+  const playOnPokeRef = useRef<(double: boolean) => boolean>(() => false);
+  const playIdleRef = useRef<() => void>(() => undefined);
+  const lastRocketAt = useRef(0);
+  const lastLaughAt = useRef(0);
+  const shake = useRef({ lastX: 0, dir: 0, flips: [] as number[] });
+  const diyaTimer = useRef<number | null>(null);
   const heartId = useRef(0);
   const bubbleTimer = useRef<number | null>(null);
   const moodTimer = useRef<number | null>(null);
@@ -105,6 +128,7 @@ export function useKnotPet({ size, firstName }: { size: number; firstName: strin
     window.setTimeout(() => setHearts((h) => h.filter((id) => !ids.includes(id))), 1300);
   }, []);
 
+
   const touch = useCallback(() => {
     lastActiveAt.current = performance.now();
   }, []);
@@ -121,6 +145,137 @@ export function useKnotPet({ size, firstName }: { size: number; firstName: strin
     body.current.vy = -speed;
     mode.current = "fall";
   }, []);
+
+  // ---- seasonal play -------------------------------------------------------------------------------------------
+  const centre = useCallback(() => ({ x: body.current.x + size / 2, y: body.current.y + size / 2 }), [size]);
+
+  /** Hit a ball from the bat's side of the screen out of the park (or along the ground for a four). */
+  const hitBall = useCallback(
+    (kind: "six" | "four") => {
+      const c = centre();
+      const dir = facing.current;
+      const x0 = c.x + dir * 26;
+      const y0 = c.y - 8;
+      const x1 = dir > 0 ? window.innerWidth + 40 : -40;
+      const ball = document.createElement("div");
+      ball.setAttribute("aria-hidden", "true");
+      ball.style.cssText = "position:fixed;left:0;top:0;width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f87171,#b91c1c);box-shadow:0 0 0 1px #7f1d1d,0 2px 6px rgba(0,0,0,.3);z-index:46;pointer-events:none";
+      document.body.appendChild(ball);
+      const floor = floorY(worldFor(size)) + size - 7;
+      const height = kind === "six" ? Math.min(y0 - 30, 160 + Math.random() * 220) : 0;
+      const steps = 18;
+      const frames = Array.from({ length: steps + 1 }, (_, i) => {
+        const t = i / steps;
+        const x = x0 + (x1 - x0) * t;
+        const y =
+          kind === "six"
+            ? y0 - height * 4 * t * (1 - t) + (floor - y0) * t * t * 0.2
+            : floor - Math.abs(Math.sin(t * Math.PI * 3.2)) * 46 * (1 - t) - 2;
+        return { transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${(t * 900 * dir).toFixed(0)}deg)`, opacity: t > 0.92 ? 0 : 1 };
+      });
+      const run = ball.animate(frames, { duration: kind === "six" ? 1100 : 1300, easing: "linear" });
+      run.onfinish = () => ball.remove();
+      run.oncancel = () => ball.remove();
+    },
+    [centre, size]
+  );
+
+  const swing = useCallback((then?: () => void) => {
+    setAction("swing");
+    if (then) timers.current.push(window.setTimeout(then, 190));
+    timers.current.push(window.setTimeout(() => setAction(null), 520));
+  }, []);
+
+  const lightDiya = useCallback(() => {
+    const w = worldFor(size);
+    const side = body.current.x > w.width / 2 ? -1 : 1;
+    setDiya({ x: Math.min(Math.max(body.current.x + side * (size + 18), 8), w.width - 48) });
+    say(PET_COPY.diyaLit);
+    setMood("love", 1500);
+    if (diyaTimer.current) window.clearTimeout(diyaTimer.current);
+    diyaTimer.current = window.setTimeout(() => setDiya(null), DIYA_MS);
+  }, [say, setMood, size]);
+
+  const rocket = useCallback(() => {
+    const now = performance.now();
+    if (now - lastRocketAt.current < ROCKET_GAP_MS) return;
+    lastRocketAt.current = now;
+    const c = centre();
+    launchRocket({ x: c.x + (Math.random() - 0.5) * 36, y: body.current.y, targetY: Math.max(70, body.current.y - 260 - Math.random() * 160) });
+    say(pick(PET_COPY.cracker));
+    hop(380);
+  }, [centre, hop, say]);
+
+  /** What one poke does in each season. Returns false when the season has nothing special (so the usual hop and chat happen). */
+  const playOnPoke = useCallback((double: boolean): boolean => {
+    const c = centre();
+    switch (seasonRef.current) {
+      case "CRICKET":
+        if (double) {
+          say(PET_COPY.cricketCentury);
+          setMood("party", 2400);
+          [0, 420, 840].forEach((ms) => timers.current.push(window.setTimeout(() => swing(() => hitBall("six")), ms)));
+        } else {
+          const six = Math.random() < 0.65;
+          swing(() => hitBall(six ? "six" : "four"));
+          say(pick(six ? PET_COPY.cricketSix : PET_COPY.cricketFour));
+        }
+        return true;
+      case "DIWALI":
+        if (double) {
+          setMood("party", 2400);
+          [0, 450, 900].forEach((ms) => timers.current.push(window.setTimeout(() => { lastRocketAt.current = 0; rocket(); }, ms)));
+        } else if (!diya) {
+          lightDiya();
+          burstSparks({ x: c.x, y: c.y - size / 2, count: 24, speed: 3 });
+        } else {
+          rocket();
+        }
+        return true;
+      case "HOLI":
+        throwPowder({ x: c.x, y: c.y - 6, count: double ? 130 : 70 });
+        say(pick(PET_COPY.holi));
+        setMood(double ? "party" : "love", 1800);
+        hop(double ? 700 : 520);
+        return true;
+      case "CHRISTMAS":
+        say(pick(PET_COPY.christmasLines));
+        hop(560);
+        if (double) setMood("laugh", 1600);
+        return true;
+      default:
+        return false;
+    }
+  }, [centre, diya, hitBall, hop, lightDiya, rocket, say, setMood, size, swing]);
+
+  /** Something to do now and then when nobody is touching the pet. */
+  const playIdle = useCallback(() => {
+    const c = centre();
+    switch (seasonRef.current) {
+      case "CRICKET":
+        swing(() => hitBall(Math.random() < 0.7 ? "six" : "four"));
+        say(pick(PET_COPY.cricketNets));
+        break;
+      case "DIWALI":
+        if (!diya) lightDiya();
+        else {
+          burstSparks({ x: c.x + (Math.random() - 0.5) * 80, y: c.y - size / 2, count: 28, speed: 3.6 });
+          say(pick(PET_COPY.crackerPop));
+        }
+        break;
+      case "HOLI":
+        throwPowder({ x: c.x, y: c.y - 6, count: 40 });
+        say(pick(PET_COPY.holi));
+        break;
+      case "CHRISTMAS":
+        say(pick(PET_COPY.christmasLines));
+        hop(420);
+        break;
+      default:
+        break;
+    }
+  }, [centre, diya, hitBall, hop, lightDiya, say, size, swing]);
+
 
   const party = useCallback(() => {
     setMood("party", 2200);
@@ -141,7 +296,16 @@ export function useKnotPet({ size, firstName }: { size: number; firstName: strin
       say(PET_COPY.dizzy);
       return;
     }
-    if (recent.length >= 2 && now - recent[recent.length - 2] < DOUBLE_CLICK_MS) {
+    // Comfort a crying pet before anything else.
+    if (moodRef.current === "cry") {
+      setMood("love", 1800);
+      sprinkleHearts(3);
+      say(PET_COPY.comfort);
+      return;
+    }
+    const isDouble = recent.length >= 2 && now - recent[recent.length - 2] < DOUBLE_CLICK_MS;
+    if (playOnPokeRef.current(isDouble)) return;
+    if (isDouble) {
       party();
       return;
     }
@@ -152,6 +316,7 @@ export function useKnotPet({ size, firstName }: { size: number; firstName: strin
     }
     say(PET_LINES[Math.floor(Math.random() * PET_LINES.length)]);
   }, [hop, party, say, setMood, sprinkleHearts, touch, wake]);
+
 
   const nap = useCallback(() => {
     setMenuOpen(false);
@@ -166,6 +331,13 @@ export function useKnotPet({ size, firstName }: { size: number; firstName: strin
     wake();
     say(PET_LINES[Math.floor(Math.random() * PET_LINES.length)]);
   }, [say, touch, wake]);
+
+  // Side effect: the loop and the click handlers read the latest season and play functions through refs.
+  useEffect(() => {
+    seasonRef.current = season;
+    playOnPokeRef.current = playOnPoke;
+    playIdleRef.current = playIdle;
+  });
 
   // ---- the loop ----------------------------------------------------------------------------------------------
   useEffect(() => {
@@ -184,6 +356,7 @@ export function useKnotPet({ size, firstName }: { size: number; firstName: strin
     body.current = { x: Math.max(w.margin, w.width - size - 28), y: floorY(w), vx: 0, vy: 0 };
     lastActiveAt.current = performance.now();
     nextWanderAt.current = performance.now() + 3500;
+    nextPlayAt.current = performance.now() + 7000;
     ready.current = true;
     place();
 
@@ -196,10 +369,16 @@ export function useKnotPet({ size, firstName }: { size: number; firstName: strin
       const ww = world();
 
       if (mode.current === "fall") {
+        const impact = body.current.vy;
         const r = stepFalling(body.current, dt, ww);
-        const landed = body.current.vy > 300 && r.body.y >= floorY(ww) - 0.5;
+        const landed = impact > 300 && r.body.y >= floorY(ww) - 0.5;
         body.current = r.body;
         if (landed) squashUntil.current = now + 140;
+        // Christmas: a hard landing hurts.
+        if (landed && impact > CRY_IMPACT && seasonRef.current === "CHRISTMAS" && moodRef.current !== "cry") {
+          setMood("cry", 3400);
+          say(PET_COPY.cry);
+        }
         if (r.resting) {
           mode.current = "idle";
           nextWanderAt.current = now + 2500 + Math.random() * 3000;
@@ -219,6 +398,9 @@ export function useKnotPet({ size, firstName }: { size: number; firstName: strin
         } else if (!reducedMotion() && now > nextWanderAt.current && moodRef.current === "hello") {
           target.current = pickWanderTarget(body.current.x, ww, Math.random);
           mode.current = "walk";
+        } else if (!reducedMotion() && seasonRef.current && now > nextPlayAt.current && moodRef.current === "hello") {
+          nextPlayAt.current = now + 14_000 + Math.random() * 18_000;
+          playIdleRef.current();
         }
       }
       place();
@@ -306,6 +488,7 @@ export function useKnotPet({ size, firstName }: { size: number; firstName: strin
       allTimers.forEach((t) => window.clearTimeout(t));
       if (bubbleTimer.current) window.clearTimeout(bubbleTimer.current);
       if (moodTimer.current) window.clearTimeout(moodTimer.current);
+      if (diyaTimer.current) window.clearTimeout(diyaTimer.current);
     };
     // The loop is built once per pet size; everything it needs changes through refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -320,7 +503,11 @@ export function useKnotPet({ size, firstName }: { size: number; firstName: strin
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* some browsers refuse capture for synthetic or already-finished pointers; dragging still works while the pointer is over the pet */
+    }
     touch();
     setMenuOpen(false);
     const wasAsleep = mode.current === "sleep";
@@ -359,12 +546,32 @@ export function useKnotPet({ size, firstName }: { size: number; firstName: strin
     if (!d.moved) {
       d.moved = true;
       clearHold();
-      setMood("held");
+      if (moodRef.current !== "laugh") setMood("held");
+      shake.current = { lastX: e.clientX, dir: 0, flips: [] };
     }
     const w = worldFor(size);
     body.current.x = clampX(e.clientX - d.offX, w);
     body.current.y = Math.min(Math.max(0, e.clientY - d.offY), floorY(w));
     d.samples.push({ x: e.clientX, y: e.clientY, t: performance.now() });
+    // Christmas: shake it and it laughs (the pointer flips sideways direction several times quickly).
+    if (seasonRef.current === "CHRISTMAS") {
+      const sh = shake.current;
+      const dx = e.clientX - sh.lastX;
+      if (Math.abs(dx) >= SHAKE_STEP_PX) {
+        const dir = dx > 0 ? 1 : -1;
+        const nowMs = performance.now();
+        if (sh.dir !== 0 && dir !== sh.dir) sh.flips.push(nowMs);
+        sh.dir = dir;
+        sh.lastX = e.clientX;
+        sh.flips = sh.flips.filter((t) => nowMs - t < SHAKE_WINDOW_MS);
+        if (sh.flips.length >= SHAKE_REVERSALS && nowMs - lastLaughAt.current > 3500) {
+          lastLaughAt.current = nowMs;
+          sh.flips = [];
+          setMood("laugh", 2600);
+          say(PET_COPY.laugh);
+        }
+      }
+    }
     if (d.samples.length > 12) d.samples.shift();
   };
 
@@ -390,8 +597,8 @@ export function useKnotPet({ size, firstName }: { size: number; firstName: strin
     body.current.vx = v.vx;
     body.current.vy = v.vy;
     mode.current = "fall";
-    setMood("hello");
-    if (Math.hypot(v.vx, v.vy) > 900) say(PET_COPY.thrown);
+    if (moodRef.current !== "laugh") setMood("hello");
+    if (Math.hypot(v.vx, v.vy) > 900 && seasonRef.current !== "CHRISTMAS") say(PET_COPY.thrown);
   };
 
   const onContextMenu = (e: React.MouseEvent) => {
@@ -417,6 +624,9 @@ export function useKnotPet({ size, firstName }: { size: number; firstName: strin
     hearts,
     menuOpen,
     setMenuOpen,
+    action,
+    diya,
+    costume: season ? COSTUMES[season] : null,
     asleep: mood === "sleep",
     nap,
     talk,
