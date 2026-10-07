@@ -34,9 +34,10 @@ export function ReferralPageClient() {
 
   const debouncedQ = useDebouncedValue(searchQuery, 300);
 
-  const prevQ = useRef(debouncedQ);
-  if (prevQ.current !== debouncedQ) {
-    prevQ.current = debouncedQ;
+  // Back to page 1 when the search changes (React's "adjust state while rendering" pattern, no ref needed).
+  const [prevQ, setPrevQ] = useState(debouncedQ);
+  if (prevQ !== debouncedQ) {
+    setPrevQ(debouncedQ);
     setPage(1);
   }
 

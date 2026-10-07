@@ -27,7 +27,10 @@ export function useManagerPortfolioEmails(enabled: boolean) {
   const [teamEmails, setTeamEmails] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const enabledRef = useRef(enabled);
-  enabledRef.current = enabled;
+  // Keep the latest value readable from callbacks; a ref must not be written while rendering.
+  useEffect(() => {
+    enabledRef.current = enabled;
+  });
   const fetchedForSessionRef = useRef(false);
 
   const refresh = useCallback(async () => {

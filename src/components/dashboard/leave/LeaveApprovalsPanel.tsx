@@ -100,14 +100,20 @@ export function LeaveApprovalsPanel({
     requestType: unknown;
   } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
-  const [decisionsVersion, setDecisionsVersion] = useState(0);
-  const decisionsRef = useRef<
-    Map<string, { status: UserRequestStatusValue; reason?: string }>
-  >(new Map());
+  // Decisions made here that the server list has not caught up with yet (replaced, never mutated).
+  const [decisions, setDecisions] = useState<
+    ReadonlyMap<string, { status: UserRequestStatusValue; reason?: string }>
+  >(() => new Map());
+  const forgetDecision = (requestId: string) =>
+    setDecisions((prev) => {
+      const next = new Map(prev);
+      next.delete(requestId);
+      return next;
+    });
 
   const displayRows = useMemo(
-    () => applyLeaveTeamRequestDecisions(inboxQ.rows, decisionsRef.current, actorEmail),
-    [inboxQ.rows, decisionsVersion, inboxQ.dataUpdatedAt, actorEmail]
+    () => applyLeaveTeamRequestDecisions(inboxQ.rows, decisions, actorEmail),
+    [inboxQ.rows, decisions, inboxQ.dataUpdatedAt, actorEmail]
   );
 
   const filteredRows = useMemo(() => {
@@ -136,7 +142,7 @@ export function LeaveApprovalsPanel({
   }, [displayRows, search]);
 
   const pagination = useClientPagination(filteredRows, {
-    resetKeys: [search, inboxQ.dataUpdatedAt, decisionsVersion],
+    resetKeys: [search, inboxQ.dataUpdatedAt, decisions],
   });
 
   const pendingCount = useMemo(
@@ -150,8 +156,7 @@ export function LeaveApprovalsPanel({
     status: UserRequestStatusValue,
     reason?: string
   ) {
-    decisionsRef.current.set(requestId, { status, reason });
-    setDecisionsVersion((version) => version + 1);
+    setDecisions((prev) => new Map(prev).set(requestId, { status, reason }));
     queryClient.setQueryData(
       primaryManagerInboxQueryKey(actorEmail.trim()),
       (prev: Array<Record<string, unknown>> | undefined) => {
@@ -172,13 +177,12 @@ export function LeaveApprovalsPanel({
 
   /** Drop a row the backend reports as deleted, so its actions disappear at once. */
   function dropDeletedRow(requestId: string) {
-    decisionsRef.current.delete(requestId);
+    forgetDecision(requestId);
     queryClient.setQueryData(
       primaryManagerInboxQueryKey(actorEmail.trim()),
       (prev: Array<Record<string, unknown>> | undefined) =>
         prev ? prev.filter((row) => requestIdFromRow(row) !== requestId) : prev
     );
-    setDecisionsVersion((version) => version + 1);
   }
 
   async function submitDecision(
@@ -199,8 +203,7 @@ export function LeaveApprovalsPanel({
       } else if (isAlreadyDecidedUserRequestError(error)) {
         // Another reviewer decided it first. Pull the server state so this row stops
         // offering actions that can only fail.
-        decisionsRef.current.delete(requestId);
-        setDecisionsVersion((version) => version + 1);
+        forgetDecision(requestId);
         void refreshInbox();
       }
       throw error;
@@ -424,8 +427,7 @@ export function LeaveApprovalsPanel({
                                 actorEmail={actorEmail}
                                 isHrOrAdmin={isHrOrAdmin}
                                 onChanged={async () => {
-                                  decisionsRef.current.delete(requestId);
-                                  setDecisionsVersion((version) => version + 1);
+                                  forgetDecision(requestId);
                                   await refreshInbox();
                                 }}
                                 fallback={<span className="text-xs text-wt-text-muted">—</span>}

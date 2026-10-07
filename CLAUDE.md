@@ -7,7 +7,7 @@ WebTrak frontend: Next.js 16 (App Router, Turbopack dev), React 19, TypeScript s
 ## Commands (pnpm only)
 - `pnpm dev` — dev server on :3000
 - `pnpm build` — production build (only step that currently type-checks)
-- `pnpm lint` — ESLint flat config (a few legacy errors exist; not enforced)
+- `pnpm lint` — ESLint flat config (0 errors; ~80 `react-hooks/set-state-in-effect` warnings are known and tolerated, see `eslint.config.mjs`)
 - Typecheck: `pnpm exec tsc --noEmit`
 - No test framework. Verify changes with typecheck + lint + build, and by running the app.
 

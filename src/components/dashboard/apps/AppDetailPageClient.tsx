@@ -226,7 +226,7 @@ export function AppDetailPageClient({ appId }: { appId: number }) {
       ) : (
         <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm">
           <p className="mb-3 text-sm text-wt-text-muted">
-            Endpoints check the caller's roles — grant only what this key needs. ROLE_ADMIN is not assignable to keys.
+            Endpoints check the caller&apos;s roles — grant only what this key needs. ROLE_ADMIN is not assignable to keys.
           </p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {ASSIGNABLE_APP_ROLES.map((role) => {

@@ -109,8 +109,11 @@ export function OverviewPageClient() {
   } | null>(null);
   const invitedListFromDateRef = useRef(invitedListFromDate);
   const invitedListToDateRef = useRef(invitedListToDate);
-  invitedListFromDateRef.current = invitedListFromDate;
-  invitedListToDateRef.current = invitedListToDate;
+  // Keep the latest value readable from callbacks; a ref must not be written while rendering.
+  useEffect(() => {
+    invitedListFromDateRef.current = invitedListFromDate;
+    invitedListToDateRef.current = invitedListToDate;
+  });
   const [allocations, setAllocations] = useState<Array<Record<string, unknown>>>([]);
   const [allocationForecastRows, setAllocationForecastRows] = useState<Array<Record<string, unknown>>>([]);
   const allocationRecordsRef = useRef<HTMLDivElement>(null);
@@ -817,90 +820,6 @@ export function OverviewPageClient() {
     },
     [runDashboardAction, refresh]
   );
-
-  function normalizeAssignedProjects(rows: Array<Record<string, unknown>>) {
-    return rows.map((row) => {
-      const isManagerRaw = row.is_manager ?? null;
-      const isManager =
-        isManagerFlagTruthy(isManagerRaw) || isManagerRoleLabel(row.role ?? row.designation)
-          ? "Yes"
-          : "No";
-
-      return {
-        project_code: row.project_code ?? row.projectCode ?? row.code ?? "—",
-        project_name: row.project_name ?? row.projectName ?? row.name ?? "—",
-        project_type: row.project_type ?? row.projectType ?? "—",
-        role: row.role ?? row.designation ?? "—",
-        allocated_hours: row.allocated_hours ?? row.allocatedHours ?? row.hours ?? "—",
-        billing_status: row.billing_status ?? row.billingStatus ?? "—",
-        is_manager: isManager,
-        start_date: row.start_date ?? row.startDate ?? "—",
-        end_date: row.end_date ?? row.endDate ?? "—",
-      } as Record<string, unknown>;
-    });
-  }
-
-  function mergeProjectAndAllocationData(
-    projectsRows: Array<Record<string, unknown>>,
-    allocationRows: Array<Record<string, unknown>>
-  ) {
-    const allocationByProject = allocationRows.reduce<Record<string, Record<string, unknown>>>(
-      (acc, row) => {
-        const key = String(row.project_code ?? row.projectCode ?? "").trim();
-        if (!key) return acc;
-        const existing = acc[key];
-        if (!existing) {
-          acc[key] = row;
-          return acc;
-        }
-        const existingIsManager =
-          isManagerFlagTruthy(existing.is_manager) ||
-          isManagerRoleLabel(existing.role ?? existing.designation);
-        const nextIsManager =
-          isManagerFlagTruthy(row.is_manager) ||
-          isManagerRoleLabel(row.role ?? row.designation);
-        // Prefer a manager allocation row when multiple users share a project code.
-        acc[key] = nextIsManager && !existingIsManager ? row : existing;
-        return acc;
-      },
-      {}
-    );
-
-    return projectsRows.map((row) => {
-      const projectKey = String(row.project_code ?? "").trim();
-      const allocation = allocationByProject[projectKey] ?? {};
-      return {
-        ...row,
-        role: row.role === "—" ? allocation.role ?? allocation.designation ?? "—" : row.role,
-        allocated_hours:
-          row.allocated_hours === "—"
-            ? allocation.allocated_hours ?? allocation.allocatedHours ?? allocation.hours ?? "—"
-            : row.allocated_hours,
-        billing_status:
-          row.billing_status === "—"
-            ? allocation.billing_status ?? allocation.billingStatus ?? "—"
-            : row.billing_status,
-        is_manager:
-          row.is_manager === "No" &&
-          (allocation.is_manager !== undefined || isManagerRoleLabel(allocation.role ?? allocation.designation))
-            ? (() => {
-                const raw = allocation.is_manager;
-                return isManagerFlagTruthy(raw) || isManagerRoleLabel(allocation.role ?? allocation.designation);
-              })()
-              ? "Yes"
-              : "No"
-            : row.is_manager,
-        start_date:
-          row.start_date === "—"
-            ? allocation.start_date ?? allocation.startDate ?? "—"
-            : row.start_date,
-        end_date:
-          row.end_date === "—"
-            ? allocation.end_date ?? allocation.endDate ?? "—"
-            : row.end_date,
-      } as Record<string, unknown>;
-    });
-  }
 
   function managerProjectCode(row: Record<string, unknown>) {
     const nestedProject = row.project as Record<string, unknown> | undefined;

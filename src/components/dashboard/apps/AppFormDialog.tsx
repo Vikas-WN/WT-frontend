@@ -126,7 +126,7 @@ export function AppFormDialog({
           <div className="space-y-2">
             <Label>Roles</Label>
             <p className="text-xs text-wt-text-muted">
-              Endpoints check the caller's roles — grant only what this key needs. ROLE_ADMIN is not assignable to keys.
+              Endpoints check the caller&apos;s roles — grant only what this key needs. ROLE_ADMIN is not assignable to keys.
             </p>
             <div className="grid grid-cols-2 gap-2">
               {ASSIGNABLE_APP_ROLES.map((role) => {

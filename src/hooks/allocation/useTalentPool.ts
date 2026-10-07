@@ -41,7 +41,10 @@ export function useTalentPoolTables(enabled: boolean) {
   const [pages, setPages] = useState<TalentPoolPages>(DEFAULT_PAGES);
   const [pageSizes, setPageSizes] = useState<TalentPoolPageSizes>(DEFAULT_PAGE_SIZES);
   const pageSizesRef = useRef(pageSizes);
-  pageSizesRef.current = pageSizes;
+  // Keep the latest value readable from callbacks; a ref must not be written while rendering.
+  useEffect(() => {
+    pageSizesRef.current = pageSizes;
+  });
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);

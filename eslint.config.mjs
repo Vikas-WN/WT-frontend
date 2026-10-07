@@ -15,6 +15,15 @@ const eslintConfig = defineConfig([
       "react-hooks/set-state-in-effect": "off",
     },
   },
+  {
+    rules: {
+      // The app loads data in effects and sets a loading flag first ("load on mount"). The React Compiler lint flags
+      // every such effect (~80 across the app). They are not runtime bugs, and rewriting each into a query or an event
+      // handler is its own behaviour-changing refactor, so it stays visible as a warning instead of failing lint.
+      // New code should not add more: prefer TanStack Query for loading and derive state instead of copying it.
+      "react-hooks/set-state-in-effect": "warn",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
