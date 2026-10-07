@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { Knot } from "@/components/mascot/Knot";
 import { PET_COPY, PET_NAME } from "@/constants/petCopy";
 import { useAuth } from "@/context/AuthContext";
+import { useActiveSeason } from "@/hooks/seasonal/useActiveSeason";
+import type { SeasonalThemeId } from "@/types/seasonal";
 import { useKnotPet } from "@/hooks/pet/useKnotPet";
 import { usePetEnabled } from "@/lib/petPreference";
 import { cn } from "@/lib/utils";
@@ -12,13 +14,14 @@ import { cn } from "@/lib/utils";
 const SIZE_DESKTOP = 72;
 const SIZE_PHONE = 58;
 
-function Pet({ size, firstName, onHide }: { size: number; firstName: string | null; onHide: () => void }) {
+function Pet({ size, firstName, season, onHide }: { size: number; firstName: string | null; season: SeasonalThemeId | null; onHide: () => void }) {
   // The refs are taken out of the hook's result first so the rest (plain state and handlers) can be read freely during render.
-  const { rootRef, innerRef, ...pet } = useKnotPet({ size, firstName });
+  const { rootRef, innerRef, ...pet } = useKnotPet({ size, firstName, season });
   const bubbleSide =
     pet.align === "left" ? "left-0 items-start" : pet.align === "right" ? "right-0 items-end" : "left-1/2 -translate-x-1/2 items-center";
 
   return (
+    <>
     <div
       ref={rootRef}
       className="wt-pet fixed left-0 top-0 z-[45] touch-none select-none"
@@ -48,7 +51,7 @@ function Pet({ size, firstName, onHide }: { size: number; firstName: string | nu
       ))}
 
       <div ref={innerRef} className="wt-pet-inner h-full w-full" style={{ transformOrigin: "50% 100%" }}>
-        <Knot mood={pet.mood} size={size} animate={pet.mood !== "held"} />
+        <Knot mood={pet.mood} size={size} animate={pet.mood !== "held"} costume={pet.costume} action={pet.action} />
       </div>
 
       {pet.menuOpen ? (
@@ -75,6 +78,23 @@ function Pet({ size, firstName, onHide }: { size: number; firstName: string | nu
         </div>
       ) : null}
     </div>
+    {pet.diya ? (
+        <div
+          aria-hidden
+          className="wt-pet-diya pointer-events-none fixed z-[44]"
+          style={{ left: pet.diya.x, bottom: 12 }}
+        >
+          <svg width="44" height="36" viewBox="0 0 84 64">
+            <ellipse className="wt-deco-glow" cx="42" cy="28" rx="34" ry="24" fill="#fbbf24" opacity=".35" />
+            <path className="wt-deco-flame" d="M42 4 C 33 18 32 27 42 33 C 52 27 51 18 42 4 Z" fill="#f97316" />
+            <path className="wt-deco-flame" d="M42 14 C 38 21 38 27 42 30 C 46 27 46 21 42 14 Z" fill="#fde68a" />
+            <path d="M8 36 C 10 54 26 60 42 60 C 58 60 74 54 76 36 C 62 42 22 42 8 36 Z" fill="#c2410c" />
+            <path d="M8 36 C 22 42 62 42 76 36 C 70 31 14 31 8 36 Z" fill="#ea580c" />
+          </svg>
+        </div>
+      ) : null}
+
+    </>
   );
 }
 
@@ -83,6 +103,7 @@ function Pet({ size, firstName, onHide }: { size: number; firstName: string | nu
 export function KnotPet() {
   const { user } = useAuth();
   const [enabled, setEnabled] = usePetEnabled();
+  const season = useActiveSeason();
   // UI state: render only after mount — the pet is positioned from the real window size, which the server does not know.
   const [mounted, setMounted] = useState(false);
   const [size, setSize] = useState(SIZE_DESKTOP);
@@ -98,7 +119,7 @@ export function KnotPet() {
 
   if (!mounted || !enabled) return null;
   const firstName = (user?.name ?? "").trim().split(/\s+/)[0] || null;
-  return <Pet key={size} size={size} firstName={firstName} onHide={() => setEnabled(false)} />;
+  return <Pet key={size} size={size} firstName={firstName} season={season} onHide={() => setEnabled(false)} />;
 }
 
 export { Pet as KnotPetView, PET_NAME };

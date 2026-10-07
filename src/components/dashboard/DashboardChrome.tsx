@@ -447,7 +447,9 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       <Suspense fallback={null}>
         <SeasonalHost />
       </Suspense>
-      <KnotPet />
+      <Suspense fallback={null}>
+        <KnotPet />
+      </Suspense>
       <DashboardSidebar
         visibleNavigation={visibleNavigation}
         activeSection={activeSection}

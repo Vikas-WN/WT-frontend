@@ -34,6 +34,19 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-07-08",
+    releasedOn: "2026-10-07",
+    title: "Knot dresses up and plays for the festivals",
+    highlights: [
+      {
+        area: "Look & feel",
+        title: "Cricket, Diwali, Christmas and Holi games",
+        description:
+          "During a festive look Knot gets a costume and plays: it hits sixes in cricket season, lights a diya and sets off crackers at Diwali, throws colour at Holi, and as Santa it laughs when shaken and cries when dropped from a height.",
+      },
+    ],
+  },
+  {
     id: "2026-10-07-07",
     releasedOn: "2026-10-07",
     title: "Optional holidays show up again",
