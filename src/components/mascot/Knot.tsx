@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-export type KnotMood = "hello" | "loading" | "oops" | "lost" | "party";
+export type KnotMood = "hello" | "loading" | "oops" | "lost" | "party" | "sleep" | "held" | "love" | "dizzy";
 
 const BRAND = "var(--wt-brand, #355095)";
 const KNOT = "#f5c451";
@@ -37,6 +37,28 @@ function Face({ mood }: { mood: KnotMood }) {
           </g>
         </>
       );
+    case "sleep":
+      return (
+        <>
+          <path d="M42 62 q6 3 12 0" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />
+          <g className="wt-knot-zzz" fill="#cbd5e1" fontFamily="system-ui, sans-serif" fontWeight="700">
+            <text x="66" y="30" fontSize="11">z</text>
+            <text x="74" y="20" fontSize="14">Z</text>
+          </g>
+        </>
+      );
+    case "held":
+      return <ellipse cx="48" cy="63" rx="4.2" ry="5.2" fill="#fff" />;
+    case "love":
+      return (
+        <>
+          <path d="M37 59 q11 13 22 0" fill="#fff" stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
+          <circle cx="29" cy="58" r="4" fill="#fb7185" opacity=".55" />
+          <circle cx="67" cy="58" r="4" fill="#fb7185" opacity=".55" />
+        </>
+      );
+    case "dizzy":
+      return <path d="M38 63 q4 -5 8 0 t8 0 t8 0" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />;
     default:
       return <path d="M37 59 q11 12 22 0" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" />;
   }
@@ -80,6 +102,8 @@ export function Knot({
         .wt-knot-on .wt-knot-drop{animation:wt-knot-drip 1.6s ease-in infinite}
         .wt-knot-on .wt-knot-spark{transform-box:fill-box;transform-origin:center;animation:wt-knot-twinkle 1.2s ease-in-out infinite}
         .wt-knot-on.wt-knot-loading .wt-knot-loop{transform-box:fill-box;transform-origin:center;animation:wt-knot-wiggle 1.4s ease-in-out infinite}
+        .wt-knot-on .wt-knot-zzz{animation:wt-knot-zzz 2.4s ease-in-out infinite}
+        @keyframes wt-knot-zzz{0%,100%{opacity:.35;transform:translateY(2px)}50%{opacity:1;transform:translateY(-3px)}}
         @keyframes wt-knot-bob{0%,100%{transform:translateY(0) scale(1,1)}50%{transform:translateY(-4px) scale(1.02,.98)}}
         @keyframes wt-knot-wobble{0%,100%{transform:rotate(0)}25%{transform:rotate(-5deg)}75%{transform:rotate(5deg)}}
         @keyframes wt-knot-blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
@@ -103,15 +127,34 @@ export function Knot({
             <ellipse cx="58" cy="19" rx="10" ry="6" transform="rotate(24 58 19)" fill="none" stroke={KNOT} strokeWidth="4" />
           </g>
           <circle cx="48" cy="22" r="5" fill={KNOT} />
-          {/* eyes */}
-          <g>
-            <ellipse className="wt-knot-eye" cx="37" cy="48" rx="6" ry="7" fill="#fff" />
-            <ellipse className="wt-knot-eye" cx="59" cy="48" rx="6" ry="7" fill="#fff" />
-            <circle cx={38 + looking} cy="49" r="3" fill="#1f2a44" />
-            <circle cx={60 + looking} cy="49" r="3" fill="#1f2a44" />
-            <circle cx={39 + looking} cy="47.5" r="1" fill="#fff" />
-            <circle cx={61 + looking} cy="47.5" r="1" fill="#fff" />
-          </g>
+          {/* eyes — closed, hearts or crosses for some moods; otherwise they look where `--wt-knot-look-*` points (the pet follows the cursor) */}
+          {mood === "sleep" ? (
+            <g fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round">
+              <path d="M31 49 q6 5 12 0" />
+              <path d="M53 49 q6 5 12 0" />
+            </g>
+          ) : mood === "love" ? (
+            <g fill="#fb7185">
+              <path d="M37 54 c-9 -6 -9 -13 -3 -13 c2 0 3 1 3 3 c0 -2 1 -3 3 -3 c6 0 6 7 -3 13z" />
+              <path d="M59 54 c-9 -6 -9 -13 -3 -13 c2 0 3 1 3 3 c0 -2 1 -3 3 -3 c6 0 6 7 -3 13z" />
+            </g>
+          ) : mood === "dizzy" ? (
+            <g stroke="#fff" strokeWidth="2.6" strokeLinecap="round">
+              <path d="M32 43 l10 10 M42 43 l-10 10" />
+              <path d="M54 43 l10 10 M64 43 l-10 10" />
+            </g>
+          ) : (
+            <g>
+              <ellipse className="wt-knot-eye" cx="37" cy="48" rx="6" ry={mood === "held" ? 8 : 7} fill="#fff" />
+              <ellipse className="wt-knot-eye" cx="59" cy="48" rx="6" ry={mood === "held" ? 8 : 7} fill="#fff" />
+              <g style={{ transform: "translate(var(--wt-knot-look-x, 0px), var(--wt-knot-look-y, 0px))" }}>
+                <circle cx={38 + looking} cy="49" r="3" fill="#1f2a44" />
+                <circle cx={60 + looking} cy="49" r="3" fill="#1f2a44" />
+                <circle cx={39 + looking} cy="47.5" r="1" fill="#fff" />
+                <circle cx={61 + looking} cy="47.5" r="1" fill="#fff" />
+              </g>
+            </g>
+          )}
           <Face mood={mood} />
         </g>
       </g>

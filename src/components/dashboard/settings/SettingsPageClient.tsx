@@ -1,5 +1,6 @@
 "use client";
 
+import { usePetEnabled } from "@/lib/petPreference";
 import { configureFeedback, giveFeedback } from "@/lib/feedback";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -110,6 +111,7 @@ function PreferenceToggle({
 export function SettingsPageClient() {
   const { preferences, updatePreferences, isSaving, isLoading } = useUserPreferences();
   const { user } = useAuth();
+  const [petEnabled, setPetEnabled] = usePetEnabled();
   const [timezone, setTimezone] = useState(preferences.timezone);
   const [theme, setTheme] = useState(preferences.theme);
   const [density, setDensity] = useState(preferences.density);
@@ -340,6 +342,20 @@ export function SettingsPageClient() {
                     className="size-4 accent-[var(--wt-brand)]"
                     checked={festiveLook}
                     onChange={(e) => setFestiveLook(e.target.checked)}
+                  />
+                </label>
+                <label className="mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-3 py-3 dark:bg-wt-surface-3">
+                  <span>
+                    <span className="block text-sm font-medium text-wt-text">Knot, your desk pet</span>
+                    <span className="block text-xs text-wt-text-muted">
+                      A little companion that wanders the screen. Drag it, poke it, pet it — right-click for options. Applies to this browser.
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-[var(--wt-brand)]"
+                    checked={petEnabled}
+                    onChange={(e) => setPetEnabled(e.target.checked)}
                   />
                 </label>
                 <label className="mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-3 py-3 dark:bg-wt-surface-3">

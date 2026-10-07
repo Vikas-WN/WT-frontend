@@ -8,6 +8,8 @@
  * never break the action it accompanies.
  */
 
+import { emitPetEvent } from "@/lib/petEvents";
+
 export type FeedbackKind = "approve" | "reject" | "undo" | "success";
 
 type FeedbackSettings = { sound: boolean; haptic: boolean };
@@ -78,6 +80,8 @@ function playSound(kind: FeedbackKind): void {
 /** Give the feedback that goes with an action, if the person asked for it. Safe to call anywhere, any time. */
 export function giveFeedback(kind: FeedbackKind): void {
   if (typeof window === "undefined") return;
+  // Knot, the pet, reacts whether or not the person wants sounds.
+  emitPetEvent(kind);
   try {
     if (settings.sound && !prefersReducedMotion()) playSound(kind);
     if (settings.haptic && typeof navigator.vibrate === "function") navigator.vibrate(BUZZ[kind]);

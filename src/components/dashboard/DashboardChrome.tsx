@@ -1,5 +1,6 @@
 "use client";
 
+import { KnotPet } from "@/components/mascot/KnotPet";
 import { SeasonalHost } from "@/components/seasonal/SeasonalHost";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -446,6 +447,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       <Suspense fallback={null}>
         <SeasonalHost />
       </Suspense>
+      <KnotPet />
       <DashboardSidebar
         visibleNavigation={visibleNavigation}
         activeSection={activeSection}
