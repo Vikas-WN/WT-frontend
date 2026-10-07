@@ -3,7 +3,6 @@ import { isLinodeObjectStorageConfigured } from "@/lib/linodeObjectStorage";
 import { requireSession } from "@/lib/requireSession";
 import { proxyUpstreamApiRequest } from "@/lib/serverApi";
 import {
-  deleteHolidayCalendarObjectsForYear,
   getHolidayCalendarObjectForYear,
   holidayCalendarStorageUnavailableMessage,
 } from "@/lib/holidayCalendarStorageServer";
@@ -95,17 +94,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Invalid year." }, { status: 400 });
   }
 
-  if (!isLinodeObjectStorageConfigured()) {
-    return proxyToBackend(request, yearRaw);
-  }
-
-  try {
-    await deleteHolidayCalendarObjectsForYear(year);
-    return NextResponse.json({
-      message: "Holiday calendar files deleted",
-      data: { year },
-    });
-  } catch (error) {
-    return storageUnavailableResponse(error);
-  }
+  // Deletes always go through the backend, which checks the caller's role. This handler used to delete from the bucket
+  // itself after only checking that a session cookie existed, so a made-up cookie was enough to wipe a year's calendar.
+  return proxyToBackend(request, yearRaw);
 }

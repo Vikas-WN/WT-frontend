@@ -34,6 +34,19 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-07-02",
+    releasedOn: "2026-10-07",
+    title: "Your documents are now kept safely",
+    highlights: [
+      {
+        area: "Documents",
+        title: "Uploaded files can be opened again",
+        description:
+          "Policies, signed copies, training material and assessment files, onboarding documents and referral resumes are now stored in secure file storage, so they stay available after updates and open with one click. Only the people who should see a file can open it.",
+      },
+    ],
+  },
+  {
     id: "2026-10-07-01",
     releasedOn: "2026-10-07",
     title: "Changed your mind? Undo and cancel for leave and requests",

@@ -1,5 +1,7 @@
 "use client";
 
+import { StoredDocumentLink } from "@/components/dashboard/ui/StoredDocumentLink";
+
 import { Button } from "@/components/ui/button";
 import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
@@ -262,6 +264,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
     () =>
       (materialsQ.data ?? []).map((row) => ({
         ...row,
+        material_url: <StoredDocumentLink value={row.material_url} />,
         visibility: <MaterialVisibilityBadge value={row.visibility} />,
       })),
     [materialsQ.data]
@@ -581,7 +584,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
           <DataTable
             title="List of assessments"
             columns={["name", "description", "file_url", "weight_percent"]}
-            rows={assessmentsQ.data ?? []}
+            rows={(assessmentsQ.data ?? []).map((row) => ({ ...row, file_url: <StoredDocumentLink value={row.file_url} /> }))}
             emptyLabel="No assessments."
             sortOptions={TITLE_SORT_OPTIONS}
           />

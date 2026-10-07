@@ -1,5 +1,7 @@
 "use client";
 
+import { StoredDocumentLink } from "@/components/dashboard/ui/StoredDocumentLink";
+
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -88,7 +90,7 @@ export function AssessmentsPageClient() {
         <DataTable
           title="List of assessments"
           columns={["name", "description", "file_url", "weight_percent"]}
-          rows={assessmentsQ.data ?? []}
+          rows={(assessmentsQ.data ?? []).map((row) => ({ ...row, file_url: <StoredDocumentLink value={row.file_url} /> }))}
           emptyLabel="No assessments."
           sortOptions={TITLE_SORT_OPTIONS}
         />
