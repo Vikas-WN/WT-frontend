@@ -1,5 +1,6 @@
 "use client";
 
+import { TelemetryHost } from "@/components/telemetry/TelemetryHost";
 import { KnotPet } from "@/components/mascot/KnotPet";
 import { SeasonalHost } from "@/components/seasonal/SeasonalHost";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -449,6 +450,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
       </Suspense>
       <Suspense fallback={null}>
         <KnotPet />
+      <TelemetryHost />
       </Suspense>
       <DashboardSidebar
         visibleNavigation={visibleNavigation}

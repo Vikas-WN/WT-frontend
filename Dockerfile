@@ -32,6 +32,10 @@ COPY . .
 # Disable telemetry
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Release label shown in error reports and logs (e.g. the git SHA): docker build --build-arg NEXT_PUBLIC_APP_RELEASE=$(git rev-parse --short HEAD)
+ARG NEXT_PUBLIC_APP_RELEASE=dev
+ENV NEXT_PUBLIC_APP_RELEASE=$NEXT_PUBLIC_APP_RELEASE
+
 # Build the application
 RUN pnpm build
 
@@ -45,6 +49,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
+ARG NEXT_PUBLIC_APP_RELEASE=dev
+ENV NEXT_PUBLIC_APP_RELEASE=$NEXT_PUBLIC_APP_RELEASE
 # Set at container runtime (not build time): API_BASE_URL=http://<backend-host>:8080
 
 # next.config.ts sets `output: "standalone"`: the build traces the actual

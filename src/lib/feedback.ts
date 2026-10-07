@@ -8,6 +8,7 @@
  * never break the action it accompanies.
  */
 
+import { trackFeature } from "@/lib/telemetry/client";
 import { emitPetEvent } from "@/lib/petEvents";
 
 export type FeedbackKind = "approve" | "reject" | "undo" | "success";
@@ -82,6 +83,7 @@ export function giveFeedback(kind: FeedbackKind): void {
   if (typeof window === "undefined") return;
   // Knot, the pet, reacts whether or not the person wants sounds.
   emitPetEvent(kind);
+  trackFeature(`approval_${kind}`);
   try {
     if (settings.sound && !prefersReducedMotion()) playSound(kind);
     if (settings.haptic && typeof navigator.vibrate === "function") navigator.vibrate(BUZZ[kind]);
