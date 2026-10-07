@@ -351,6 +351,20 @@ export interface CycleKpiSummary {
   manager_rating_display: string | null;
   admin_rating_average: number | null;
   admin_rating_display: string | null;
+  /** Months of this cycle that have a final score, and their average — the cycle's single six-month result. */
+  months_reviewed?: number;
+  six_month_result?: number | null;
+  promotion_eligible?: boolean;
+}
+
+/** One reviewed month, for the year-at-a-glance trend. */
+export interface MonthKpiPoint {
+  month: string;
+  cycle_key: string | null;
+  review_status: string | null;
+  employee_rating: number | null;
+  manager_rating: number | null;
+  admin_rating: number | null;
 }
 
 export interface AllTimeKpiSummary {
@@ -370,6 +384,70 @@ export interface AllTimeKpiSummary {
   admin_rating_average: number | null;
   admin_rating_display: string | null;
   cycles: CycleKpiSummary[];
+  months?: MonthKpiPoint[];
+}
+
+// --- Pulse insights (HR/Admin) ---
+
+export interface InsightsMonthPoint {
+  month: string;
+  submissions: number;
+  finalised: number;
+  employee_average: number | null;
+  manager_average: number | null;
+  final_average: number | null;
+}
+
+export interface InsightsStats {
+  count: number;
+  mean: number | null;
+  stdev: number | null;
+  median: number | null;
+  minimum: number | null;
+  maximum: number | null;
+  p10: number | null;
+  p25: number | null;
+  p75: number | null;
+  p90: number | null;
+}
+
+export interface InsightsEmployee {
+  user_id: number;
+  name: string;
+  emp_id: string | null;
+  department: string | null;
+  months_submitted: number;
+  months_finalised: number;
+  employee_average: number | null;
+  manager_average: number | null;
+  six_month_result: number | null;
+  percentile: number | null;
+  promotion_eligible: boolean;
+}
+
+export interface InsightsCycleReport {
+  cycle_key: string;
+  cycle_label: string;
+  months: string[];
+  employees_total: number;
+  employees_with_result: number;
+  promotion_eligible_count: number;
+  promotion_min_score: number;
+  employee_average: number | null;
+  manager_average: number | null;
+  final_average: number | null;
+  stats: InsightsStats;
+  histogram: { lower: number; upper: number; count: number }[];
+  bell_curve: { x: number; density: number }[];
+  departments: { department: string; employees: number; average: number | null }[];
+  employees: InsightsEmployee[];
+}
+
+export interface PulseInsights {
+  cycle_key: string;
+  cycles: { key: string; label: string }[];
+  year: InsightsMonthPoint[];
+  cycle: InsightsCycleReport;
 }
 
 /** HR/Admin-tunable Pulse scoring (Settings → Pulse scoring). Percentages. */

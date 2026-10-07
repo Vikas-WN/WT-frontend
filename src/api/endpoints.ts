@@ -339,6 +339,7 @@ export const endpoints = {
       `${api}/monthly-submissions/${encodeURIComponent(String(submissionId))}/manager-review/draft`,
     list: `${api}/monthly-submissions`,
     adminOverview: `${api}/monthly-submissions/admin-overview`,
+    insights: `${api}/monthly-submissions/insights`,
     scoreBreakdown: (submissionId: string | number) =>
       `${api}/monthly-submissions/${encodeURIComponent(String(submissionId))}/score-breakdown`,
     adminReview: (submissionId: string | number) =>

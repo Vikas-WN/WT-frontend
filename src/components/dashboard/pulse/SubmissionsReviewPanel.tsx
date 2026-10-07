@@ -172,8 +172,11 @@ export function SubmissionsReviewPanel() {
         <div className="flex flex-wrap items-center gap-3">
           <MonthSwitcher value={month} onChange={setMonth} maxMonth={currentMonthKey()} />
           {overview.data?.six_month_review_month ? (
-            <span className="rounded-full border border-[var(--wt-brand)]/25 bg-[var(--wt-brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--wt-brand)]">
-              Six-month review month
+            <span
+              className="rounded-full border border-[var(--wt-brand)]/25 bg-[var(--wt-brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--wt-brand)]"
+              title="April and October are the last month of each six-month cycle (Nov–Apr and May–Oct), when the six-month result is due."
+            >
+              Last month of the {overview.data.cycle_key.startsWith("MAY-OCT") ? "May–Oct" : "Nov–Apr"} cycle · six-month result due
             </span>
           ) : null}
         </div>

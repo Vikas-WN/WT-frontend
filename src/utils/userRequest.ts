@@ -1082,13 +1082,20 @@ export function requestUndoByEmail(row: Record<string, unknown>): string {
   return String(pickRowField(row, "undo_by_email", "undoByEmail") ?? "").trim().toLowerCase();
 }
 
+/** Seconds left in the employee's own 24-hour cancel window (counted from submitting the request); 0 once it is over. */
+export function requestCancelSecondsLeft(row: Record<string, unknown>): number {
+  const value = Number(pickRowField(row, "cancel_seconds_left", "cancelSecondsLeft"));
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
 /**
- * Whether the employee can still cancel this approved request: it has to start today or later. Mirrors the backend
- * rule; after that only HR can cancel it.
+ * Whether the employee can still cancel this approved request: within 24 hours of submitting it, and it has to start
+ * today or later. Mirrors the backend rule; after that only HR can cancel it.
  */
 export function canEmployeeCancelApproved(row: Record<string, unknown>, todayIso: string): boolean {
   const type = String(pickRowField(row, "request_type", "requestType") ?? "").trim().toUpperCase();
   if (!REVERSIBLE_TYPES.has(type) || HR_ONLY_CANCEL_TYPES.has(type) || requestRowFinalStatus(row) !== "APPROVED") return false;
+  if (requestCancelSecondsLeft(row) <= 0) return false;
   const from = apiDateToInputValue(String(pickRowField(row, "request_from_date", "requestFromDate") ?? ""));
   return Boolean(from) && from >= todayIso;
 }

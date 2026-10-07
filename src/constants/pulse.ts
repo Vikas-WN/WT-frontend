@@ -15,6 +15,7 @@ export const PULSE_QUERY_KEYS = {
   adminReviewers: ["pulse", "admin-reviewers"] as const,
   managerTeam: ["pulse", "manager-team"] as const,
   cycles: ["pulse", "cycles"] as const,
+  insights: (cycleKey: string) => ["pulse", "insights", cycleKey] as const,
   candidates: (query: string) => ["pulse", "window-candidates", query] as const,
   scoring: ["pulse", "scoring"] as const,
 };
