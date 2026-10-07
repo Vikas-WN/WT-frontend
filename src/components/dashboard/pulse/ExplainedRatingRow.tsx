@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2 } from "lucide-react";
+
 import { RatingButtons } from "@/components/dashboard/pulse/employee/RatingButtons";
 import { PULSE_COPY } from "@/constants/pulseCopy";
 import { cn } from "@/lib/utils";
@@ -13,7 +14,7 @@ export function explainedRowDomId(kind: "kpi" | "value", id: number): string {
 /**
  * One KPI or Company Value: pick a level AND say why. The two belong together — a rating with
  * no reason isn't accepted — so the row shows which half is still missing rather than leaving
- * that to an error after Submit.
+ * that to an error after Submit. The left edge turns green once both are in.
  */
 export function ExplainedRatingRow({
   domId,
@@ -51,21 +52,23 @@ export function ExplainedRatingRow({
     <div
       id={domId}
       className={cn(
-        "scroll-mt-24 rounded-xl border bg-wt-surface-2/40 p-3.5",
+        "relative scroll-mt-24 overflow-hidden rounded-2xl border bg-wt-surface-1 p-4 pl-5 transition-colors sm:p-5 sm:pl-6",
         complete ? "border-emerald-500/30" : "border-wt-border"
       )}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <span
+        aria-hidden
+        className={cn("absolute inset-y-0 left-0 w-1 transition-colors", complete ? "bg-emerald-500" : rated || commented ? "bg-[var(--wt-brand)]/60" : "bg-wt-border-md")}
+      />
+      <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-sm font-medium text-wt-text">
-            {title}
-            {complete ? <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" aria-label="Complete" /> : null}
-          </p>
-          {detail ? <p className="text-xs text-wt-text-muted">{detail}</p> : null}
-          {meta ? <p className="text-xs text-wt-text-muted">{meta}</p> : null}
+          <p className="text-[0.9375rem] font-semibold leading-snug text-wt-text">{title}</p>
+          {detail ? <p className="mt-1 text-xs leading-relaxed text-wt-text-muted">{detail}</p> : null}
+          {meta ? <p className="mt-1 text-xs text-wt-text-faint">{meta}</p> : null}
         </div>
-        <RatingButtons value={rated ? rating : null} onChange={onRating} disabled={disabled} />
+        {complete ? <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-500" aria-label="Complete" /> : null}
       </div>
+      <RatingButtons value={rated ? rating : null} onChange={onRating} disabled={disabled} label={title} />
       <textarea
         value={comment}
         onChange={(event) => onComment(event.target.value)}
@@ -75,9 +78,14 @@ export function ExplainedRatingRow({
         placeholder={PULSE_COPY.rowCommentPlaceholder}
         aria-label={`Why ${title}`}
         aria-required="true"
-        className="mt-2.5 w-full resize-y rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40 disabled:opacity-60"
+        className="mt-3 w-full resize-y rounded-xl border border-wt-border bg-wt-surface-2/50 px-3.5 py-2.5 text-sm text-wt-text placeholder:text-wt-text-faint transition-colors focus:border-[var(--wt-brand)]/60 focus:bg-wt-surface-1 focus:outline-none focus:ring-2 focus:ring-[var(--wt-brand)]/25 disabled:opacity-60"
       />
-      {hint ? <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">{hint}</p> : null}
+      <div className="mt-1.5 flex items-center justify-between gap-3 text-xs">
+        <span className={hint ? "text-amber-700 dark:text-amber-400" : "text-transparent"} aria-live="polite">
+          {hint ?? "·"}
+        </span>
+        <span className="tabular-nums text-wt-text-faint">{comment.length}/1000</span>
+      </div>
     </div>
   );
 }

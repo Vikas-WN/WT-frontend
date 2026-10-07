@@ -1,13 +1,12 @@
 "use client";
 
 import { pulseRatingLabel } from "@/constants/pulseRatings";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { CheckCircle2, ChevronRight, Pencil, Trash2, Upload, XCircle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle2, Pencil, Upload, XCircle } from "lucide-react";
 
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
-import { MetricCard } from "@/components/dashboard/ui/MetricCard";
-import { ToolbarFilterSelect } from "@/components/dashboard/ui/ToolbarFilterSelect";
+import { SearchInput } from "@/components/dashboard/ui/SearchInput";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -30,6 +29,12 @@ import {
 } from "@/components/dashboard/ui/wtTable";
 import { AdminEditSubmissionForm } from "@/components/dashboard/pulse/AdminEditSubmissionForm";
 import { useSubmissionLink } from "@/components/dashboard/pulse/useSubmissionLink";
+import { MonthSwitcher } from "@/components/dashboard/pulse/shared/MonthSwitcher";
+import { MonthOverview } from "@/components/dashboard/pulse/submissions/MonthOverview";
+import { StatusChips } from "@/components/dashboard/pulse/submissions/StatusChips";
+import { SubmissionList } from "@/components/dashboard/pulse/submissions/SubmissionList";
+import { ALL, computeMonthStats, matchesQuery, type StatusFilter } from "@/components/dashboard/pulse/submissions/submissionsModel";
+import { currentMonthKey, formatMonthLabel } from "@/utils/pulseMonth";
 import { hrmsService } from "@/services/hrms.service";
 import { notifyError, notifySuccess } from "@/lib/notify";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
@@ -84,28 +89,23 @@ function statusLabel(status: MonthlySubmissionReviewStatus | null): string {
 }
 
 export function SubmissionsReviewPanel() {
-  const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
+  const [month, setMonth] = useState(currentMonthKey);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(ALL);
+  const [query, setQuery] = useState("");
   const [reloadTick, setReloadTick] = useState(0);
   const refresh = useCallback(() => setReloadTick((t) => t + 1), []);
 
-  // Arrived from a notification (`?submission=`): list every status while the
-  // link is active so the submission is found wherever it now stands; it
-  // opens until the review is closed, which drops the link.
+  // Arrived from a notification (`?submission=`): look across every month while the link is active so the
+  // submission is found wherever it now stands; it opens until the review is closed, which drops the link.
   const { linkedId, clear: clearLink } = useSubmissionLink();
-  const effectiveFilter = linkedId != null ? ALL_STATUSES : statusFilter;
-  const submissions = useLoad<{ filter: string; rows: MonthlySubmissionItem[] }>(
-    () =>
-      hrmsService
-        .listAllMonthlySubmissions({
-          reviewStatus: effectiveFilter && effectiveFilter !== ALL_STATUSES ? effectiveFilter : undefined,
-        })
-        .then((rows) => ({ filter: effectiveFilter, rows })),
-    [effectiveFilter, reloadTick]
+  const lookupMonth = linkedId != null ? undefined : month;
+  const submissions = useLoad<{ month: string | undefined; rows: MonthlySubmissionItem[] }>(
+    () => hrmsService.listAllMonthlySubmissions({ month: lookupMonth }).then((rows) => ({ month: lookupMonth, rows })),
+    [lookupMonth, reloadTick]
   );
-  // Rows stay on screen until a refetch lands — only trust them for the link
-  // once they were loaded for the current filter.
-  const listFresh = submissions.status === "done" && submissions.data?.filter === effectiveFilter;
-  const overview = useLoad<AdminMonthlyOverview>(() => hrmsService.getAdminMonthlyOverview(), [reloadTick]);
+  // Rows stay on screen until a refetch lands — only trust them for the link once they were loaded for it.
+  const listFresh = submissions.status === "done" && submissions.data?.month === lookupMonth;
+  const overview = useLoad<AdminMonthlyOverview>(() => hrmsService.getAdminMonthlyOverview({ month }), [month, reloadTick]);
   const [reviewing, setReviewing] = useState<MonthlySubmissionItem | null>(null);
   const linkedRow =
     linkedId != null && listFresh ? (submissions.data?.rows.find((row) => row.id === linkedId) ?? null) : null;
@@ -120,7 +120,6 @@ export function SubmissionsReviewPanel() {
     clearLink();
   }, [linkedId, listFresh, linkedRow, clearLink]);
 
-
   const importInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const handleImport = async (file: File) => {
@@ -131,10 +130,7 @@ export function SubmissionsReviewPanel() {
       refresh();
     } catch (error) {
       notifyError(
-        toUserFriendlyApiErrorMessage(
-          error,
-          error instanceof ApiError ? error.message : "Couldn't import the CSV."
-        )
+        toUserFriendlyApiErrorMessage(error, error instanceof ApiError ? error.message : "Couldn't import the CSV.")
       );
     } finally {
       setImporting(false);
@@ -153,47 +149,35 @@ export function SubmissionsReviewPanel() {
       refresh();
     } catch (error) {
       notifyError(
-        toUserFriendlyApiErrorMessage(
-          error,
-          error instanceof ApiError ? error.message : "Couldn't delete the submission."
-        )
+        toUserFriendlyApiErrorMessage(error, error instanceof ApiError ? error.message : "Couldn't delete the submission.")
       );
     } finally {
       setDeleting(false);
     }
   };
 
-  const rows = submissions.data?.rows ?? [];
+  const allRows = useMemo(() => submissions.data?.rows ?? [], [submissions.data]);
+  const stats = useMemo(() => computeMonthStats(allRows), [allRows]);
+  // A filter chip for a status that has no rows this month would show an empty list — fall back to All.
+  const activeFilter: StatusFilter = statusFilter === ALL || (stats.byStatus[statusFilter] ?? 0) > 0 ? statusFilter : ALL;
+  const rows = useMemo(
+    () => allRows.filter((row) => (activeFilter === ALL || row.review_status === activeFilter) && matchesQuery(row, query)),
+    [allRows, activeFilter, query]
+  );
+  const loading = submissions.status === "loading";
 
   return (
-    <div className="space-y-5">
-      {overview.data ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <MetricCard label="This cycle" value={overview.data.total_submissions} loading={false} />
-          <MetricCard label="Manager reviewed" value={overview.data.manager_reviewed} loading={false} />
-          <MetricCard label="Final" value={overview.data.approved} loading={false} />
-          <MetricCard
-            label="Pending manager review"
-            value={overview.data.pending_manager_review}
-            loading={false}
-          />
-        </div>
-      ) : null}
-      {overview.data?.six_month_review_month ? (
-        <p className="text-xs text-wt-text-muted">
-          {overview.data.cycle_key} is a six-month review month.
-        </p>
-      ) : null}
-
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold text-wt-text">Submissions</h3>
-          <p className="mt-0.5 text-xs text-wt-text-muted">
-            Every rating side by side. A manager&apos;s submission is final — send it back to the employee or
-            the managers, or correct anyone&apos;s part.
-          </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <MonthSwitcher value={month} onChange={setMonth} maxMonth={currentMonthKey()} />
+          {overview.data?.six_month_review_month ? (
+            <span className="rounded-full border border-[var(--wt-brand)]/25 bg-[var(--wt-brand-soft)] px-3 py-1 text-xs font-semibold text-[var(--wt-brand)]">
+              Six-month review month
+            </span>
+          ) : null}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div>
           <input
             ref={importInputRef}
             type="file"
@@ -206,70 +190,54 @@ export function SubmissionsReviewPanel() {
               void handleImport(file);
             }}
           />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => importInputRef.current?.click()}
-            disabled={importing}
-          >
-            <Upload className="mr-1.5 size-4" /> {importing ? "Importing…" : "Import Ratings CSV"}
+          <Button type="button" variant="outline" onClick={() => importInputRef.current?.click()} disabled={importing}>
+            <Upload className="mr-1.5 size-4" /> {importing ? "Importing…" : "Import ratings CSV"}
           </Button>
-          <ToolbarFilterSelect
-            value={effectiveFilter}
-            onChange={(value) => {
-              if (linkedId != null) clearLink();
-              setStatusFilter(value);
-            }}
-            options={STATUS_OPTIONS}
-            placeholder="All statuses"
-            aria-label="Filter by status"
-          />
         </div>
       </div>
 
-      {submissions.status === "loading" ? (
-        <SectionLoading label="" />
-      ) : rows.length === 0 ? (
-        <EmptyState title="Nothing Here" description="No submissions match this filter." />
-      ) : (
-        <div className="space-y-2">
-          {rows.map((row) => (
-            <div
-              key={row.id}
-              className="flex w-full items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-4 py-3 transition-colors hover:border-wt-brand/40"
-            >
-              <button
-                type="button"
-                onClick={() => setReviewing(row)}
-                className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-wt-text">{row.employee.name}</p>
-                  <p className="text-xs text-wt-text-muted">
-                    {row.month} · {row.cycle_label}
-                    {row.employee.emp_id ? ` · ${row.employee.emp_id}` : ""}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {row.admin_edits?.length ? <Badge variant="outline">Edited by HR</Badge> : null}
-                  <Badge variant="outline">{statusLabel(row.review_status)}</Badge>
-                  {row.final_score != null ? <Badge>{row.final_score}</Badge> : null}
-                  <ChevronRight className="size-4 text-wt-text-faint" />
-                </div>
-              </button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setDeleteTarget(row)}
-                aria-label={`Delete ${row.employee.name}'s submission`}
-              >
-                <Trash2 className="size-3.5 text-rose-600" />
-              </Button>
-            </div>
-          ))}
+      {linkedId != null ? (
+        <p className="rounded-xl border border-[var(--wt-brand)]/25 bg-[var(--wt-brand-soft)] px-4 py-2.5 text-sm text-wt-text">
+          Opening the submission you were linked to — searching every month.
+        </p>
+      ) : null}
+
+      <MonthOverview month={month} stats={stats} loading={loading} />
+
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-base font-semibold text-wt-text">Submissions</h3>
+            <p className="mt-0.5 text-xs text-wt-text-muted">
+              Open one to see every rating side by side — send it back, correct anyone&apos;s part, or give final approval.
+            </p>
+          </div>
+          <div className="w-full sm:w-72">
+            <SearchInput
+              id="pulse-submissions-search"
+              value={query}
+              onChange={setQuery}
+              placeholder="Search name, ID or reviewer"
+              aria-label="Search submissions"
+            />
+          </div>
         </div>
-      )}
+
+        {stats.total > 0 ? <StatusChips stats={stats} value={activeFilter} onChange={setStatusFilter} /> : null}
+
+        {loading ? (
+          <SectionLoading label="" />
+        ) : allRows.length === 0 ? (
+          <EmptyState
+            title={`Nothing submitted for ${formatMonthLabel(month)}`}
+            description="Once people submit their self-reviews for this month they will show up here. Try another month with the arrows above."
+          />
+        ) : rows.length === 0 ? (
+          <EmptyState title="No matches" description="No submissions match this search and filter." />
+        ) : (
+          <SubmissionList rows={rows} onOpen={setReviewing} onDelete={setDeleteTarget} />
+        )}
+      </section>
 
       {open ? (
         <AdminReviewModal

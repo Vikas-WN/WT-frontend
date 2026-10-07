@@ -6,7 +6,7 @@ import { pulseRatingLabel } from "@/constants/pulseRatings";
 import { cn } from "@/lib/utils";
 
 export const SIDE_BY_SIDE_GRID =
-  "grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_9rem_minmax(0,22rem)] sm:items-start sm:gap-4";
+  "grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_10rem] sm:items-start sm:gap-4";
 
 export function SideBySideHeader() {
   return (
@@ -17,8 +17,7 @@ export function SideBySideHeader() {
       )}
     >
       <span>Item</span>
-      <span className="text-center">Employee</span>
-      <span>Shared rating</span>
+      <span className="text-center">Employee rated</span>
     </div>
   );
 }
@@ -62,7 +61,7 @@ export function SideBySideRow({
     <div
       id={domId}
       className={cn(
-        "scroll-mt-24 rounded-lg border bg-wt-surface-2/40 px-3 py-2.5",
+        "scroll-mt-24 rounded-2xl border bg-wt-surface-1 p-4",
         complete ? "border-emerald-500/30" : managerRating == null ? "border-wt-border" : "border-wt-brand/30"
       )}
     >
@@ -74,17 +73,17 @@ export function SideBySideRow({
       </div>
       <div className="flex items-center gap-2 sm:justify-center">
         <span className="text-xs text-wt-text-muted sm:hidden">Employee</span>
-        <span className="rounded-lg border border-wt-border bg-wt-surface-1 px-2 py-1 text-center text-xs font-medium leading-tight text-wt-text">
+        <span className="rounded-lg border border-wt-border bg-wt-surface-2 px-2.5 py-1 text-center text-xs font-medium leading-tight text-wt-text">
           {pulseRatingLabel(selfRating)}
         </span>
       </div>
-      <div className="space-y-1">
-        <RatingButtons value={managerRating} onChange={onRate} disabled={disabled} />
+      <div className="space-y-1 sm:col-span-2">
+        <RatingButtons value={managerRating} onChange={onRate} disabled={disabled} label={title} />
         {direction ? <p className="text-xs text-amber-700 dark:text-amber-400">{direction}</p> : null}
       </div>
     </div>
     {selfComment?.trim() ? (
-      <p className="mt-2 rounded-md bg-wt-surface-1 px-2.5 py-1.5 text-xs text-wt-text-muted">
+      <p className="mt-3 rounded-xl bg-wt-surface-2/60 px-3 py-2 text-xs text-wt-text-muted">
         <span className="font-medium text-wt-text">Employee&apos;s reason: </span>
         {selfComment}
       </p>
@@ -98,7 +97,7 @@ export function SideBySideRow({
       placeholder={PULSE_COPY.managerRowCommentPlaceholder}
       aria-label={`Your reason for ${title}`}
       aria-required="true"
-      className="mt-2 w-full resize-y rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-wt-brand/40 disabled:opacity-60"
+      className="mt-3 w-full resize-y rounded-xl border border-wt-border bg-wt-surface-2/50 px-3.5 py-2.5 text-sm text-wt-text placeholder:text-wt-text-faint transition-colors focus:border-[var(--wt-brand)]/60 focus:bg-wt-surface-1 focus:outline-none focus:ring-2 focus:ring-[var(--wt-brand)]/25 disabled:opacity-60"
     />
     {managerRating != null && managerComment.trim().length === 0 ? (
       <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">{PULSE_COPY.rowNeedsComment}</p>

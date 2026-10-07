@@ -57,7 +57,7 @@ export function KpiStep({ api, ctx }: { api: ReviewFormApi; ctx: ReviewContext }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="KPI groups">
+      <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="KPI groups">
         {groups.map((g) => {
           const done = doneIn(g);
           const complete = done === g.items.length;
@@ -69,7 +69,7 @@ export function KpiStep({ api, ctx }: { api: ReviewFormApi; ctx: ReviewContext }
               aria-selected={g.key === group.key}
               onClick={() => setActiveKey(g.key)}
               className={cn(
-                "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
+                "inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold transition-colors",
                 g.key === group.key
                   ? "border-[var(--wt-brand)] bg-[var(--wt-brand)] text-[var(--wt-brand-text)]"
                   : "border-wt-border bg-wt-surface-1 text-wt-text-muted hover:border-[var(--wt-brand)]/40"
@@ -85,12 +85,15 @@ export function KpiStep({ api, ctx }: { api: ReviewFormApi; ctx: ReviewContext }
         })}
       </div>
 
-      <div className="rounded-2xl border border-wt-border bg-wt-surface-1">
-        <header className="flex items-baseline justify-between gap-3 border-b border-wt-border px-4 py-3 sm:px-5">
-          <h3 className="text-sm font-semibold text-wt-text">{group.title}</h3>
-          {group.weight ? <span className="text-xs text-wt-text-muted">Weight {group.weight}</span> : null}
+      <div className="space-y-3">
+        <header className="flex items-baseline justify-between gap-3 px-1">
+          <h3 className="text-base font-semibold text-wt-text">{group.title}</h3>
+          <span className="flex items-center gap-3 text-xs text-wt-text-muted">
+            {group.weight ? <span className="rounded-full bg-wt-surface-2 px-2.5 py-1 font-medium">Weight {group.weight}</span> : null}
+            <span className="tabular-nums">{doneIn(group)}/{group.items.length} done</span>
+          </span>
         </header>
-        <div className="space-y-3 p-3 sm:p-4">
+        <div className="space-y-3">
           {group.items.map((kpi) => {
             const entry = entryOf(kpi.id);
             return (
@@ -109,7 +112,7 @@ export function KpiStep({ api, ctx }: { api: ReviewFormApi; ctx: ReviewContext }
           })}
         </div>
         {next ? (
-          <footer className="flex justify-end border-t border-wt-border px-4 py-3 sm:px-5">
+          <footer className="flex justify-end">
             <Button type="button" variant="outline" size="sm" onClick={() => setActiveKey(next.key)}>
               Next: {next.title} <ArrowRight className="size-3.5" />
             </Button>

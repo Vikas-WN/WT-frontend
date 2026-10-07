@@ -34,6 +34,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-07-03",
+    releasedOn: "2026-10-07",
+    title: "A fresh look for Pulse",
+    highlights: [
+      {
+        area: "Pulse",
+        title: "Your monthly review is clearer and easier to finish",
+        description:
+          "A progress ring shows how far along you are and what is left, ratings are one connected scale you can click or type 1 to 5, and each KPI or value shows when it is complete. Your answers still save as you go.",
+      },
+      {
+        area: "Pulse",
+        title: "HR sees submissions month by month",
+        description:
+          "Pick a month to see how many reviews are finalised, who is with which manager, what was sent back and the average score. Filter by status, search by name, and follow each review from submitted to final.",
+      },
+    ],
+  },
+  {
     id: "2026-10-07-02",
     releasedOn: "2026-10-07",
     title: "Your documents are now kept safely",

@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock, LockOpen } from "lucide-react";
+import { Lock } from "lucide-react";
 
 import { WINDOW_SCOPE_LABELS } from "@/constants/pulse";
 import { cn } from "@/lib/utils";
@@ -22,7 +22,7 @@ export function WindowPill({
   if (loading || !status) {
     return <span className="h-7 w-28 animate-pulse rounded-full bg-wt-surface-3" aria-label="Checking window" />;
   }
-  const Icon = status.open ? LockOpen : Lock;
+  const Icon = Lock;
   const via = status.open && status.resolved_scope ? WINDOW_SCOPE_LABELS[status.resolved_scope] : null;
   return (
     <span
@@ -33,7 +33,14 @@ export function WindowPill({
           : "border-rose-500/25 bg-rose-500/10 text-rose-700 dark:text-rose-400"
       )}
     >
-      <Icon className="size-3.5" aria-hidden />
+      {status.open ? (
+        <span className="relative flex size-2" aria-hidden>
+          <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500/60 motion-reduce:hidden" />
+          <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+        </span>
+      ) : (
+        <Icon className="size-3.5" aria-hidden />
+      )}
       {status.open ? openLabel : closedLabel}
       {status.open && status.window_end_at ? <span className="font-normal opacity-80">· until {status.window_end_at.slice(0, 16)}</span> : null}
       {via ? <span className="font-normal opacity-80">· {via.toLowerCase()}</span> : null}

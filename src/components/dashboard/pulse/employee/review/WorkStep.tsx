@@ -9,7 +9,7 @@ import type { ReviewFormApi } from "@/components/dashboard/pulse/employee/review
 import { PULSE_COPY } from "@/constants/pulseCopy";
 import { cn } from "@/lib/utils";
 
-const CARD = "rounded-2xl border border-wt-border bg-wt-surface-1 p-4 sm:p-5";
+const CARD = "rounded-2xl border border-wt-border bg-wt-surface-1 p-5 sm:p-6";
 
 function Tile({
   selected,
@@ -31,10 +31,10 @@ function Tile({
       disabled={disabled}
       aria-pressed={selected}
       className={cn(
-        "flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors",
+        "flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-[border-color,background-color,transform] duration-150 active:scale-[0.99] motion-reduce:transition-none",
         selected
           ? "border-[var(--wt-brand)] bg-[var(--wt-brand-soft)]"
-          : "border-wt-border bg-wt-surface-2/40 hover:border-[var(--wt-brand)]/40",
+          : "border-wt-border bg-wt-surface-1 hover:border-[var(--wt-brand)]/40 hover:bg-wt-surface-2/60",
         disabled && "cursor-not-allowed opacity-50"
       )}
     >
@@ -46,8 +46,10 @@ function Tile({
       >
         {selected ? <Check className="size-3.5" aria-hidden /> : null}
       </span>
-      <span className="min-w-0 flex-1 truncate text-sm font-medium text-wt-text">{title}</span>
-      {meta ? <span className="shrink-0 text-xs text-wt-text-faint">{meta}</span> : null}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-wt-text">{title}</span>
+        {meta ? <span className="mt-0.5 block truncate text-xs text-wt-text-faint">{meta}</span> : null}
+      </span>
     </button>
   );
 }
@@ -69,10 +71,12 @@ export function WorkStep({
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <section className={CARD}>
-        <header className="mb-3 flex items-start gap-2.5">
-          <FolderKanban className="mt-0.5 size-4 text-[var(--wt-brand)]" aria-hidden />
+        <header className="mb-4 flex items-start gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]">
+            <FolderKanban className="size-4.5" aria-hidden />
+          </span>
           <div>
-            <h3 className="text-sm font-semibold text-wt-text">Projects you worked on</h3>
+            <h3 className="text-base font-semibold text-wt-text">Projects you worked on</h3>
             <p className="text-xs text-wt-text-muted">
               Pick 1 to {MAX_PROJECTS} · {selected.length}/{MAX_PROJECTS} chosen
             </p>
@@ -104,10 +108,12 @@ export function WorkStep({
       </section>
 
       <section className={CARD}>
-        <header className="mb-3 flex items-start gap-2.5">
-          <Award className="mt-0.5 size-4 text-[var(--wt-brand)]" aria-hidden />
+        <header className="mb-4 flex items-start gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]">
+            <Award className="size-4.5" aria-hidden />
+          </span>
           <div>
-            <h3 className="text-sm font-semibold text-wt-text">Certifications & recognition</h3>
+            <h3 className="text-base font-semibold text-wt-text">Certifications &amp; recognition</h3>
             <p className="text-xs text-wt-text-muted">Optional — they add bonus points to your score.</p>
           </div>
         </header>
@@ -127,7 +133,7 @@ export function WorkStep({
                       onChange={(e) => actions.setCertificationProof(c.id, e.target.value)}
                       placeholder="Proof — a link or note (optional)"
                       aria-label={`Proof for ${c.name}`}
-                      className="w-full rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-1.5 text-sm text-wt-text placeholder:text-wt-text-faint focus:outline-none focus:ring-2 focus:ring-[var(--wt-brand)]/40"
+                      className="w-full rounded-xl border border-wt-border bg-wt-surface-2/50 px-3.5 py-2 text-sm text-wt-text placeholder:text-wt-text-faint focus:border-[var(--wt-brand)]/60 focus:bg-wt-surface-1 focus:outline-none focus:ring-2 focus:ring-[var(--wt-brand)]/25"
                     />
                   ) : null}
                 </div>
@@ -135,7 +141,7 @@ export function WorkStep({
             })}
           </div>
         )}
-        <div className="mt-4 flex items-center gap-3 rounded-xl border border-wt-border bg-wt-surface-2/40 px-3.5 py-2.5">
+        <div className="mt-5 flex items-center gap-3 rounded-xl border border-wt-border bg-wt-surface-2/50 px-3.5 py-3">
           <Sparkles className="size-4 text-amber-500" aria-hidden />
           <label className="text-sm font-medium text-wt-text" htmlFor="recognitions-count">
             Recognitions received

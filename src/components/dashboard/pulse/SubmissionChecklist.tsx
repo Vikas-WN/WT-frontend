@@ -26,7 +26,7 @@ export function SubmissionChecklist({
   return (
     <section
       aria-label={PULSE_COPY.checklistTitle}
-      className={cn("rounded-xl border border-wt-border bg-wt-surface-1 p-4", className)}
+      className={cn("rounded-2xl border border-wt-border bg-wt-surface-1 p-5", className)}
     >
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="text-sm font-semibold text-wt-text">{PULSE_COPY.checklistTitle}</h3>
@@ -35,19 +35,19 @@ export function SubmissionChecklist({
         </p>
       </div>
       <div
-        className="mt-2 h-1.5 overflow-hidden rounded-full bg-wt-surface-2"
+        className="mt-3 h-2 overflow-hidden rounded-full bg-wt-surface-3"
         role="progressbar"
         aria-valuenow={percent}
         aria-valuemin={0}
         aria-valuemax={100}
       >
         <div
-          className={cn("h-full rounded-full transition-all", summary.complete ? "bg-emerald-500" : "bg-wt-brand")}
+          className={cn("h-full rounded-full transition-[width] duration-500", summary.complete ? "bg-emerald-500" : "bg-[var(--wt-brand)]")}
           style={{ width: `${percent}%` }}
         />
       </div>
 
-      <ul className="mt-3 space-y-2">
+      <ul className="mt-4 space-y-3">
         {groups.map((group) => {
           const outstanding = group.items.filter((item) => !item.done);
           if (outstanding.length === 0) {

@@ -39,13 +39,20 @@ function useDefaultMonth(): string {
 
 function ClosedNotice({ month }: { month: string }) {
   return (
-    <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-8 text-center">
-      <Lock className="mx-auto size-8 text-wt-text-faint" aria-hidden />
-      <h3 className="mt-3 text-base font-semibold text-wt-text">{formatMonthLabel(month)} is closed for submissions</h3>
-      <p className="mx-auto mt-1.5 max-w-md text-sm text-wt-text-muted">
-        HR opens the monthly self-review window on a schedule. Check back once it&apos;s open — KPIs, values and your self
-        review can only be entered while it is.
-      </p>
+    <div className="relative overflow-hidden rounded-3xl border border-wt-border bg-wt-surface-1 px-6 py-12 text-center">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_50%_0%,color-mix(in_srgb,var(--wt-brand)_7%,transparent),transparent_70%)]"
+      />
+      <div className="relative">
+        <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-wt-surface-2 text-wt-text-faint">
+          <Lock className="size-6" aria-hidden />
+        </span>
+        <h3 className="mt-4 text-lg font-semibold tracking-tight text-wt-text">{formatMonthLabel(month)} isn&apos;t open yet</h3>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-wt-text-muted">
+          HR opens the monthly self-review on a schedule. When it opens you can rate your KPIs and values and write your review — we&apos;ll notify you.
+        </p>
+      </div>
     </div>
   );
 }
