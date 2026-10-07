@@ -34,6 +34,19 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-07-07",
+    releasedOn: "2026-10-07",
+    title: "Optional holidays show up again",
+    highlights: [
+      {
+        area: "Holidays",
+        title: "Optional holidays are marked optional",
+        description:
+          "Holidays that the company sheet marks as optional, such as \"Optional with Muharram\", now appear as optional in the calendar, with their note, instead of as mandatory. HR needs to re-upload the sheet once to fix the existing year.",
+      },
+    ],
+  },
+  {
     id: "2026-10-07-06",
     releasedOn: "2026-10-07",
     title: "Meet Knot, your desk pet",

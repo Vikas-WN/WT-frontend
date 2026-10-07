@@ -117,6 +117,24 @@ function parseCsvText(text: string): ParsedSpreadsheet {
   return buildParsedSheet(headers, trimTrailingEmptySheetRows(matrix, headerIndex).slice(headerIndex + 1));
 }
 
+export type NamedSheet = { name: string; parsed: ParsedSpreadsheet };
+
+/** Every non-empty sheet of a workbook (a CSV has just one). For files where the sheets mean different things. */
+export async function parseSpreadsheetSheets(file: File): Promise<NamedSheet[]> {
+  const lowerName = file.name.toLowerCase();
+  if (!(lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls"))) {
+    return [{ name: file.name, parsed: parseCsvText(await file.text()) }];
+  }
+  const XLSX = await import("xlsx");
+  const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+  const sheets: NamedSheet[] = [];
+  for (const name of workbook.SheetNames) {
+    const parsed = parseWorkbookSheet(XLSX, workbook.Sheets[name]);
+    if (parsed.columns.length && parsed.rows.length) sheets.push({ name, parsed });
+  }
+  return sheets;
+}
+
 async function parseXlsxBuffer(buffer: ArrayBuffer): Promise<ParsedSpreadsheet> {
   const XLSX = await import("xlsx");
   const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
@@ -124,8 +142,10 @@ async function parseXlsxBuffer(buffer: ArrayBuffer): Promise<ParsedSpreadsheet> 
   if (!sheetName) {
     return { columns: [], rows: [] };
   }
+  return parseWorkbookSheet(XLSX, workbook.Sheets[sheetName]);
+}
 
-  const sheet = workbook.Sheets[sheetName];
+function parseWorkbookSheet(XLSX: typeof import("xlsx"), sheet: import("xlsx").WorkSheet): ParsedSpreadsheet {
   const matrix = XLSX.utils.sheet_to_json<(string | number | Date | null | undefined)[]>(sheet, {
     header: 1,
     defval: "",
