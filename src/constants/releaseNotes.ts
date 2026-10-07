@@ -34,6 +34,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-07-06",
+    releasedOn: "2026-10-07",
+    title: "Meet Knot, your desk pet",
+    highlights: [
+      {
+        area: "Look & feel",
+        title: "A little companion that plays along",
+        description:
+          "Knot wanders the bottom of your screen and follows your cursor. Drag and throw it, click it, double-click for a party, hold it to pet it, right-click for options. It cheers when you approve something and naps when you are away. Hide it in Settings.",
+      },
+      {
+        area: "Pulse",
+        title: "Review fixes for phones",
+        description:
+          "The rating scale now shows readable labels on phones and in two columns, and the review header and steps no longer push the page sideways.",
+      },
+    ],
+  },
+  {
     id: "2026-10-07-05",
     releasedOn: "2026-10-07",
     title: "Skills matrix, a mascot and some festive touches",
