@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Knot } from "@/components/mascot/Knot";
 import { Button } from "@/components/ui/button";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
 import { NotFoundSpaceScene } from "@/components/shared/NotFoundSpaceScene";
@@ -21,6 +22,9 @@ export default function NotFound() {
           <NotFoundSpaceScene />
         </div>
 
+        <div className="wt-not-found-enter wt-not-found-enter--3 -mt-2">
+          <Knot mood="lost" size={76} label="Knot, the WebTrak mascot, looking lost" />
+        </div>
         <h1 className="wt-not-found-enter wt-not-found-enter--3 wt-brand-wordmark mt-2 text-balance text-2xl font-bold tracking-[-0.03em] text-wt-text sm:text-3xl">
           Lost in orbit
         </h1>

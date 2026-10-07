@@ -8,6 +8,11 @@ export type UserPreferences = {
   theme: ThemePreference;
   density: DensityPreference;
   reduce_motion: boolean;
+  /** Optional approval sounds and buzzes; both off until the person turns them on. */
+  sound_effects: boolean;
+  haptic_feedback: boolean;
+  /** Wear the seasonal look when HR has switched it on (people can opt out). */
+  festive_look: boolean;
   email_notifications: boolean;
   desktop_notifications: boolean;
   week_starts_on: WeekStartPreference;
@@ -23,6 +28,9 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   theme: "system",
   density: "comfortable",
   reduce_motion: false,
+  sound_effects: false,
+  haptic_feedback: false,
+  festive_look: true,
   email_notifications: true,
   desktop_notifications: true,
   week_starts_on: "monday",

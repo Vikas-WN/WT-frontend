@@ -27,6 +27,12 @@ export const LazyHomePageClient = lazyPage(
   "Loading home…"
 );
 
+export const LazySkillsMatrixPageClient = lazyPage(
+  () => import("@/components/dashboard/skills/SkillsMatrixPageClient"),
+  "SkillsMatrixPageClient",
+  "Loading skills…"
+);
+
 export const LazyPulsePageClient = lazyPage(
   () => import("@/components/dashboard/pulse/PulsePageClient"),
   "PulsePageClient",

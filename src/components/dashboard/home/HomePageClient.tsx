@@ -1,5 +1,6 @@
 "use client";
 
+import { SeasonalGreeting } from "@/components/seasonal/SeasonalGreeting";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays,
@@ -561,6 +562,8 @@ export function HomePageClient() {
         onReset={resetLayout}
         onSearch={openSearch}
       />
+
+      <SeasonalGreeting />
 
       <HomeUpdatesGallery />
 

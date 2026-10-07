@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Cake, PartyPopper } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { fireConfetti } from "@/lib/confetti";
+import { MilestoneCelebration } from "@/components/dashboard/home/MilestoneCelebration";
+import { isMilestoneYear } from "@/utils/milestones";
 import { useCelebrationsQuery, useReactToCelebration } from "@/hooks/celebrations/useCelebrations";
 import type { CelebrationEntry, CelebrationKind } from "@/services/hrms.service";
 
@@ -107,22 +109,34 @@ export function TodaysCelebrationsBanner() {
     [todays, user?.email]
   );
 
+  // UI state: the big milestone card is shown once, then dismissed.
+  const [milestoneOpen, setMilestoneOpen] = useState(false);
+
+  // Side effect: celebrate the signed-in person once per day (per browser) — confetti, or the full milestone moment.
   useEffect(() => {
     if (!myEntry || firedConfettiRef.current) return;
-    const storageKey = `wt-celebration-confetti-${myEntry.kind}-${myEntry.user_id}-${myEntry.occurrence_year}`;
+    const storageKey = `wt-celebration-${myEntry.kind}-${myEntry.user_id}-${myEntry.occurrence_year}`;
     try {
-      if (sessionStorage.getItem(storageKey)) return;
-      sessionStorage.setItem(storageKey, "1");
+      if (localStorage.getItem(storageKey)) return;
+      localStorage.setItem(storageKey, "1");
     } catch {
-      // Private browsing / blocked storage — fire anyway, just without the once-per-session guard.
+      // Blocked storage — celebrate anyway, just without the once-a-day guard.
     }
     firedConfettiRef.current = true;
+    if (myEntry.kind === "anniversary" && myEntry.years != null && isMilestoneYear(myEntry.years)) {
+      setMilestoneOpen(true);
+      return;
+    }
     fireConfetti({ originYRatio: 0.18, particleCount: 220 });
   }, [myEntry]);
 
   if (isLoading || todays.length === 0) return null;
 
   return (
+    <>
+      {milestoneOpen && myEntry && myEntry.years != null ? (
+        <MilestoneCelebration name={myEntry.name} years={myEntry.years} onClose={() => setMilestoneOpen(false)} />
+      ) : null}
     <div className="mb-6 rounded-2xl border border-[var(--wt-brand)]/25 bg-[linear-gradient(145deg,color-mix(in_srgb,var(--wt-brand)_10%,var(--wt-surface-1)),var(--wt-surface-1)_60%)] p-5 shadow-sm">
       {myEntry ? (
         <div className="mb-4 flex items-center gap-3">
@@ -154,5 +168,6 @@ export function TodaysCelebrationsBanner() {
         ))}
       </ul>
     </div>
+    </>
   );
 }

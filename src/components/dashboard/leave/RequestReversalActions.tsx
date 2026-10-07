@@ -1,5 +1,6 @@
 "use client";
 
+import { giveFeedback } from "@/lib/feedback";
 import { useState } from "react";
 import { Ban, Undo2 } from "lucide-react";
 
@@ -61,6 +62,7 @@ export function RequestReversalActions({
     try {
       if (action === "undo") await undoUserRequestDecision(requestId);
       else await cancelUserRequest(requestId);
+      giveFeedback(action === "undo" ? "undo" : "success");
       notifySuccess(action === "undo" ? COPY.undoDone : COPY.cancelDone);
       setPending(null);
       await onChanged();

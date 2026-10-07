@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { SeasonalHost } from "@/components/seasonal/SeasonalHost";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -442,6 +443,9 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
 
   return (
     <div className="wt-app-shell flex h-dvh overflow-hidden text-wt-text">
+      <Suspense fallback={null}>
+        <SeasonalHost />
+      </Suspense>
       <DashboardSidebar
         visibleNavigation={visibleNavigation}
         activeSection={activeSection}

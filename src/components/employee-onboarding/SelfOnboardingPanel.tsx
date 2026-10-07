@@ -1,5 +1,6 @@
 "use client";
 
+import { Knot } from "@/components/mascot/Knot";
 import { Button } from "@/components/ui/button";
 import { SkillRatingsListInput } from "@/components/dashboard/ui/SkillRatingsListInput";
 import {
@@ -322,10 +323,16 @@ export function SelfOnboardingPanel({
 
   return (
     <div key={formKey} className="rounded-3xl border border-wt-border bg-wt-surface-1 p-5 shadow-[var(--wt-shadow-md)] wt-soft-in dark:shadow-none sm:p-7">
-      <h3 className="text-lg font-semibold tracking-tight text-wt-text">Complete Your Onboarding</h3>
-      <p className="mb-5 mt-1 text-sm text-wt-text-muted">
-        Submit your onboarding survey to activate full portal access. Fields marked with * are required.
-      </p>
+      <div className="flex items-center gap-4">
+        <Knot mood="hello" size={64} label="Knot, the WebTrak mascot, waving hello" />
+        <div>
+          <h3 className="text-lg font-semibold tracking-tight text-wt-text">Welcome! Let&apos;s get you set up</h3>
+          <p className="mt-1 text-sm text-wt-text-muted">
+            Submit your onboarding survey to activate full portal access. Fields marked with * are required.
+          </p>
+        </div>
+      </div>
+      <div className="mb-5" />
       <OnboardingProgressChecklist
         items={computeOnboardingChecklist(form, files, priorEmploymentDocsRequired)}
       />

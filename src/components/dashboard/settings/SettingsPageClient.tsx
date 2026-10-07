@@ -1,5 +1,6 @@
 "use client";
 
+import { configureFeedback, giveFeedback } from "@/lib/feedback";
 import { useEffect, useMemo, useState } from "react";
 import {
   Bell,
@@ -20,6 +21,7 @@ import { SelectField } from "@/components/dashboard/ui/forms";
 import { useUserPreferences } from "@/context/UserPreferencesContext";
 import { useAuth } from "@/context/AuthContext";
 import { normalizeRoles } from "@/utils/roles";
+import { SeasonalThemeSettingsSection } from "@/components/dashboard/settings/SeasonalThemeSettingsSection";
 import { PulseScoreSettingsSection } from "@/components/dashboard/settings/PulseScoreSettingsSection";
 import {
   COMMON_TIMEZONES,
@@ -112,6 +114,9 @@ export function SettingsPageClient() {
   const [theme, setTheme] = useState(preferences.theme);
   const [density, setDensity] = useState(preferences.density);
   const [reduceMotion, setReduceMotion] = useState(preferences.reduce_motion);
+  const [soundEffects, setSoundEffects] = useState(preferences.sound_effects);
+  const [hapticFeedback, setHapticFeedback] = useState(preferences.haptic_feedback);
+  const [festiveLook, setFestiveLook] = useState(preferences.festive_look);
   const [emailNotifications, setEmailNotifications] = useState(preferences.email_notifications);
   const [desktopNotifications, setDesktopNotifications] = useState(preferences.desktop_notifications);
   const [weekStartsOn, setWeekStartsOn] = useState(preferences.week_starts_on);
@@ -123,6 +128,9 @@ export function SettingsPageClient() {
     setTheme(preferences.theme);
     setDensity(preferences.density);
     setReduceMotion(preferences.reduce_motion);
+    setSoundEffects(preferences.sound_effects);
+    setHapticFeedback(preferences.haptic_feedback);
+    setFestiveLook(preferences.festive_look);
     setEmailNotifications(preferences.email_notifications);
     setDesktopNotifications(preferences.desktop_notifications);
     setWeekStartsOn(preferences.week_starts_on);
@@ -155,6 +163,9 @@ export function SettingsPageClient() {
     theme !== preferences.theme ||
     density !== preferences.density ||
     reduceMotion !== preferences.reduce_motion ||
+    soundEffects !== preferences.sound_effects ||
+    hapticFeedback !== preferences.haptic_feedback ||
+    festiveLook !== preferences.festive_look ||
     emailNotifications !== preferences.email_notifications ||
     desktopNotifications !== preferences.desktop_notifications ||
     weekStartsOn !== preferences.week_starts_on ||
@@ -166,6 +177,9 @@ export function SettingsPageClient() {
       theme,
       density,
       reduce_motion: reduceMotion,
+      sound_effects: soundEffects,
+      haptic_feedback: hapticFeedback,
+      festive_look: festiveLook,
       email_notifications: emailNotifications,
       desktop_notifications: desktopNotifications,
       week_starts_on: weekStartsOn,
@@ -178,6 +192,9 @@ export function SettingsPageClient() {
     setTheme(preferences.theme);
     setDensity(preferences.density);
     setReduceMotion(preferences.reduce_motion);
+    setSoundEffects(preferences.sound_effects);
+    setHapticFeedback(preferences.haptic_feedback);
+    setFestiveLook(preferences.festive_look);
     setEmailNotifications(preferences.email_notifications);
     setDesktopNotifications(preferences.desktop_notifications);
     setWeekStartsOn(preferences.week_starts_on);
@@ -311,6 +328,52 @@ export function SettingsPageClient() {
                     onChange={(e) => setReduceMotion(e.target.checked)}
                   />
                 </label>
+                <label className="mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-3 py-3 dark:bg-wt-surface-3">
+                  <span>
+                    <span className="block text-sm font-medium text-wt-text">Festive look</span>
+                    <span className="block text-xs text-wt-text-muted">
+                      Show the seasonal touches (Diwali, Holi, Christmas, cricket season) when your company turns them on
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-[var(--wt-brand)]"
+                    checked={festiveLook}
+                    onChange={(e) => setFestiveLook(e.target.checked)}
+                  />
+                </label>
+                <label className="mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-3 py-3 dark:bg-wt-surface-3">
+                  <span>
+                    <span className="block text-sm font-medium text-wt-text">Sound on approvals</span>
+                    <span className="block text-xs text-wt-text-muted">A short, soft tone when you approve, reject or undo a request</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-[var(--wt-brand)]"
+                    checked={soundEffects}
+                    onChange={(e) => {
+                      setSoundEffects(e.target.checked);
+                      if (e.target.checked) {
+                        // Let them hear it right away, even before they save.
+                        configureFeedback({ sound: true, haptic: false });
+                        giveFeedback("approve");
+                        configureFeedback({ sound: preferences.sound_effects, haptic: preferences.haptic_feedback });
+                      }
+                    }}
+                  />
+                </label>
+                <label className="mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-3 py-3 dark:bg-wt-surface-3">
+                  <span>
+                    <span className="block text-sm font-medium text-wt-text">Vibration on approvals</span>
+                    <span className="block text-xs text-wt-text-muted">A light buzz on phones and tablets that support it</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-[var(--wt-brand)]"
+                    checked={hapticFeedback}
+                    onChange={(e) => setHapticFeedback(e.target.checked)}
+                  />
+                </label>
               </div>
             </div>
           </section>
@@ -415,6 +478,7 @@ export function SettingsPageClient() {
             </p>
           </section>
 
+          {canManagePulseScoring ? <SeasonalThemeSettingsSection /> : null}
           {canManagePulseScoring ? <PulseScoreSettingsSection /> : null}
 
           <div className="sticky bottom-6 right-6 z-10 flex justify-end">

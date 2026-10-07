@@ -43,6 +43,8 @@ import type {
   AdminMonthlyOverview,
   PulseInsights,
 } from "@/types/kpi";
+import type { SeasonalThemeSettings } from "@/types/seasonal";
+import type { SkillsSearchResult } from "@/types/skillsMatrix";
 import type { MyLearningSummary, TeamTrainingCompletionRow, CertificateOut } from "@/types/learning";
 import type {
   PaginatedWikiPages,
@@ -618,6 +620,25 @@ export const hrmsService = {
     return apiClient.put<ApiEnvelope<unknown>>(endpoints.profile.self, {
       body: fd,
       timeoutMs: 60_000,
+    });
+  },
+
+  searchSkillsMatrix(query: string) {
+    return apiClient.get<SkillsSearchResult>(endpoints.skillsMatrix.search, { query: { q: query } });
+  },
+
+  getSeasonalTheme() {
+    return apiClient.get<{ active: string | null; label: string | null }>(endpoints.seasonalTheme.current);
+  },
+
+  getSeasonalThemeSettings() {
+    return apiClient.get<SeasonalThemeSettings>(endpoints.seasonalTheme.admin);
+  },
+
+  updateSeasonalThemeSettings(payload: { enabled: boolean; themes: string[] }) {
+    return apiClient.put<SeasonalThemeSettings>(endpoints.seasonalTheme.current, {
+      contentType: "application/json",
+      body: JSON.stringify(payload),
     });
   },
 
