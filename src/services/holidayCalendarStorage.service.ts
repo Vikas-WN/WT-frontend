@@ -2,12 +2,12 @@ import { endpoints } from "@/api/endpoints";
 import { ApiError } from "@/api/error";
 import { apiClient } from "@/api/httpClient";
 import type { HolidayCalendarRow } from "@/utils/holidayCalendarTable";
-import { normalizeHolidayCalendarRows } from "@/utils/holidayCalendarTable";
+import { normalizeHolidayCalendarSheets } from "@/utils/holidayCalendarTable";
 import {
   buildHolidayCalendarFile,
   holidayCalendarFileMimeType,
 } from "@/utils/buildHolidayCalendarFile";
-import { downloadBlobFile, parseSpreadsheetFile } from "@/utils/parseSpreadsheetFile";
+import { downloadBlobFile, parseSpreadsheetSheets } from "@/utils/parseSpreadsheetFile";
 import {
   holidayCalendarStorageFileName,
   resolveHolidayCalendarExtension,
@@ -34,8 +34,7 @@ async function parseStoredFileResponse(
     type: blob.type || "application/octet-stream",
   });
 
-  const parsed = await parseSpreadsheetFile(file);
-  const rows = normalizeHolidayCalendarRows(parsed);
+  const rows = normalizeHolidayCalendarSheets(await parseSpreadsheetSheets(file));
 
   return {
     year,

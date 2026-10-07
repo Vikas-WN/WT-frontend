@@ -246,22 +246,66 @@ export function holidayRowsTomorrow(
   });
 }
 
-export function normalizeHolidayCalendarRows(parsed: ParsedSpreadsheet): HolidayCalendarRow[] {
+/** The label shown for a holiday the sheet marks optional without saying more. */
+export const OPTIONAL_HOLIDAY_LABEL = "Optional";
+
+/** "Optional Holidays", "Optional (choose 2)" … on a line of its own (no date) starts the optional part of a sheet. */
+function isOptionalSectionHeader(row: HolidayCalendarRow): boolean {
+  return !row.date.trim() && /optional|restricted/i.test(`${row.holiday} ${row.day} ${row.optional}`);
+}
+
+/** "Mandatory Holidays" / "Public holidays" on a line of its own ends the optional part again. */
+function isMandatorySectionHeader(row: HolidayCalendarRow): boolean {
+  return !row.date.trim() && /mandatory|public|fixed|national/i.test(`${row.holiday} ${row.day} ${row.optional}`);
+}
+
+export function normalizeHolidayCalendarRows(
+  parsed: ParsedSpreadsheet,
+  options: { allOptional?: boolean } = {}
+): HolidayCalendarRow[] {
   const sourceByKey = resolveSourceColumns(parsed.columns);
   const normalized: HolidayCalendarRow[] = [];
+  // Optional holidays are often listed as their own block under a heading, after a blank line, rather than flagged row by row.
+  let inOptionalBlock = Boolean(options.allOptional);
+  let afterGap = false;
 
   for (let index = 0; index < parsed.rows.length; index += 1) {
     const row = normalizeHolidayCalendarRow(parsed.rows[index], sourceByKey);
+    const blank = !row.holiday.trim() && !row.date.trim() && !row.day.trim() && !row.optional.trim();
 
-    if (normalized.length > 0 && !row.holiday.trim() && !row.date.trim()) {
-      break;
+    if (blank) {
+      if (normalized.length > 0) afterGap = true;
+      continue;
     }
+    if (isOptionalSectionHeader(row)) {
+      inOptionalBlock = true;
+      afterGap = false;
+      continue;
+    }
+    if (isMandatorySectionHeader(row)) {
+      inOptionalBlock = Boolean(options.allOptional);
+      afterGap = false;
+      continue;
+    }
+    // After a blank line only a new optional block counts as more calendar; anything else is leftover from edits.
+    if (afterGap && !inOptionalBlock) break;
+    afterGap = false;
 
     if (!isHolidayDataRow(row)) continue;
+    if (inOptionalBlock && !row.optional.trim()) row.optional = OPTIONAL_HOLIDAY_LABEL;
     normalized.push(row);
   }
 
   return dedupeHolidayCalendarRows(normalized);
+}
+
+/** A workbook's sheets, in order: the main calendar plus any sheet whose name says "optional" (all of whose rows are optional). */
+export function normalizeHolidayCalendarSheets(sheets: ReadonlyArray<{ name: string; parsed: ParsedSpreadsheet }>): HolidayCalendarRow[] {
+  const all: HolidayCalendarRow[] = [];
+  for (const sheet of sheets) {
+    all.push(...normalizeHolidayCalendarRows(sheet.parsed, { allOptional: /optional|restricted/i.test(sheet.name) }));
+  }
+  return dedupeHolidayCalendarRows(all);
 }
 
 /** Excel edits often leave stale rows in the file. Keep the last row per date + holiday. */

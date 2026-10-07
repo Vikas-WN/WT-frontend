@@ -24,10 +24,10 @@ import {
 } from "@/hooks/holiday-calendars/useHolidayCalendarStorage";
 import { showErrorToast } from "@/lib/toast";
 import { holidayCalendarStorageService } from "@/services/holidayCalendarStorage.service";
-import { parseSpreadsheetFile } from "@/utils/parseSpreadsheetFile";
+import { parseSpreadsheetSheets } from "@/utils/parseSpreadsheetFile";
 import {
   HOLIDAY_CALENDAR_COLUMNS,
-  normalizeHolidayCalendarRows,
+  normalizeHolidayCalendarSheets,
   type HolidayCalendarColumnKey,
   type HolidayCalendarRow,
 } from "@/utils/holidayCalendarTable";
@@ -104,12 +104,12 @@ export function HolidayCalendarsPageClient() {
   async function handleUpload(file: File) {
     setUploading(true);
     try {
-      const parsed = await parseSpreadsheetFile(file);
-      if (!parsed.columns.length) {
+      const sheets = await parseSpreadsheetSheets(file);
+      if (!sheets.some((sheet) => sheet.parsed.columns.length)) {
         throw new Error("No columns were found in the uploaded file.");
       }
 
-      const normalizedRows = normalizeHolidayCalendarRows(parsed);
+      const normalizedRows = normalizeHolidayCalendarSheets(sheets);
       if (!normalizedRows.length) {
         throw new Error(
           "No holiday rows were found. Use columns Date, Day, Holiday, and Optional."
