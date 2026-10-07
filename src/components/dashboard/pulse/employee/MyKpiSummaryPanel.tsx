@@ -5,10 +5,11 @@ import { Award, TrendingUp } from "lucide-react";
 
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
+import { TrendChart, type TrendPoint } from "@/components/dashboard/pulse/insights/TrendChart";
 import { StagePipeline } from "@/components/dashboard/pulse/shared/StagePipeline";
 import { StatusPill } from "@/components/dashboard/pulse/shared/StatusPill";
 import { cn } from "@/lib/utils";
-import { formatMonthLabel } from "@/utils/pulseMonth";
+import { formatMonthLabel, shiftMonth } from "@/utils/pulseMonth";
 import { hrmsService } from "@/services/hrms.service";
 import {
   TableBody,
@@ -18,7 +19,7 @@ import {
   TableRow,
   WtTable,
 } from "@/components/dashboard/ui/wtTable";
-import type { AllTimeKpiSummary, MonthlySubmissionItem } from "@/types/kpi";
+import type { AllTimeKpiSummary, MonthKpiPoint, MonthlySubmissionItem } from "@/types/kpi";
 
 type Load<T> = { status: "loading" | "done" | "error"; data: T | null };
 
@@ -63,8 +64,20 @@ function StatTile({ label, value, sub, emphasize = false }: { label: string; val
   );
 }
 
+/** The 12 months ending at the latest reviewed month, with a gap where a month has nothing. */
+function last12Months(months: readonly MonthKpiPoint[]): TrendPoint[] {
+  if (months.length === 0) return [];
+  const byMonth = new Map(months.map((m) => [m.month, m]));
+  const latest = months[months.length - 1].month;
+  return Array.from({ length: 12 }, (_, i) => shiftMonth(latest, i - 11)).map((month) => {
+    const point = byMonth.get(month);
+    return { month, employee: point?.employee_rating ?? null, manager: point?.manager_rating ?? null, final: point?.admin_rating ?? null };
+  });
+}
+
 /** Exported for reuse by KpiReportsPanel.tsx (admin browsing any employee's summary). */
 export function SummarySection({ summary }: { summary: AllTimeKpiSummary }) {
+  const trend = last12Months(summary.months ?? []);
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -79,6 +92,43 @@ export function SummarySection({ summary }: { summary: AllTimeKpiSummary }) {
         />
       </div>
 
+      {summary.cycles.some((c) => c.six_month_result != null) ? (
+        <div>
+          <h4 className="text-sm font-semibold text-wt-text">Six-month results</h4>
+          <p className="mt-0.5 text-xs text-wt-text-muted">Each result is the average of the monthly final scores inside that cycle.</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {summary.cycles.map((cycle) => (
+              <div
+                key={cycle.cycle_key}
+                className={cn(
+                  "rounded-2xl border p-4 sm:p-5",
+                  cycle.promotion_eligible ? "border-emerald-500/30 bg-emerald-500/8" : "border-wt-border bg-wt-surface-1"
+                )}
+              >
+                <p className="text-xs font-medium text-wt-text-muted">{cycle.cycle_label}</p>
+                <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-wt-text">
+                  {cycle.six_month_result == null ? "—" : cycle.six_month_result.toFixed(2)}
+                </p>
+                <p className="mt-1 text-xs text-wt-text-muted">
+                  {cycle.months_reviewed ?? 0} of 6 months reviewed
+                  {cycle.promotion_eligible ? <span className="ml-2 font-semibold text-emerald-700 dark:text-emerald-300">Promotion eligible</span> : null}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {trend.length > 0 ? (
+        <div className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 sm:p-6">
+          <h4 className="text-sm font-semibold text-wt-text">Your last 12 months</h4>
+          <p className="mt-0.5 text-xs text-wt-text-muted">Self rating, manager rating and final score for each reviewed month.</p>
+          <div className="mt-4">
+            <TrendChart points={trend} />
+          </div>
+        </div>
+      ) : null}
+
       {summary.cycles.length > 0 ? (
         <div>
           <h4 className="text-sm font-semibold text-wt-text">By cycle</h4>
@@ -90,7 +140,7 @@ export function SummarySection({ summary }: { summary: AllTimeKpiSummary }) {
                   <TableHead>Submissions</TableHead>
                   <TableHead>Your rating</TableHead>
                   <TableHead>Manager rating</TableHead>
-                  <TableHead>Admin rating</TableHead>
+                  <TableHead>Six-month result</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -100,7 +150,7 @@ export function SummarySection({ summary }: { summary: AllTimeKpiSummary }) {
                     <TableCell>{cycle.submissions}</TableCell>
                     <TableCell>{cycle.employee_rating_display ?? "—"}</TableCell>
                     <TableCell>{cycle.manager_rating_display ?? "—"}</TableCell>
-                    <TableCell>{scoreCell(cycle.admin_rating_average)}</TableCell>
+                    <TableCell className="font-semibold">{scoreCell(cycle.six_month_result ?? cycle.admin_rating_average)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

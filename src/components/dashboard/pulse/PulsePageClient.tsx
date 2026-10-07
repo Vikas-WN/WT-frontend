@@ -11,6 +11,7 @@ import { WebknotValuesPanel } from "@/components/dashboard/pulse/WebknotValuesPa
 import { CertificationsPanel } from "@/components/dashboard/pulse/CertificationsPanel";
 import { KpiReportsPanel } from "@/components/dashboard/pulse/KpiReportsPanel";
 import { PulseScoringForm } from "@/components/dashboard/pulse/scoring/PulseScoringForm";
+import { InsightsPanel } from "@/components/dashboard/pulse/insights/InsightsPanel";
 import { SubmissionPortalPanel } from "@/components/dashboard/pulse/SubmissionPortalPanel";
 import { SubmissionsReviewPanel } from "@/components/dashboard/pulse/SubmissionsReviewPanel";
 import { EmployeeMonthlyReviewPanel } from "@/components/dashboard/pulse/employee/EmployeeMonthlyReviewPanel";
@@ -156,6 +157,7 @@ function PulseManagerPageClient() {
 
 type AdminTab =
   | "submissions"
+  | "insights"
   | "manager-reviews"
   | "my-review"
   | "kpis"
@@ -167,6 +169,7 @@ type AdminTab =
 
 const ADMIN_TABS: readonly TabItem<AdminTab>[] = [
   { value: "submissions", label: "Submissions" },
+  { value: "insights", label: "Insights" },
   // HR/Admin can act as reviewer for anyone — this is how submissions
   // from employees with no manager on record get their manager step.
   { value: "manager-reviews", label: "Manager Reviews" },
@@ -190,6 +193,8 @@ function PulseAdminPageClient() {
       render={(tab) =>
         tab === "submissions" ? (
           <SubmissionsReviewPanel />
+        ) : tab === "insights" ? (
+          <InsightsPanel />
         ) : tab === "manager-reviews" ? (
           <ManagerTeamReviewPanel />
         ) : tab === "my-review" ? (

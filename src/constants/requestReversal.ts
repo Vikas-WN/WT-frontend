@@ -15,5 +15,5 @@ export const REQUEST_REVERSAL_COPY = {
   cancelConfirm: "Cancel request",
   cancelDone: "Request cancelled.",
   cancelFailed: "Couldn't cancel that request.",
-  askHr: "Started — ask HR to cancel",
+  askHr: "Cancel window over — ask HR",
 } as const;

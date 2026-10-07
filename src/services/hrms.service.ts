@@ -41,6 +41,7 @@ import type {
   ScoreBreakdown,
   AllTimeKpiSummary,
   AdminMonthlyOverview,
+  PulseInsights,
 } from "@/types/kpi";
 import type { MyLearningSummary, TeamTrainingCompletionRow, CertificateOut } from "@/types/learning";
 import type {
@@ -2053,6 +2054,12 @@ export const hrmsService = {
     if (params.month?.trim()) query.month = params.month.trim();
     if (params.cycleKey?.trim()) query.cycle_key = params.cycleKey.trim();
     return apiClient.get<AdminMonthlyOverview>(endpoints.monthlySubmissions.adminOverview, { query });
+  },
+
+  getPulseInsights(cycleKey?: string) {
+    const query: Record<string, string> = {};
+    if (cycleKey?.trim()) query.cycle_key = cycleKey.trim();
+    return apiClient.get<PulseInsights>(endpoints.monthlySubmissions.insights, { query });
   },
 
   getMonthlySubmissionScoreBreakdown(submissionId: number) {

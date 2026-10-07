@@ -34,6 +34,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-07-04",
+    releasedOn: "2026-10-07",
+    title: "Pulse insights and a tighter cancel window",
+    highlights: [
+      {
+        area: "Pulse",
+        title: "Six-month results, bell curve and a year at a glance",
+        description:
+          "HR has a new Insights tab: pick a six-month cycle to see the bell curve, self vs manager vs final ratings, departments and a 12-month trend, and export everyone's result. Employees see their own six-month results and trend too.",
+      },
+      {
+        area: "Leave",
+        title: "Cancel an approved request within 24 hours",
+        description:
+          "You can cancel an approved leave or WFH request yourself for 24 hours after you submit it, as long as it has not started. After that, ask HR to cancel it.",
+      },
+    ],
+  },
+  {
     id: "2026-10-07-03",
     releasedOn: "2026-10-07",
     title: "A fresh look for Pulse",

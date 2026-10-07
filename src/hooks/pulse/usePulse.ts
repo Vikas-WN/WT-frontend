@@ -224,3 +224,12 @@ export function useChangeCycle() {
 }
 
 export type { SubmissionCycleScope };
+
+/** HR/Admin insights for a six-month cycle (the current one when `cycleKey` is empty): distribution, year trend, results. */
+export function usePulseInsights(cycleKey: string) {
+  return useQuery({
+    queryKey: PULSE_QUERY_KEYS.insights(cycleKey),
+    queryFn: () => hrmsService.getPulseInsights(cycleKey || undefined),
+    staleTime: 60_000,
+  });
+}
