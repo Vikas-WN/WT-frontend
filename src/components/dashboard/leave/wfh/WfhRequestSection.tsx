@@ -54,6 +54,7 @@ export function WfhRequestSection({
             onRefresh={actions.refresh}
             onEdit={actions.editRow}
             onRevoke={actions.revokeRow}
+            onCancel={actions.cancelRow}
           />
         </TabsContent>
       </Tabs>

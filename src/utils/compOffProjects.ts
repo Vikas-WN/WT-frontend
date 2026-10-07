@@ -109,7 +109,7 @@ export function buildCompOffProjectOptions(
     if (!code) return;
     const key = code.toLowerCase();
     const name = projectNameFromRow(row);
-    let mgr =
+    const mgr =
       projectManagerEmailFromRow(row, userIdToEmail) ||
       projectManagerEmailFromAllocationRows(code, allRows);
     const existing = map.get(key);

@@ -34,7 +34,10 @@ export function useClientPagination<T>(items: readonly T[], options?: Options) {
 
   const totalItems = items.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize) || 1);
-  totalPagesRef.current = totalPages;
+  // Keep the latest value readable from callbacks; a ref must not be written while rendering.
+  useEffect(() => {
+    totalPagesRef.current = totalPages;
+  });
 
   const safePage = Math.min(page, Math.max(0, totalPages - 1));
 

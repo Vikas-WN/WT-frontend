@@ -195,6 +195,8 @@ export function notificationCategoryLabel(
     case "LEAVE_APPROVAL_REMINDER":
     case "LEAVE_AUTO_APPROVED":
     case "LOP_LEAVE_REQUEST":
+    case "REQUEST_DECISION_UNDONE":
+    case "REQUEST_CANCELLED":
       return "Leave";
     case "WFH_REQUEST":
     case "WFH_APPROVED":
@@ -356,6 +358,12 @@ export function resolveNotificationHref(
     case "LEAVE_REJECTED":
     case "LEAVE_AUTO_APPROVED":
       return withLeaveDeepLink(DASHBOARD_ROUTES.leave, row, "my");
+
+    case "REQUEST_DECISION_UNDONE":
+    case "REQUEST_CANCELLED":
+      return isRequestApprover(roles)
+        ? withLeaveDeepLink(DASHBOARD_ROUTES["leave-team"], row, "team")
+        : withLeaveDeepLink(DASHBOARD_ROUTES.leave, row, "my");
 
     case "WFH_REQUEST":
     case "WFH_EXCEPTION_REQUEST":

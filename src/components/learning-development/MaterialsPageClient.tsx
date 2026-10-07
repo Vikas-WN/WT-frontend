@@ -1,5 +1,7 @@
 "use client";
 
+import { StoredDocumentLink } from "@/components/dashboard/ui/StoredDocumentLink";
+
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -34,6 +36,7 @@ export function MaterialsPageClient() {
     () =>
       (materialsQ.data ?? []).map((row) => ({
         ...row,
+        material_url: <StoredDocumentLink value={row.material_url} />,
         visibility: <MaterialVisibilityBadge value={row.visibility} />,
       })),
     [materialsQ.data]

@@ -316,7 +316,7 @@ export function LeaveManagerSelector({
                     </p>
                     <div className="border-t border-border pt-3">
                       <p className="text-xs text-muted-foreground text-center mb-2">
-                        Can't find your manager? Enter their email manually:
+                        Can&apos;t find your manager? Enter their email manually:
                       </p>
                       <div className="flex gap-2">
                         <input

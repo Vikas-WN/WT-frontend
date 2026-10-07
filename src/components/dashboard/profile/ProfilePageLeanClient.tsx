@@ -291,13 +291,14 @@ export function ProfilePageLeanClient() {
 
   const profileDisplayName =
     String(employeeProfile?.name ?? user?.name ?? "").trim() || "Profile";
+  const pickedProfilePicName = selfProfilePic?.name;
   const currentProfilePhotoName = useMemo(() => {
-    if (selfProfilePic?.name) return selfProfilePic.name;
+    if (pickedProfilePicName) return pickedProfilePicName;
     const raw = String(employeeProfile?.profile_photo ?? employeeProfile?.profilePhoto ?? "").trim();
     if (!raw) return "";
     const parts = raw.split("/");
     return parts[parts.length - 1] ?? raw;
-  }, [employeeProfile?.profilePhoto, employeeProfile?.profile_photo, selfProfilePic?.name]);
+  }, [employeeProfile?.profilePhoto, employeeProfile?.profile_photo, pickedProfilePicName]);
 
   // Preview the freshly picked file when there is one, otherwise the stored photo, so the
   // field shows the picture that will be saved instead of looking unset.

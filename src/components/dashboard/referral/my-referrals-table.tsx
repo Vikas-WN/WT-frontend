@@ -1,5 +1,7 @@
 "use client";
 
+import { documentHref } from "@/utils/documentLinks";
+
 import { RefreshCw, ExternalLink, FileText, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,7 +47,7 @@ function ResumeLink({ url }: { url: string | null | undefined }) {
   if (!url) return <span className="text-wt-text-faint">-</span>;
   return (
     <a
-      href={url}
+      href={documentHref(url) ?? url}
       target="_blank"
       rel="noopener noreferrer"
       className="inline-flex items-center gap-1 text-sm font-medium text-[var(--wt-brand)] hover:underline"

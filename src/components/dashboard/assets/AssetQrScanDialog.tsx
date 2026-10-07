@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import { SwitchCamera } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -31,9 +31,15 @@ export function AssetQrScanDialog({
   const handlingRef = useRef(false);
   const dismissedRef = useRef(false);
   const onTagScannedRef = useRef(onTagScanned);
-  onTagScannedRef.current = onTagScanned;
+  // Keep the latest value readable from callbacks; a ref must not be written while rendering.
+  useEffect(() => {
+    onTagScannedRef.current = onTagScanned;
+  });
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  // Keep the latest value readable from callbacks; a ref must not be written while rendering.
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
   const stopRef = useRef<() => Promise<void>>(async () => undefined);
 
   const finish = async (reason: AssetQrScanCloseReason) => {
@@ -74,7 +80,10 @@ export function AssetQrScanDialog({
     elementId: READER_ID,
     onDecode,
   });
-  stopRef.current = stopAndWait;
+  // Keep the latest value readable from callbacks; a ref must not be written while rendering.
+  useEffect(() => {
+    stopRef.current = stopAndWait;
+  });
 
   const error = scanError ?? cameraError;
   const canSwitch = cameras.length > 1 && !busy && !switching;

@@ -5,7 +5,10 @@ import { Award, TrendingUp } from "lucide-react";
 
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
-import { Badge } from "@/components/ui/badge";
+import { StagePipeline } from "@/components/dashboard/pulse/shared/StagePipeline";
+import { StatusPill } from "@/components/dashboard/pulse/shared/StatusPill";
+import { cn } from "@/lib/utils";
+import { formatMonthLabel } from "@/utils/pulseMonth";
 import { hrmsService } from "@/services/hrms.service";
 import {
   TableBody,
@@ -45,11 +48,16 @@ function scoreCell(value: number | null): string {
   return value == null ? "—" : value.toFixed(2);
 }
 
-function StatTile({ label, value, sub }: { label: string; value: string; sub?: string | null }) {
+function StatTile({ label, value, sub, emphasize = false }: { label: string; value: string; sub?: string | null; emphasize?: boolean }) {
   return (
-    <div className="rounded-xl border border-wt-border bg-wt-surface-1 px-4 py-3">
-      <p className="text-xs text-wt-text-muted">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-wt-text">{value}</p>
+    <div
+      className={cn(
+        "rounded-2xl border p-4 sm:p-5",
+        emphasize ? "border-[var(--wt-brand)]/25 bg-[var(--wt-brand-soft)]" : "border-wt-border bg-wt-surface-1"
+      )}
+    >
+      <p className="text-xs font-medium text-wt-text-muted">{label}</p>
+      <p className={cn("mt-1.5 font-bold tabular-nums tracking-tight text-wt-text", emphasize ? "text-3xl" : "text-2xl")}>{value}</p>
       {sub ? <p className="mt-0.5 text-xs text-wt-text-muted">{sub}</p> : null}
     </div>
   );
@@ -59,12 +67,11 @@ function StatTile({ label, value, sub }: { label: string; value: string; sub?: s
 export function SummarySection({ summary }: { summary: AllTimeKpiSummary }) {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Total submissions" value={String(summary.total_submissions)} />
-        <StatTile label="Reviewed" value={String(summary.reviewed_submissions)} />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile label="Final score" value={scoreCell(summary.admin_rating_average)} sub="Average of approved reviews" emphasize />
         <StatTile label="Your rating" value={summary.employee_rating_display ?? "—"} />
         <StatTile label="Manager rating" value={summary.manager_rating_display ?? "—"} />
-        <StatTile label="Final score" value={scoreCell(summary.admin_rating_average)} />
+        <StatTile label="Reviewed" value={`${summary.reviewed_submissions} / ${summary.total_submissions}`} sub="submissions" />
         <StatTile label="All-time KPI average" value={scoreCell(summary.all_time_kpi_average)} />
         <StatTile
           label="All-time manager KPI average"
@@ -75,7 +82,7 @@ export function SummarySection({ summary }: { summary: AllTimeKpiSummary }) {
       {summary.cycles.length > 0 ? (
         <div>
           <h4 className="text-sm font-semibold text-wt-text">By cycle</h4>
-          <div className="mt-2 overflow-x-auto rounded-xl border border-wt-border">
+          <div className="mt-2 overflow-x-auto rounded-2xl border border-wt-border bg-wt-surface-1">
             <WtTable>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -105,15 +112,6 @@ export function SummarySection({ summary }: { summary: AllTimeKpiSummary }) {
   );
 }
 
-const REVIEW_STATUS_LABELS: Record<string, string> = {
-  DRAFT: "Draft",
-  SUBMITTED: "With manager",
-  NEEDS_REVIEW: "Sent back for changes",
-  MANAGER_SUBMITTED: "Awaiting HR approval",
-  NEEDS_MANAGER_REVIEW: "With your managers to revise",
-  APPROVED: "Approved",
-};
-
 /** Exported for reuse by KpiReportsPanel.tsx (admin browsing any employee's history). */
 export function HistorySection({ rows }: { rows: MonthlySubmissionItem[] }) {
   if (rows.length === 0) {
@@ -121,32 +119,42 @@ export function HistorySection({ rows }: { rows: MonthlySubmissionItem[] }) {
   }
 
   return (
-    <div className="space-y-2">
+    <ol className="relative space-y-3 before:absolute before:bottom-3 before:left-[1.1rem] before:top-3 before:w-0.5 before:rounded-full before:bg-wt-border sm:before:left-[1.35rem]">
       {rows.map((row) => (
-        <div
-          key={row.id}
-          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-4 py-3"
-        >
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-wt-text">{row.cycle_label}</p>
-            <p className="text-xs text-wt-text-muted">{row.month}</p>
+        <li key={row.id} className="relative pl-12 sm:pl-14">
+          <span
+            aria-hidden
+            className={cn(
+              "absolute left-2 top-5 size-4 rounded-full border-4 border-wt-surface-1 ring-2 sm:left-2.5",
+              row.review_status === "APPROVED" ? "bg-emerald-500 ring-emerald-500/30" : "bg-[var(--wt-brand)] ring-[var(--wt-brand)]/25"
+            )}
+          />
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-2xl border border-wt-border bg-wt-surface-1 p-4 transition-colors hover:border-[var(--wt-brand)]/30 sm:p-5">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-wt-text">{formatMonthLabel(row.month)}</p>
+              {row.cycle_label && row.cycle_label !== formatMonthLabel(row.month) ? <p className="mt-0.5 text-xs text-wt-text-muted">{row.cycle_label}</p> : null}
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <StatusPill status={row.review_status} />
+                {row.promotion_eligible ? (
+                  <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">Promotion eligible</span>
+                ) : null}
+                {row.locked ? <span className="rounded-full border border-wt-border bg-wt-surface-2 px-2.5 py-1 text-xs font-medium text-wt-text-muted">Locked</span> : null}
+              </div>
+            </div>
+            <div className="flex items-center gap-5">
+              <StagePipeline row={row} showLabels className="hidden sm:flex" />
+              {row.final_score != null ? (
+                <div className="text-right">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-faint">Score</p>
+                  {/* admin_rating_display is the same score as a 2-dp string, not a label. */}
+                  <p className="text-2xl font-bold tabular-nums tracking-tight text-wt-text">{row.admin_rating_display ?? row.final_score}</p>
+                </div>
+              ) : null}
+            </div>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Badge variant="outline">
-              {REVIEW_STATUS_LABELS[row.review_status ?? ""] ?? row.review_status ?? row.status}
-            </Badge>
-            {row.final_score != null ? (
-              // admin_rating_display is the same score as a 2-dp string, not a label.
-              <Badge variant="outline">Score {row.admin_rating_display ?? row.final_score}</Badge>
-            ) : null}
-            {row.promotion_eligible ? (
-              <Badge className="border-emerald-300 bg-emerald-50 text-emerald-700">Promotion eligible</Badge>
-            ) : null}
-            {row.locked ? <Badge variant="outline">Locked</Badge> : null}
-          </div>
-        </div>
+        </li>
       ))}
-    </div>
+    </ol>
   );
 }
 

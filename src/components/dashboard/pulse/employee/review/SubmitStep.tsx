@@ -13,7 +13,7 @@ export function SubmitStep({ api, ctx }: { api: ReviewFormApi; ctx: ReviewContex
   const { form, progress, actions } = api;
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-      <div className="space-y-4 rounded-2xl border border-wt-border bg-wt-surface-1 p-4 sm:p-5">
+      <div className="space-y-4 rounded-2xl border border-wt-border bg-wt-surface-1 p-5 sm:p-6">
         <TextAreaField
           label="Self review"
           value={form.self_review_text}

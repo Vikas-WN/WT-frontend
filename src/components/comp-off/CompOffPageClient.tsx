@@ -21,6 +21,7 @@ import { useClientPagination } from "@/hooks/useClientPagination";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { RequestReversalActions } from "@/components/dashboard/leave/RequestReversalActions";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { hrmsService } from "@/services/hrms.service";
 import { compOffService } from "@/services/compOff.service";
@@ -673,7 +674,10 @@ export function CompOffPageClient({
         // here, which is why they got the notification but never the request.
         if (isAssignedCompOffUsageManager(row, userEmail)) return true;
         const emp = requestRowEmail(row);
-        return emp ? team.has(emp) : false;
+        if (emp && team.has(emp)) return true;
+        // Routed by the backend (project manager, reporting manager or default approver) without a picker selection:
+        // nothing on the row names this manager, but GET /userRequest only returns what is in their inbox, so keep it.
+        return Boolean(emp) && emp !== userEmail;
       });
       const seenMgr = new Set<string>();
       merged = merged.filter((row) => {
@@ -1573,7 +1577,22 @@ export function CompOffPageClient({
                                   </Button>
                                 </div>
                               ) : (
-                                <span className="text-muted-foreground">{"\u2014"}</span>
+                                <RequestReversalActions
+                                  row={row}
+                                  actorEmail={userEmail}
+                                  isHrOrAdmin={hasHrAccess}
+                                  onChanged={async () => {
+                                    // The page remembers decisions it just made; forget this one so the row shows its real status.
+                                    teamDecisionsRef.current.delete(id);
+                                    setTeamDecisions((prev) => {
+                                      const { [id]: _removed, ...rest } = prev;
+                                      return rest;
+                                    });
+                                    await loadTeamRequests({ force: true });
+                                    void loadBalanceAndGrants();
+                                  }}
+                                  fallback={<span className="text-muted-foreground">{"\u2014"}</span>}
+                                />
                               )}
                             </TableCell>
                           </>

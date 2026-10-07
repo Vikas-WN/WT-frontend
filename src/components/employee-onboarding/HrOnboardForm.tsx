@@ -260,7 +260,10 @@ export function HrOnboardForm({
     error: designationQueryErrorDetail,
   } = useDesignationSelectOptions(department, designationBandId, consultantDesignationBandIds);
   const onErrorRef = useRef(onError);
-  onErrorRef.current = onError;
+  // Keep the latest value readable from callbacks; a ref must not be written while rendering.
+  useEffect(() => {
+    onErrorRef.current = onError;
+  });
 
   const designationFieldError = designationLengthError(form.role);
 

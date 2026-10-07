@@ -123,13 +123,14 @@ export function useHomeDashboardLayout(defaultOrder: readonly string[]) {
     });
   }, []);
 
+  const defaultOrderKey = defaultOrder.join(",");
   const resetLayout = useCallback(() => {
     persist(defaultLayout(defaultOrder));
     // Depend on the joined ids (a stable primitive), not the `defaultOrder`
     // array reference itself, which callers typically pass as a new literal
     // on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultOrder.join(","), persist]);
+  }, [defaultOrderKey, persist]);
 
   return { layout, reorder, toggleSize, setHidden, resetLayout };
 }

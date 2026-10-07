@@ -95,8 +95,11 @@ export function EmployeePageClient() {
 
   const invitedListFromDateRef = useRef(invitedListFromDate);
   const invitedListToDateRef = useRef(invitedListToDate);
-  invitedListFromDateRef.current = invitedListFromDate;
-  invitedListToDateRef.current = invitedListToDate;
+  // Keep the latest value readable from callbacks; a ref must not be written while rendering.
+  useEffect(() => {
+    invitedListFromDateRef.current = invitedListFromDate;
+    invitedListToDateRef.current = invitedListToDate;
+  });
 
   const roleRetryRef = useRef(false);
 

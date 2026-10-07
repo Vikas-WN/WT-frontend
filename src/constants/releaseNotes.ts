@@ -34,6 +34,83 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-07-03",
+    releasedOn: "2026-10-07",
+    title: "A fresh look for Pulse",
+    highlights: [
+      {
+        area: "Pulse",
+        title: "Your monthly review is clearer and easier to finish",
+        description:
+          "A progress ring shows how far along you are and what is left, ratings are one connected scale you can click or type 1 to 5, and each KPI or value shows when it is complete. Your answers still save as you go.",
+      },
+      {
+        area: "Pulse",
+        title: "HR sees submissions month by month",
+        description:
+          "Pick a month to see how many reviews are finalised, who is with which manager, what was sent back and the average score. Filter by status, search by name, and follow each review from submitted to final.",
+      },
+    ],
+  },
+  {
+    id: "2026-10-07-02",
+    releasedOn: "2026-10-07",
+    title: "Your documents are now kept safely",
+    highlights: [
+      {
+        area: "Documents",
+        title: "Uploaded files can be opened again",
+        description:
+          "Policies, signed copies, training material and assessment files, onboarding documents and referral resumes are now stored in secure file storage, so they stay available after updates and open with one click. Only the people who should see a file can open it.",
+      },
+    ],
+  },
+  {
+    id: "2026-10-07-01",
+    releasedOn: "2026-10-07",
+    title: "Changed your mind? Undo and cancel for leave and requests",
+    highlights: [
+      {
+        area: "Approvals",
+        title: "Managers can undo an approval or rejection for 24 hours",
+        description:
+          "If you approve or reject a request by mistake, use Undo next to it within 24 hours. It goes back to Pending and the employee is told. After 24 hours the decision is final.",
+      },
+      {
+        area: "My requests",
+        title: "Cancel an approved leave or WFH before it starts",
+        description:
+          "Pending requests can still be edited or deleted. Once approved you can cancel until the start date, and your balance is restored. After it has started, ask HR to cancel it; HR cancelling notifies you and your manager.",
+      },
+    ],
+  },
+  {
+    id: "2026-10-06-04",
+    releasedOn: "2026-10-06",
+    title: "Use WebTrak on several devices at once",
+    highlights: [
+      {
+        area: "Signing in",
+        title: "Signing in on another device no longer signs you out here",
+        description:
+          "Your laptop, phone, browser and the desktop app each keep their own session. Signing out on one, or leaving one idle, leaves the others signed in. You are still signed out after 4 hours with no activity on that device.",
+      },
+    ],
+  },
+  {
+    id: "2026-10-06-03",
+    releasedOn: "2026-10-06",
+    title: "Fewer unexpected sign-outs",
+    highlights: [
+      {
+        area: "Signing in",
+        title: "A brief connection drop no longer signs you out",
+        description:
+          "If your Wi-Fi blinks or your laptop is just waking up, WebTrak now waits and reconnects quietly instead of ending your session. You are still signed out after 4 hours of no activity.",
+      },
+    ],
+  },
+  {
     id: "2026-10-06-02",
     releasedOn: "2026-10-06",
     title: "Approve from your email, and install WebTrak",

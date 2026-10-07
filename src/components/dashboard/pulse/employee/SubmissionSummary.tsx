@@ -1,26 +1,13 @@
 "use client";
 
-import { Check, Hourglass } from "lucide-react";
+import { Quote } from "lucide-react";
 
+import { StagePipeline } from "@/components/dashboard/pulse/shared/StagePipeline";
+import { StatusPill } from "@/components/dashboard/pulse/shared/StatusPill";
+import { statusMeta } from "@/components/dashboard/pulse/shared/submissionStatus";
 import { groupKpisByParameter, hasKpiParameters } from "@/utils/kpiParameters";
 import { cn } from "@/lib/utils";
 import type { MonthlySubmissionItem } from "@/types/kpi";
-
-type Stage = { label: string; state: "done" | "current" | "todo" };
-
-/** Where a submitted review stands: Submitted → Manager review → HR approval. */
-function stagesFor(row: MonthlySubmissionItem): Stage[] {
-  const status = row.review_status;
-  const submitted = Boolean(status && status !== "DRAFT");
-  const managerDone = status === "MANAGER_SUBMITTED" || status === "APPROVED";
-  const approved = status === "APPROVED";
-  const reviewer = row.reviewer ? `${row.reviewer.name}'s review` : "Manager review";
-  return [
-    { label: submitted ? "Submitted" : "Not submitted", state: submitted ? "done" : "current" },
-    { label: reviewer, state: managerDone ? "done" : submitted ? "current" : "todo" },
-    { label: "HR approval", state: approved ? "done" : managerDone ? "current" : "todo" },
-  ];
-}
 
 function Rating({ value, muted }: { value: number | null | undefined; muted?: boolean }) {
   return (
@@ -39,7 +26,7 @@ function Rating({ value, muted }: { value: number | null | undefined; muted?: bo
  *  side by side (yours | your manager's). Used once the review has left the
  *  employee, and for months whose window has closed. */
 export function SubmissionSummary({ submission }: { submission: MonthlySubmissionItem }) {
-  const stages = stagesFor(submission);
+  const meta = statusMeta(submission.review_status);
   const mine = new Map(submission.kpi_ratings.map((r) => [r.kpi_id, r.rating]));
   const manager = submission.manager_evaluation?.kpi_ratings ?? {};
   const managerValues = submission.manager_evaluation?.value_ratings ?? {};
@@ -48,38 +35,41 @@ export function SubmissionSummary({ submission }: { submission: MonthlySubmissio
 
   return (
     <div className="space-y-4">
-      <ol className="grid gap-2 sm:grid-cols-3">
-        {stages.map((stage) => (
-          <li
-            key={stage.label}
-            className={cn(
-              "flex items-center gap-2.5 rounded-xl border px-3.5 py-3 text-sm font-medium",
-              stage.state === "done" && "border-emerald-500/30 bg-emerald-500/10 text-wt-text",
-              stage.state === "current" && "border-[var(--wt-brand)]/40 bg-[var(--wt-brand-soft)] text-wt-text",
-              stage.state === "todo" && "border-wt-border bg-wt-surface-1 text-wt-text-faint"
-            )}
-          >
-            {stage.state === "done" ? <Check className="size-4 text-emerald-600" aria-hidden /> : <Hourglass className="size-4 opacity-60" aria-hidden />}
-            {stage.label}
-          </li>
-        ))}
-      </ol>
+      <section className="relative overflow-hidden rounded-3xl border border-wt-border bg-wt-surface-1 p-5 sm:p-6">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_120%_at_0%_0%,color-mix(in_srgb,var(--wt-brand)_8%,transparent),transparent_60%)]"
+        />
+        <div className="relative flex flex-wrap items-center justify-between gap-5">
+          <div className="min-w-0 space-y-2">
+            <StatusPill status={submission.review_status} />
+            <p className="text-sm text-wt-text-muted">
+              {approved ? "This review is final." : meta.waitingOn === "Employee" ? "Waiting on you." : `Waiting on: ${meta.waitingOn.toLowerCase()}.`}
+            </p>
+            <StagePipeline row={submission} showLabels className="pt-1" />
+          </div>
+          {approved && submission.final_score != null ? (
+            <div className="flex items-center gap-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-5 py-3">
+              <div>
+                <p className="text-xs font-medium text-wt-text-muted">Final score</p>
+                <p className="text-3xl font-bold tabular-nums tracking-tight text-wt-text">{submission.final_score}</p>
+              </div>
+              {submission.promotion_eligible ? (
+                <span className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white">Promotion eligible</span>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      </section>
 
       {submission.manager_review?.comments ? (
-        <blockquote className="rounded-xl border border-wt-border bg-wt-surface-1 p-4 text-sm text-wt-text-muted">
-          <span className="block text-xs font-semibold uppercase tracking-wide text-wt-text-faint">Manager&apos;s comment</span>
-          &ldquo;{submission.manager_review.comments}&rdquo;
-        </blockquote>
-      ) : null}
-
-      {approved && submission.final_score != null ? (
-        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-          <div>
-            <p className="text-xs text-wt-text-muted">Final score</p>
-            <p className="text-2xl font-semibold tabular-nums text-wt-text">{submission.final_score}</p>
-          </div>
-          {submission.promotion_eligible ? <span className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white">Promotion eligible</span> : null}
-        </div>
+        <figure className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5">
+          <Quote className="size-5 text-[var(--wt-brand)]/60" aria-hidden />
+          <blockquote className="mt-2 text-sm leading-relaxed text-wt-text">{submission.manager_review.comments}</blockquote>
+          <figcaption className="mt-2 text-xs font-medium text-wt-text-muted">
+            Manager&apos;s comment{submission.manager_review.reviewed_by ? ` · ${submission.manager_review.reviewed_by}` : ""}
+          </figcaption>
+        </figure>
       ) : null}
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1">

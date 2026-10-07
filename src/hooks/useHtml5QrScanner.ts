@@ -39,7 +39,10 @@ export function useHtml5QrScanner({
   const currentIdRef = useRef<string | null>(null);
   const camerasRef = useRef<CameraDevice[]>([]);
   const onDecodeRef = useRef(onDecode);
-  onDecodeRef.current = onDecode;
+  // Keep the latest value readable from callbacks; a ref must not be written while rendering.
+  useEffect(() => {
+    onDecodeRef.current = onDecode;
+  });
 
   const stopAndWait = useCallback(async () => {
     const scanner = scannerRef.current;

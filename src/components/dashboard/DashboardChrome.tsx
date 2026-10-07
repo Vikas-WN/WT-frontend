@@ -229,6 +229,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     applyResolvedTheme(resolvedTheme);
   }, [resolvedTheme]);
 
+  const userEmail = user?.email;
   const loadNotifications = useCallback(async () => {
     setNotificationsLoading(true);
     setNotificationsError(null);
@@ -276,7 +277,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
             !notificationIsRead(row)
         )
       ) {
-        void queryClient.invalidateQueries({ queryKey: selfProfileQueryKey(user?.email) });
+        void queryClient.invalidateQueries({ queryKey: selfProfileQueryKey(userEmail) });
       }
     } catch (error) {
       setNotifications([]);
@@ -286,7 +287,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     } finally {
       setNotificationsLoading(false);
     }
-  }, [queryClient, user?.email, hasHrAccess]);
+  }, [queryClient, userEmail, hasHrAccess]);
 
   const handleNotificationClick = useCallback(
     async (row: NotificationItem) => {
