@@ -1,5 +1,6 @@
 "use client";
 
+import { reportClientError, flush } from "@/lib/telemetry/client";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -11,6 +12,8 @@ export default function GuideError({
   reset: () => void;
 }) {
   useEffect(() => {
+    reportClientError("react", error);
+    flush();
     console.error("Help & Guide failed to render:", error);
   }, [error]);
 

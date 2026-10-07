@@ -1,4 +1,5 @@
 import { ApiError, parseApiErrorMessage } from "@/api/error";
+import { reportApiFailure } from "@/lib/telemetry/client";
 import { attachApiLoadingTelemetry } from "@/api/apiLoading";
 import {
   dispatchSessionLogout,
@@ -301,6 +302,13 @@ export class HttpClient {
       }
       for (const interceptor of this.errorInterceptors) {
         nextError = await interceptor(nextError);
+      }
+      // Tell monitoring when a call failed on the server side or never got there (not for ordinary 4xx answers, and never for
+      // telemetry's own calls).
+      if (nextError instanceof ApiError && !path.includes("/telemetry/")) {
+        if (timedOut) reportApiFailure(undefined, "timeout");
+        else if (nextError.status === 0) reportApiFailure(undefined, "network");
+        else if (nextError.status >= 500) reportApiFailure(nextError.status);
       }
       throw nextError;
     } finally {

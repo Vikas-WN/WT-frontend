@@ -1,5 +1,6 @@
 "use client";
 
+import { flush, reportClientError } from "@/lib/telemetry/client";
 import { Knot } from "@/components/mascot/Knot";
 import { useEffect } from "react";
 
@@ -11,6 +12,8 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
+    reportClientError("react", error);
+    flush();
     console.error("[Global Error Boundary]", error);
   }, [error]);
 

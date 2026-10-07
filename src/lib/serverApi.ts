@@ -252,6 +252,10 @@ export async function proxyUpstreamApiRequest(
 
   const backendUrl = `${getBackendBaseUrl()}/api/v1/${segments.join("/")}${request.nextUrl.search}`;
   const headers = buildUpstreamAuthHeaders(request);
+  // One id from the browser to the database: reuse the caller's, else make one, pass it on and echo it back.
+  const requestId = acceptRequestId(request.headers.get("x-request-id"));
+  headers.set("x-request-id", requestId);
+  const startedAt = Date.now();
 
   const init: RequestInit = {
     method: request.method,
@@ -271,19 +275,59 @@ export async function proxyUpstreamApiRequest(
   try {
     upstream = await fetch(backendUrl, init);
   } catch (error) {
-    console.error("BFF proxy upstream fetch failed:", backendUrl, error);
+    logBff("error", "upstream_unreachable", { requestId, method: request.method, path: `/${segments.join("/")}`, ms: Date.now() - startedAt, error: String(error).slice(0, 300) });
     return backendUnavailableResponse();
+  }
+
+  const elapsed = Date.now() - startedAt;
+  if (upstream.status >= 500 || elapsed > SLOW_UPSTREAM_MS) {
+    logBff(upstream.status >= 500 ? "error" : "warn", upstream.status >= 500 ? "upstream_error" : "upstream_slow", {
+      requestId,
+      method: request.method,
+      path: `/${segments.join("/")}`,
+      status: upstream.status,
+      ms: elapsed,
+    });
   }
 
   try {
     const body = await upstream.arrayBuffer();
+    const responseHeaders = buildSafeUpstreamResponseHeaders(upstream);
+    responseHeaders.set("x-request-id", requestId);
     return new NextResponse(body, {
       status: upstream.status,
       statusText: upstream.statusText,
-      headers: buildSafeUpstreamResponseHeaders(upstream),
+      headers: responseHeaders,
     });
   } catch (error) {
     console.error("BFF proxy response build failed:", backendUrl, error);
     return backendUnavailableResponse();
   }
+}
+
+const SLOW_UPSTREAM_MS = 2_000;
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
+
+/** Keep a caller's request id if it looks like one, otherwise make a new one. */
+export function acceptRequestId(inbound: string | null): string {
+  const candidate = (inbound ?? "").trim();
+  if (REQUEST_ID_PATTERN.test(candidate)) return candidate;
+  return Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** One JSON line per notable event on the Next server, in the same shape the backend logs — so one log search covers both. */
+export function logBff(level: "info" | "warn" | "error", event: string, fields: Record<string, unknown> = {}): void {
+  const line = JSON.stringify({
+    ts: new Date().toISOString(),
+    level: level.toUpperCase(),
+    logger: "bff",
+    service: "webtrak-frontend",
+    env: process.env.APP_ENV ?? process.env.NODE_ENV,
+    version: process.env.NEXT_PUBLIC_APP_RELEASE ?? "dev",
+    event,
+    msg: event,
+    ...fields,
+  });
+  if (level === "error") console.error(line);
+  else console.log(line);
 }

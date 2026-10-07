@@ -1,5 +1,6 @@
 "use client";
 
+import { reportClientError, flush } from "@/lib/telemetry/client";
 import { Knot } from "@/components/mascot/Knot";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,8 @@ export default function DashboardError({
   reset: () => void;
 }) {
   useEffect(() => {
+    reportClientError("react", error);
+    flush();
     console.error("[Dashboard Error Boundary]", error);
   }, [error]);
 
