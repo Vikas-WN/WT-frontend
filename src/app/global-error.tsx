@@ -1,5 +1,6 @@
 "use client";
 
+import { Knot } from "@/components/mascot/Knot";
 import { useEffect } from "react";
 
 export default function GlobalError({
@@ -42,6 +43,7 @@ export default function GlobalError({
             background: "#fff",
           }}
         >
+          <Knot mood="oops" size={84} />
           <h2 style={{ fontSize: "1.125rem", fontWeight: 600, margin: 0 }}>
             {isChunkError ? "App Updated" : "Something went wrong"}
           </h2>

@@ -1,5 +1,6 @@
 "use client";
 
+import { giveFeedback } from "@/lib/feedback";
 import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Info } from "lucide-react";
@@ -209,6 +210,7 @@ export function LeaveApprovalsPanel({
       throw error;
     }
     applyLocalDecision(requestId, status, reason);
+    giveFeedback(status === "APPROVED" ? "approve" : "reject");
     void refreshInbox();
   }
 

@@ -2464,3 +2464,59 @@ tbody tr { transition: background-color var(--wt-duration-fast) var(--wt-ease); 
   border-color: var(--wt-brand);
   background-color: var(--wt-surface-1);
 }
+
+/* ───────── Seasonal looks (Diwali · Holi · Christmas · cricket season) ─────────
+   Subtle on purpose: a thin ribbon across the very top, a tinted greeting and a gently different accent on the
+   greeting icon. Switched on per date by the server (HR's setting) via `data-season` on <html>. */
+html[data-season]::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 3px;
+  z-index: 60;
+  pointer-events: none;
+  background: var(--wt-season-ribbon);
+  background-size: 200% 100%;
+  animation: wt-season-flow 14s linear infinite;
+}
+html[data-season="diwali"] {
+  --wt-season-ribbon: linear-gradient(90deg, #f59e0b, #f97316, #fbbf24, #f59e0b);
+  --wt-season-tint: #f59e0b;
+}
+html[data-season="holi"] {
+  --wt-season-ribbon: linear-gradient(90deg, #ec4899, #8b5cf6, #22c1c3, #f5c451, #ec4899);
+  --wt-season-tint: #ec4899;
+}
+html[data-season="christmas"] {
+  --wt-season-ribbon: linear-gradient(90deg, #dc2626, #16a34a, #dc2626, #16a34a);
+  --wt-season-tint: #16a34a;
+}
+html[data-season="cricket"] {
+  --wt-season-ribbon: linear-gradient(90deg, #16a34a, #2563eb, #16a34a);
+  --wt-season-tint: #16a34a;
+}
+.wt-season-greeting {
+  border-color: color-mix(in srgb, var(--wt-season-tint, var(--wt-brand)) 28%, var(--wt-border));
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--wt-season-tint, var(--wt-brand)) 10%, var(--wt-surface-1)),
+    var(--wt-surface-1) 70%
+  );
+}
+.wt-season-icon {
+  background: color-mix(in srgb, var(--wt-season-tint, var(--wt-brand)) 16%, transparent);
+  color: var(--wt-season-tint, var(--wt-brand));
+}
+@keyframes wt-season-flow {
+  to {
+    background-position: 200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-season]::before {
+    animation: none;
+  }
+}
+html.wt-reduce-motion[data-season]::before {
+  animation: none;
+}

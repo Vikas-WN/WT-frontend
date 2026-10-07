@@ -96,6 +96,13 @@ export const dashboardNavigation: NavItem[] = [
         icon: "bookUser",
       },
       {
+        id: "skills-matrix",
+        label: "Skills Matrix",
+        // The people who staff projects: HR/Admin and the managers.
+        roles: ["ROLE_HR", "ROLE_ADMIN", "ROLE_MANAGER", "ROLE_DM", "ROLE_AM"],
+        icon: "layoutGrid",
+      },
+      {
         id: "holiday-calendars",
         label: "Holiday Calendar",
         roles: ["ROLE_HR", "ROLE_ADMIN"],
@@ -453,6 +460,7 @@ const PAGE_TITLE_OVERRIDES: Record<string, string> = {
   settings: "Settings",
   overview: "Overview",
   "employee-directory": "Employee Directory",
+  "skills-matrix": "Skills Matrix",
   employee: "Onboarding",
   offboarding: "Offboarding",
   timelog: "Time Logs",

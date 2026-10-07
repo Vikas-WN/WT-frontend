@@ -1,5 +1,6 @@
 "use client";
 
+import { giveFeedback } from "@/lib/feedback";
 import { useState } from "react";
 import { Check, ExternalLink, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -41,6 +42,7 @@ export function NotificationQuickActions({
     setBusy(true);
     try {
       await updateUserRequestStatus(requestId, "APPROVED");
+      giveFeedback("approve");
       notifySuccess(COPY.approved);
       onDone();
     } catch (error) {

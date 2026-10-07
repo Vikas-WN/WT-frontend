@@ -1,5 +1,6 @@
 "use client";
 
+import { giveFeedback } from "@/lib/feedback";
 import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider, useMutation, useQuery } from "@tanstack/react-query";
 
@@ -40,7 +41,10 @@ function QuickActionFlow({ token }: { token: string }) {
   const decide = useMutation({
     mutationFn: ({ action, message }: { action: QuickActionDecision; message?: string }) =>
       quickActionService.decide(token, action, message),
-    onSuccess: (_res, { action }) => setOutcome(action === "APPROVED" ? "approved" : "rejected"),
+    onSuccess: (_res, { action }) => {
+      giveFeedback(action === "APPROVED" ? "approve" : "reject");
+      setOutcome(action === "APPROVED" ? "approved" : "rejected");
+    },
     onError: (err) => {
       if (err instanceof ApiError && err.status === 410) return setOutcome("expired");
       // The backend words these for people ("This request has already been approved."), so show them as they are.

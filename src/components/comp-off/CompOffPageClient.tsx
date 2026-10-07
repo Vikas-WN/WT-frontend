@@ -1,5 +1,6 @@
 "use client";
 
+import { giveFeedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -784,6 +785,7 @@ export function CompOffPageClient({
     const reason = rejectReason.trim();
     if (!reason) throw new Error("Reason is required when rejecting a request.");
     await decideTeamRequest(pendingReject.requestId, pendingReject.flow, "REJECTED", reason);
+    giveFeedback("reject");
     setPendingReject(null);
     setRejectReason("");
     await loadTeamRequests({ force: true });
@@ -1558,6 +1560,7 @@ export function CompOffPageClient({
                                         compOffTeamReviewActionLabel(flow, "approve"),
                                         async () => {
                                           await decideTeamRequest(id, flow, "APPROVED");
+                                          giveFeedback("approve");
                                           fireConfetti();
                                           await loadTeamRequests({ force: true });
                                         }

@@ -25,6 +25,7 @@ import {
   parseUserPreferences,
 } from "@/utils/userPreferences";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { configureFeedback } from "@/lib/feedback";
 
 type UserPreferencesContextValue = {
   preferences: UserPreferences;
@@ -84,6 +85,8 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const theme = preferences.theme;
   const density = preferences.density;
   const reduceMotion = preferences.reduce_motion;
+  const soundEffects = preferences.sound_effects;
+  const hapticFeedback = preferences.haptic_feedback;
 
   // Keep this dependency list fixed-length — Fast Refresh previously flipped between
   // a 7-item and 3-item array and React throws if the size changes across renders.
@@ -92,6 +95,11 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     applyDensityPreference(density);
     applyReduceMotionPreference(reduceMotion);
   }, [theme, density, reduceMotion]);
+
+  // Side effect: the approval sound/buzz helper lives outside React and needs to know the current choices.
+  useEffect(() => {
+    configureFeedback({ sound: soundEffects, haptic: hapticFeedback });
+  }, [soundEffects, hapticFeedback]);
 
   useEffect(() => {
     if (theme !== "system") return;

@@ -1,5 +1,6 @@
 "use client";
 
+import { giveFeedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
@@ -1484,6 +1485,7 @@ export function LeavePageClient() {
       options
     ).catch((error): Promise<never> => refreshOnStaleDecision(error));
     const updated = extractStatusUpdateData(res);
+    giveFeedback(status === "APPROVED" ? "approve" : "reject");
     const reason = options?.reason?.trim();
     applyLocalTeamRequestStatus(requestId, status, reason);
     if (updated) {

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { Knot } from "@/components/mascot/Knot";
+
 type WtLoaderProps = {
   size?: "sm" | "md" | "lg";
   className?: string;
@@ -28,8 +30,8 @@ export function WtLoaderCentered({
   className?: string;
 }) {
   return (
-    <div className={`flex flex-col items-center justify-center gap-4 ${className}`.trim()}>
-      <WtLoader size="lg" label={label || "Loading"} />
+    <div className={`flex flex-col items-center justify-center gap-3 ${className}`.trim()} role="status" aria-live="polite" aria-label={label || "Loading"}>
+      <Knot mood="loading" size={72} />
       {label ? (
         <p className="animate-pulse text-sm font-medium tracking-wide text-wt-text-muted">{label}</p>
       ) : null}
@@ -55,8 +57,8 @@ export function WtLoadingOverlay({ label = "Loading" }: { label?: string }) {
       aria-busy="true"
       aria-label={label}
     >
-      <div className="flex flex-col items-center justify-center gap-4 px-6">
-        <WtLoader size="lg" label={label} />
+      <div className="flex flex-col items-center justify-center gap-3 px-6">
+        <Knot mood="loading" size={84} />
         {label ? (
           <p className="animate-pulse text-center text-sm font-medium tracking-wide text-wt-text">
             {label}

@@ -34,6 +34,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-07-05",
+    releasedOn: "2026-10-07",
+    title: "Skills matrix, a mascot and some festive touches",
+    highlights: [
+      {
+        area: "Skills",
+        title: "Ask who knows what, and who is free",
+        description:
+          "Managers and HR can now type a question like \"who knows React and is free next month\" in the new Skills Matrix and see matching people, their ratings and how much time they have free, as cards or a grid.",
+      },
+      {
+        area: "Celebrations",
+        title: "A proper welcome, and big anniversary moments",
+        description:
+          "New joiners get a welcome message and the company sees a welcome announcement on their joining day. Work-anniversary milestones now get a full celebration on your Home, with confetti.",
+      },
+      {
+        area: "Look & feel",
+        title: "Meet Knot, plus optional festive looks and sounds",
+        description:
+          "Knot, our new mascot, keeps you company while pages load and when something goes wrong. HR can switch on a subtle festive look for Diwali, Holi, Christmas and the cricket season. Approval sounds and vibration are in Settings, off by default.",
+      },
+    ],
+  },
+  {
     id: "2026-10-07-04",
     releasedOn: "2026-10-07",
     title: "Pulse insights and a tighter cancel window",

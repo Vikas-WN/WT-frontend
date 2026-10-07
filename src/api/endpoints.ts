@@ -376,6 +376,15 @@ export const endpoints = {
     exportAssignmentsCsv: `${api}/holiday-calendars/employee-assignments/export-csv`,
   },
 
+  skillsMatrix: {
+    search: `${api}/skills-matrix/search`,
+  },
+
+  seasonalTheme: {
+    current: `${api}/settings/seasonal-theme`,
+    admin: `${api}/settings/seasonal-theme/admin`,
+  },
+
   holidayCalendarStorage: {
     byYear: (year: string | number) =>
       `${api}/holiday-calendar-storage/${encodeURIComponent(String(year))}`,

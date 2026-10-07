@@ -23,6 +23,9 @@ export function parseUserPreferences(raw: unknown): UserPreferences {
         ? (density as DensityPreference)
         : DEFAULT_USER_PREFERENCES.density,
     reduce_motion: Boolean(row.reduce_motion ?? row.reduceMotion ?? false),
+    sound_effects: Boolean(row.sound_effects ?? row.soundEffects ?? DEFAULT_USER_PREFERENCES.sound_effects),
+    haptic_feedback: Boolean(row.haptic_feedback ?? row.hapticFeedback ?? DEFAULT_USER_PREFERENCES.haptic_feedback),
+    festive_look: Boolean(row.festive_look ?? row.festiveLook ?? DEFAULT_USER_PREFERENCES.festive_look),
     email_notifications: Boolean(
       row.email_notifications ?? row.emailNotifications ?? DEFAULT_USER_PREFERENCES.email_notifications
     ),

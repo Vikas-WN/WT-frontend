@@ -1,5 +1,6 @@
 "use client";
 
+import { Knot } from "@/components/mascot/Knot";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -17,6 +18,7 @@ export default function ProfileError({
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 p-8 text-center">
       <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-8 shadow-sm">
+        <Knot mood="oops" size={72} className="mx-auto mb-3" />
         <h2 className="text-lg font-semibold text-wt-text">
           Something went wrong
         </h2>
