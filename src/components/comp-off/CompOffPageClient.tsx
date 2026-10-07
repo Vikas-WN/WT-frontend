@@ -674,7 +674,10 @@ export function CompOffPageClient({
         // here, which is why they got the notification but never the request.
         if (isAssignedCompOffUsageManager(row, userEmail)) return true;
         const emp = requestRowEmail(row);
-        return emp ? team.has(emp) : false;
+        if (emp && team.has(emp)) return true;
+        // Routed by the backend (project manager, reporting manager or default approver) without a picker selection:
+        // nothing on the row names this manager, but GET /userRequest only returns what is in their inbox, so keep it.
+        return Boolean(emp) && emp !== userEmail;
       });
       const seenMgr = new Set<string>();
       merged = merged.filter((row) => {
