@@ -2520,3 +2520,96 @@ html[data-season="cricket"] {
 html.wt-reduce-motion[data-season]::before {
   animation: none;
 }
+
+/* ───────── Festive artwork (see components/seasonal/SeasonalDecor.tsx) ───────── */
+.wt-deco-lights {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 30px;
+  color: color-mix(in srgb, var(--wt-text-muted, #64748b) 70%, transparent);
+}
+.wt-deco-wire {
+  position: absolute;
+  inset: 0 0 auto 0;
+  width: 100%;
+  height: 22px;
+}
+.wt-deco-bulb {
+  position: absolute;
+  width: 8px;
+  height: 11px;
+  margin-left: -4px;
+  border-radius: 50% 50% 55% 55%;
+  background: var(--bulb);
+  box-shadow: 0 0 10px 2px color-mix(in srgb, var(--bulb) 70%, transparent);
+  animation: wt-deco-twinkle 2.4s ease-in-out infinite;
+}
+.wt-deco-sway {
+  transform-origin: 50% 0;
+  animation: wt-deco-sway 5s ease-in-out infinite;
+  filter: drop-shadow(0 4px 8px rgb(0 0 0 / 0.18));
+}
+.wt-deco-flame {
+  transform-origin: 42px 32px;
+  animation: wt-deco-flicker 1.3s ease-in-out infinite;
+}
+.wt-deco-glow {
+  animation: wt-deco-twinkle 2.6s ease-in-out infinite;
+}
+.wt-deco-powder {
+  opacity: 0.38;
+  filter: blur(4px);
+  animation: wt-deco-breathe 9s ease-in-out infinite;
+}
+.wt-deco-float {
+  opacity: 0.6;
+  animation: wt-deco-drift 8s ease-in-out infinite;
+}
+.wt-deco-snow {
+  background: #dbeafe;
+  box-shadow: 0 0 0 1px rgb(147 197 253 / 0.7), 0 0 6px rgb(147 197 253 / 0.8);
+  animation: wt-deco-fall linear infinite;
+}
+.wt-deco-twinkle {
+  animation: wt-deco-twinkle 1.8s ease-in-out infinite;
+}
+.wt-deco-bounce {
+  animation: wt-deco-bounce 1.6s cubic-bezier(0.3, 0.1, 0.4, 1) infinite;
+}
+.wt-deco-pitch {
+  background: linear-gradient(to top, color-mix(in srgb, #16a34a 22%, transparent), transparent);
+}
+@keyframes wt-deco-twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+@keyframes wt-deco-sway {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+@keyframes wt-deco-flicker {
+  0%, 100% { transform: scale(1, 1) rotate(0); }
+  35% { transform: scale(0.93, 1.07) rotate(-2deg); }
+  70% { transform: scale(1.05, 0.96) rotate(2deg); }
+}
+@keyframes wt-deco-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.12); opacity: 0.45; }
+}
+@keyframes wt-deco-drift {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(10px, -16px); }
+}
+@keyframes wt-deco-fall {
+  from { transform: translate(0, -10px); }
+  to { transform: translate(24px, 108vh); }
+}
+@keyframes wt-deco-bounce {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-34px); }
+  60% { transform: translateY(-30px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wt-deco-layer * { animation: none !important; }
+}
+html.wt-reduce-motion .wt-deco-layer * { animation: none !important; }

@@ -50,13 +50,13 @@ export function ReviewForm({
   const { progress } = api;
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       {needsRevision ? <RevisionNotice submission={initial} /> : null}
 
       <ReviewHero month={initial.month} done={progress.overall.done} total={progress.overall.total} missing={progress.missing} saveState={api.saveState} />
 
       <div className="grid gap-4 lg:grid-cols-[14.5rem_minmax(0,1fr)]">
-        <div className="lg:sticky lg:top-24 lg:self-start">
+        <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <StepRail active={step} progress={progress} onSelect={setStep} />
         </div>
         <div className="min-w-0 space-y-4">

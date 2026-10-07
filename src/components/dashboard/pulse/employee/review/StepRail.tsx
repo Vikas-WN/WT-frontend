@@ -17,8 +17,8 @@ export function StepRail({
   onSelect: (step: ReviewStepId) => void;
 }) {
   return (
-    <nav aria-label="Review steps" className="rounded-2xl border border-wt-border bg-wt-surface-1 p-2 lg:p-3">
-      <ol className="flex gap-1 overflow-x-auto lg:flex-col lg:gap-0 lg:overflow-visible">
+    <nav aria-label="Review steps" className="max-w-full rounded-2xl border border-wt-border bg-wt-surface-1 p-2 lg:p-3">
+      <ol className="flex max-w-full gap-1 overflow-x-auto lg:flex-col lg:gap-0 lg:overflow-visible">
         {REVIEW_STEPS.map((step, i) => {
           const p = progress[step.id];
           const complete = p.total > 0 ? p.done >= p.total : true;
