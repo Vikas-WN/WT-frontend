@@ -46,14 +46,14 @@ export function ReviewHero({
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_120%_at_0%_0%,color-mix(in_srgb,var(--wt-brand)_9%,transparent),transparent_60%)]"
       />
-      <div className="relative flex flex-wrap items-center gap-5">
+      <div className="relative flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-5">
         <ScoreRing percent={pct} size={76} stroke={7} tone={complete ? "success" : "brand"} label="Review completion">
           <span className="text-lg font-bold tabular-nums text-wt-text">{pct}%</span>
         </ScoreRing>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 sm:flex-1 sm:basis-56">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--wt-brand)]">Self review</p>
           <h2 className="mt-0.5 text-xl font-bold tracking-[-0.02em] text-wt-text sm:text-2xl">{formatMonthLabel(month)}</h2>
-          <p className="mt-1 text-sm text-wt-text-muted">
+          <p className="mt-1 text-sm text-wt-text-muted [overflow-wrap:anywhere]">
             {complete
               ? "Everything's in. Head to Submit when you're ready."
               : missing.length > 0

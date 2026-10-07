@@ -6,9 +6,11 @@ import { useSearchParams } from "next/navigation";
 import { SEASON_PREVIEW_PARAM, SEASONAL_THEME_IDS } from "@/constants/seasonal";
 import { useUserPreferences } from "@/context/UserPreferencesContext";
 import { useSeasonalTheme } from "@/hooks/seasonal/useSeasonalTheme";
+import { SeasonalDecor } from "@/components/seasonal/SeasonalDecor";
+import type { SeasonalThemeId } from "@/types/seasonal";
 
 /**
- * Puts today's seasonal look on the page as `data-season="diwali"` (the CSS does the rest). Nothing renders. The look is
+ * Puts today's seasonal look on the page as `data-season="diwali"` (the CSS does the rest). Renders the decorative layer (edges only, never clickable). The look is
  * only worn when HR has switched it on, the date is inside a festival window and the person has not opted out.
  */
 export function SeasonalHost() {
@@ -29,5 +31,6 @@ export function SeasonalHost() {
     };
   }, [season, wanted]);
 
-  return null;
+  if (!season || !wanted) return null;
+  return <SeasonalDecor season={season.toUpperCase() as SeasonalThemeId} />;
 }

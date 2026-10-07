@@ -69,7 +69,7 @@ export function RatingButtons({
               disabled={disabled}
               onClick={() => onChange(level.value)}
               className={cn(
-                "group/level flex min-h-[3.25rem] flex-col items-stretch justify-between gap-2 rounded-xl border bg-wt-surface-1 px-2 pb-2 pt-2.5 text-center transition-[border-color,background-color,transform,box-shadow] duration-150 active:scale-[0.97] motion-reduce:transition-none",
+                "group/level flex min-h-[3.25rem] min-w-0 flex-col items-stretch justify-between gap-2 rounded-xl border bg-wt-surface-1 px-1 pb-2 pt-2.5 text-center transition-[border-color,background-color,transform,box-shadow] duration-150 active:scale-[0.97] motion-reduce:transition-none",
                 selected
                   ? cn(tone.selected, "shadow-[var(--wt-shadow-sm)]")
                   : cn("border-wt-border text-wt-text-muted hover:bg-wt-surface-2", tone.hover),
@@ -80,13 +80,13 @@ export function RatingButtons({
                 aria-hidden
                 className={cn("mx-auto h-1.5 w-full max-w-10 rounded-full transition-all", tone.bar, selected ? "opacity-100" : "opacity-35 group-hover/level:opacity-70")}
               />
-              <span className="hidden text-[11px] font-medium leading-tight sm:block">{level.label}</span>
+              <span className="text-[11px] font-medium leading-tight">{level.short}</span>
             </button>
           );
         })}
       </div>
-      <p className={cn("mt-1.5 text-xs font-medium sm:hidden", value ? "text-wt-text" : "text-wt-text-faint")} aria-hidden>
-        {value ? pulseRatingLabel(value) : "Tap a level"}
+      <p className={cn("mt-1.5 text-xs font-medium", value ? "text-wt-text" : "text-wt-text-faint")} aria-hidden>
+        {value ? pulseRatingLabel(value) : "Choose a level"}
       </p>
     </div>
   );

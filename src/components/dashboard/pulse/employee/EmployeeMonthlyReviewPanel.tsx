@@ -120,7 +120,7 @@ export function EmployeeMonthlyReviewPanel() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <MonthSwitcher value={month} onChange={setChosen} marks={months.data} />
         <WindowPill status={windowQ.data} loading={windowQ.isLoading} openLabel="Accepting submissions" closedLabel="Window closed" />
