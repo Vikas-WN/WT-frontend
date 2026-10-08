@@ -51,6 +51,12 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
           "Right under the balance you can see your pending requests and your approved leave that is coming up, with the dates and status of each.",
       },
       {
+        area: "App",
+        title: "Back, forward and refresh buttons in the installed app",
+        description:
+          "When you use WebTrak as an installed app there is no browser toolbar, so it now has its own back, forward and refresh buttons next to the page title.",
+      },
+      {
         area: "Leave",
         title: "A fresh leave year every 1 January",
         description:

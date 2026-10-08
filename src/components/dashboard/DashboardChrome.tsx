@@ -46,6 +46,7 @@ import { applyResolvedTheme } from "@/utils/dashboard/theme";
 import { readSidebarCollapsed, writeSidebarCollapsed } from "@/utils/dashboard/sidebarPrefs";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { AccountMenu } from "@/components/dashboard/AccountMenu";
+import { AppNavButtons } from "@/components/dashboard/AppNavButtons";
 import { ReportBugButton } from "@/components/dashboard/bug-reports/ReportBugButton";
 import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
@@ -490,6 +491,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
             >
               <IconMenu />
             </button>
+            <AppNavButtons />
             <WebTrakBrand variant="header" compact className="hidden shrink-0 min-[420px]:flex lg:hidden" />
             <div className="min-w-0">
             <h2 className="truncate text-lg font-semibold tracking-tight text-wt-text sm:text-[1.35rem]">
