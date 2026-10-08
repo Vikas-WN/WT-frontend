@@ -1,23 +1,15 @@
 import { RequestStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
 import { cn } from "@/lib/utils";
 import { formatUserRequestTypeLabel } from "@/utils/actionToast";
+import { formatShortRange } from "@/utils/shortDateRange";
 import type { HomeLeaveRequestItem } from "@/utils/homeLeaveRequests";
 
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"] as const;
 
-function formatRange(start: Date, end: Date): string {
-  const day = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()].charAt(0)}${MONTHS[d.getMonth()].slice(1).toLowerCase()}`;
-  if (start.getTime() === end.getTime()) return `${day(start)} ${start.getFullYear()}`;
-  if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
-    return `${start.getDate()} – ${day(end)} ${end.getFullYear()}`;
-  }
-  return `${day(start)} – ${day(end)} ${end.getFullYear()}`;
-}
-
 /** A request as a small date tile (day over month) beside its type, dates and status — pending glows warm, approved cool. */
 export function LeaveRequestRow({ item }: { item: HomeLeaveRequestItem }) {
   const pending = item.status !== "APPROVED";
-  const range = formatRange(item.start, item.end);
+  const range = formatShortRange(item.start, item.end);
   return (
     <li className="flex items-center gap-3">
       <span

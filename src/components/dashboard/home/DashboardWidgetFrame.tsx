@@ -8,6 +8,7 @@ import type { WidgetSize } from "@/hooks/dashboard/useHomeDashboardLayout";
 export function DashboardWidgetFrame({
   id,
   size,
+  tall = false,
   editing,
   draggedId,
   onDragStart,
@@ -19,6 +20,8 @@ export function DashboardWidgetFrame({
 }: {
   id: string;
   size: WidgetSize;
+  /** Spans two rows on desktop (for a card with more to show than its neighbours). */
+  tall?: boolean;
   editing: boolean;
   draggedId: string | null;
   onDragStart: (id: string) => void;
@@ -36,6 +39,7 @@ export function DashboardWidgetFrame({
       className={cn(
         "h-full min-h-0",
         size === "wide" && "sm:col-span-2",
+        tall && "lg:row-span-2",
         editing && "relative rounded-2xl outline outline-2 outline-transparent transition-[outline-color]",
         editing && isDropTarget && draggedId && draggedId !== id && "outline-[var(--wt-brand)]",
         isDragging && "opacity-40"

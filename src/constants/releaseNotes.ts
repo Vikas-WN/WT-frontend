@@ -51,6 +51,12 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
           "Right under the balance you can see your pending requests and your approved leave that is coming up, with the dates and status of each.",
       },
       {
+        area: "Home",
+        title: "A tidier, roomier Home screen",
+        description:
+          "Home cards now fit their content instead of stretching to fill the screen. Approvers see the actual requests waiting for them, and attendance shows where everyone is at a glance.",
+      },
+      {
         area: "App",
         title: "Back, forward and refresh buttons in the installed app",
         description:

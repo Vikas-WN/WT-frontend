@@ -1,195 +1,82 @@
 "use client";
 
+import { Building2, ChevronRight } from "lucide-react";
 import { useState } from "react";
-import { createPortal } from "react-dom";
-import { Building2, CalendarOff, Home as HomeIcon } from "lucide-react";
 
-import { HomeCard, CardMessage, CardSkeleton } from "@/components/dashboard/home/HomeCard";
-import {
-  MODAL_BODY_CLASS,
-  MODAL_HEADER_CLASS,
-  MODAL_OVERLAY_CLASS,
-  MODAL_PANEL_CLASS,
-} from "@/components/dashboard/ui/uiLayout";
-import { Button } from "@/components/ui/button";
+import { AttendanceBucketDialog } from "@/components/dashboard/home/attendance/AttendanceBucketDialog";
+import { BUCKET_META, BUCKET_ORDER, type BucketKey } from "@/components/dashboard/home/attendance/attendanceMeta";
+import { CardMessage, CardSkeleton, HomeCard } from "@/components/dashboard/home/HomeCard";
 import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
-import type { AttendanceBucket, AttendanceSnapshot } from "@/services/hrms.service";
+import { HOME_ATTENDANCE_COPY } from "@/constants/homeCards";
 import { cn } from "@/lib/utils";
+import type { AttendanceBucket, AttendanceSnapshot } from "@/services/hrms.service";
 
-type BucketKey = "office" | "work_from_home" | "on_leave";
+const NAMES_SHOWN = 2;
 
-const BUCKET_META: Record<
-  BucketKey,
-  { label: string; short: string; icon: React.ReactNode; tone: string }
-> = {
-  office: {
-    label: "In Office",
-    short: "Office",
-    icon: <Building2 className="size-3.5" />,
-    tone: "text-[var(--wt-brand)] bg-[var(--wt-brand-soft)]",
-  },
-  work_from_home: {
-    label: "Work From Home",
-    short: "Remote",
-    icon: <HomeIcon className="size-3.5" />,
-    tone: "text-emerald-700 dark:text-emerald-400 bg-emerald-500/12",
-  },
-  on_leave: {
-    label: "On Leave",
-    short: "On leave",
-    icon: <CalendarOff className="size-3.5" />,
-    tone: "text-amber-700 dark:text-amber-400 bg-amber-500/12",
-  },
-};
-
-function initials(name: string): string {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((p) => p[0]?.toUpperCase() ?? "")
-      .join("") || "?"
-  );
-}
-
-function BucketDialog({
-  bucketKey,
-  bucket,
-  onClose,
-}: {
-  bucketKey: BucketKey;
-  bucket: AttendanceBucket;
-  onClose: () => void;
-}) {
-  if (typeof document === "undefined") return null;
+function BucketRow({ bucketKey, bucket, onOpen }: { bucketKey: BucketKey; bucket: AttendanceBucket; onOpen: () => void }) {
   const meta = BUCKET_META[bucketKey];
-
-  return createPortal(
-    <div
-      className={cn(MODAL_OVERLAY_CLASS, "z-[110]")}
-      role="presentation"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div role="dialog" aria-modal="true" className={cn(MODAL_PANEL_CLASS, "max-w-md")}>
-        <div className={cn(MODAL_HEADER_CLASS, "flex items-center justify-between gap-3")}>
-          <div className="flex items-center gap-2.5">
-            <span className={cn("flex size-9 items-center justify-center rounded-xl", meta.tone)}>
-              {meta.icon}
-            </span>
-            <div>
-              <h2 className="text-base font-semibold text-wt-text">{meta.label}</h2>
-              <p className="text-xs text-wt-text-muted">
-                {bucket.count} {bucket.count === 1 ? "employee" : "employees"} today
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className={MODAL_BODY_CLASS}>
-          {bucket.employees.length === 0 ? (
-            <p className="py-6 text-center text-sm text-wt-text-muted">Nobody in this list.</p>
-          ) : (
-            <ul className="space-y-2">
-              {bucket.employees.map((e) => (
-                <li key={e.email || e.emp_id} className="flex items-center gap-2.5">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-wt-surface-3 text-[11px] font-semibold text-wt-text-muted">
-                    {initials(e.name)}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm text-wt-text">{e.name}</span>
-                    {e.department ? (
-                      <span className="block truncate text-xs text-wt-text-muted">
-                        {e.department}
-                      </span>
-                    ) : null}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div className="flex shrink-0 justify-end border-t border-wt-border px-5 py-4 sm:px-7 dark:border-wt-border/80">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Close
-          </Button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
-function StatTile({
-  bucketKey,
-  bucket,
-  onOpen,
-}: {
-  bucketKey: BucketKey;
-  bucket: AttendanceBucket;
-  onOpen: () => void;
-}) {
-  const meta = BUCKET_META[bucketKey];
-  const names = bucket.employees
-    .slice(0, 2)
-    .map((e) => e.name.split(" ")[0])
-    .join(", ");
+  const names = bucket.employees.slice(0, NAMES_SHOWN).map((e) => e.name.split(" ")[0]).join(", ");
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      disabled={bucket.count === 0}
-      className="group flex min-w-0 flex-col justify-between gap-1 rounded-xl border border-wt-border bg-wt-surface-2/60 p-3 text-left transition-[background-color,border-color,transform] duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:border-wt-border-md hover:bg-wt-surface-2 active:scale-[0.98] disabled:cursor-default disabled:hover:bg-wt-surface-2/60"
-    >
-      <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-wt-text-muted">
-        <span className={cn("grid size-6 shrink-0 place-items-center rounded-lg", meta.tone)}>{meta.icon}</span>
-        <span className="truncate">{meta.short}</span>
-      </span>
-      <span className="text-3xl font-semibold leading-none tabular-nums text-wt-text">
-        <AnimatedNumber value={bucket.count} />
-      </span>
-      <span className="truncate text-xs text-wt-text-muted">
-        {names || "None today"}
-        {bucket.count > 2 ? ` +${bucket.count - 2}` : ""}
-      </span>
-    </button>
+    <li>
+      <button
+        type="button"
+        onClick={onOpen}
+        disabled={bucket.count === 0}
+        aria-label={HOME_ATTENDANCE_COPY.open(meta.label)}
+        className="group flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors duration-[var(--wt-duration)] hover:bg-wt-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)] disabled:cursor-default disabled:hover:bg-transparent"
+      >
+        <span className={cn("grid size-9 shrink-0 place-items-center rounded-xl", meta.tone)}>{meta.icon}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium text-wt-text">{meta.short}</span>
+          <span className="block truncate text-xs text-wt-text-muted">
+            {names || HOME_ATTENDANCE_COPY.none}
+            {bucket.count > NAMES_SHOWN ? ` ${HOME_ATTENDANCE_COPY.more(bucket.count - NAMES_SHOWN)}` : ""}
+          </span>
+        </span>
+        <span className="text-xl font-semibold tabular-nums text-wt-text">
+          <AnimatedNumber value={bucket.count} />
+        </span>
+        <ChevronRight className="size-4 shrink-0 text-wt-text-faint opacity-0 transition-opacity group-hover:opacity-100 group-disabled:hidden" aria-hidden />
+      </button>
+    </li>
   );
 }
 
-export function AttendanceCard({
-  data,
-  status,
-}: {
-  data: AttendanceSnapshot | null;
-  status: "loading" | "done" | "error";
-}) {
+/** One proportional bar for the whole headcount, split by where people are today. */
+function SplitBar({ data, total }: { data: AttendanceSnapshot; total: number }) {
+  return (
+    <div className="flex h-2 gap-0.5 overflow-hidden rounded-full bg-wt-surface-3" aria-hidden>
+      {BUCKET_ORDER.map((key) => {
+        const count = data[key].count;
+        return count > 0 ? <span key={key} className={cn("h-full rounded-full", BUCKET_META[key].bar)} style={{ width: `${(count / total) * 100}%` }} /> : null;
+      })}
+    </div>
+  );
+}
+
+/** HR/Admin: where everyone is today — a proportional bar, and a row per place with a few names. */
+export function AttendanceCard({ data, status }: { data: AttendanceSnapshot | null; status: "loading" | "done" | "error" }) {
   const [openBucket, setOpenBucket] = useState<BucketKey | null>(null);
+  const total = data ? BUCKET_ORDER.reduce((sum, key) => sum + data[key].count, 0) : 0;
 
   return (
-    <HomeCard
-      title="Today's Attendance"
-      icon={<Building2 className="size-4" />}
-    >
+    <HomeCard title={HOME_ATTENDANCE_COPY.title} icon={<Building2 className="size-4" />}>
       {status === "loading" ? (
         <CardSkeleton />
       ) : status === "error" || !data ? (
-        <CardMessage text="Unavailable" />
+        <CardMessage text={HOME_ATTENDANCE_COPY.unavailable} />
       ) : (
-        <div className="grid h-full grid-cols-3 gap-2.5">
-          <StatTile bucketKey="office" bucket={data.office} onOpen={() => setOpenBucket("office")} />
-          <StatTile bucketKey="work_from_home" bucket={data.work_from_home} onOpen={() => setOpenBucket("work_from_home")} />
-          <StatTile bucketKey="on_leave" bucket={data.on_leave} onOpen={() => setOpenBucket("on_leave")} />
+        <div>
+          <p className="mb-2.5 text-xs text-wt-text-muted">{HOME_ATTENDANCE_COPY.total(total)}</p>
+          {total > 0 ? <SplitBar data={data} total={total} /> : null}
+          <ul className="mt-2 space-y-0.5">
+            {BUCKET_ORDER.map((key) => (
+              <BucketRow key={key} bucketKey={key} bucket={data[key]} onOpen={() => setOpenBucket(key)} />
+            ))}
+          </ul>
         </div>
       )}
-
-      {data && openBucket ? (
-        <BucketDialog
-          bucketKey={openBucket}
-          bucket={data[openBucket]}
-          onClose={() => setOpenBucket(null)}
-        />
-      ) : null}
+      {data && openBucket ? <AttendanceBucketDialog bucketKey={openBucket} bucket={data[openBucket]} onClose={() => setOpenBucket(null)} /> : null}
     </HomeCard>
   );
 }

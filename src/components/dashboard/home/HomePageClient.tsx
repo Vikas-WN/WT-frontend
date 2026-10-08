@@ -5,10 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays,
   CalendarRange,
-  ClipboardCheck,
   GraduationCap,
   LayoutGrid,
-  Plane,
 } from "lucide-react";
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
@@ -17,12 +15,15 @@ import { AnimatedBar } from "@/components/motion/AnimatedBar";
 import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import { cellsOf, useHomeGridShape } from "@/hooks/dashboard/useHomeGridShape";
 import { useHomeAttention } from "@/hooks/dashboard/useHomeAttention";
+import { useHomePendingApprovals } from "@/hooks/dashboard/useHomePendingApprovals";
+import { HOME_EMPTY_COPY } from "@/constants/homeCards";
 import { useCommandPalette } from "@/components/dashboard/CommandPalette";
-import { HomeCard, CardMessage, CardSkeleton } from "@/components/dashboard/home/HomeCard";
+import { HomeCard, CardEmpty, CardMessage, CardSkeleton } from "@/components/dashboard/home/HomeCard";
 import { CelebrationsCard } from "@/components/dashboard/home/CelebrationsCard";
 import { HomeUpdatesGallery } from "@/components/dashboard/home/HomeUpdatesGallery";
 import { TodaysCelebrationsBanner } from "@/components/dashboard/home/TodaysCelebrationsBanner";
 import { LeaveBalanceCard } from "@/components/dashboard/home/LeaveBalanceCard";
+import { ApprovalsCard } from "@/components/dashboard/home/ApprovalsCard";
 import { AttendanceCard } from "@/components/dashboard/home/AttendanceCard";
 import { DashboardWidgetFrame } from "@/components/dashboard/home/DashboardWidgetFrame";
 import { useHomeDashboardLayout } from "@/hooks/dashboard/useHomeDashboardLayout";
@@ -40,7 +41,6 @@ import {
   upcomingHolidayRowsInYear,
   type HolidayCalendarRow,
 } from "@/utils/holidayCalendarTable";
-import { fetchPaginatedScopedUserRequests } from "@/utils/userRequest";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { normalizeRoles } from "@/utils/roles";
 import { notifyError } from "@/lib/notify";
@@ -181,44 +181,7 @@ export function HomePageClient() {
         : Promise.resolve(null),
     [canSeeOrgOut]
   );
-  const approvals = useLoad<number | null>(async () => {
-    if (!isApprover) return null;
-    const from = new Date(today);
-    from.setDate(from.getDate() - 45);
-    const to = new Date(today);
-    to.setDate(to.getDate() + 60);
-    const scopes: Array<{ orgScope?: boolean; hrTeamScope?: boolean }> = [
-      { orgScope: true },
-      { hrTeamScope: true },
-    ];
-    const seen = new Set<string>();
-    let pending = 0;
-    for (const scope of scopes) {
-      try {
-        const res = await fetchPaginatedScopedUserRequests({
-          fromDate: iso(from),
-          toDate: iso(to),
-          requestType: "ALL",
-          page: 0,
-          size: 200,
-          ...scope,
-        });
-        for (const row of res.rows) {
-          const id = String(
-            row.user_request_id ?? row.userRequestId ?? row.id ?? Math.random()
-          );
-          const status = String(row.status ?? row.final_status ?? "").toUpperCase();
-          if (!seen.has(id) && status === "PENDING") {
-            seen.add(id);
-            pending += 1;
-          }
-        }
-      } catch {
-        /* one scope failing shouldn't blank the card */
-      }
-    }
-    return pending;
-  }, [isApprover, todayIso]);
+  const approvals = useHomePendingApprovals(isApprover);
 
   // One toast (desktop) / splash (mobile) if any card's data fails — never one
   // per card. See memory `webtrak-ui-conventions`.
@@ -282,31 +245,7 @@ export function HomePageClient() {
     },
     approvals: {
       eligible: isApprover,
-      node: (
-        <HomeCard
-          title="Pending approvals"
-          tone="amber"
-          icon={<ClipboardCheck className="size-4" />}
-          href={DASHBOARD_ROUTES["leave-team"]}
-          cta="Review"
-          featured={Boolean(approvals.data)}
-        >
-          {approvals.status === "loading" ? (
-            <CardSkeleton />
-          ) : approvals.status === "error" || approvals.data == null ? (
-            <p className="text-sm text-wt-text-muted">Open your team requests to review.</p>
-          ) : approvals.data === 0 ? (
-            <p className="text-sm text-wt-text-muted">Nothing waiting on you. 🎉</p>
-          ) : (
-            <p className="text-3xl font-semibold tabular-nums text-wt-text">
-              <AnimatedNumber value={approvals.data} />
-              <span className="ml-2 align-middle text-sm font-normal text-wt-text-muted">
-                awaiting your review
-              </span>
-            </p>
-          )}
-        </HomeCard>
-      ),
+      node: <ApprovalsCard status={approvals.status} count={approvals.count} items={approvals.items} />,
     },
     "leave-balance": {
       eligible: true,
@@ -327,7 +266,7 @@ export function HomePageClient() {
           ) : learning.status === "error" || !learning.data ? (
             <CardMessage text="Unavailable" />
           ) : learning.data.enrolled_count === 0 ? (
-            <p className="text-sm text-wt-text-muted">No trainings enrolled yet.</p>
+            <CardEmpty icon={<GraduationCap className="size-[18px]" />} title={HOME_EMPTY_COPY.learning.title} hint={HOME_EMPTY_COPY.learning.hint} />
           ) : (
             <div className="space-y-2">
               <div className="flex gap-5">
@@ -375,7 +314,7 @@ export function HomePageClient() {
           ) : whosOut.status === "error" ? (
             <CardMessage text="Unavailable" />
           ) : outToday.length === 0 ? (
-            <p className="text-sm text-wt-text-muted">Everyone&apos;s in today.</p>
+            <CardEmpty icon={<CalendarRange className="size-[18px]" />} title={HOME_EMPTY_COPY.whosOut.title} hint={HOME_EMPTY_COPY.whosOut.hint} />
           ) : (
             <div className="flex flex-wrap gap-1.5">
               {outToday.slice(0, 5).map((p) => (
@@ -411,7 +350,7 @@ export function HomePageClient() {
           ) : allocations.status === "error" ? (
             <CardMessage text="Unavailable" />
           ) : activeProjects.length === 0 ? (
-            <p className="text-sm text-wt-text-muted">No active project allocation.</p>
+            <CardEmpty icon={<LayoutGrid className="size-[18px]" />} title={HOME_EMPTY_COPY.projects.title} hint={HOME_EMPTY_COPY.projects.hint} />
           ) : (
             <ul className="space-y-1.5">
               {activeProjects.slice(0, 4).map((p) => (
@@ -445,7 +384,7 @@ export function HomePageClient() {
           ) : holidays.status === "error" ? (
             <CardMessage text="Unavailable" />
           ) : upcomingHolidays.length === 0 ? (
-            <p className="text-sm text-wt-text-muted">No holidays coming up.</p>
+            <CardEmpty icon={<CalendarDays className="size-[18px]" />} title={HOME_EMPTY_COPY.holidays.title} hint={HOME_EMPTY_COPY.holidays.hint} />
           ) : (
             <ul className="space-y-1.5">
               {upcomingHolidays.map((h) => (
@@ -475,19 +414,17 @@ export function HomePageClient() {
     .filter((w) => widgetRegistry[w.id]?.eligible && w.hidden)
     .map((w) => ({ id: w.id, title: HOME_WIDGET_TITLES[w.id] ?? w.id }));
 
-  // Desktop: every widget is always on screen. Columns follow the window width and rows follow how many widgets
-  // there are, so the grid fills the window exactly — nothing to page through or scroll.
+  // Desktop: columns follow the window width. Rows are as tall as their content needs (they used to be stretched to fill
+  // the window, which left the cards mostly empty); the tall leave card spans two rows so its neighbours stay compact.
   const shape = useHomeGridShape();
-  const attention = useHomeAttention(approvals.data ?? null);
+  const attention = useHomeAttention(approvals.count);
   const cells = cellsOf(visibleLayout);
   const columns = shape.columnsFor(cells);
-  const rows = Math.max(1, Math.ceil(cells / columns));
 
   return (
     <DashboardPageShell
       className={cn(
-        "lg:flex lg:min-h-full lg:flex-col lg:space-y-0 lg:gap-4 lg:!px-6 lg:!py-4",
-        !shape.fixed && "space-y-4"
+        "space-y-5 lg:!px-6 lg:!py-6"
       )}
     >
       <HomeHeader
@@ -515,14 +452,15 @@ export function HomePageClient() {
         </div>
       ) : (
         <div
-          className="grid gap-4 sm:grid-cols-2 lg:flex-1 lg:grid-flow-dense lg:grid-cols-[repeat(var(--home-cols),minmax(0,1fr))] lg:grid-rows-[repeat(var(--home-rows),minmax(10rem,1fr))]"
-          style={{ "--home-cols": columns, "--home-rows": rows } as React.CSSProperties}
+          className="grid items-stretch gap-4 sm:grid-cols-2 lg:grid-flow-dense lg:auto-rows-min lg:grid-cols-[repeat(var(--home-cols),minmax(0,1fr))]"
+          style={{ "--home-cols": columns } as React.CSSProperties}
         >
           {visibleLayout.map((w) => (
             <DashboardWidgetFrame
               key={w.id}
               id={w.id}
               size={w.size}
+              tall={w.id === "leave-balance"}
               editing={editMode}
               draggedId={draggedWidgetId}
               onDragStart={setDraggedWidgetId}
