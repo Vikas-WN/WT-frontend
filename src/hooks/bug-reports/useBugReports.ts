@@ -2,16 +2,11 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { ApiError } from "@/api/error";
 import { BUG_REPORT_PAGE_SIZE, BUG_REPORT_QUERY_KEYS } from "@/constants/bugReports";
 import { notifyError, notifySuccess } from "@/lib/notify";
 import { bugReportService } from "@/services/bugReports.service";
 import type { BugReportCreatePayload, BugReportUpdatePayload, BugSeverity, BugStatus } from "@/types/bugReport";
-import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
-
-function apiErrorMessage(error: unknown, fallback: string): string {
-  return toUserFriendlyApiErrorMessage(error, error instanceof ApiError ? error.message : fallback);
-}
+import { apiErrorMessage } from "@/utils/apiErrorMessage";
 
 export function useMyBugReports() {
   return useQuery({

@@ -25,6 +25,7 @@ export function WtFormDialog({
   onSubmit,
   submitLabel,
   submittingLabel = UI_COPY.saving,
+  cancelLabel = UI_COPY.cancel,
   submitDisabled = false,
   loading = false,
   maxWidthClass = "max-w-2xl",
@@ -38,6 +39,8 @@ export function WtFormDialog({
   onSubmit?: () => void;
   submitLabel?: string;
   submittingLabel?: string;
+  /** Text of the dismiss button (e.g. "Close" once the work is done). */
+  cancelLabel?: string;
   submitDisabled?: boolean;
   loading?: boolean;
   maxWidthClass?: string;
@@ -85,7 +88,7 @@ export function WtFormDialog({
 
         <div className={MODAL_FOOTER_CLASS}>
           <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-            {UI_COPY.cancel}
+            {cancelLabel}
           </Button>
           {secondaryAction ? (
             <Button

@@ -1,4 +1,5 @@
 import { ApiError, parseApiErrorMessage } from "@/api/error";
+import { recordCall } from "@/lib/diagnostics/recorder";
 import { reportApiFailure } from "@/lib/telemetry/client";
 import { attachApiLoadingTelemetry } from "@/api/apiLoading";
 import {
@@ -195,6 +196,9 @@ export class HttpClient {
       request = await interceptor(request.url, request.init);
     }
 
+    const startedAt = performance.now();
+    let finalStatus = 0;
+    let requestId: string | undefined;
     const timeoutController = timeoutMs > 0 ? new AbortController() : null;
     let timedOut = false;
     const timeoutHandle = timeoutController
@@ -209,6 +213,8 @@ export class HttpClient {
 
     try {
       let response = await fetch(request.url, request.init);
+      finalStatus = response.status;
+      requestId = response.headers.get("x-request-id") ?? undefined;
       for (const interceptor of this.responseInterceptors) {
         response = await interceptor(response, request);
       }
@@ -313,6 +319,10 @@ export class HttpClient {
       throw nextError;
     } finally {
       if (timeoutHandle) clearTimeout(timeoutHandle);
+      // Remember the call for bug reports (path template only — no query, no bodies). Telemetry's own calls are left out.
+      if (!path.includes("/telemetry/")) {
+        recordCall({ method, path, status: finalStatus, ms: Math.round(performance.now() - startedAt), requestId });
+      }
     }
   }
 

@@ -7,6 +7,16 @@ export interface BugReporter {
   email: string;
 }
 
+export interface BugAttachment {
+  id: number;
+  file_name: string;
+  content_type: string | null;
+  size_bytes: number;
+  /** The `s3://` reference — open it through `storedDocumentHref`. */
+  file_url: string;
+  created_at: string;
+}
+
 export interface BugReport {
   id: number;
   title: string;
@@ -15,6 +25,11 @@ export interface BugReport {
   status: BugStatus;
   page_url: string | null;
   user_agent: string | null;
+  /** dd/mm/yyyy HH:MM:SS — when the reporter says it happened. */
+  occurred_at: string | null;
+  /** What the browser captured (see BugContext); shape can vary by app release. */
+  context: Record<string, unknown> | null;
+  attachments: BugAttachment[];
   resolution_note: string | null;
   reporter: BugReporter;
   handled_by_name: string | null;
@@ -35,6 +50,9 @@ export interface BugReportCreatePayload {
   severity: BugSeverity;
   page_url?: string | null;
   user_agent?: string | null;
+  /** ISO time from the reporter's device. */
+  occurred_at?: string | null;
+  context?: object | null;
 }
 
 /** HR/Admin triage. `resolution_note: null` clears the note. */

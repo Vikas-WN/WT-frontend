@@ -1,9 +1,13 @@
-import { Globe } from "lucide-react";
+import { Clock, Globe } from "lucide-react";
+
+import { BugAttachmentList } from "@/components/dashboard/bug-reports/BugAttachmentList";
+import { BugTechnicalDetails } from "@/components/dashboard/bug-reports/BugTechnicalDetails";
 
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  BUG_DETAIL_COPY,
   BUG_REPORT_COPY,
   BUG_SEVERITY_OPTIONS,
   BUG_SEVERITY_TONE,
@@ -57,12 +61,20 @@ export function BugReportCard({
         </div>
       </div>
       <p className="mt-3 line-clamp-3 whitespace-pre-wrap text-sm text-wt-text-muted">{bug.description}</p>
+      {bug.occurred_at ? (
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-wt-text-faint">
+          <Clock className="size-3.5 shrink-0" aria-hidden />
+          {BUG_DETAIL_COPY.happened} {formatApiDateTimeDisplay(bug.occurred_at)}
+        </p>
+      ) : null}
       {bug.page_url ? (
         <p className="mt-2 flex items-center gap-1.5 truncate text-xs text-wt-text-faint">
           <Globe className="size-3.5 shrink-0" aria-hidden />
           <span className="truncate">{bug.page_url}</span>
         </p>
       ) : null}
+      <BugAttachmentList attachments={bug.attachments ?? []} />
+      {onReview ? <BugTechnicalDetails bug={bug} /> : null}
       {bug.resolution_note ? (
         <div className="mt-3 rounded-lg bg-wt-surface-2 px-3 py-2 text-sm text-wt-text">
           <span className="font-medium">{bug.handled_by_name ?? "HR"}: </span>

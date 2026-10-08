@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
+import { recordPage } from "@/lib/diagnostics/recorder";
 import { installGlobalHandlers, trackPageView } from "@/lib/telemetry/client";
 import { startWebVitals } from "@/lib/telemetry/webVitals";
 
@@ -23,6 +24,7 @@ export function TelemetryHost() {
   // Side effect: one page view per navigation.
   useEffect(() => {
     trackPageView(pathname);
+    recordPage(pathname);
   }, [pathname]);
 
   return null;
