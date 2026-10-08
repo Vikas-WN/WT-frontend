@@ -22,6 +22,7 @@ import { HomeCard, CardMessage, CardSkeleton } from "@/components/dashboard/home
 import { CelebrationsCard } from "@/components/dashboard/home/CelebrationsCard";
 import { HomeUpdatesGallery } from "@/components/dashboard/home/HomeUpdatesGallery";
 import { TodaysCelebrationsBanner } from "@/components/dashboard/home/TodaysCelebrationsBanner";
+import { LeaveBalanceCard } from "@/components/dashboard/home/LeaveBalanceCard";
 import { AttendanceCard } from "@/components/dashboard/home/AttendanceCard";
 import { DashboardWidgetFrame } from "@/components/dashboard/home/DashboardWidgetFrame";
 import { useHomeDashboardLayout } from "@/hooks/dashboard/useHomeDashboardLayout";
@@ -80,7 +81,6 @@ function greeting(): string {
   return "Good evening";
 }
 
-const LEAVE_SEGMENT_COLORS = ["bg-[var(--wt-brand)]", "bg-emerald-500", "bg-amber-500"] as const;
 
 const HOME_WIDGET_IDS = [
   "attendance",
@@ -103,26 +103,6 @@ const HOME_WIDGET_TITLES: Record<string, string> = {
   holidays: "Upcoming Holidays",
   celebrations: "Celebrations",
 };
-
-/** Proportional split bar under the leave-balance numbers — purely visual,
- *  degrades gracefully (renders nothing) when every bucket is zero. */
-function LeaveSplitBar({ values }: { values: number[] }) {
-  const total = values.reduce((sum, v) => sum + Math.max(0, v), 0);
-  if (total <= 0) return null;
-  return (
-    <div className="mt-3 flex h-1.5 overflow-hidden rounded-full bg-wt-surface-3">
-      {values.map((v, i) =>
-        v > 0 ? (
-          <div
-            key={i}
-            className={LEAVE_SEGMENT_COLORS[i % LEAVE_SEGMENT_COLORS.length]}
-            style={{ width: `${(Math.max(0, v) / total) * 100}%` }}
-          />
-        ) : null
-      )}
-    </div>
-  );
-}
 
 /** Thin completion bar for the Learning card. */
 function ProgressBar({ value, max }: { value: number; max: number }) {
@@ -330,48 +310,7 @@ export function HomePageClient() {
     },
     "leave-balance": {
       eligible: true,
-      node: (
-        <HomeCard
-          title="My leave balance"
-          tone="emerald"
-          icon={<Plane className="size-4" />}
-          href={`${DASHBOARD_ROUTES.leave}?tab=my`}
-          cta="Details"
-        >
-          {balance.status === "loading" ? (
-            <CardSkeleton />
-          ) : balance.status === "error" || !balance.data ? (
-            <CardMessage text="Unavailable" />
-          ) : (
-            <div>
-              <div className="flex gap-5">
-                {[
-                  { label: "Primary", value: balance.data.leave.primary, dot: LEAVE_SEGMENT_COLORS[0] },
-                  { label: "Secondary", value: balance.data.leave.secondary, dot: LEAVE_SEGMENT_COLORS[1] },
-                  { label: "Comp-off", value: balance.data.comp_off_balance, dot: LEAVE_SEGMENT_COLORS[2] },
-                ].map((b) => (
-                  <div key={b.label}>
-                    <p className="text-2xl font-semibold tabular-nums text-wt-text">
-                      <AnimatedNumber value={Number(b.value ?? 0)} decimals={Number.isInteger(Number(b.value ?? 0)) ? 0 : 1} />
-                    </p>
-                    <p className="mt-0.5 flex items-center gap-1.5 text-xs text-wt-text-muted">
-                      <span className={cn("size-1.5 rounded-full", b.dot)} aria-hidden />
-                      {b.label}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <LeaveSplitBar
-                values={[
-                  Number(balance.data.leave.primary ?? 0),
-                  Number(balance.data.leave.secondary ?? 0),
-                  Number(balance.data.comp_off_balance ?? 0),
-                ]}
-              />
-            </div>
-          )}
-        </HomeCard>
-      ),
+      node: <LeaveBalanceCard />,
     },
     learning: {
       eligible: true,

@@ -34,6 +34,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-08-01",
+    releasedOn: "2026-10-08",
+    title: "Your leave balance, in full, on the home screen",
+    highlights: [
+      {
+        area: "Home",
+        title: "Accrued and carried-forward leave",
+        description:
+          "The leave card now shows what you have accrued, what was carried forward from earlier, and your comp-off, with the total you can take.",
+      },
+      {
+        area: "Home",
+        title: "Your leave requests at a glance",
+        description:
+          "Right under the balance you can see your pending requests and your approved leave that is coming up, with the dates and status of each.",
+      },
+    ],
+  },
+  {
     id: "2026-10-07-08",
     releasedOn: "2026-10-07",
     title: "Knot dresses up and plays for the festivals",
