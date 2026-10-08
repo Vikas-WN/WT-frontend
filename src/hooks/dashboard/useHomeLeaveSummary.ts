@@ -47,9 +47,7 @@ export function useHomeLeaveSummary() {
     requestsStatus: requests.isLoading ? "loading" : requests.isError ? "error" : "ready",
     primary,
     secondary,
-    accrued: primary + secondary,
-    carryForward: Number(leave?.carry_forward ?? 0),
-    total: Number(leave?.total ?? primary + secondary + Number(leave?.carry_forward ?? 0)),
+    total: Number(leave?.total ?? primary + secondary),
     compOff: Number(balance.data?.comp_off_balance ?? 0),
     items,
   } as const;

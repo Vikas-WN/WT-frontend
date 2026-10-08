@@ -94,16 +94,16 @@ export function LeaveBalanceCard() {
       ) : (
         <div>
           <div className="grid grid-cols-3 gap-4">
+            <Figure label={HOME_LEAVE_CARD.primaryLabel} value={s.primary} dot={SEGMENT_COLORS[0]} />
             <Figure
-              label={HOME_LEAVE_CARD.accruedLabel}
-              value={s.accrued}
-              dot={SEGMENT_COLORS[0]}
-              hint={HOME_LEAVE_CARD.accruedBreakdown(formatBalanceDays(s.primary).amount, formatBalanceDays(s.secondary).amount)}
+              label={HOME_LEAVE_CARD.secondaryLabel}
+              value={s.secondary}
+              dot={SEGMENT_COLORS[1]}
+              hint={HOME_LEAVE_CARD.secondaryHint}
             />
-            <Figure label={HOME_LEAVE_CARD.carryLabel} value={s.carryForward} dot={SEGMENT_COLORS[1]} />
             <Figure label={HOME_LEAVE_CARD.compOffLabel} value={s.compOff} dot={SEGMENT_COLORS[2]} />
           </div>
-          <SplitBar values={[s.accrued, s.carryForward, s.compOff]} />
+          <SplitBar values={[s.primary, s.secondary, s.compOff]} />
           <p className="mt-2 text-xs text-wt-text-muted" title={HOME_LEAVE_CARD.totalHint}>
             {HOME_LEAVE_CARD.totalLabel}: <span className="font-medium text-wt-text">{formatBalanceDays(s.total).amount}</span>
           </p>

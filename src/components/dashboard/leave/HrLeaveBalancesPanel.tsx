@@ -75,7 +75,7 @@ export function HrLeaveBalancesPanel({
   const canEditBalances = Boolean(
     user?.roles.includes("ROLE_ADMIN") || user?.roles.includes("ROLE_HR")
   );
-  const columnCount = canEditBalances ? 7 : 6;
+  const columnCount = canEditBalances ? 6 : 5;
 
   const monthOptions =
     Number(year) === currentYear
@@ -245,7 +245,6 @@ export function HrLeaveBalancesPanel({
                 <TableHead className="px-4 font-semibold">Employee</TableHead>
                 <TableHead className="px-4 font-semibold">Primary</TableHead>
                 <TableHead className="px-4 font-semibold">Secondary</TableHead>
-                <TableHead className="px-4 font-semibold">Carry Forward</TableHead>
                 <TableHead className="px-4 font-semibold">Total</TableHead>
                 <TableHead className="px-4 font-semibold">Comp-Off</TableHead>
                 {canEditBalances ? (
@@ -283,9 +282,6 @@ export function HrLeaveBalancesPanel({
                     </TableCell>
                     <TableCell className="px-4 py-3.5 tabular-nums">
                       {row.leave?.secondary ?? "—"}
-                    </TableCell>
-                    <TableCell className="px-4 py-3.5 tabular-nums">
-                      {row.leave?.carry_forward ?? "—"}
                     </TableCell>
                     <TableCell className="px-4 py-3.5 font-medium tabular-nums">
                       {row.leave?.total ?? "—"}

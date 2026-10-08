@@ -3,15 +3,15 @@ export const HOME_LEAVE_CARD = {
   cta: "Details",
   unavailable: "Unavailable",
   totalLabel: "Available to take",
-  totalHint: "Accrued + carried forward. Comp-off is tracked separately.",
-  accruedLabel: "Accrued",
-  carryLabel: "Carried forward",
+  totalHint: "Primary + secondary (carried-forward leave is part of secondary). Comp-off is tracked separately.",
+  primaryLabel: "Primary",
+  secondaryLabel: "Secondary",
+  secondaryHint: "Includes carried forward",
   compOffLabel: "Comp-off",
   requestsHeading: "My leave requests",
   requestsEmpty: "No upcoming or pending leave requests.",
   requestsError: "Could not load your requests.",
   moreRequests: (n: number) => `+${n} more`,
-  accruedBreakdown: (primary: string, secondary: string) => `Primary ${primary} · Secondary ${secondary}`,
 } as const;
 
 /** How many requests the card lists, and how far around today it looks for them. */

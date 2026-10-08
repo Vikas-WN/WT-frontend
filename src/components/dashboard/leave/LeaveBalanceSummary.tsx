@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import { useMyLeaveBalance } from "@/hooks/leave/useMyLeaveBalance";
 import { formatBalanceDays } from "@/utils/leaveRequestDisplay";
-import { CalendarDays, RotateCcw, User, Users, Clock, Info } from "lucide-react";
+import { CalendarDays, User, Users, Clock, Info } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -84,7 +84,7 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
     return null;
   }
 
-  const { primary, secondary, carry_forward, total } = data.leave;
+  const { primary, secondary, total } = data.leave;
   const compOff = Number(data.comp_off_balance ?? 0);
   const normalizedType = String(selectedType ?? "").trim().toUpperCase();
   const isCompOffOnly = normalizedType === "COMP_OFF";
@@ -93,7 +93,7 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
 
   return (
     <>
-    <div className={`grid grid-cols-1 gap-4 ${isCompOffOnly ? "" : "sm:grid-cols-2 lg:grid-cols-5"}`}>
+    <div className={`grid grid-cols-1 gap-4 ${isCompOffOnly ? "" : "sm:grid-cols-2 lg:grid-cols-4"}`}>
       {showAll ? (
         <BalanceStatCard
           label={
@@ -119,18 +119,17 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
       ) : null}
       {showAll ? (
         <BalanceStatCard
-          label="Secondary"
+          label={
+            <span>
+              Secondary
+              <span title="Includes any leave carried forward from earlier." className="inline-flex align-middle ml-1 cursor-help">
+                <Info className="size-3.5 text-[var(--wt-brand)]/60" />
+              </span>
+            </span>
+          }
           {...formatBalanceDays(secondary)}
           icon={Users}
           tone="sky"
-        />
-      ) : null}
-      {showAll ? (
-        <BalanceStatCard
-          label="Carry Forward"
-          {...formatBalanceDays(carry_forward)}
-          icon={RotateCcw}
-          tone="amber"
         />
       ) : null}
       {(showAll || isCompOffOnly) ? (

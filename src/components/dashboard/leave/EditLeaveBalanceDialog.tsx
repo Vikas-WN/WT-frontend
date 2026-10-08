@@ -9,8 +9,7 @@ import { UI_COPY } from "@/constants/uiCopy";
 
 const BALANCE_FIELDS = [
   { key: "primary", label: "Primary" },
-  { key: "secondary", label: "Secondary" },
-  { key: "carry_forward", label: "Carry Forward" },
+  { key: "secondary", label: "Secondary (incl. carry forward)" },
 ] as const;
 
 export function EditLeaveBalanceDialog({
@@ -28,7 +27,7 @@ export function EditLeaveBalanceDialog({
   onClose: () => void;
   onSaved: () => void | Promise<void>;
 }) {
-  const [values, setValues] = useState<Record<string, string>>({ primary: "0", secondary: "0", carry_forward: "0" });
+  const [values, setValues] = useState<Record<string, string>>({ primary: "0", secondary: "0" });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -36,7 +35,6 @@ export function EditLeaveBalanceDialog({
     setValues({
       primary: String(employee.leave?.primary ?? 0),
       secondary: String(employee.leave?.secondary ?? 0),
-      carry_forward: String(employee.leave?.carry_forward ?? 0),
     });
   }, [open, employee]);
 
@@ -57,6 +55,8 @@ export function EditLeaveBalanceDialog({
       }
       parsed[field.key] = num;
     }
+    // Carried-forward leave is held in secondary now; sending 0 clears any separate carry-forward the row still has.
+    parsed.carry_forward = 0;
     setLoading(true);
     try {
       await hrmsService.updateLeaveBalance(employee.emp_id, { ...parsed, year, month });

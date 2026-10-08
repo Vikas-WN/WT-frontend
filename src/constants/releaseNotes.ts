@@ -40,9 +40,9 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
     highlights: [
       {
         area: "Home",
-        title: "Accrued and carried-forward leave",
+        title: "Primary, secondary and comp-off at a glance",
         description:
-          "The leave card now shows what you have accrued, what was carried forward from earlier, and your comp-off, with the total you can take.",
+          "The leave card now shows your primary and secondary leave (carried-forward leave is part of secondary) and your comp-off, with the total you can take.",
       },
       {
         area: "Home",
