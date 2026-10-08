@@ -36,7 +36,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     id: "2026-10-08-01",
     releasedOn: "2026-10-08",
-    title: "Your leave year on Home, and a team calendar",
+    title: "A clearer leave card, and calendars for Who's Out and holidays",
     highlights: [
       {
         area: "Home",
@@ -49,6 +49,12 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
         title: "Your leave requests at a glance",
         description:
           "Right under the balance you can see your pending requests and your approved leave that is coming up, with the dates and status of each.",
+      },
+      {
+        area: "Holiday Calendar",
+        title: "The whole year as a calendar",
+        description:
+          "The holiday calendar now opens as twelve month cards with every holiday marked and named, for employees and HR alike. The table is one click away if you prefer it.",
       },
       {
         area: "Who's Out",

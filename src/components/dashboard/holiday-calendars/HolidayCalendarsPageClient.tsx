@@ -24,6 +24,9 @@ import {
 } from "@/hooks/holiday-calendars/useHolidayCalendarStorage";
 import { showErrorToast } from "@/lib/toast";
 import { holidayCalendarStorageService } from "@/services/holidayCalendarStorage.service";
+import { HolidayViewToggle } from "@/components/dashboard/holiday-calendars/HolidayViewToggle";
+import { HolidayYearCalendar } from "@/components/dashboard/holiday-calendars/HolidayYearCalendar";
+import type { HolidayViewMode } from "@/constants/holidayCalendarView";
 import { parseSpreadsheetSheets } from "@/utils/parseSpreadsheetFile";
 import {
   HOLIDAY_CALENDAR_COLUMNS,
@@ -63,6 +66,8 @@ export function HolidayCalendarsPageClient() {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(String(currentYear));
   const [uploading, setUploading] = useState(false);
+  // UI state: how the list is shown (table for editing/exporting, calendar for reading).
+  const [view, setView] = useState<HolidayViewMode>("calendar");
 
   const storageQuery = useHolidayCalendarStorage(selectedYear);
   const loading = storageQuery.isFetching || uploading;
@@ -194,6 +199,7 @@ export function HolidayCalendarsPageClient() {
               <ArrowUpFromLine className="size-4" aria-hidden />
               Export
             </Button>
+            <HolidayViewToggle value={view} onChange={setView} />
             <ToolbarFilterSelect
               id="holiday-calendar-year"
               label="Year"
@@ -207,6 +213,9 @@ export function HolidayCalendarsPageClient() {
           </div>
         }
       >
+        {view === "calendar" && !loading && filteredRows.length > 0 ? (
+          <HolidayYearCalendar rows={filteredRows} year={Number(selectedYear)} />
+        ) : (
         <div className="wt-scroll-x-visible w-full overflow-x-auto rounded-xl border border-wt-border">
           <WtTable className="w-full">
             <colgroup>
@@ -275,6 +284,7 @@ export function HolidayCalendarsPageClient() {
             </TableBody>
           </WtTable>
         </div>
+        )}
       </ManagementListCard>
     </DashboardPageShell>
   );
