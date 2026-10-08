@@ -32,6 +32,9 @@ import {
   parseHolidayCalendarDate,
   type HolidayCalendarRow,
 } from "@/utils/holidayCalendarTable";
+import { HolidayViewToggle } from "@/components/dashboard/holiday-calendars/HolidayViewToggle";
+import { HolidayYearCalendar } from "@/components/dashboard/holiday-calendars/HolidayYearCalendar";
+import type { HolidayViewMode } from "@/constants/holidayCalendarView";
 import { downloadCsvFile } from "@/utils/parseSpreadsheetFile";
 
 const YEAR_LOOKBACK = 15;
@@ -100,6 +103,8 @@ export function PersonalHolidayCalendarView() {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(String(currentYear));
   const [downloading, setDownloading] = useState(false);
+  // UI state: calendar is the default read view; the table stays one click away.
+  const [view, setView] = useState<HolidayViewMode>("calendar");
   const yearNumber = Number(selectedYear);
   const storageQuery = useHolidayCalendarStorage(selectedYear);
 
@@ -238,6 +243,7 @@ export function PersonalHolidayCalendarView() {
                 <ArrowUpFromLine className="size-4" aria-hidden />
                 {downloading ? "Exporting…" : "Export"}
               </Button>
+              <HolidayViewToggle value={view} onChange={setView} />
               <ToolbarFilterSelect
                 id="personal-holiday-calendar-year"
                 label="Year"
@@ -296,6 +302,8 @@ export function PersonalHolidayCalendarView() {
               title="No Holidays"
               description={`No holidays are listed for ${selectedYear}.`}
             />
+          ) : view === "calendar" ? (
+            <HolidayYearCalendar rows={displayRows} year={yearNumber} />
           ) : (
             <ScrollableTable maxHeightClass="max-h-[min(70vh,560px)]">
               <WtTable>
