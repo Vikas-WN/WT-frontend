@@ -62,10 +62,9 @@ export function EmployeeLeaveBalancesCard({
         ) : null}
 
         {!isLoading && !isError && data ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
             <BalanceStat label="Primary Leave" value={data.leave?.primary ?? 0} />
-            <BalanceStat label="Secondary Leave" value={data.leave?.secondary ?? 0} />
-            <BalanceStat label="Carry Forward" value={data.leave?.carry_forward ?? 0} />
+            <BalanceStat label="Secondary Leave (incl. carry forward)" value={data.leave?.secondary ?? 0} />
             <BalanceStat label="Total Available" value={data.leave?.total ?? 0} />
             <BalanceStat label="Comp Off" value={data.comp_off_balance ?? 0} />
           </div>
