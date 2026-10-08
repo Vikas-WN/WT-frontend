@@ -52,9 +52,9 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
       },
       {
         area: "Holiday Calendar",
-        title: "The whole year as a calendar",
+        title: "The holiday calendar, month by month",
         description:
-          "The holiday calendar now opens as twelve month cards with every holiday marked and named, for employees and HR alike. The table is one click away if you prefer it.",
+          "The holiday calendar now opens as a month calendar with every holiday named on its day, a quick strip to jump between months, and the month's holidays listed beside it — for employees and HR alike. The table is one click away if you prefer it.",
       },
       {
         area: "Who's Out",
