@@ -51,6 +51,12 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
           "Right under the balance you can see your pending requests and your approved leave that is coming up, with the dates and status of each.",
       },
       {
+        area: "Leave",
+        title: "A fresh leave year every 1 January",
+        description:
+          "On 1 January primary and secondary leave start again from zero, and up to 4 of your unused days carry forward into secondary. The month-by-month plan on the Leave page now shows this.",
+      },
+      {
         area: "Holiday Calendar",
         title: "The holiday calendar, month by month",
         description:
