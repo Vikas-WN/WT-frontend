@@ -3,89 +3,30 @@
 import { Plane } from "lucide-react";
 
 import { CardMessage, CardSkeleton, HomeCard } from "@/components/dashboard/home/HomeCard";
-import { RequestStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
-import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
+import { LeaveRequestsList } from "@/components/dashboard/home/leave-card/LeaveRequestsList";
+import { LeaveRing } from "@/components/dashboard/home/leave-card/LeaveRing";
+import { LeaveYearStats } from "@/components/dashboard/home/leave-card/LeaveYearStats";
+import { HOME_LEAVE_CARD, LEAVE_COLORS } from "@/constants/homeLeaveCard";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
-import { HOME_LEAVE_CARD, HOME_LEAVE_MAX_ROWS } from "@/constants/homeLeaveCard";
 import { useHomeLeaveSummary } from "@/hooks/dashboard/useHomeLeaveSummary";
 import { cn } from "@/lib/utils";
-import { formatUserRequestTypeLabel } from "@/utils/actionToast";
-import { formatApiDateDisplay } from "@/utils/apiDate";
-import type { HomeLeaveRequestItem } from "@/utils/homeLeaveRequests";
+import { formatBalanceDays } from "@/utils/leaveRequestDisplay";
 
-const SEGMENT_COLORS = ["bg-[var(--wt-brand)]", "bg-amber-500", "bg-emerald-500"] as const;
-
-function Figure({ label, value, dot }: { label: string; value: number; dot: string }) {
+function Legend({ items }: { items: Array<{ label: string; value: number; dot: string; hint?: string }> }) {
   return (
-    <div className="min-w-0">
-      <p className="text-2xl font-semibold tabular-nums text-wt-text">
-        <AnimatedNumber value={value} decimals={Number.isInteger(value) ? 0 : 1} />
-      </p>
-      <p className="mt-0.5 flex items-center gap-1.5 text-xs text-wt-text-muted">
-        <span className={cn("size-1.5 shrink-0 rounded-full", dot)} aria-hidden />
-        {label}
-      </p>
-    </div>
+    <ul className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+      {items.map((i) => (
+        <li key={i.label} className="flex items-center gap-1.5 text-xs text-wt-text-muted" title={i.hint}>
+          <span className={cn("size-2 rounded-full", i.dot)} aria-hidden />
+          {i.label}
+          <span className="font-semibold tabular-nums text-wt-text">{formatBalanceDays(i.value).amount}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
-function YearFigure({ label, value, hint, strong = false }: { label: string; value: number; hint: string; strong?: boolean }) {
-  return (
-    <div className="min-w-0 text-center" title={hint}>
-      <p className="truncate text-[11px] font-medium text-wt-text-muted">{label}</p>
-      <p className={cn("mt-1 text-2xl tabular-nums", strong ? "font-bold text-wt-brand" : "font-semibold text-wt-text")}>
-        <AnimatedNumber value={value} decimals={Number.isInteger(value) ? 0 : 1} />
-      </p>
-    </div>
-  );
-}
-
-function SplitBar({ values }: { values: number[] }) {
-  const total = values.reduce((sum, v) => sum + Math.max(0, v), 0);
-  if (total <= 0) return null;
-  return (
-    <div className="mt-3 flex h-1.5 overflow-hidden rounded-full bg-wt-surface-3" aria-hidden>
-      {values.map((v, i) =>
-        v > 0 ? <div key={i} className={SEGMENT_COLORS[i]} style={{ width: `${(v / total) * 100}%` }} /> : null
-      )}
-    </div>
-  );
-}
-
-function RequestRow({ item }: { item: HomeLeaveRequestItem }) {
-  const range = item.from === item.to ? formatApiDateDisplay(item.from) : `${formatApiDateDisplay(item.from)} – ${formatApiDateDisplay(item.to)}`;
-  return (
-    <li className="flex items-center justify-between gap-2 text-sm">
-      <span className="min-w-0 truncate text-wt-text">
-        {formatUserRequestTypeLabel(item.type, item.isHalfDay)}
-        <span className="ml-1.5 text-xs text-wt-text-muted">{range}</span>
-      </span>
-      <RequestStatusBadge status={item.status} className="shrink-0" />
-    </li>
-  );
-}
-
-function RequestsSection() {
-  const { items, requestsStatus } = useHomeLeaveSummary();
-  if (requestsStatus === "loading") return <CardSkeleton />;
-  if (requestsStatus === "error") return <p className="text-xs text-wt-text-muted">{HOME_LEAVE_CARD.requestsError}</p>;
-  if (items.length === 0) return <p className="text-xs text-wt-text-muted">{HOME_LEAVE_CARD.requestsEmpty}</p>;
-  const shown = items.slice(0, HOME_LEAVE_MAX_ROWS);
-  return (
-    <>
-      <ul className="space-y-1.5">
-        {shown.map((item) => (
-          <RequestRow key={item.id} item={item} />
-        ))}
-      </ul>
-      {items.length > shown.length ? (
-        <p className="mt-1.5 text-xs text-wt-text-faint">{HOME_LEAVE_CARD.moreRequests(items.length - shown.length)}</p>
-      ) : null}
-    </>
-  );
-}
-
-/** Home card: what I can take (accrued + carried forward), comp-off, and my open / upcoming leave requests. */
+/** Home card: how much leave is left (ring), where it came from and went, the primary/secondary/comp-off split, and what's coming up. */
 export function LeaveBalanceCard() {
   const s = useHomeLeaveSummary();
   return (
@@ -101,25 +42,21 @@ export function LeaveBalanceCard() {
       ) : s.balanceStatus === "error" ? (
         <CardMessage text={HOME_LEAVE_CARD.unavailable} />
       ) : (
-        <div>
-          {s.yearSummary ? (
-            <div className="grid grid-cols-4 gap-3">
-              <YearFigure label={HOME_LEAVE_CARD.carriedForwardLabel} value={s.yearSummary.carried_forward} hint={HOME_LEAVE_CARD.carriedForwardHint} />
-              <YearFigure label={HOME_LEAVE_CARD.accruedYearLabel} value={s.yearSummary.accrued} hint={HOME_LEAVE_CARD.accruedYearHint} />
-              <YearFigure label={HOME_LEAVE_CARD.takenLabel} value={s.yearSummary.leaves_taken} hint={HOME_LEAVE_CARD.takenHint} />
-              <YearFigure label={HOME_LEAVE_CARD.balanceLabel} value={s.yearSummary.balance} hint={HOME_LEAVE_CARD.balanceHint} strong />
-            </div>
-          ) : null}
-          <div className={cn("grid grid-cols-3 gap-4", s.yearSummary && "mt-4")}>
-            <Figure label={HOME_LEAVE_CARD.primaryLabel} value={s.primary} dot={SEGMENT_COLORS[0]} />
-            <Figure label={HOME_LEAVE_CARD.secondaryLabel} value={s.secondary} dot={SEGMENT_COLORS[1]} />
-            <Figure label={HOME_LEAVE_CARD.compOffLabel} value={s.compOff} dot={SEGMENT_COLORS[2]} />
+        <div className="@container">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+            <LeaveRing primary={s.primary} secondary={s.secondary} balance={s.yearSummary?.balance ?? s.total} />
+            {s.yearSummary ? <LeaveYearStats summary={s.yearSummary} /> : null}
           </div>
-          <SplitBar values={[s.primary, s.secondary, s.compOff]} />
-          <p className="mt-2 text-[11px] text-wt-text-faint">{HOME_LEAVE_CARD.breakupNote}</p>
-          <div className="mt-3 border-t border-wt-border pt-3">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-wt-text-muted">{HOME_LEAVE_CARD.requestsHeading}</p>
-            <RequestsSection />
+          <Legend
+            items={[
+              { label: HOME_LEAVE_CARD.primaryLabel, value: s.primary, dot: LEAVE_COLORS.primary.dot },
+              { label: HOME_LEAVE_CARD.secondaryLabel, value: s.secondary, dot: LEAVE_COLORS.secondary.dot, hint: HOME_LEAVE_CARD.secondaryHint },
+              { label: HOME_LEAVE_CARD.compOffLabel, value: s.compOff, dot: LEAVE_COLORS.compOff.dot, hint: HOME_LEAVE_CARD.compOffHint },
+            ]}
+          />
+          <div className="mt-4 border-t border-wt-border pt-3.5">
+            <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-wt-text-muted">{HOME_LEAVE_CARD.requestsHeading}</p>
+            <LeaveRequestsList status={s.requestsStatus} items={s.items} />
           </div>
         </div>
       )}

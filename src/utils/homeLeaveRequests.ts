@@ -5,8 +5,9 @@ export interface HomeLeaveRequestItem {
   from: string;
   to: string;
   status: string;
-  /** Start date, used for ordering. */
+  /** Start and end dates (the end equals the start for a single day); the start is also used for ordering. */
   start: Date;
+  end: Date;
 }
 
 export interface HomeLeaveRequestRules {
@@ -54,6 +55,7 @@ export function selectOpenLeaveRequests(
       to,
       status,
       start,
+      end,
     });
   }
   return items.sort((a, b) => a.start.getTime() - b.start.getTime());
