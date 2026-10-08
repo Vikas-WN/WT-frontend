@@ -1,6 +1,7 @@
 import { endpoints } from "@/api/endpoints";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
 import type {
+  BugAttachment,
   BugReport,
   BugReportCreatePayload,
   BugReportList,
@@ -8,6 +9,8 @@ import type {
   BugReportUpdatePayload,
 } from "@/types/bugReport";
 
+/** Large screen recordings on a slow connection need time; this is generous but not endless. */
+const ATTACHMENT_TIMEOUT_MS = 180_000;
 const JSON_BODY = { contentType: "application/json" } as const;
 
 export const bugReportService = {
@@ -16,6 +19,13 @@ export const bugReportService = {
       ...JSON_BODY,
       body: JSON.stringify(payload),
     });
+  },
+
+  /** One file per call, so each can succeed or fail on its own (and be retried) without losing the report. */
+  addAttachment(id: number, file: File) {
+    const body = new FormData();
+    body.append("file", file);
+    return apiClient.post<ApiEnvelope<BugAttachment>>(endpoints.bugReports.attachments(id), { body, timeoutMs: ATTACHMENT_TIMEOUT_MS });
   },
 
   mine() {

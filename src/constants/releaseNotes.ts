@@ -51,6 +51,18 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
           "Right under the balance you can see your pending requests and your approved leave that is coming up, with the dates and status of each.",
       },
       {
+        area: "Bug reports",
+        title: "Attach screenshots and recordings to a bug report",
+        description:
+          "When you report a bug you can now attach screenshots (or paste one), a short screen recording or a log file. The report also carries the exact time, your browser and screen, and the last few steps, so it can be reproduced quickly.",
+      },
+      {
+        area: "Home",
+        title: "A tidier, roomier Home screen",
+        description:
+          "Home cards now fit their content instead of stretching to fill the screen. Approvers see the actual requests waiting for them, and attendance shows where everyone is at a glance.",
+      },
+      {
         area: "App",
         title: "Back, forward and refresh buttons in the installed app",
         description:

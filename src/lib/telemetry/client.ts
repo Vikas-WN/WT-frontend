@@ -1,5 +1,7 @@
 "use client";
 
+import { recordError } from "@/lib/diagnostics/recorder";
+
 /**
  * Browser telemetry: what the real users' browsers saw — page views, Core Web Vitals, errors and failed API calls — batched and sent
  * to the backend (POST /api/v1/telemetry/events), where it becomes metrics, log lines and usage counts.
@@ -95,6 +97,7 @@ export function reportClientError(kind: "js" | "promise" | "react" | "api", erro
   if (key === lastErrorKey && now - lastErrorAt < 5_000) return;
   lastErrorKey = key;
   lastErrorAt = now;
+  recordError(kind, message);
   enqueue({ type: "client_error", route: currentRoute(), kind, message, stack: err.stack?.slice(0, STACK_MAX) });
 }
 

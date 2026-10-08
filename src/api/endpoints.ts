@@ -226,6 +226,7 @@ export const endpoints = {
     root: `${api}/bug-reports`,
     mine: `${api}/bug-reports/mine`,
     byId: (id: number | string) => `${api}/bug-reports/${encodeURIComponent(id)}`,
+    attachments: (id: number | string) => `${api}/bug-reports/${encodeURIComponent(id)}/attachments`,
   },
 
   meetingRooms: {

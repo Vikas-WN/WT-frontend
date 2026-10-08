@@ -91,6 +91,21 @@ export function CardMessage({ text }: { text: string }) {
   return <p className="py-4 text-sm text-wt-text-muted">{text}</p>;
 }
 
+/** A calm empty state: a small icon, what is missing, and what will appear — instead of a bare line of text. */
+export function CardEmpty({ icon, title, hint }: { icon: React.ReactNode; title: string; hint?: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-wt-surface-2/60 px-3.5 py-3">
+      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-wt-surface-1 text-wt-text-muted shadow-[var(--wt-shadow-sm)]" aria-hidden>
+        {icon}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-wt-text">{title}</span>
+        {hint ? <span className="block text-xs text-wt-text-muted">{hint}</span> : null}
+      </span>
+    </div>
+  );
+}
+
 export function CardSkeleton() {
   return (
     <div className="space-y-2 py-1" aria-hidden>
