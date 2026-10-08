@@ -3,6 +3,7 @@
 import { CalendarRange } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LEAVE_OUTLOOK_COPY, NEW_YEAR_MONTH } from "@/constants/leaveOutlookCopy";
 import { useLeaveOutlook } from "@/hooks/leave/useLeaveOutlook";
 import type { LeaveMonthOutlookItem } from "@/services/hrms.service";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,11 @@ function MonthRow({ month }: { month: LeaveMonthOutlookItem }) {
       <td className="px-3 py-2.5 text-sm font-medium text-wt-text">
         {month.label}
         {month.is_current ? <span className="ml-2 text-xs font-normal text-wt-text-muted">this month</span> : null}
+        {month.month === NEW_YEAR_MONTH && !month.is_current ? (
+          <span className="ml-2 rounded-full bg-amber-500/14 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300" title={LEAVE_OUTLOOK_COPY.newYearTagHint}>
+            {LEAVE_OUTLOOK_COPY.newYearTag}
+          </span>
+        ) : null}
       </td>
       <td className="px-3 py-2.5 text-sm tabular-nums text-wt-text-muted">
         {month.credit > 0 ? `+${days(month.credit)}` : EMPTY}
@@ -86,7 +92,7 @@ export function LeaveMonthlyOutlook({ enabled = true }: { enabled?: boolean }) {
             {data.accrues
               ? `You earn ${days(data.monthly_credit_total)} leaves on ${data.credited_on} (${days(data.monthly_credit_primary)} primary + ${days(data.monthly_credit_secondary)} secondary). `
               : "Your employment type doesn't earn monthly leave. "}
-            Leave approved for a later month comes off that month&apos;s balance, not today&apos;s.
+            {LEAVE_OUTLOOK_COPY.capsNote} {LEAVE_OUTLOOK_COPY.newYearNote} Leave approved for a later month comes off that month&apos;s balance, not today&apos;s.
           </p>
         </div>
       </div>
