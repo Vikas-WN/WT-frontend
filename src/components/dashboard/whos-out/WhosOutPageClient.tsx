@@ -17,6 +17,10 @@ import {
 } from "@/services/hrms.service";
 import { normalizeRoles } from "@/utils/roles";
 import { notifyError } from "@/lib/notify";
+import { CALENDAR_COPY } from "@/constants/whosOutCalendar";
+import { pickDefaultDay, type CalendarOccurrence } from "@/utils/whosOutCalendar";
+import { WhosOutCalendar } from "@/components/dashboard/whos-out/WhosOutCalendar";
+import { WhosOutDayPanel } from "@/components/dashboard/whos-out/WhosOutDayPanel";
 import { cn } from "@/lib/utils";
 
 const MONTHS = [
@@ -63,7 +67,7 @@ function initials(name: string): string {
   );
 }
 
-type DayOccurrence = { person: WhosOutPerson; entry: WhosOutEntry };
+type DayOccurrence = { person: WhosOutPerson; entry: WhosOutEntry } & CalendarOccurrence;
 
 const ENTRY_LABEL: Record<string, string> = {
   LEAVE: "Leave",
@@ -106,10 +110,12 @@ export function WhosOutPageClient() {
     () => new Date(initialMonth.getFullYear(), initialMonth.getMonth(), 1)
   );
   const [scope, setScope] = useState<"team" | "org">(initialScope);
-  const [view, setView] = useState<"agenda" | "month">("agenda");
+  const [view, setView] = useState<"agenda" | "month">("month");
   const [data, setData] = useState<WhosOutData | null>(null);
   const [status, setStatus] = useState<"loading" | "done" | "error">("loading");
   const [visibleDays, setVisibleDays] = useState(AGENDA_PAGE_SIZE);
+  // UI state only: which calendar day is picked (derived default below when none / out of the month).
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
   const reqSeq = useRef(0);
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -209,6 +215,7 @@ export function WhosOutPageClient() {
     [agendaDays]
   );
 
+  const selectedDay = pickDefaultDay(pickedDay, fromIso, toIso, todayIso, agendaDays);
   const totalPeople = data?.people.length ?? 0;
 
   const outTodayCount = useMemo(
@@ -298,8 +305,8 @@ export function WhosOutPageClient() {
               ))}
             </div>
           ) : null}
-          <div className="hidden rounded-lg border border-wt-border p-0.5 sm:inline-flex">
-            {(["agenda", "month"] as const).map((v) => (
+          <div className="inline-flex rounded-lg border border-wt-border p-0.5">
+            {(["month", "agenda"] as const).map((v) => (
               <button
                 key={v}
                 type="button"
@@ -311,7 +318,7 @@ export function WhosOutPageClient() {
                     : "text-wt-text-muted hover:text-wt-text"
                 )}
               >
-                {v}
+                {v === "month" ? CALENDAR_COPY.viewCalendar : CALENDAR_COPY.viewAgenda}
               </button>
             ))}
           </div>
@@ -321,7 +328,7 @@ export function WhosOutPageClient() {
       {status === "done" ? (
         <button
           type="button"
-          onClick={() => openDayInAgenda(todayIso)}
+          onClick={() => (view === "month" ? setPickedDay(todayIso) : openDayInAgenda(todayIso))}
           className="group flex w-full items-center gap-3 rounded-2xl border border-wt-border bg-gradient-to-br from-wt-surface-1 to-wt-surface-2/40 px-4 py-3 text-left transition-colors hover:border-[var(--wt-brand)]/40"
         >
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]">
@@ -355,21 +362,30 @@ export function WhosOutPageClient() {
             <RotateCw className="mr-1.5 size-3.5" /> Try again
           </Button>
         </div>
-      ) : agendaDays.length === 0 ? (
+      ) : view === "agenda" && agendaDays.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-wt-border px-6 py-16 text-center text-sm text-wt-text-muted">
           {scope === "org"
             ? `Nobody across the org has approved leave or WFH in ${monthLabel}.`
             : `Nobody on your team has approved leave or WFH in ${monthLabel}.`}
         </div>
       ) : view === "month" ? (
-        <MonthGrid
-          fromIso={fromIso}
-          toIso={toIso}
-          todayIso={todayIso}
-          holidaysByDay={holidaysByDay}
-          occByDay={occByDay}
-          onDayClick={openDayInAgenda}
-        />
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+          <WhosOutCalendar
+            fromIso={fromIso}
+            toIso={toIso}
+            todayIso={todayIso}
+            holidaysByDay={holidaysByDay}
+            occByDay={occByDay}
+            selectedDay={selectedDay}
+            onSelectDay={setPickedDay}
+          />
+          <WhosOutDayPanel
+            day={selectedDay}
+            todayIso={todayIso}
+            occurrences={selectedDay ? (occByDay.get(selectedDay) ?? []) : []}
+            holiday={selectedDay ? holidaysByDay.get(selectedDay) : undefined}
+          />
+        </div>
       ) : (
         <div className="space-y-2.5">
           {agendaDays.slice(0, visibleDays).map((day) => {
@@ -443,7 +459,7 @@ export function WhosOutPageClient() {
         </div>
       )}
 
-      {status === "done" && agendaDays.length > 0 ? (
+      {status === "done" && (view === "month" || agendaDays.length > 0) ? (
         <p className="text-center text-xs text-wt-text-faint">
           {view === "agenda" && agendaDays.length > visibleDays
             ? `Showing ${visibleDays} of ${agendaDays.length} days · `
@@ -454,101 +470,5 @@ export function WhosOutPageClient() {
         </p>
       ) : null}
     </DashboardPageShell>
-  );
-}
-
-function MonthGrid({
-  fromIso,
-  toIso,
-  todayIso,
-  holidaysByDay,
-  occByDay,
-  onDayClick,
-}: {
-  fromIso: string;
-  toIso: string;
-  todayIso: string;
-  holidaysByDay: Map<string, { name: string; is_optional: boolean }>;
-  occByDay: Map<string, DayOccurrence[]>;
-  onDayClick: (day: string) => void;
-}) {
-  const first = new Date(`${fromIso}T00:00:00`);
-  const leadingBlanks = (first.getDay() + 6) % 7; // Mon = 0
-  const days = eachDayIso(fromIso, toIso);
-  const cells: (string | null)[] = [
-    ...Array.from({ length: leadingBlanks }, () => null),
-    ...days,
-  ];
-  while (cells.length % 7 !== 0) cells.push(null);
-
-  return (
-    <div className="overflow-hidden rounded-2xl border border-wt-border">
-      <div className="grid grid-cols-7 border-b border-wt-border bg-wt-surface-2/50 text-center text-[11px] font-semibold uppercase tracking-wide text-wt-text-faint">
-        {WEEKDAYS.map((w) => (
-          <div key={w} className="py-2">
-            {w}
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7">
-        {cells.map((day, idx) => {
-          if (!day) {
-            return <div key={`b-${idx}`} className="min-h-[92px] border-b border-r border-wt-border/60 bg-wt-surface-2/20" />;
-          }
-          const d = new Date(`${day}T00:00:00`);
-          const weekend = d.getDay() === 0 || d.getDay() === 6;
-          const holiday = holidaysByDay.get(day);
-          const occ = occByDay.get(day) ?? [];
-          return (
-            <button
-              key={day}
-              type="button"
-              onClick={() => onDayClick(day)}
-              className={cn(
-                "min-h-[92px] border-b border-r border-wt-border/60 p-1.5 text-left align-top transition-colors hover:bg-[var(--wt-brand-soft)]/40",
-                weekend && "bg-wt-surface-2/30"
-              )}
-            >
-              <span
-                className={cn(
-                  "inline-flex size-5 items-center justify-center rounded-full text-xs",
-                  day === todayIso
-                    ? "bg-[var(--wt-brand)] font-semibold text-[var(--wt-brand-text)]"
-                    : "text-wt-text-muted"
-                )}
-              >
-                {d.getDate()}
-              </span>
-              {holiday ? (
-                <p className="mt-0.5 truncate text-[10px] font-medium text-rose-600 dark:text-rose-400">
-                  {holiday.name}
-                </p>
-              ) : null}
-              <div className="mt-0.5 space-y-0.5">
-                {occ.slice(0, 3).map(({ person, entry }, i) => (
-                  <p
-                    key={`${person.email}-${i}`}
-                    className="truncate text-[10px] text-wt-text-muted"
-                  >
-                    <span
-                      className={cn(
-                        "mr-1 inline-block size-1.5 rounded-full align-middle",
-                        entry.type === "LEAVE" ? "bg-amber-500" : "bg-[var(--wt-brand)]"
-                      )}
-                    />
-                    {person.name.split(" ")[0]}
-                  </p>
-                ))}
-                {occ.length > 3 ? (
-                  <p className="text-[10px] font-medium text-wt-text-faint">
-                    +{occ.length - 3} more
-                  </p>
-                ) : null}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
   );
 }

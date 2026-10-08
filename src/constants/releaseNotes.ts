@@ -36,19 +36,25 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     id: "2026-10-08-01",
     releasedOn: "2026-10-08",
-    title: "Your leave balance, in full, on the home screen",
+    title: "Your leave year on Home, and a team calendar",
     highlights: [
       {
         area: "Home",
-        title: "Primary, secondary and comp-off at a glance",
+        title: "Your leave year at a glance",
         description:
-          "The leave card now shows your primary and secondary leave (carried-forward leave is part of secondary) and your comp-off, with the total you can take.",
+          "The leave card now shows what you carried forward, what you have accrued this year, the leave you have taken and your balance, with your primary, secondary and comp-off split underneath.",
       },
       {
         area: "Home",
         title: "Your leave requests at a glance",
         description:
           "Right under the balance you can see your pending requests and your approved leave that is coming up, with the dates and status of each.",
+      },
+      {
+        area: "Who's Out",
+        title: "A proper team calendar",
+        description:
+          "Who's Out now opens as a month calendar: leave, work-from-home and holidays are colour-coded on each day, and tapping a day lists exactly who is out.",
       },
     ],
   },

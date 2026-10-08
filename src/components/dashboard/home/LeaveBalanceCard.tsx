@@ -12,11 +12,10 @@ import { cn } from "@/lib/utils";
 import { formatUserRequestTypeLabel } from "@/utils/actionToast";
 import { formatApiDateDisplay } from "@/utils/apiDate";
 import type { HomeLeaveRequestItem } from "@/utils/homeLeaveRequests";
-import { formatBalanceDays } from "@/utils/leaveRequestDisplay";
 
 const SEGMENT_COLORS = ["bg-[var(--wt-brand)]", "bg-amber-500", "bg-emerald-500"] as const;
 
-function Figure({ label, value, hint, dot }: { label: string; value: number; hint?: string; dot: string }) {
+function Figure({ label, value, dot }: { label: string; value: number; dot: string }) {
   return (
     <div className="min-w-0">
       <p className="text-2xl font-semibold tabular-nums text-wt-text">
@@ -26,7 +25,17 @@ function Figure({ label, value, hint, dot }: { label: string; value: number; hin
         <span className={cn("size-1.5 shrink-0 rounded-full", dot)} aria-hidden />
         {label}
       </p>
-      {hint ? <p className="mt-0.5 truncate text-[11px] text-wt-text-faint">{hint}</p> : null}
+    </div>
+  );
+}
+
+function YearFigure({ label, value, hint, strong = false }: { label: string; value: number; hint: string; strong?: boolean }) {
+  return (
+    <div className="min-w-0 text-center" title={hint}>
+      <p className="truncate text-[11px] font-medium text-wt-text-muted">{label}</p>
+      <p className={cn("mt-1 text-2xl tabular-nums", strong ? "font-bold text-wt-brand" : "font-semibold text-wt-text")}>
+        <AnimatedNumber value={value} decimals={Number.isInteger(value) ? 0 : 1} />
+      </p>
     </div>
   );
 }
@@ -93,20 +102,21 @@ export function LeaveBalanceCard() {
         <CardMessage text={HOME_LEAVE_CARD.unavailable} />
       ) : (
         <div>
-          <div className="grid grid-cols-3 gap-4">
+          {s.yearSummary ? (
+            <div className="grid grid-cols-4 gap-3">
+              <YearFigure label={HOME_LEAVE_CARD.carriedForwardLabel} value={s.yearSummary.carried_forward} hint={HOME_LEAVE_CARD.carriedForwardHint} />
+              <YearFigure label={HOME_LEAVE_CARD.accruedYearLabel} value={s.yearSummary.accrued} hint={HOME_LEAVE_CARD.accruedYearHint} />
+              <YearFigure label={HOME_LEAVE_CARD.takenLabel} value={s.yearSummary.leaves_taken} hint={HOME_LEAVE_CARD.takenHint} />
+              <YearFigure label={HOME_LEAVE_CARD.balanceLabel} value={s.yearSummary.balance} hint={HOME_LEAVE_CARD.balanceHint} strong />
+            </div>
+          ) : null}
+          <div className={cn("grid grid-cols-3 gap-4", s.yearSummary && "mt-4")}>
             <Figure label={HOME_LEAVE_CARD.primaryLabel} value={s.primary} dot={SEGMENT_COLORS[0]} />
-            <Figure
-              label={HOME_LEAVE_CARD.secondaryLabel}
-              value={s.secondary}
-              dot={SEGMENT_COLORS[1]}
-              hint={HOME_LEAVE_CARD.secondaryHint}
-            />
+            <Figure label={HOME_LEAVE_CARD.secondaryLabel} value={s.secondary} dot={SEGMENT_COLORS[1]} />
             <Figure label={HOME_LEAVE_CARD.compOffLabel} value={s.compOff} dot={SEGMENT_COLORS[2]} />
           </div>
           <SplitBar values={[s.primary, s.secondary, s.compOff]} />
-          <p className="mt-2 text-xs text-wt-text-muted" title={HOME_LEAVE_CARD.totalHint}>
-            {HOME_LEAVE_CARD.totalLabel}: <span className="font-medium text-wt-text">{formatBalanceDays(s.total).amount}</span>
-          </p>
+          <p className="mt-2 text-[11px] text-wt-text-faint">{HOME_LEAVE_CARD.breakupNote}</p>
           <div className="mt-3 border-t border-wt-border pt-3">
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-wt-text-muted">{HOME_LEAVE_CARD.requestsHeading}</p>
             <RequestsSection />

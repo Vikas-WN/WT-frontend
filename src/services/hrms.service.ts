@@ -94,10 +94,21 @@ export interface EmployeeLeaveBalanceBreakdown {
   total: number;
 }
 
+/** This year in one line: carried_forward + accrued - leaves_taken = balance. */
+export interface LeaveYearSummary {
+  year: number;
+  carried_forward: number;
+  accrued: number;
+  leaves_taken: number;
+  balance: number;
+}
+
 export interface EmployeeLeaveBalancesData {
   emp_id: string;
   leave: EmployeeLeaveBalanceBreakdown;
   comp_off_balance: number;
+  /** Only on the signed-in employee's own current balance. */
+  year_summary?: LeaveYearSummary | null;
 }
 
 export interface LeaveBalanceForecastData {

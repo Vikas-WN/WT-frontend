@@ -48,6 +48,7 @@ export function useHomeLeaveSummary() {
     primary,
     secondary,
     total: Number(leave?.total ?? primary + secondary),
+    yearSummary: balance.data?.year_summary ?? null,
     compOff: Number(balance.data?.comp_off_balance ?? 0),
     items,
   } as const;
