@@ -1,5 +1,5 @@
 /** How long the reason / comments on a leave, WFH or comp-off request may be. The server enforces the same number. */
-export const REQUEST_REASON_MAX_LENGTH = 500;
+export const REQUEST_REASON_MAX_LENGTH = 1000;
 
 /** The counter turns to a warning once this share of the limit is used. */
 export const REASON_WARN_FRACTION = 0.9;

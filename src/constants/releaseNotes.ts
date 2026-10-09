@@ -34,27 +34,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
-    id: "2026-10-08-01",
-    releasedOn: "2026-10-08",
-    title: "A clearer leave card, and calendars for Who's Out and holidays",
+    id: "2026-10-09-01",
+    releasedOn: "2026-10-09",
+    title: "Bug reports with files, a longer reason box, and a tidier Home",
     highlights: [
-      {
-        area: "Home",
-        title: "Your leave year at a glance",
-        description:
-          "The leave card now shows what you carried forward, what you have accrued this year, the leave you have taken and your balance, with your primary, secondary and comp-off split underneath.",
-      },
-      {
-        area: "Home",
-        title: "Your leave requests at a glance",
-        description:
-          "Right under the balance you can see your pending requests and your approved leave that is coming up, with the dates and status of each.",
-      },
       {
         area: "Leave & WFH",
         title: "Room to explain your request properly",
         description:
-          "The reason on a leave or work-from-home request can now be up to 500 characters (it was 200), with a counter under the box that warns you as you get close and tells you if pasted text had to be shortened.",
+          "The reason on a leave or work-from-home request can now be up to 1000 characters (it was 200), with a counter under the box that warns you as you get close and tells you if pasted text had to be shortened.",
       },
       {
         area: "Bug reports",
@@ -73,6 +61,25 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
         title: "Back, forward and refresh buttons in the installed app",
         description:
           "When you use WebTrak as an installed app there is no browser toolbar, so it now has its own back, forward and refresh buttons next to the page title.",
+      },
+    ],
+  },
+  {
+    id: "2026-10-08-01",
+    releasedOn: "2026-10-08",
+    title: "A clearer leave card, and calendars for Who's Out and holidays",
+    highlights: [
+      {
+        area: "Home",
+        title: "Your leave year at a glance",
+        description:
+          "The leave card now shows what you carried forward, what you have accrued this year, the leave you have taken and your balance, with your primary, secondary and comp-off split underneath.",
+      },
+      {
+        area: "Home",
+        title: "Your leave requests at a glance",
+        description:
+          "Right under the balance you can see your pending requests and your approved leave that is coming up, with the dates and status of each.",
       },
       {
         area: "Leave",
