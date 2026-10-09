@@ -1,13 +1,11 @@
 "use client";
 
 import { useId } from "react";
-import { Textarea } from "@/components/ui/textarea";
+import { LimitedTextarea } from "@/components/dashboard/ui/LimitedTextarea";
+import { REQUEST_REASON_MAX_LENGTH } from "@/constants/requestReason";
 import { Field, FieldLabel as ShadcnFieldLabel } from "@/components/ui/field";
 import { FORM_FIELD_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { formatUILabel } from "@/utils/titleCase";
-import { cn } from "@/lib/utils";
-
-const MAX_LENGTH = 200;
 
 export function LeaveReasonField({
   value,
@@ -28,24 +26,7 @@ export function LeaveReasonField({
           *
         </span>
       </ShadcnFieldLabel>
-      <div className="relative">
-        <Textarea
-          id={fieldId}
-          className="min-h-[88px] resize-y pr-14"
-          value={value}
-          disabled={disabled}
-          maxLength={MAX_LENGTH}
-          placeholder="Enter reason for your leave..."
-          rows={3}
-          onChange={(event) => onChange(event.target.value)}
-        />
-        <span
-          className="pointer-events-none absolute bottom-2 right-3 text-xs tabular-nums text-wt-text-muted"
-          aria-live="polite"
-        >
-          {value.length} / {MAX_LENGTH}
-        </span>
-      </div>
+      <LimitedTextarea id={fieldId} value={value} onChange={onChange} max={REQUEST_REASON_MAX_LENGTH} disabled={disabled} placeholder="Enter reason for your leave..." />
     </Field>
   );
 }
@@ -69,24 +50,7 @@ export function WfhReasonField({
           *
         </span>
       </ShadcnFieldLabel>
-      <div className="relative">
-        <Textarea
-          id={fieldId}
-          className={cn("min-h-[88px] resize-y pr-14")}
-          value={value}
-          disabled={disabled}
-          maxLength={MAX_LENGTH}
-          placeholder="Enter reason for your request..."
-          rows={3}
-          onChange={(event) => onChange(event.target.value)}
-        />
-        <span
-          className="pointer-events-none absolute bottom-2 right-3 text-xs tabular-nums text-wt-text-muted"
-          aria-live="polite"
-        >
-          {value.length} / {MAX_LENGTH}
-        </span>
-      </div>
+      <LimitedTextarea id={fieldId} value={value} onChange={onChange} max={REQUEST_REASON_MAX_LENGTH} disabled={disabled} placeholder="Enter reason for your request..." />
     </Field>
   );
 }

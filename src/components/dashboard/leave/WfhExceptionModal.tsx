@@ -1,5 +1,6 @@
 "use client";
 
+import { REASON_COPY, REQUEST_REASON_MAX_LENGTH } from "@/constants/requestReason";
 import { ApiError } from "@/api/error";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -53,8 +54,8 @@ export function WfhExceptionModal({ open, onClose, onSubmit }: WfhExceptionModal
       showErrorToast("Reason is required.");
       return;
     }
-    if (reason.trim().length > 200) {
-      showErrorToast("Reason must be 200 characters or less.");
+    if (reason.trim().length > REQUEST_REASON_MAX_LENGTH) {
+      showErrorToast(REASON_COPY.toast(REQUEST_REASON_MAX_LENGTH));
       return;
     }
 
@@ -126,6 +127,7 @@ export function WfhExceptionModal({ open, onClose, onSubmit }: WfhExceptionModal
           onChange={setReason}
           placeholder="Explain why you need additional WFH days..."
           required
+          maxLength={REQUEST_REASON_MAX_LENGTH}
         />
         <div className="flex justify-end gap-3 pt-2 border-t border-border/40">
           <Button type="button" variant="outline" onClick={onClose} disabled={saving}>

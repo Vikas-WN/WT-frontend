@@ -51,6 +51,12 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
           "Right under the balance you can see your pending requests and your approved leave that is coming up, with the dates and status of each.",
       },
       {
+        area: "Leave & WFH",
+        title: "Room to explain your request properly",
+        description:
+          "The reason on a leave or work-from-home request can now be up to 500 characters (it was 200), with a counter under the box that warns you as you get close and tells you if pasted text had to be shortened.",
+      },
+      {
         area: "Bug reports",
         title: "Attach screenshots and recordings to a bug report",
         description:

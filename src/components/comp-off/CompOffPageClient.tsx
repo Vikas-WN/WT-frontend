@@ -1,5 +1,6 @@
 "use client";
 
+import { REASON_COPY, REQUEST_REASON_MAX_LENGTH } from "@/constants/requestReason";
 import { giveFeedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
@@ -974,7 +975,7 @@ export function CompOffPageClient({
     else if (!parseApiDate(fromDate) || !parseApiDate(toDate)) missingFields.push("Valid From Date", "Valid To Date");
     else if (compareApiDates(fromDate, toDate) > 0) missingFields.push("Valid date range (Start Date cannot be after End Date)");
     if (calendarDaysInclusive(fromDate, toDate) < 1) missingFields.push("At least one calendar day");
-    if (comments.length > 200) missingFields.push("Comments (200 characters or less)");
+    if (comments.length > REQUEST_REASON_MAX_LENGTH) missingFields.push(REASON_COPY.validation(REQUEST_REASON_MAX_LENGTH));
     
     if (missingFields.length > 0) {
       showMissingFieldsToast(missingFields, "submitting");
