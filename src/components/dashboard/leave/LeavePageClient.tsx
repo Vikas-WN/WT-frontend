@@ -1,5 +1,6 @@
 "use client";
 
+import { REASON_COPY, REQUEST_REASON_MAX_LENGTH } from "@/constants/requestReason";
 import { giveFeedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 
@@ -2001,8 +2002,8 @@ export function LeavePageClient() {
                                         const comments = leaveRequestForm.comments.trim();
                                         if (!comments) {
                                           missingFields.push("Comments");
-                                        } else if (comments.length > 200) {
-                                          missingFields.push("Comments (200 characters or less)");
+                                        } else if (comments.length > REQUEST_REASON_MAX_LENGTH) {
+                                          missingFields.push(REASON_COPY.validation(REQUEST_REASON_MAX_LENGTH));
                                         }
                                         
                                         if (leaveRequestForm.is_half_day && fromDate !== toDate) {
@@ -2048,7 +2049,7 @@ export function LeavePageClient() {
                                             "Valid To Date": "leave-to-date",
                                             "Valid date range (Start Date cannot be after End Date)": "leave-from-date",
                                             "Comments": "leave-comments",
-                                            "Comments (200 characters or less)": "leave-comments",
+                                            [REASON_COPY.validation(REQUEST_REASON_MAX_LENGTH)]: "leave-comments",
                                             "Valid Half-day date (From and To Date must be the same)": "leave-from-date",
                                             "Client approval confirmation": "client-approval",
                                             "At least one Primary Manager": "leave-primary-managers",

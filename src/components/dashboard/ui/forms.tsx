@@ -20,6 +20,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { LimitedTextarea } from "@/components/dashboard/ui/LimitedTextarea";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { FORM_FIELD_CLASS } from "@/components/dashboard/ui/uiLayout";
@@ -258,6 +259,7 @@ export function TextAreaField({
   rows = 4,
   className,
   textareaClassName,
+  maxLength,
 }: {
   label: string;
   value: string;
@@ -267,12 +269,17 @@ export function TextAreaField({
   rows?: number;
   className?: string;
   textareaClassName?: string;
+  /** When set, the box shows a character counter and warns as the limit nears. */
+  maxLength?: number;
 }) {
   const fieldId = useId();
 
   return (
     <Field className={cn(FORM_FIELD_CLASS, className)}>
       <FieldLabel label={label} required={required} htmlFor={fieldId} />
+      {maxLength ? (
+        <LimitedTextarea id={fieldId} value={value} onChange={onChange} max={maxLength} placeholder={placeholder} rows={rows} className={cn("min-h-[100px] break-words whitespace-pre-wrap", textareaClassName)} />
+      ) : (
       <Textarea
         id={fieldId}
         className={cn("min-h-[100px] resize-y break-words whitespace-pre-wrap", textareaClassName)}
@@ -283,6 +290,7 @@ export function TextAreaField({
         aria-required={required || undefined}
         rows={rows}
       />
+      )}
     </Field>
   );
 }

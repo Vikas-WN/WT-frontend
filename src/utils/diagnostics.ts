@@ -17,7 +17,8 @@ export function routeTemplate(path: string): string {
   return pathname
     .replace(/\/\d+(?=\/|$)/g, "/:id")
     .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\/|$)/gi, "/:id")
-    .replace(/\/[A-Za-z0-9_-]{24,}(?=\/|$)/g, "/:token");
+    // A long segment is a secret-looking token only if it mixes in digits; a long route NAME ("holiday-calendar-storage") is just words.
+    .replace(/\/(?=[A-Za-z0-9_-]*\d)[A-Za-z0-9_-]{24,}(?=\/|$)/g, "/:token");
 }
 
 /** Add to a list that never grows past `max`: the oldest entries fall off the front. */

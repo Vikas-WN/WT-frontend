@@ -15,7 +15,9 @@ test("API paths lose their query and their ids", () => {
   assert.equal(routeTemplate("/api/v1/leave/123/approve?x=1&token=abc"), "/api/v1/leave/:id/approve");
   assert.equal(routeTemplate("/api/v1/profile"), "/api/v1/profile");
   assert.equal(routeTemplate("/api/v1/doc/3f2b8c1e-1111-4222-8333-444455556666"), "/api/v1/doc/:id");
-  assert.equal(routeTemplate(`/api/v1/calendar/feed/${"z".repeat(30)}.ics`), "/api/v1/calendar/feed/:token.ics".replace(":token.ics", `${"z".repeat(30)}.ics`));
+  // a long route NAME is kept; a long id-like token (with digits) is hidden
+  assert.equal(routeTemplate("/api/v1/holiday-calendar-storage/2026"), "/api/v1/holiday-calendar-storage/:id");
+  assert.equal(routeTemplate("/api/v1/calendar/feed/ab12cd34ef56ab12cd34ef56ab12cd34"), "/api/v1/calendar/feed/:token");
 });
 
 test("a bounded list drops the oldest", () => {
