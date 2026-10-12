@@ -22,6 +22,22 @@ export const AUDIENCE_COPY = {
   teamHint: "Goes to everyone who reports to you.",
 } as const;
 
+/** The "Who is this training for?" section of Create training and the Trainees page. */
+export const TRAINING_AUDIENCE_COPY = {
+  heading: "Who is this training for?",
+  assignNow: "Assign people now — they're added as trainees and notified",
+  assignLater: "The training is created without trainees. Add them any time from Trainees.",
+  incomplete: "Choose who this training is for, or untick “Assign people now”.",
+  create: "Create",
+  creating: "Creating…",
+  createAndAssign: (summary: string) => `Create & assign to ${summary}`,
+  addHeading: "Add trainees",
+  add: (summary: string) => `Add ${summary}`,
+  adding: "Adding…",
+  added: (count: number) =>
+    count === 0 ? "Everyone in that group is already a trainee." : `Added ${count} trainee${count === 1 ? "" : "s"}.`,
+} as const;
+
 /** One line describing an audience: "Everyone", "2 departments", "5 people"… */
 export function describeAudience(scope: AudienceScope, counts: { departments: number; projects: number; users: number }): string {
   switch (scope) {

@@ -224,6 +224,7 @@ export function notificationCategoryLabel(
     case "TIMELOG_REQUEST":
     case "NO_TIME_LOGS":
       return "Time Log";
+    case "TRAINING_ASSIGNED":
     case "TRAINING_SCHEDULED":
     case "TRAINING_REMINDER":
     case "TRAINING_WITHDRAWAL_REQUEST":
@@ -423,6 +424,7 @@ export function resolveNotificationHref(
     case "TRAINING_MARKS_PUBLISHED":
       return LEARNING_SCORES;
 
+    case "TRAINING_ASSIGNED":
     case "TRAINING_SCHEDULED":
     case "TRAINING_REMINDER":
     case "TRAINING_WITHDRAWAL_REQUEST":

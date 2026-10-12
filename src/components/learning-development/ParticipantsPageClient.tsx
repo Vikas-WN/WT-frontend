@@ -1,18 +1,13 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTrainingParticipants } from "@/hooks/learning/useLearningTrainings";
-import { useLearningTrainerDirectory } from "@/hooks/learning/useLearningTrainerDirectory";
-import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
-import { SelectField } from "@/components/dashboard/ui/forms";
 import { TrainingParticipantsList } from "@/components/learning-development/TrainingParticipantsList";
 import { TrainingScopePicker } from "@/components/learning-development/TrainingScopePicker";
-import { participantRowUserId } from "@/utils/learning/participants";
-import { resolveLearningTrainerUserId } from "@/utils/learning/resolveTrainerUserId";
+import { TrainingAudienceAdder } from "@/components/learning-development/TrainingAudienceAdder";
 import { hrmsService } from "@/services/hrms.service";
 import { LearningPageShell } from "@/components/learning-development/LearningPageShell";
 import { notifyError } from "@/lib/notify";
@@ -23,40 +18,9 @@ export function ParticipantsPageClient() {
   const hasHrAccess = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
 
   const [trainingId, setTrainingId] = useState("");
-  const [traineePick, setTraineePick] = useState("");
   const [updatingParticipantId, setUpdatingParticipantId] = useState<string | null>(null);
   const qc = useQueryClient();
   const traineesQ = useTrainingParticipants(trainingId, Boolean(trainingId.trim()));
-  const onboardQ = useLearningTrainerDirectory();
-
-  const enrolledUserIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const row of traineesQ.data ?? []) {
-      const id = participantRowUserId(row);
-      if (id) ids.add(id);
-    }
-    return ids;
-  }, [traineesQ.data]);
-
-  const addTraineeOptions = useMemo(
-    () => (onboardQ.data ?? []).filter((o) => !enrolledUserIds.has(o.id)),
-    [onboardQ.data, enrolledUserIds]
-  );
-
-  useEffect(() => {
-    setTraineePick("");
-  }, [trainingId]);
-
-  const addMut = useMutation({
-    mutationFn: async () => {
-      const idNum = await resolveLearningTrainerUserId(traineePick);
-      await hrmsService.addTrainingParticipants(trainingId, { user_ids: [idNum], select_all: false });
-    },
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["learning", "participants", trainingId] });
-      setTraineePick("");
-    },
-  });
 
   const updateParticipantStatus = async (userId: string, status: "COMPLETED" | "WITHDRAWN") => {
     setUpdatingParticipantId(userId);
@@ -90,23 +54,8 @@ export function ParticipantsPageClient() {
 
       {hasHrAccess ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
-          <div className="flex flex-wrap items-end gap-3">
-            <SelectField
-              label="Add trainee"
-              required
-              className="min-w-[min(100%,280px)] flex-1 max-w-md"
-              value={traineePick}
-              onChange={setTraineePick}
-              placeholder="Select trainee"
-              options={addTraineeOptions.map((o) => ({ value: o.id, label: o.label }))}
-            />
-            <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0" disabled={addMut.isPending || !traineePick || !trainingId} onClick={() => addMut.mutate(undefined, { onError: (e) => notifyError(String(e)) })}
-            >
-              {addMut.isPending ? "Adding…" : "Add trainee"}
-            </Button>
-          </div>
-          {onboardQ.isLoading ? (
-            <SectionLoading compact label="Loading employees from onboard list…" className="py-2" />
+          {trainingId ? (
+            <TrainingAudienceAdder trainingId={trainingId} currentCount={traineesQ.data?.length ?? 0} />
           ) : null}
           <TrainingParticipantsList
             rows={traineesQ.data ?? []}

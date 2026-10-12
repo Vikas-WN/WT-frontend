@@ -36,6 +36,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmployeeLearningCatalog } from "@/components/learning-development/EmployeeLearningCatalog";
 import { LearningPageShell } from "@/components/learning-development/LearningPageShell";
 import { notifyError } from "@/lib/notify";
+import { AudiencePicker, isAudienceComplete } from "@/components/audience/AudiencePicker";
+import { AUDIENCE_COPY, TRAINING_AUDIENCE_COPY, describeAudience } from "@/constants/audience";
+import { useAudienceOptions } from "@/hooks/announcements/useAnnouncements";
+import { EMPTY_AUDIENCE, type AudienceSpec } from "@/types/audience";
 
 function TrainingCardsSkeleton({ count = 6 }: { count?: number }) {
   return (
@@ -80,6 +84,15 @@ function HrTrainingsView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(createEmptyTrainingForm);
   const [createTrainerId, setCreateTrainerId] = useState("");
+  /** Who the new training is for. Off = create it now and add people later from Trainees. */
+  const [assignNow, setAssignNow] = useState(true);
+  const [audience, setAudience] = useState<AudienceSpec>(EMPTY_AUDIENCE);
+  const audienceOptions = useAudienceOptions(sheetOpen && !editingId);
+  const audienceSummary = describeAudience(audience.scope, {
+    departments: audience.departments.length,
+    projects: audience.project_ids.length,
+    users: audience.user_ids.length,
+  });
 
   const updateMut = useUpdateTraining(editingId ?? undefined);
 
@@ -103,10 +116,16 @@ function HrTrainingsView() {
     resetKeys: [search, statusFilter, sortId],
   });
 
+  function resetAudience() {
+    setAssignNow(true);
+    setAudience(EMPTY_AUDIENCE);
+  }
+
   function openCreate() {
     setEditingId(null);
     setForm(createEmptyTrainingForm());
     setCreateTrainerId("");
+    resetAudience();
     setSheetOpen(true);
   }
 
@@ -115,6 +134,7 @@ function HrTrainingsView() {
     setEditingId(null);
     setForm(createEmptyTrainingForm());
     setCreateTrainerId("");
+    resetAudience();
     setSheetOpen(true);
     router.replace("/dashboard/learning-development/trainings", { scroll: false });
   }, [searchParams, router]);
@@ -164,9 +184,13 @@ function HrTrainingsView() {
     } else {
       const name = form.name.trim();
       if (!name) throw new Error("Training name is required.");
+      if (assignNow && !isAudienceComplete(audience)) {
+        throw new Error(TRAINING_AUDIENCE_COPY.incomplete);
+      }
       const res = await createMut.mutateAsync({
         ...payload,
         name,
+        ...(assignNow ? { audience } : {}),
       });
       const created = ((res as { data?: unknown }).data ?? res) as Record<string, unknown> | null;
       const createdTrainingId = String(created?.id ?? "").trim();
@@ -291,7 +315,13 @@ function HrTrainingsView() {
                 submitForm().catch((e) => notifyError(e instanceof Error ? e.message : "Unable to save"))
               }
             >
-              Save
+              {editingId
+                ? "Save"
+                : createMut.isPending
+                  ? TRAINING_AUDIENCE_COPY.creating
+                  : assignNow
+                    ? TRAINING_AUDIENCE_COPY.createAndAssign(audienceSummary)
+                    : TRAINING_AUDIENCE_COPY.create}
             </Button>
           </div>
         }
@@ -371,6 +401,24 @@ function HrTrainingsView() {
                 options={trainerOptions.map((t) => ({ value: t.id, label: t.label }))}
               />
             </div>
+          ) : null}
+          {!editingId ? (
+            <fieldset className="sm:col-span-2 space-y-3 border-t border-wt-border pt-4">
+              <legend className="text-sm font-semibold text-wt-text">{TRAINING_AUDIENCE_COPY.heading}</legend>
+              <label className="flex items-center gap-2 text-sm text-wt-text">
+                <Checkbox checked={assignNow} onCheckedChange={(v) => setAssignNow(Boolean(v))} />
+                {TRAINING_AUDIENCE_COPY.assignNow}
+              </label>
+              {!assignNow ? (
+                <p className="text-sm text-wt-text-muted">{TRAINING_AUDIENCE_COPY.assignLater}</p>
+              ) : audienceOptions.isLoading ? (
+                <p className="text-sm text-wt-text-muted">{AUDIENCE_COPY.loading}</p>
+              ) : audienceOptions.data ? (
+                <AudiencePicker options={audienceOptions.data} value={audience} onChange={setAudience} />
+              ) : (
+                <p className="text-sm text-rose-600 dark:text-rose-400">{AUDIENCE_COPY.error}</p>
+              )}
+            </fieldset>
           ) : null}
         </div>
       </Sheet>

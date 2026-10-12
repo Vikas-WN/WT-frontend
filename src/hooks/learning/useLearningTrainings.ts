@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { AudienceSpec } from "@/types/audience";
 import { hrmsService } from "@/services/hrms.service";
 import { toPagedRows } from "@/utils/apiRows";
 import {
@@ -222,6 +223,20 @@ export function useTrainingParticipants(trainingId: string | undefined, enabled:
       const fromEnvelope = participantListFromApiEnvelope(res);
       const raw = fromEnvelope.length ? fromEnvelope : toPagedRows((res as { data?: unknown }).data ?? res);
       return normalizeParticipantRows(raw);
+    },
+  });
+}
+
+/** Add everyone an audience reaches (people, departments, projects, team, everyone) to a training. */
+export function useAddTrainingAudience(trainingId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (audience: AudienceSpec) => {
+      const res = await hrmsService.addTrainingParticipants(trainingId, { audience });
+      return toPagedRows((res as { data?: unknown }).data ?? res).length;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["learning", "participants", trainingId] });
     },
   });
 }

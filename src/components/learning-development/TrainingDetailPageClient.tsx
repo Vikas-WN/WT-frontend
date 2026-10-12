@@ -39,7 +39,7 @@ import {
   createEmptyMaterialForm,
   createEmptySessionForm,
 } from "@/utils/learningFormState";
-import { participantRowUserId } from "@/utils/learning/participants";
+import { TrainingAudienceAdder } from "@/components/learning-development/TrainingAudienceAdder";
 import {
   isMaterialVisibility,
   MATERIAL_VISIBILITY_OPTIONS,
@@ -133,27 +133,12 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
     [directoryQ.data, assignedTrainerUserIds]
   );
 
-  const enrolledUserIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const row of participantsQ.data ?? []) {
-      const id = participantRowUserId(row);
-      if (id) ids.add(id);
-    }
-    return ids;
-  }, [participantsQ.data]);
-
-  const addTraineeOptions = useMemo(
-    () => (directoryQ.data ?? []).filter((o) => !enrolledUserIds.has(o.id)),
-    [directoryQ.data, enrolledUserIds]
-  );
-
   const training = detailQ.data ?? {};
 
   const [sessionForm, setSessionForm] = useState(createEmptySessionForm);
 
   const [trainerPick, setTrainerPick] = useState("");
   const [removingTrainerId, setRemovingTrainerId] = useState<string | null>(null);
-  const [participantPick, setParticipantPick] = useState("");
   const [updatingParticipantId, setUpdatingParticipantId] = useState<string | null>(null);
   const [materialForm, setMaterialForm] = useState(createEmptyMaterialForm);
   const [materialFile, setMaterialFile] = useState<File | null>(null);
@@ -196,17 +181,6 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
         setRemovingTrainerId(null);
       }
     });
-
-  const addParticipantMut = useMutation({
-    mutationFn: async () => {
-      const idNum = await resolveLearningTrainerUserId(participantPick);
-      await hrmsService.addTrainingParticipants(tid, { user_ids: [idNum], select_all: false });
-    },
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["learning", "participants", tid] });
-      setParticipantPick("");
-    },
-  });
 
   const updateParticipantStatus = (userId: string, status: "COMPLETED" | "WITHDRAWN") =>
     void runAction("Update trainee status", async () => {
@@ -476,25 +450,7 @@ export function TrainingDetailPageClient({ trainingId }: { trainingId: string })
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-5 space-y-4">
           <h2 className="font-semibold">Trainees</h2>
           {hasHrAccess ? (
-            <div className="flex flex-wrap items-end gap-3">
-              <SelectField
-                label="Add trainee"
-                required
-                className="min-w-[min(100%,280px)] flex-1 max-w-md"
-                value={participantPick}
-                onChange={setParticipantPick}
-                placeholder="Select trainee"
-                options={addTraineeOptions.map((o) => ({ value: o.id, label: o.label }))}
-              />
-              <Button variant="brand" size="sm" type="button" className="px-4 py-2 text-sm shrink-0 disabled:opacity-40" disabled={addParticipantMut.isPending || !participantPick} onClick={() =>
-                  addParticipantMut.mutate(undefined, {
-                    onError: (e) => notifyError(e instanceof Error ? e.message : "Failed"),
-                  })
-                }
-              >
-                {addParticipantMut.isPending ? "Adding…" : "Add trainee"}
-              </Button>
-            </div>
+            <TrainingAudienceAdder trainingId={tid} currentCount={participantsQ.data?.length ?? 0} />
           ) : null}
           <TrainingParticipantsList
             rows={participantsQ.data ?? []}
