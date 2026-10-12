@@ -156,6 +156,7 @@ export const FALLBACK_ONBOARD_OPTIONS: OnboardOptionsResponse = {
     { value: "Finance", label: "Finance" },
     { value: "Human Resources", label: "Human Resources" },
     { value: "Manager", label: "Manager" },
+    { value: "Pre-Sales", label: "Pre-Sales" },
     { value: "QA", label: "QA" },
     { value: "Quality Assurance", label: "Quality Assurance" },
     { value: "UI/UX", label: "UI/UX" },
