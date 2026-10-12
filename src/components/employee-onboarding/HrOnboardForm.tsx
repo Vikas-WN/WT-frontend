@@ -5,7 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useMemo, useRef, useState, useId } from "react";
 import { hrmsService } from "@/services/hrms.service";
+import { useQueryClient } from "@tanstack/react-query";
 import { useDesignationSelectOptions } from "@/hooks/useDesignationSelectOptions";
+import { DesignationCombobox } from "@/components/employee-onboarding/DesignationCombobox";
 import { FieldLabel, InputField, DropdownSelectField, DatePickerField, AdaptiveSelectField } from "@/components/dashboard/ui/forms";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -93,6 +95,8 @@ function validateWorkStep(
   ctx?: {
     designationLoading?: boolean;
     designationOptionsCount?: number;
+    /** Designations the role must be one of (existing for the band + department, or just added by HR). */
+    knownDesignations?: string[];
   }
 ) {
   const empId = form.emp_id.trim();
@@ -171,16 +175,26 @@ function validateWorkStep(
   if (ctx?.designationLoading) {
     throw new Error("Designations are still loading. Please wait a moment.");
   }
-  if (ctx?.designationOptionsCount === 0) {
+  // Consultants pick from designations that already exist on the department's bands; everyone else can
+  // have a new designation added from the field itself.
+  if (isConsultant && ctx?.designationOptionsCount === 0) {
     throw new Error(
-      isConsultant
-        ? "No designation is configured for the selected department. Please choose a different department."
-        : "No designation is configured for the selected band. Please choose a different department or band."
+      "No designation is configured for the selected department yet. Add one by onboarding a full-time " +
+        "employee in this department first, or choose a different department."
     );
   }
   if (!role) throw new Error("Designation is required.");
   const designationError = designationLengthError(role);
   if (designationError) throw new Error(designationError);
+  if (
+    !isConsultant &&
+    ctx?.knownDesignations &&
+    !ctx.knownDesignations.some((known) => known.toLowerCase() === role.toLowerCase())
+  ) {
+    throw new Error(
+      `"${role}" is not a designation yet. Pick one from the list, or choose "Add "${role}" as new designation".`
+    );
+  }
 
   return {
     empId,
@@ -207,6 +221,13 @@ export function HrOnboardForm({
   runAction,
 }: HrOnboardFormProps) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  /** Designations HR added from this form, accepted before the designation list refetches. */
+  const [createdDesignations, setCreatedDesignations] = useState<string[]>([]);
+  const createdDesignationsRef = useRef(createdDesignations);
+  useEffect(() => {
+    createdDesignationsRef.current = createdDesignations;
+  });
   const portalRoleOptions = useMemo(() => portalRoleOptionsForActor(user?.roles ?? []), [user?.roles]);
   const internBandId = useMemo(() => resolveInternBandId(bands), [bands]);
 
@@ -295,7 +316,11 @@ export function HrOnboardForm({
     setForm((prev) => {
       if (!prev.role) return prev;
       const validRoles = new Set(designationOptions.map((option) => option.value).filter(Boolean));
-      if (designationOptions.length > 0 && !validRoles.has(prev.role)) {
+      if (
+        designationOptions.length > 0 &&
+        !validRoles.has(prev.role) &&
+        !createdDesignationsRef.current.includes(prev.role)
+      ) {
         return { ...prev, role: "" };
       }
       return prev;
@@ -333,6 +358,10 @@ export function HrOnboardForm({
       } = validateWorkStep(form, internBandId, {
           designationLoading,
           designationOptionsCount: designationOptions.length,
+          knownDesignations: [
+            ...designationOptions.map((option) => option.value),
+            ...createdDesignations,
+          ],
         });
 
       const basePayload: Record<string, unknown> = {
@@ -488,41 +517,48 @@ export function HrOnboardForm({
             />
           )
         ) : null}
-        <DropdownSelectField
-          label="Designation"
-          required
-          value={form.role}
-          loading={designationLoading}
-          loadingLabel="Loading designations…"
-          placeholder={
-            !form.department.trim()
-              ? "Select Department First"
-              : isConsultant
-                ? designationLoading
+        {isConsultant ? (
+          <DropdownSelectField
+            label="Designation"
+            required
+            value={form.role}
+            loading={designationLoading}
+            loadingLabel="Loading designations…"
+            placeholder={
+              !form.department.trim()
+                ? "Select Department First"
+                : designationLoading
                   ? "Loading Designations…"
                   : designationOptions.length
                     ? "Select"
                     : consultantDesignationBandIds?.length
                       ? "No Designations For This Department"
                       : "No Bands Available"
-                : designationBandId <= 0
-                  ? "Select Department And Band First"
-                  : designationLoading
-                    ? "Loading Designations…"
-                    : designationOptions.length
-                      ? "Select"
-                      : "No Designations For This Band"
-          }
-          disabled={
-            !form.department.trim() ||
-            designationLoading ||
-            !designationOptions.length ||
-            (!isConsultant && designationBandId <= 0)
-          }
-          options={designationOptions}
-          onChange={(role) => setForm((p) => ({ ...p, role }))}
-          error={designationFieldError}
-        />
+            }
+            disabled={!form.department.trim() || designationLoading || !designationOptions.length}
+            options={designationOptions}
+            onChange={(role) => setForm((p) => ({ ...p, role }))}
+            error={designationFieldError}
+          />
+        ) : (
+          <DesignationCombobox
+            bandId={designationBandId}
+            department={department}
+            value={form.role}
+            required
+            canCreate
+            error={designationFieldError}
+            onChange={(role) => setForm((p) => ({ ...p, role }))}
+            onError={(message) => onErrorRef.current(message)}
+            onCreated={(designation) => {
+              const name = designation.name.trim();
+              if (name) {
+                setCreatedDesignations((prev) => (prev.includes(name) ? prev : [...prev, name]));
+              }
+              void queryClient.invalidateQueries({ queryKey: ["masters", "designations"] });
+            }}
+          />
+        )}
         <DropdownSelectField
           label="Work Mode"
           required
