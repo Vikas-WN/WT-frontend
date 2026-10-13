@@ -7,8 +7,12 @@ import type {
   ChatMessagePage,
   ChatPerson,
   ChatReport,
+  ChatReaction,
   CreateChannelPayload,
 } from "@/types/chat";
+
+/** Uploads can be big and phones are slow: allow far longer than a normal call. */
+const UPLOAD_TIMEOUT_MS = 180_000;
 
 const JSON_BODY = { contentType: "application/json" } as const;
 const json = (value: unknown) => ({ ...JSON_BODY, body: JSON.stringify(value) });
@@ -50,6 +54,15 @@ export const chatService = {
   },
   send(id: number, body: string) {
     return apiClient.post<ApiEnvelope<ChatMessage>>(endpoints.chat.messages(id), json({ body }));
+  },
+  sendFile(id: number, file: File, caption: string) {
+    const body = new FormData();
+    body.append("file", file);
+    if (caption.trim()) body.append("caption", caption.trim());
+    return apiClient.post<ApiEnvelope<ChatMessage>>(endpoints.chat.attachments(id), { body, timeoutMs: UPLOAD_TIMEOUT_MS });
+  },
+  react(messageId: number, emoji: string) {
+    return apiClient.put<ApiEnvelope<{ reactions: ChatReaction[] }>>(endpoints.chat.reactions(messageId), json({ emoji }));
   },
   markRead(id: number, messageId: number) {
     return apiClient.post<ApiEnvelope<null>>(endpoints.chat.read(id), json({ message_id: messageId }));

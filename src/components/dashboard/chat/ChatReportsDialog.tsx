@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { WtFormDialog } from "@/components/allocation/WtFormDialog";
+import { MessageAttachment } from "@/components/dashboard/chat/MessageAttachment";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CHAT_COPY as COPY } from "@/constants/chat";
@@ -25,6 +26,7 @@ function ReportCard({ report, onClose }: { report: ChatReport; onClose: (outcome
           <li key={m.id} className={cn("text-xs", m.reported ? "rounded bg-rose-500/10 px-1.5 py-1 text-wt-text" : "text-wt-text-muted")}>
             <span className="font-semibold">{m.sender_name}</span> <span className="text-wt-text-faint">{clockTime(m.created_at)}</span>
             <span className="block whitespace-pre-wrap break-words">{m.body}</span>
+            {m.attachment ? <MessageAttachment attachment={m.attachment} /> : null}
           </li>
         ))}
       </ul>

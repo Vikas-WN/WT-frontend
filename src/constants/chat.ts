@@ -24,6 +24,17 @@ export const CHAT_LIMITS = {
   groupWithinMs: 5 * 60 * 1000,
 } as const;
 
+/** The reactions people can leave on a message (the server accepts exactly these). */
+export const CHAT_REACTIONS = ["👍", "❤️", "😂", "🎉", "👀", "🙏", "🔥", "😮"] as const;
+export const CHAT_CONFETTI_EMOJI = "🎉";
+
+/** A small, friendly set for the composer's emoji button. */
+export const CHAT_EMOJI_PICKER = [
+  "😀", "😁", "😂", "🤣", "😊", "😍", "😎", "🤔", "😅", "😉", "🙃", "😴",
+  "👍", "👎", "👏", "🙌", "🙏", "💪", "🤝", "👀", "🔥", "✨", "🎉", "🥳",
+  "❤️", "💯", "✅", "❌", "⚡", "☕", "🍕", "🚀", "🐛", "💡", "📌", "📎",
+] as const;
+
 export const CHAT_COPY = {
   title: "Chat",
   messages: "Messages",
@@ -76,4 +87,15 @@ export const CHAT_COPY = {
   closeReport: "Close report",
   outcomePlaceholder: "What was done?",
   you: "You",
+  attach: "Attach a file",
+  emoji: "Emoji",
+  react: "Add reaction",
+  removeFile: "Remove file",
+  captionPlaceholder: "Add a caption (optional)",
+  uploading: "Uploading…",
+  fileSendError: "Couldn't send that file. Check your connection and try again.",
+  download: "Download",
+  unavailableFile: "This file is no longer available.",
+  dropHere: "Drop a file to send it",
+  pastedImage: "Pasted image",
 } as const;

@@ -2637,3 +2637,12 @@ html.wt-reduce-motion .wt-deco-layer * { animation: none !important; }
 @media (prefers-reduced-motion: reduce) {
   .wt-pet-walking svg, .wt-pet-bubble, .wt-pet-heart { animation: none !important; }
 }
+
+/* Chat: confetti when someone reacts with 🎉. Reduced-motion users get the global near-zero animation duration. */
+@keyframes wt-confetti-burst {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(260deg) scale(0.6); }
+}
+.wt-confetti {
+  animation: wt-confetti-burst 1.1s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}

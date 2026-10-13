@@ -85,6 +85,21 @@ export function ChatThread({ conversation, myName, onBack, onLeave, onReport }: 
     }
   }
 
+  async function react(id: number, emoji: string) {
+    try {
+      const reactions = (await chatService.react(id, emoji)).data?.reactions;
+      if (reactions) thread.patchMessage(id, { reactions });
+    } catch {
+      notifyError("Couldn't add that reaction.");
+    }
+  }
+
+  // A picture or video finishing loading makes the list taller; if you were at the bottom, stay there.
+  function keepAtBottom() {
+    const el = scroller.current;
+    if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
+  }
+
   async function remove(id: number) {
     try {
       await chatService.remove(id);
@@ -101,7 +116,13 @@ export function ChatThread({ conversation, myName, onBack, onLeave, onReport }: 
         <button type="button" onClick={onBack} className="grid size-9 place-items-center rounded-lg text-wt-text-muted hover:bg-wt-surface-2 md:hidden" aria-label="Back to conversations">
           <ArrowLeft className="size-5" aria-hidden />
         </button>
-        <ChatAvatar name={conversation.title} channel={isChannel} isPrivate={conversation.is_private} />
+        <ChatAvatar
+          name={conversation.title}
+          channel={isChannel}
+          isPrivate={conversation.is_private}
+          userId={conversation.partner?.user_id}
+          hasPhoto={conversation.partner?.has_photo}
+        />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-sm font-semibold text-wt-text">{conversation.title}</h2>
           <p className="flex items-center gap-1.5 truncate text-xs text-wt-text-muted">
@@ -166,13 +187,22 @@ export function ChatThread({ conversation, myName, onBack, onLeave, onReport }: 
                 <span className="h-px flex-1 bg-rose-400/60" />
               </div>
             ) : (
-              <MessageBubble key={row.key} message={row.message} startsGroup={row.startsGroup} onEdit={edit} onDelete={(id) => void remove(id)} onReport={onReport} />
+              <MessageBubble
+                key={row.key}
+                message={row.message}
+                startsGroup={row.startsGroup}
+                onEdit={edit}
+                onDelete={(id) => void remove(id)}
+                onReport={onReport}
+                onReact={(id, emoji) => void react(id, emoji)}
+                onMediaLoad={keepAtBottom}
+              />
             )
           )
         )}
       </div>
 
-      <ChatComposer to={conversation.title} autoFocusKey={conversation.id} onSend={(body) => thread.send(body, myName)} />
+      <ChatComposer to={conversation.title} autoFocusKey={conversation.id} onSend={(body, file) => (file ? thread.sendFile(file, body, myName) : thread.send(body, myName))} />
     </div>
   );
 }

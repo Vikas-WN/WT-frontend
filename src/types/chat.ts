@@ -4,6 +4,8 @@ export interface ChatPerson {
   user_id: number;
   name: string;
   department: string | null;
+  /** Whether a profile photo exists to show instead of initials. */
+  has_photo?: boolean;
 }
 
 export interface ChatConversation {
@@ -22,6 +24,23 @@ export interface ChatConversation {
   partner: ChatPerson | null;
 }
 
+export type ChatAttachmentKind = "image" | "video" | "audio" | "file";
+
+export interface ChatAttachment {
+  /** 0 while the file is still being uploaded from this device. */
+  id: number;
+  file_name: string;
+  content_type: string;
+  kind: ChatAttachmentKind;
+  size_bytes: number;
+}
+
+export interface ChatReaction {
+  emoji: string;
+  count: number;
+  mine: boolean;
+}
+
 export interface ChatMessage {
   id: number;
   conversation_id: number;
@@ -33,6 +52,9 @@ export interface ChatMessage {
   edited: boolean;
   deleted: boolean;
   mine: boolean;
+  sender_has_photo?: boolean;
+  attachment?: ChatAttachment | null;
+  reactions?: ChatReaction[];
   /** Set only on a message that is still being sent from this device. */
   pending?: boolean;
 }

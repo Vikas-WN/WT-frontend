@@ -4,9 +4,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
 
 import { CHAT_LIMITS, CHAT_POLL, CHAT_QUERY_KEYS } from "@/constants/chat";
+import { ApiError } from "@/api/error";
 import { notifyError } from "@/lib/notify";
 import { chatService } from "@/services/chat.service";
 import type { ChatMessage } from "@/types/chat";
+import { chatFileKind } from "@/utils/chatFiles";
 import { lastRealId, mergeMessages } from "@/utils/chatMessages";
 
 interface ThreadData {
@@ -99,6 +101,43 @@ export function useChatThread(conversationId: number | null) {
     [conversationId, key, queryClient]
   );
 
+  /** Sends a file (with an optional caption). It shows at once as "uploading"; returns false (and removes it) if the upload fails. */
+  const sendFile = useCallback(
+    async (file: File, caption: string, senderName: string): Promise<boolean> => {
+      const id = conversationId;
+      if (id === null) return false;
+      const temp: ChatMessage = {
+        id: -Date.now(),
+        conversation_id: id,
+        sender_id: 0,
+        sender_name: senderName,
+        body: caption,
+        created_at: new Date().toISOString(),
+        edited: false,
+        deleted: false,
+        mine: true,
+        pending: true,
+        attachment: { id: 0, file_name: file.name, content_type: file.type, kind: chatFileKind(file.name), size_bytes: file.size },
+        reactions: [],
+      };
+      const put = (fn: (messages: ChatMessage[]) => ChatMessage[]) =>
+        queryClient.setQueryData<ThreadData>(key, (c) => (c ? { ...c, messages: fn(c.messages) } : { messages: fn([]), hasMore: false, firstUnreadId: null }));
+      put((list) => [...list, temp]);
+      try {
+        const sent = (await chatService.sendFile(id, file, caption)).data;
+        put((list) => mergeMessages(list.filter((m) => m.id !== temp.id), sent ? [sent] : []));
+        void queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.conversations });
+        return true;
+      } catch (error) {
+        put((list) => list.filter((m) => m.id !== temp.id));
+        // The server's message says exactly what was wrong with the file (type, size); other failures get the generic one.
+        notifyError(error instanceof ApiError && error.status === 400 ? error.message : "Couldn't send that file. Check your connection and try again.");
+        return false;
+      }
+    },
+    [conversationId, key, queryClient]
+  );
+
   const patchMessage = useCallback(
     (messageId: number, change: Partial<ChatMessage>) =>
       queryClient.setQueryData<ThreadData>(key, (c) => (c ? { ...c, messages: c.messages.map((m) => (m.id === messageId ? { ...m, ...change } : m)) } : c)),
@@ -114,6 +153,7 @@ export function useChatThread(conversationId: number | null) {
     refetch: query.refetch,
     loadOlder,
     send,
+    sendFile,
     patchMessage,
   };
 }

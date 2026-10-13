@@ -29,7 +29,7 @@ export function PersonPicker({ onPick, exclude = [], autoFocus = true }: { onPic
         {results.map((p) => (
           <li key={p.user_id}>
             <button type="button" onClick={() => onPick(p)} className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-wt-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)]">
-              <ChatAvatar name={p.name} size="sm" />
+              <ChatAvatar name={p.name} size="sm" userId={p.user_id} hasPhoto={p.has_photo} />
               <span className="min-w-0">
                 <span className="block truncate text-sm font-medium text-wt-text">{p.name}</span>
                 {p.department ? <span className="block truncate text-xs text-wt-text-muted">{p.department}</span> : null}
