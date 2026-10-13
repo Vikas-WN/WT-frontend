@@ -416,6 +416,7 @@ export const endpoints = {
     roleBilling: `${api}/reports/workforce/role-wise-billed`,
     experienceBands: `${api}/reports/workforce/experience`,
     utilizationByDepartment: `${api}/reports/utilization/utilization-by-department`,
+    utilizationWeekly: `${api}/reports/utilization/weekly`,
     benchAging: `${api}/reports/utilization/bench-aging`,
     attritionOverallPercent: `${api}/reports/attrition/overall-percent`,
     attritionVoluntaryInvoluntary: `${api}/reports/attrition/voluntary-involuntary`,

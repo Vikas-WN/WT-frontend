@@ -295,6 +295,7 @@ export const dashboardNavigation: NavItem[] = [
       { id: "reports-section-4", label: "Skill & Capacity Report" },
       { id: "reports-section-6", label: "Compliance & Risk Support Report" },
       { id: "reports-section-7", label: "BGV Report Dashboard" },
+      { id: "reports-heatmap", label: "Utilisation Heatmap" },
       { id: "reports-lop", label: "LOP Report" },
     ],
   },
