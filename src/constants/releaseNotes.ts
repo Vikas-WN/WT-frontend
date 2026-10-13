@@ -34,6 +34,29 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-13-04",
+    releasedOn: "2026-10-13",
+    title: "Send files and react in Chat",
+    highlights: [
+      {
+        area: "Chat",
+        title: "Photos, videos, audio and documents",
+        description:
+          "Use the paperclip, drop a file on the message box, or paste a picture to send it. Photos and videos show in the conversation; PDFs, Word, Excel and PowerPoint files download with one click.",
+      },
+      {
+        area: "Chat",
+        title: "Reactions and emoji",
+        description: "React to any message with an emoji (try 🎉), and pick emoji from the new smiley button. Typing /shrug or /party adds a bit of fun.",
+      },
+      {
+        area: "Chat",
+        title: "Profile photos in chat",
+        description: "People now appear with their profile photo in conversations, the list and the people search, instead of just initials.",
+      },
+    ],
+  },
+  {
     id: "2026-10-13-03",
     releasedOn: "2026-10-13",
     title: "Chat with your colleagues",

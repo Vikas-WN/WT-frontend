@@ -36,7 +36,7 @@ function Row({ c, active, onSelect, now }: { c: ChatConversation; active: boolea
           active ? "bg-[var(--wt-brand-soft)]" : "hover:bg-wt-surface-2"
         )}
       >
-        <ChatAvatar name={c.title} channel={c.kind === "CHANNEL"} isPrivate={c.is_private} />
+        <ChatAvatar name={c.title} channel={c.kind === "CHANNEL"} isPrivate={c.is_private} userId={c.partner?.user_id} hasPhoto={c.partner?.has_photo} />
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline justify-between gap-2">
             <span className={cn("truncate text-sm text-wt-text", unread ? "font-semibold" : "font-medium")}>{c.title}</span>
