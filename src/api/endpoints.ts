@@ -222,6 +222,24 @@ export const endpoints = {
     options: `${api}/audience/options`,
   },
 
+  chat: {
+    people: `${api}/chat/people`,
+    conversations: `${api}/chat/conversations`,
+    unread: `${api}/chat/unread-count`,
+    dm: `${api}/chat/dm`,
+    channels: `${api}/chat/channels`,
+    browse: `${api}/chat/channels/browse`,
+    join: (id: number) => `${api}/chat/channels/${id}/join`,
+    leave: (id: number) => `${api}/chat/channels/${id}/leave`,
+    members: (id: number) => `${api}/chat/channels/${id}/members`,
+    messages: (id: number) => `${api}/chat/conversations/${id}/messages`,
+    read: (id: number) => `${api}/chat/conversations/${id}/read`,
+    message: (id: number) => `${api}/chat/messages/${id}`,
+    report: (id: number) => `${api}/chat/messages/${id}/report`,
+    reports: `${api}/chat/reports`,
+    resolveReport: (id: number) => `${api}/chat/reports/${id}/resolve`,
+  },
+
   bugReports: {
     root: `${api}/bug-reports`,
     mine: `${api}/bug-reports/mine`,

@@ -99,6 +99,12 @@ export const LazyUtilizationHeatmapPageClient = lazyPage(
   "Loading utilisation…"
 );
 
+export const LazyChatPageClient = lazyPage(
+  () => import("@/components/dashboard/chat/ChatPageClient"),
+  "ChatPageClient",
+  "Loading chat…"
+);
+
 export const LazyWhosOutPageClient = lazyPage(
   () => import("@/components/dashboard/whos-out/WhosOutPageClient"),
   "WhosOutPageClient",

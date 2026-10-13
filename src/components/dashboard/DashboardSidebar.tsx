@@ -18,6 +18,7 @@ import { Search } from "lucide-react";
 import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
 import { useCommandPalette } from "@/components/dashboard/CommandPalette";
 import { modKeyLabel } from "@/lib/keyboard";
+import { ChatUnreadBadge } from "@/components/dashboard/chat/ChatUnreadBadge";
 import { dashboardHref } from "@/constants/routes";
 import { learningSubNav, LEARNING_BASE } from "@/constants/learningNav";
 import type { NavItem, AccordionSectionId } from "@/constants/dashboardNavigation";
@@ -654,6 +655,7 @@ export function DashboardSidebar({
                 >
                   <SidebarIcon name={item.icon} className={SIDEBAR_ICON_WRAP} />
                   <span className={sidebarNavLabelClass(showCollapsed)}>{item.label}</span>
+                  {item.id === "chat" ? <ChatUnreadBadge collapsed={showCollapsed} /> : null}
                 </Link>
               );
             }

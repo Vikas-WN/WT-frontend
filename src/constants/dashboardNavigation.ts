@@ -78,6 +78,13 @@ export const dashboardNavigation: NavItem[] = [
     icon: "layoutGrid",
   },
   {
+    kind: "link",
+    id: "chat",
+    label: "Chat",
+    roles: ENGAGE_ROLES,
+    icon: "messageCircle",
+  },
+  {
     kind: "group",
     id: "employee",
     label: "Employee",
