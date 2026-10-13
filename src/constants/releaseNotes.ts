@@ -34,6 +34,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-13-03",
+    releasedOn: "2026-10-13",
+    title: "Chat with your colleagues",
+    highlights: [
+      {
+        area: "Chat",
+        title: "Message anyone, or a whole channel",
+        description:
+          "The new Chat page lets you send a direct message to a colleague or talk in a channel. Anyone can create a public channel, or a private one for just the people they add.",
+      },
+      {
+        area: "Chat",
+        title: "Private, unless reported",
+        description:
+          "Nobody in HR or admin can read your chats. If you report a message, only that message and a few around it go to HR, and the access is logged. Messages are deleted after a year.",
+      },
+    ],
+  },
+  {
     id: "2026-10-13-02",
     releasedOn: "2026-10-13",
     title: "See over- and under-use week by week",

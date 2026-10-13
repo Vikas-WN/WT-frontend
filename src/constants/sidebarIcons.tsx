@@ -251,6 +251,8 @@ export const sidebarIcons = {
         <path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z" />
       </>
     )),
+  messageCircle: ({ className = "" }: IconProps) =>
+    svg(className, <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z" />),
   chevronDown: ({ className = "" }: IconProps) =>
     svg(className, <path d="m6 9 6 6 6-6" />),
   chevronRight: ({ className = "" }: IconProps) =>
