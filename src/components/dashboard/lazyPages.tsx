@@ -93,6 +93,12 @@ export const LazyLopReportPageClient = lazyPage(
   "Loading LOP report…"
 );
 
+export const LazyUtilizationHeatmapPageClient = lazyPage(
+  () => import("@/components/dashboard/reports/utilization/UtilizationHeatmapPageClient"),
+  "UtilizationHeatmapPageClient",
+  "Loading utilisation…"
+);
+
 export const LazyWhosOutPageClient = lazyPage(
   () => import("@/components/dashboard/whos-out/WhosOutPageClient"),
   "WhosOutPageClient",

@@ -34,6 +34,19 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-13-02",
+    releasedOn: "2026-10-13",
+    title: "See over- and under-use week by week",
+    highlights: [
+      {
+        area: "Reports",
+        title: "Utilisation heatmap",
+        description:
+          "A new report under Reports shows every person's planned load (from allocations) and actual load (from logged hours) week by week, grouped by department, so over-allocation and idle time show up early.",
+      },
+    ],
+  },
+  {
     id: "2026-10-13-01",
     releasedOn: "2026-10-13",
     title: "The dashboard fits phones properly",
