@@ -34,6 +34,19 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-13-01",
+    releasedOn: "2026-10-13",
+    title: "The dashboard fits phones properly",
+    highlights: [
+      {
+        area: "Mobile",
+        title: "Readable header and cleaner screen edge on phones",
+        description:
+          "On a phone the page title is no longer squeezed to a single letter (the role switcher now lives in the menu), the dark strip along the left edge is gone, and the Home cards fit even the smallest screens.",
+      },
+    ],
+  },
+  {
     id: "2026-10-09-01",
     releasedOn: "2026-10-09",
     title: "Bug reports with files, a longer reason box, and a tidier Home",

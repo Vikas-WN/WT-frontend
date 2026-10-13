@@ -235,6 +235,8 @@ type DashboardSidebarProps = {
   canAccessProfile: boolean;
   isOffboarded: boolean;
   onLogout: () => void | Promise<void>;
+  /** Extra controls for the top of the phone drawer (e.g. the role switcher, which has no room in a phone header). */
+  mobileTopSlot?: ReactNode;
 };
 
 export function DashboardSidebar({
@@ -254,6 +256,7 @@ export function DashboardSidebar({
   canAccessProfile,
   isOffboarded,
   onLogout,
+  mobileTopSlot,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
   const [flyoutId, setFlyoutId] = useState<AccordionSectionId | null>(null);
@@ -363,6 +366,8 @@ export function DashboardSidebar({
             )}
           </div>
         </div>
+
+        {mobileTopSlot ? <div className="mb-2 px-3 sm:hidden">{mobileTopSlot}</div> : null}
 
         <div className={cn("px-3 pb-1", showCollapsed && "lg:px-2")}>
           <SidebarSearchTrigger

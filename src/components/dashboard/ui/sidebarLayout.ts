@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 /** Sidebar shell — fixed viewport height; nav scrolls inside. Deliberately
  *  dark regardless of the app theme (see --wt-sidebar-* tokens). */
 export const SIDEBAR_SHELL_BASE =
-  "wt-sidebar wt-mobile-drawer z-40 flex h-dvh max-h-dvh shrink-0 flex-col border-r border-[var(--wt-sidebar-border)] bg-[var(--wt-sidebar-bg)] transition-[width,transform,padding] duration-[var(--wt-duration)] ease-[var(--wt-ease)] max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,288px)] lg:min-w-0 lg:translate-x-0 max-lg:shadow-[0_24px_64px_rgba(0,0,0,0.45)]";
+  "wt-sidebar wt-mobile-drawer z-40 flex h-dvh max-h-dvh shrink-0 flex-col border-r border-[var(--wt-sidebar-border)] bg-[var(--wt-sidebar-bg)] transition-[width,transform,padding] duration-[var(--wt-duration)] ease-[var(--wt-ease)] max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,288px)] lg:min-w-0 lg:translate-x-0";
 
 /** @deprecated Use sidebarShellClass */
 export const SIDEBAR_SHELL_CLASS = cn(
@@ -24,7 +24,8 @@ export function sidebarShellClass(mobileOpen: boolean, collapsed: boolean) {
 
 export function sidebarShellStateClass(mobileOpen: boolean) {
   return mobileOpen
-    ? "max-lg:translate-x-0"
+    ? // The shadow belongs to the open drawer only: left on a closed one, its 64px blur bleeds onto the page edge.
+      "max-lg:translate-x-0 max-lg:shadow-[0_24px_64px_rgba(0,0,0,0.45)]"
     : "max-lg:pointer-events-none max-lg:-translate-x-full";
 }
 
