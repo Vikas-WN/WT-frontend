@@ -452,7 +452,7 @@ export function HomePageClient() {
         </div>
       ) : (
         <div
-          className="grid items-stretch gap-4 sm:grid-cols-2 lg:grid-flow-dense lg:auto-rows-min lg:grid-cols-[repeat(var(--home-cols),minmax(0,1fr))]"
+          className="grid grid-cols-[minmax(0,1fr)] items-stretch gap-4 sm:grid-cols-2 lg:grid-flow-dense lg:auto-rows-min lg:grid-cols-[repeat(var(--home-cols),minmax(0,1fr))]"
           style={{ "--home-cols": columns } as React.CSSProperties}
         >
           {visibleLayout.map((w) => (

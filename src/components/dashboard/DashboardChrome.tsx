@@ -470,6 +470,26 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         canAccessProfile={canAccessProfile}
         isOffboarded={isOffboarded}
         onLogout={requestLogout}
+        mobileTopSlot={
+          activePersona ? (
+            <div className="rounded-xl bg-[var(--wt-sidebar-hover-bg)] p-2.5">
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--wt-sidebar-text-faint)]">Acting as</p>
+              <DropdownSelect
+                value={activePersona}
+                onChange={(next) => {
+                  setActivePersona(next);
+                  closeMobileNav();
+                }}
+                options={allRoles.map((role) => ({ value: role, label: formatRoleLabel(role) }))}
+                variant="compact"
+                className="w-full"
+                contentClassName="w-auto min-w-[10rem]"
+                aria-label="Switch active role"
+                clearSelectionOnEmptyInput={false}
+              />
+            </div>
+          ) : null
+        }
       />
 
       <LogoutConfirmDialog
@@ -505,12 +525,14 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             {/* activePersona is only ever set for users with ROLE_ADMIN — see AuthContext.syncRolesAndPersona. */}
             {activePersona ? (
+              // From tablet width up the switcher lives here; on a phone it has no room (it squeezed the page title to
+              // "E…"), so it moves into the navigation drawer — see `mobileTopSlot` below.
               <DropdownSelect
                 value={activePersona}
                 onChange={(next) => setActivePersona(next)}
                 options={allRoles.map((role) => ({ value: role, label: formatRoleLabel(role) }))}
                 variant="compact"
-                className="w-[8.25rem] shrink-0 sm:w-35"
+                className="w-[8.25rem] shrink-0 max-sm:hidden sm:w-35"
                 contentClassName="w-auto min-w-[9rem]"
                 aria-label="Switch active role"
                 clearSelectionOnEmptyInput={false}

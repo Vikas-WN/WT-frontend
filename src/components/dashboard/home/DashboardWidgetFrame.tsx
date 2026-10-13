@@ -37,7 +37,7 @@ export function DashboardWidgetFrame({
   return (
     <div
       className={cn(
-        "h-full min-h-0",
+        "h-full min-h-0 min-w-0",
         size === "wide" && "sm:col-span-2",
         tall && "lg:row-span-2",
         editing && "relative rounded-2xl outline outline-2 outline-transparent transition-[outline-color]",
