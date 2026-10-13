@@ -49,7 +49,7 @@ export function HomeCard({
     <section
       className={cn(
         CONTENT_CARD_CLASS,
-        "flex h-full min-h-0 flex-col overflow-hidden p-4 sm:p-5 lg:p-4",
+        "flex flex-col overflow-hidden p-4 sm:p-5 lg:h-full lg:min-h-0 lg:p-4",
         (href || onAction) && "wt-lift",
         featured &&
           "shadow-[inset_3px_0_0_var(--wt-brand)] border-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)] bg-[var(--wt-brand-soft)] dark:bg-[var(--wt-brand-soft)]",
@@ -82,7 +82,7 @@ export function HomeCard({
           </button>
         ) : null}
       </div>
-      <div className="wt-tile-body mt-2.5 min-h-0 flex-1 lg:overflow-y-auto lg:overscroll-contain">{children}</div>
+      <div className="wt-tile-body mt-2.5 flex-1 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain">{children}</div>
     </section>
   );
 }
