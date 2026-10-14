@@ -4,6 +4,7 @@ import { toPagedRows } from "@/utils/apiRows";
 
 export const TRAININGS_LIST_QUERY_KEY = ["learning", "trainings", "list"] as const;
 export const OPEN_TRAININGS_QUERY_KEY = ["learning", "trainings", "open"] as const;
+export const MY_TRAININGS_QUERY_KEY = ["learning", "trainings", "mine"] as const;
 
 export async function fetchTrainingsListRows(
   queryClient: QueryClient
@@ -25,6 +26,20 @@ export async function fetchOpenTrainingsRows(
     queryKey: [...OPEN_TRAININGS_QUERY_KEY],
     queryFn: async () => {
       const res = await hrmsService.getOpenTrainings();
+      return toPagedRows((res as { data?: unknown }).data ?? res);
+    },
+    staleTime: 30_000,
+  });
+}
+
+/** The trainings I'm enrolled in — includes assigned (mandatory) ones the open catalog never lists. */
+export async function fetchMyTrainingsRows(
+  queryClient: QueryClient
+): Promise<Array<Record<string, unknown>>> {
+  return queryClient.fetchQuery({
+    queryKey: [...MY_TRAININGS_QUERY_KEY],
+    queryFn: async () => {
+      const res = await hrmsService.getMyTrainings();
       return toPagedRows((res as { data?: unknown }).data ?? res);
     },
     staleTime: 30_000,

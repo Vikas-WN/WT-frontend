@@ -14,8 +14,10 @@ import {
   normalizeTrainingScoresHrSnapshot,
 } from "@/utils/learning/trainingScores";
 import {
+  MY_TRAININGS_QUERY_KEY,
   OPEN_TRAININGS_QUERY_KEY,
   TRAININGS_LIST_QUERY_KEY,
+  fetchMyTrainingsRows,
   fetchOpenTrainingsRows,
   fetchTrainingsListRows,
   findTrainingInList,
@@ -45,6 +47,20 @@ export function useOpenTrainingsList(enabled = true) {
     queryFn: async () => {
       const res = await hrmsService.getOpenTrainings();
       return toPagedRows((res as { data?: unknown }).data ?? res);
+    },
+    staleTime: 30_000,
+  });
+}
+
+/** The trainings the signed-in person is enrolled in — GET /api/v1/trainings/mine (withdrawn ones left out). */
+export function useMyTrainingsList(enabled = true) {
+  return useQuery({
+    queryKey: [...MY_TRAININGS_QUERY_KEY],
+    enabled,
+    queryFn: async () => {
+      const res = await hrmsService.getMyTrainings();
+      const rows = toPagedRows((res as { data?: unknown }).data ?? res);
+      return rows.filter((row) => String(row.enrollment_status ?? "").toUpperCase() !== "WITHDRAWN");
     },
     staleTime: 30_000,
   });
@@ -93,7 +109,7 @@ export function useUpdateTraining(trainingId: string | undefined) {
   });
 }
 
-/** Resolves training metadata from HR list or GET /trainings/open (employees). */
+/** Resolves training metadata from the HR list, or (employees) GET /trainings/open then GET /trainings/mine. */
 export function useTrainingDetail(
   trainingId: string | undefined,
   enabled: boolean,
@@ -110,11 +126,15 @@ export function useTrainingDetail(
       const rows = employeeView
         ? await fetchOpenTrainingsRows(queryClient)
         : await fetchTrainingsListRows(queryClient);
-      const found = findTrainingInList(rows, trainingId!);
+      let found = findTrainingInList(rows, trainingId!);
+      if (!found && employeeView) {
+        // An assigned (e.g. mandatory) training is not in the open catalog, but it is in my own list.
+        found = findTrainingInList(await fetchMyTrainingsRows(queryClient), trainingId!);
+      }
       if (!found) {
         throw new Error(
           employeeView
-            ? "Training not found in open catalog. Only scheduled optional/hybrid trainings are visible."
+            ? "Training not found. You can see open trainings and the ones assigned to you."
             : "Training not found in list."
         );
       }

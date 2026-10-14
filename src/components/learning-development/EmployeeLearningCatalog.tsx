@@ -5,29 +5,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { TrainingCard } from "@/components/learning-development/TrainingCard";
-import { useOpenTrainingsList } from "@/hooks/learning/useLearningTrainings";
+import { useMyTrainingsList, useOpenTrainingsList } from "@/hooks/learning/useLearningTrainings";
 import { hrmsService } from "@/services/hrms.service";
 import { notifyError } from "@/lib/notify";
 import { useDashboardAccess } from "@/components/dashboard/shared/useDashboardAccess";
 
-const ENROLLED_STORAGE_KEY = "wt-learning-enrolled-ids";
-
-function loadEnrolledIds(): Set<string> {
-  if (typeof window === "undefined") return new Set();
-  try {
-    const raw = sessionStorage.getItem(ENROLLED_STORAGE_KEY);
-    if (!raw) return new Set();
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return new Set();
-    return new Set(parsed.map((id) => String(id).trim()).filter(Boolean));
-  } catch {
-    return new Set();
-  }
-}
-
-function saveEnrolledIds(ids: Set<string>) {
-  if (typeof window === "undefined") return;
-  sessionStorage.setItem(ENROLLED_STORAGE_KEY, JSON.stringify([...ids]));
+function enrollmentLabel(row: Record<string, unknown>): string {
+  if (String(row.enrollment_status ?? "").toUpperCase() === "COMPLETED") return "Completed";
+  const progress = Number(row.progress_percent ?? 0);
+  return progress > 0 ? `In progress · ${Math.round(progress)}%` : "Enrolled";
 }
 
 function trainingDetailHref(trainingId: string) {
@@ -37,23 +23,21 @@ function trainingDetailHref(trainingId: string) {
 export function EmployeeLearningCatalog() {
   const qc = useQueryClient();
   const openQ = useOpenTrainingsList();
-  const [enrolledIds, setEnrolledIds] = useState<Set<string>>(loadEnrolledIds);
+  const mineQ = useMyTrainingsList();
+  // UI state: which training's Enroll button is mid-request.
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
   // Business rule: during the notice period an employee keeps their assigned
   // trainings but can't enrol in new ones (the backend enforces it too).
   const { isServingNotice } = useDashboardAccess();
 
+  const myTrainings = useMemo(() => mineQ.data ?? [], [mineQ.data]);
+  const enrolledIds = useMemo(() => new Set(myTrainings.map((row) => String(row.id ?? "").trim())), [myTrainings]);
   const openTrainings = openQ.data ?? [];
 
   const enrollMut = useMutation({
     mutationFn: (trainingId: string) => hrmsService.selfEnrollTraining(trainingId),
     onSuccess: async (_data, trainingId) => {
-      setEnrolledIds((prev) => {
-        const next = new Set(prev);
-        next.add(trainingId);
-        saveEnrolledIds(next);
-        return next;
-      });
+      await qc.invalidateQueries({ queryKey: ["learning", "trainings", "mine"] });
       await qc.invalidateQueries({ queryKey: ["learning", "trainings", "open"] });
       await qc.invalidateQueries({ queryKey: ["learning", "my-marks", trainingId] });
     },
@@ -77,7 +61,41 @@ export function EmployeeLearningCatalog() {
     [openTrainings]
   );
 
+  const myList = (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold">My Trainings</h2>
+        <p className="text-sm text-wt-text-muted mt-1">
+          Trainings you are enrolled in, including the ones HR assigned to you.
+        </p>
+      </div>
+      {mineQ.isLoading ? (
+        <Skeleton className="h-32 w-full rounded-2xl" aria-hidden />
+      ) : mineQ.isError ? (
+        <p className="text-sm text-wt-text-muted">We couldn&apos;t load your trainings. Please refresh to try again.</p>
+      ) : myTrainings.length === 0 ? (
+        <p className="text-sm text-wt-text-muted">You aren&apos;t enrolled in any training yet. Enroll in one below.</p>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {myTrainings.map((row) => {
+            const id = String(row.id ?? "").trim();
+            return (
+              <div key={id || String(row.name)} className="relative flex flex-col">
+                <TrainingCard row={row} href={trainingDetailHref(id)} />
+                <p className="mt-2 px-1 text-right text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                  {enrollmentLabel(row)}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+
   return (
+    <div className="space-y-8">
+    {myList}
     <section className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">Open Trainings</h2>
@@ -130,5 +148,6 @@ export function EmployeeLearningCatalog() {
         </div>
       )}
     </section>
+    </div>
   );
 }
