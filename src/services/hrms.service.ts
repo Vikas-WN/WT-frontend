@@ -2719,6 +2719,11 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.learning.open);
   },
 
+  /** Everything the signed-in person is enrolled in (assigned or self-enrolled), with status and progress. */
+  getMyTrainings() {
+    return apiClient.get<ApiEnvelope<unknown[]>>(endpoints.learning.mine);
+  },
+
   uploadTrainingMaterial(trainingId: string, payload: {
     title: string;
     visibility?: "HR_ONLY" | "EMPLOYEE";
