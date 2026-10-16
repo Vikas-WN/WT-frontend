@@ -2,7 +2,6 @@
  *  invalidation after a request is created, decided or withdrawn refreshes all of it. */
 export const LEAVE_QUERY_ROOT = ["leave"] as const;
 export const MY_LEAVE_BALANCE_QUERY_KEY = ["leave", "my-balance"] as const;
-export const MY_LEAVE_OUTLOOK_QUERY_KEY = ["leave", "my-outlook"] as const;
 export const MY_LEAVE_IMPACT_QUERY_KEY = ["leave", "my-impact"] as const;
 
 /** Balances change when a manager decides a request, which this screen isn't told about — so

@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarCheck, RotateCcw, TrendingUp } from "lucide-react";
+import { CalendarCheck, Hourglass, TrendingUp } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
@@ -26,25 +26,17 @@ function Stat({ icon, tone, label, short, hint, value }: { icon: ReactNode; tone
   );
 }
 
-/** The three numbers behind the balance: what the year opened with, what has been added, what has been used. */
+/** This year in three numbers: what has been credited, what is taken (approved) and what is waiting for approval. */
 export function LeaveYearStats({ summary }: { summary: LeaveYearSummary }) {
   return (
     <ul className="min-w-0 flex-1 space-y-2.5">
       <Stat
-        icon={<RotateCcw className="size-4" />}
-        tone="bg-amber-500/12 text-amber-700 dark:text-amber-400"
-        label={HOME_LEAVE_CARD.carriedForwardLabel}
-        short={HOME_LEAVE_CARD.carriedForwardShort}
-        hint={HOME_LEAVE_CARD.carriedForwardHint}
-        value={summary.carried_forward}
-      />
-      <Stat
         icon={<TrendingUp className="size-4" />}
         tone="bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
-        label={HOME_LEAVE_CARD.accruedLabel}
-        short={HOME_LEAVE_CARD.accruedShort}
-        hint={HOME_LEAVE_CARD.accruedHint}
-        value={summary.accrued}
+        label={HOME_LEAVE_CARD.creditedLabel}
+        short={HOME_LEAVE_CARD.creditedShort}
+        hint={HOME_LEAVE_CARD.creditedHint}
+        value={summary.credited ?? summary.carried_forward + summary.accrued}
       />
       <Stat
         icon={<CalendarCheck className="size-4" />}
@@ -52,7 +44,15 @@ export function LeaveYearStats({ summary }: { summary: LeaveYearSummary }) {
         label={HOME_LEAVE_CARD.takenLabel}
         short={HOME_LEAVE_CARD.takenShort}
         hint={HOME_LEAVE_CARD.takenHint}
-        value={summary.leaves_taken}
+        value={summary.taken_approved ?? summary.leaves_taken}
+      />
+      <Stat
+        icon={<Hourglass className="size-4" />}
+        tone="bg-amber-500/12 text-amber-700 dark:text-amber-400"
+        label={HOME_LEAVE_CARD.pendingLabel}
+        short={HOME_LEAVE_CARD.pendingShort}
+        hint={HOME_LEAVE_CARD.pendingHint}
+        value={summary.taken_pending ?? 0}
       />
     </ul>
   );

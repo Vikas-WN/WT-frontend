@@ -164,9 +164,8 @@ import { buildUserRequestBody } from "@/utils/leaveRequestPayload";
 import { activeAllocationsRequireClientApproval, isTalentPoolLeaveRouting } from "@/utils/leaveAllocations";
 import { RequestReversalActions } from "@/components/dashboard/leave/RequestReversalActions";
 import { REQUEST_REVERSAL_COPY } from "@/constants/requestReversal";
+import { LeaveYearSummaryStrip } from "@/components/dashboard/leave/LeaveYearSummaryStrip";
 import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSummary";
-import { LeaveBalanceForecastWidget } from "@/components/dashboard/leave/LeaveBalanceForecastWidget";
-import { LeaveMonthlyOutlook } from "@/components/dashboard/leave/LeaveMonthlyOutlook";
 import { HrLeaveBalancesPanel } from "@/components/dashboard/leave/HrLeaveBalancesPanel";
 import { useMyLeaveBalance } from "@/hooks/leave/useMyLeaveBalance";
 import { LEAVE_QUERY_ROOT } from "@/constants/leaveQueryKeys";
@@ -1962,8 +1961,7 @@ export function LeavePageClient() {
                             <>
                               {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
                               <div className="mb-6"><LeaveBalanceSummary selectedType={normalizeUserRequestType(leaveRequestForm.request_type)} /></div>
-                              <LeaveBalanceForecastWidget />
-                              {normalizeUserRequestType(leaveRequestForm.request_type) !== "COMP_OFF" ? <LeaveMonthlyOutlook /> : null}
+                              {normalizeUserRequestType(leaveRequestForm.request_type) !== "COMP_OFF" ? <LeaveYearSummaryStrip /> : null}
                               <Tabs value={requestViewTab} onValueChange={(v) => setRequestViewTab(v as "request" | "view")} orientation="horizontal">
                                 <TabsList variant="line" className="w-full justify-start border-b border-wt-border/80">
                                   <TabsTrigger value="request">Apply for Leave</TabsTrigger>

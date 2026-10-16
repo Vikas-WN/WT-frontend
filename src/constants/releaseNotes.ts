@@ -34,6 +34,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-16-01",
+    releasedOn: "2026-10-16",
+    title: "Leave follows the Employee Handbook",
+    highlights: [
+      {
+        area: "Leave",
+        title: "Primary and Secondary the way the handbook says",
+        description:
+          "Each month's 1.5 days go to Primary until its 11 days are credited, then to Secondary. Leave comes off Primary first. At year end, unused Primary carries forward (up to 7 days) as Secondary and up to 4 days can be encashed; Secondary never carries.",
+      },
+      {
+        area: "Leave",
+        title: "Your year at a glance",
+        description:
+          "Home and the leave page now show this year's credited days, what you have taken (approved) and what is waiting for approval, and your balance. The balance forecast and month-by-month plan are gone.",
+      },
+    ],
+  },
+  {
     id: "2026-10-13-04",
     releasedOn: "2026-10-13",
     title: "Send files and react in Chat",
