@@ -28,8 +28,6 @@ export const endpoints = {
     self: `${api}/profile`,
     preferences: `${api}/profile/preferences`,
     myBalances: `${api}/profile/balances`,
-    myBalancesForecast: `${api}/profile/balances/forecast`,
-    myBalancesMonthly: `${api}/profile/balances/monthly`,
     myLeaveImpact: `${api}/profile/balances/leave-impact`,
     employeeById: (empId: string) => `${api}/employee-profile/${encodeURIComponent(empId)}`,
     employeeUserType: (empId: string) =>

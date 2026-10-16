@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
-import { LEAVE_OUTLOOK_COPY } from "@/constants/leaveOutlookCopy";
+import { LEAVE_YEAR_COPY } from "@/constants/leaveYearSummary";
 import { useMyLeaveBalance } from "@/hooks/leave/useMyLeaveBalance";
 import { formatBalanceDays } from "@/utils/leaveRequestDisplay";
 import { CalendarDays, User, Users, Clock, Info } from "lucide-react";
@@ -151,7 +151,7 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
     </div>
     {showAll ? (
       <p className="mt-2 text-xs text-wt-text-muted">
-        {LEAVE_OUTLOOK_COPY.balanceNote}
+        {LEAVE_YEAR_COPY.balanceNote}
       </p>
     ) : null}
     </>
