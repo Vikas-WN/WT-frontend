@@ -270,7 +270,7 @@ export function MyLeaveRequestsView({
                   <div className="flex flex-col items-center gap-2">
                     <Inbox className="size-8 text-muted-foreground/40" />
                     <span className="text-sm text-muted-foreground">
-                      {rows.length ? "No requests match your search." : emptyLabel}
+                      {rows.length ? "No requests match your search." : fromDate && toDate ? `${emptyLabel} from ${fromDate} to ${toDate}` : emptyLabel}
                     </span>
                   </div>
                 </TableCell>
