@@ -1,5 +1,6 @@
 "use client";
 
+import { lastMonthToThisMonthRange } from "@/utils/leaveRequestRange";
 import { REASON_COPY, REQUEST_REASON_MAX_LENGTH } from "@/constants/requestReason";
 import { giveFeedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
@@ -348,8 +349,14 @@ export function LeavePageClient() {
     void queryClient.invalidateQueries({ queryKey: LEAVE_QUERY_ROOT });
   }, [queryClient]);
 
-  const [myRequestsFromDate, setMyRequestsFromDate] = useState("");
-  const [myRequestsToDate, setMyRequestsToDate] = useState("");
+  // UI state: the Previous Requests date filters. They start at last month → this month; a notification deep link to one
+  // request starts empty (the wide range) so an older request is not filtered out.
+  const [myRequestsFromDate, setMyRequestsFromDate] = useState(() =>
+    deepLinkRequestId ? "" : lastMonthToThisMonthRange(new Date()).from
+  );
+  const [myRequestsToDate, setMyRequestsToDate] = useState(() =>
+    deepLinkRequestId ? "" : lastMonthToThisMonthRange(new Date()).to
+  );
   const myLeaveRequestsQ = useMyLeaveRequests(
     userEmail,
     myLeaveTabActive,
