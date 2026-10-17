@@ -2618,14 +2618,9 @@ html.wt-reduce-motion .wt-deco-layer * { animation: none !important; }
 .wt-pet { -webkit-tap-highlight-color: transparent; outline: none; }
 .wt-pet:active { cursor: grabbing !important; }
 .wt-pet:focus-visible .wt-pet-inner { filter: drop-shadow(0 0 0 2px var(--wt-brand)); outline: 2px solid var(--wt-brand); outline-offset: 4px; border-radius: 24px; }
-.wt-pet-inner { transition: transform 0.14s ease-out; will-change: transform; }
-.wt-pet-walking svg { animation: wt-pet-waddle 0.46s ease-in-out infinite; }
+.wt-pet-inner { will-change: transform; } /* the body's springs write its transform every frame, so no CSS transition (it would lag behind them) */
 .wt-pet-bubble { animation: wt-pet-pop 0.22s cubic-bezier(0.2, 1.4, 0.4, 1); }
 .wt-pet-heart { color: #fb7185; animation: wt-pet-float-up 1.2s ease-out forwards; }
-@keyframes wt-pet-waddle {
-  0%, 100% { transform: translateY(0) rotate(-4deg); }
-  50% { transform: translateY(-4px) rotate(4deg); }
-}
 @keyframes wt-pet-pop {
   from { transform: scale(0.6); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
@@ -2635,7 +2630,7 @@ html.wt-reduce-motion .wt-deco-layer * { animation: none !important; }
   to { transform: translateY(-46px) scale(1.15); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .wt-pet-walking svg, .wt-pet-bubble, .wt-pet-heart { animation: none !important; }
+  .wt-pet-bubble, .wt-pet-heart { animation: none !important; }
 }
 
 /* Chat: confetti when someone reacts with 🎉. Reduced-motion users get the global near-zero animation duration. */

@@ -9,6 +9,20 @@ import { PET_COPY, PET_LINES } from "@/constants/petCopy";
 import { fireConfetti } from "@/lib/confetti";
 import { PET_EVENT, type PetEventKind } from "@/lib/petEvents";
 import {
+  BODY_SPRING,
+  TILT_SPRING,
+  TURN_SPRING,
+  bodyTransform,
+  breathe,
+  ease,
+  landingKick,
+  leanForSpeed,
+  stepSpring,
+  stretchForSpeed,
+  waddle,
+  type Spring,
+} from "@/utils/petMotion";
+import {
   clampX,
   floorY,
   lookOffset,
@@ -73,7 +87,19 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
   const target = useRef(0);
   const nextWanderAt = useRef(0);
   const lastActiveAt = useRef(0);
-  const squashUntil = useRef(0);
+  // How the body is posed right now. These are springs (they settle with a little overshoot) rather than values that jump, which
+  // is what makes landings, turns and leans look fluid.
+  const pose = useRef<{ turn: Spring; stretch: Spring; tilt: Spring; walkBlend: number; walked: number; vx: number; prevX: number }>({
+    turn: { x: -1, v: 0 },
+    stretch: { x: 0, v: 0 },
+    tilt: { x: 0, v: 0 },
+    walkBlend: 0,
+    walked: 0,
+    vx: 0,
+    prevX: 0,
+  });
+  const pointer = useRef<{ x: number; y: number } | null>(null);
+  const look = useRef({ x: 0, y: 0 });
   const drag = useRef({ offX: 0, offY: 0, startX: 0, startY: 0, moved: false, petted: false, samples: [] as PointerSample[] });
   const clicks = useRef<number[]>([]);
   const timers = useRef<number[]>([]);
@@ -342,14 +368,53 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
   // ---- the loop ----------------------------------------------------------------------------------------------
   useEffect(() => {
     const world = () => worldFor(size);
-    const place = () => {
+    const place = (now: number, dt: number) => {
       const root = rootRef.current;
       const inner = innerRef.current;
       if (!root || !inner) return;
-      root.style.transform = `translate3d(${body.current.x.toFixed(1)}px, ${body.current.y.toFixed(1)}px, 0)`;
-      const squashed = performance.now() < squashUntil.current;
-      inner.style.transform = `scaleX(${facing.current}) scale(${squashed ? "1.14, 0.86" : "1, 1"})`;
-      inner.classList.toggle("wt-pet-walking", mode.current === "walk");
+      const b = body.current;
+      const m = mode.current;
+      const p = pose.current;
+      root.style.transform = `translate3d(${b.x.toFixed(2)}px, ${b.y.toFixed(2)}px, 0)`;
+
+      // Horizontal speed, smoothed (the pet moves by different rules while walking, falling and being dragged).
+      const rawVx = dt > 0 ? (b.x - p.prevX) / dt : 0;
+      p.prevX = b.x;
+      p.vx = ease(p.vx, rawVx, dt, 18);
+
+      if (reducedMotion()) {
+        // No motion for people who ask for none: face the right way, stand still.
+        p.turn = { x: facing.current, v: 0 };
+        p.stretch = { x: 0, v: 0 };
+        p.tilt = { x: 0, v: 0 };
+        inner.style.transform = bodyTransform({ turn: facing.current, stretch: 0, breath: 0, tilt: 0, bob: 0 });
+      } else {
+        p.turn = stepSpring(p.turn, facing.current, dt, TURN_SPRING);
+        const flying = m === "fall" || m === "drag";
+        p.stretch = stepSpring(p.stretch, flying && m === "fall" ? stretchForSpeed(b.vy) : 0, dt, BODY_SPRING);
+        p.walkBlend = ease(p.walkBlend, m === "walk" ? 1 : 0, dt, 10);
+        if (m === "walk") p.walked += Math.abs(p.vx) * dt;
+        const w = waddle(p.walked);
+        const lean = flying ? leanForSpeed(p.vx) : 0;
+        p.tilt = stepSpring(p.tilt, lean + w.sway * p.walkBlend, dt, TILT_SPRING);
+        const calm = flying ? 0 : 1;
+        inner.style.transform = bodyTransform({
+          turn: p.turn.x,
+          stretch: p.stretch.x,
+          breath: breathe(now / 1000, m === "sleep") * calm,
+          tilt: p.tilt.x,
+          bob: w.bob * p.walkBlend,
+        });
+      }
+
+      // The eyes ease towards the pointer instead of jumping to it.
+      const target = pointer.current ? lookOffset({ x: b.x + size / 2, y: b.y + size / 2 }, pointer.current) : { x: 0, y: 0 };
+      look.current.x = ease(look.current.x, target.x, dt, 16);
+      look.current.y = ease(look.current.y, target.y, dt, 16);
+      // The inner box is mirrored while the pet faces left, so flip the horizontal look with it.
+      const side = p.turn.x < 0 ? -1 : 1;
+      inner.style.setProperty("--wt-knot-look-x", `${(look.current.x * side).toFixed(2)}px`);
+      inner.style.setProperty("--wt-knot-look-y", `${look.current.y.toFixed(2)}px`);
     };
 
     const w = world();
@@ -358,7 +423,9 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
     nextWanderAt.current = performance.now() + 3500;
     nextPlayAt.current = performance.now() + 7000;
     ready.current = true;
-    place();
+    pose.current.prevX = body.current.x;
+    pose.current.turn = { x: facing.current, v: 0 };
+    place(performance.now(), 0);
 
     let last = performance.now();
     let frame = 0;
@@ -373,7 +440,7 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
         const r = stepFalling(body.current, dt, ww);
         const landed = impact > 300 && r.body.y >= floorY(ww) - 0.5;
         body.current = r.body;
-        if (landed) squashUntil.current = now + 140;
+        if (landed) pose.current.stretch = { x: pose.current.stretch.x, v: pose.current.stretch.v + landingKick(impact) };
         // Christmas: a hard landing hurts.
         if (landed && impact > CRY_IMPACT && seasonRef.current === "CHRISTMAS" && moodRef.current !== "cry") {
           setMood("cry", 3400);
@@ -403,7 +470,7 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
           playIdleRef.current();
         }
       }
-      place();
+      place(now, dt);
     };
     frame = requestAnimationFrame(tick);
 
@@ -420,22 +487,9 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
       }
     };
 
-    // The eyes follow the pointer (one write per animation frame, straight to CSS variables).
-    let pending: { x: number; y: number } | null = null;
-    let lookFrame = 0;
+    // The eyes follow the pointer: only its position is noted here; the loop eases the eyes towards it each frame.
     const onPointerMove = (e: PointerEvent) => {
-      pending = { x: e.clientX, y: e.clientY };
-      if (lookFrame) return;
-      lookFrame = requestAnimationFrame(() => {
-        lookFrame = 0;
-        const inner = innerRef.current;
-        if (!pending || !inner) return;
-        const centre = { x: body.current.x + size / 2, y: body.current.y + size / 2 };
-        // The inner box is mirrored when the pet faces left, so flip the horizontal look with it.
-        const offset = lookOffset(centre, pending);
-        inner.style.setProperty("--wt-knot-look-x", `${(offset.x * facing.current).toFixed(2)}px`);
-        inner.style.setProperty("--wt-knot-look-y", `${offset.y.toFixed(2)}px`);
-      });
+      pointer.current = { x: e.clientX, y: e.clientY };
     };
 
     const onPetEvent = (e: Event) => {
@@ -480,7 +534,6 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
 
     return () => {
       cancelAnimationFrame(frame);
-      cancelAnimationFrame(lookFrame);
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pointermove", onPointerMove);
