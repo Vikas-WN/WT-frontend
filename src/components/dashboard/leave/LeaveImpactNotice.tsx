@@ -39,7 +39,7 @@ export function LeaveImpactNotice({
         <p className="font-medium">{data.message}</p>
         {data.leave_days > 0 ? (
           <p className="mt-0.5 text-xs opacity-80">
-            Balance after this leave: {data.balance_after} day(s). Leaves are credited 1.5 on the 1st of every month.
+            Balance after this leave: {data.balance_after} day(s). Leaves are credited 1.5 on the last day of every month.
           </p>
         ) : null}
       </div>

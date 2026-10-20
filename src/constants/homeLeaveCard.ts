@@ -6,7 +6,7 @@ export const HOME_LEAVE_CARD = {
   ringLabel: (balance: string, entitlement: string) => `${balance} of ${entitlement} days available`,
   creditedLabel: "Credited this year",
   creditedShort: "Credited",
-  creditedHint: "What the year opened with (carried forward) plus 1.5 days for every month so far",
+  creditedHint: "What the year opened with (carried forward) plus 1.5 days for every completed month (each month's is credited on its last day)",
   takenLabel: "Taken (approved)",
   takenShort: "Taken",
   takenHint: "Approved leave that has come off your balance",

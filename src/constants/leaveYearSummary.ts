@@ -13,5 +13,5 @@ export const LEAVE_YEAR_COPY = {
   balanceHint: "What is left to use today",
   unavailable: "Your yearly leave figures are not available right now.",
   balanceNote:
-    "This is your balance today. 1.5 days are credited on the 1st of every month — to Primary until its 11 days are credited, then to Secondary. Leave is taken from Primary first, and from Secondary only once Primary is used up.",
+    "This is your balance today. 1.5 days are credited on the last day of every month — to Primary until its 11 days are credited, then to Secondary. Leave is taken from Primary first, and from Secondary only once Primary is used up.",
 } as const;
