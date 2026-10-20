@@ -435,6 +435,9 @@ export function LeavePageClient() {
     Array<Record<string, unknown>>
   >([]);  
   const [profileAssignedProjectsLoading, setProfileAssignedProjectsLoading] = useState(false);
+  // UI state: whether the allocations were actually read. Until they have been (or if reading them failed) we do not know
+  // whether the person is on the bench, so the manager pickers stay visible and the server decides.
+  const [allocationsKnown, setAllocationsKnown] = useState(false);
   const [timelogs, setTimelogs] = useState<Array<Record<string, unknown>>>([]);
   const [managerEmailsForHr, setManagerEmailsForHr] = useState<string[]>([]);
   const [timelogProjects, setTimelogProjects] = useState<Array<{ code: string; name: string }>>([]);
@@ -843,9 +846,10 @@ export function LeavePageClient() {
 
   const routesLeaveWfhToHr = useMemo(
     () =>
+      allocationsKnown &&
       !profileAssignedProjectsLoading &&
       isTalentPoolLeaveRouting(myAllocationRowsForLeave),
-    [myAllocationRowsForLeave, profileAssignedProjectsLoading]
+    [allocationsKnown, myAllocationRowsForLeave, profileAssignedProjectsLoading]
   );
 
   useEffect(() => {
@@ -933,28 +937,24 @@ export function LeavePageClient() {
     const id = window.setTimeout(() => {
       void (async () => {
         setProfileAssignedProjectsLoading(true);
-        try {
-          const [assignedRes, myAllocationsRes] = await Promise.all([
-            hrmsService.getAssignedProjects(),
-            hrmsService.getMyAllocations(),
-          ]);
-          const normalizedProjects = normalizeAssignedProjects(
-            toPagedRows(assignedRes.data ?? assignedRes)
-          );
-          const myAllocations = toPagedRows(myAllocationsRes.data ?? myAllocationsRes);
-          
-
-          setMyActiveAllocations(myAllocations);
-
-          setProfileAssignedProjects(
-            mergeProjectAndAllocationData(normalizedProjects, myAllocations)
-          );
-        } catch {
-          setProfileAssignedProjects([]);
-          setMyActiveAllocations([]);
-        } finally {
-          setProfileAssignedProjectsLoading(false);
-        }
+        // Each is read on its own: the assigned-projects list failing must not hide the person's allocations, because the
+        // allocations decide whether the manager pickers are shown.
+        const [assignedResult, allocationsResult] = await Promise.allSettled([
+          hrmsService.getAssignedProjects(),
+          hrmsService.getMyAllocations(),
+        ]);
+        const myAllocations =
+          allocationsResult.status === "fulfilled"
+            ? toPagedRows(allocationsResult.value.data ?? allocationsResult.value)
+            : [];
+        const normalizedProjects =
+          assignedResult.status === "fulfilled"
+            ? normalizeAssignedProjects(toPagedRows(assignedResult.value.data ?? assignedResult.value))
+            : [];
+        setMyActiveAllocations(myAllocations);
+        setAllocationsKnown(allocationsResult.status === "fulfilled");
+        setProfileAssignedProjects(mergeProjectAndAllocationData(normalizedProjects, myAllocations));
+        setProfileAssignedProjectsLoading(false);
       })();
     }, 0);
     return () => window.clearTimeout(id);

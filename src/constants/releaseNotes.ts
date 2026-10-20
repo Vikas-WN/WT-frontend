@@ -34,6 +34,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-20-01",
+    releasedOn: "2026-10-20",
+    title: "Leave is credited at month end",
+    highlights: [
+      {
+        area: "Leave",
+        title: "Credited on the last day of the month",
+        description:
+          "Each month's 1.5 days now arrive on that month's last day, not the 1st, so leave in a month is taken from what you had earned before it. Your balance will look 1.5 days lower than before until the month ends.",
+      },
+      {
+        area: "Leave",
+        title: "New joiners: credit for the month you join",
+        description:
+          "In the month you join you are credited 0.5 day if you work at least 10 days of it, 1 day for at least 20, and 1.5 days for the whole month (30 days, or 28 in February). It arrives on that month's last day.",
+      },
+      {
+        area: "Leave",
+        title: "Manager picker no longer disappears",
+        description:
+          "If your allocations could not be loaded, the primary and secondary manager choices were hidden and leave could not be submitted. They now stay visible, and the message tells you what to do if they are missing.",
+      },
+    ],
+  },
+  {
     id: "2026-10-16-01",
     releasedOn: "2026-10-16",
     title: "Leave follows the Employee Handbook",
