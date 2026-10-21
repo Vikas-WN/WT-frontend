@@ -16,7 +16,7 @@ export function ReportBugButton() {
         onClick={() => setOpen(true)}
         aria-label={BUG_REPORT_COPY.buttonLabel}
         title={BUG_REPORT_COPY.buttonLabel}
-        className="flex size-10 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-1 text-wt-text-muted transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:-translate-y-px hover:bg-wt-surface-2 hover:text-wt-text hover:shadow-sm"
+        className="flex size-10 cursor-pointer items-center justify-center rounded-xl text-wt-text transition-colors hover:bg-wt-surface-3"
       >
         <Bug className="size-[18px]" aria-hidden />
       </button>

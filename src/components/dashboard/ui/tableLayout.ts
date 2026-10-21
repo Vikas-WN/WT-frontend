@@ -2,10 +2,10 @@
 export const WT_TABLE_TEXT_CLASS = "text-sm text-wt-text-muted";
 
 export const WT_TABLE_HEAD_CLASS =
-  "px-3 py-2.5 text-left align-middle font-semibold whitespace-nowrap text-[0.8125rem] text-wt-text-muted";
+  "px-4 py-3 text-left align-middle text-xs font-semibold uppercase tracking-[0.06em] whitespace-nowrap text-wt-text-muted";
 
 export const WT_TABLE_CELL_CLASS =
-  "px-3 py-2.5 align-middle whitespace-nowrap text-sm text-wt-text-muted";
+  "px-4 py-3.5 align-middle whitespace-nowrap text-sm text-wt-text-muted";
 
 /** Tighter row rhythm for dense list tables (e.g. Employee Directory). */
 export const WT_TABLE_HEAD_COMPACT_CLASS =

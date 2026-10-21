@@ -2,22 +2,25 @@
 
 import { SeasonalGreeting } from "@/components/seasonal/SeasonalGreeting";
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
+  AlertTriangle,
   CalendarDays,
   CalendarRange,
+  Folder,
   GraduationCap,
-  LayoutGrid,
 } from "lucide-react";
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { HomeHeader } from "@/components/dashboard/home/HomeHeader";
 import { AnimatedBar } from "@/components/motion/AnimatedBar";
 import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
-import { cellsOf, useHomeGridShape } from "@/hooks/dashboard/useHomeGridShape";
+import { HomeSummaryLine } from "@/components/dashboard/home/HomeSummaryLine";
+import { HOME_GRID } from "@/constants/homeGrid";
+import { daysUntil, holidayWhen } from "@/utils/holidayWhen";
 import { useHomeAttention } from "@/hooks/dashboard/useHomeAttention";
 import { useHomePendingApprovals } from "@/hooks/dashboard/useHomePendingApprovals";
 import { HOME_EMPTY_COPY } from "@/constants/homeCards";
-import { useCommandPalette } from "@/components/dashboard/CommandPalette";
 import { HomeCard, CardEmpty, CardMessage, CardSkeleton } from "@/components/dashboard/home/HomeCard";
 import { CelebrationsCard } from "@/components/dashboard/home/CelebrationsCard";
 import { HomeUpdatesGallery } from "@/components/dashboard/home/HomeUpdatesGallery";
@@ -82,16 +85,20 @@ function greeting(): string {
 }
 
 
+/** The order of the redesign: approvals and leave, who is where and holidays, then learning, projects and celebrations. */
 const HOME_WIDGET_IDS = [
-  "attendance",
   "approvals",
   "leave-balance",
-  "learning",
-  "whos-out",
-  "projects",
+  "attendance",
   "holidays",
+  "learning",
+  "projects",
   "celebrations",
+  "whos-out",
 ] as const;
+
+/** Wide in the redesign (two of the three columns); everything else takes one. */
+const HOME_WIDGET_DEFAULT_SIZES: Record<string, "wide"> = { approvals: "wide", attendance: "wide" };
 
 const HOME_WIDGET_TITLES: Record<string, string> = {
   attendance: "Today's Attendance",
@@ -114,7 +121,6 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
 
 export function HomePageClient() {
   const { user } = useAuth();
-  const { open: openSearch } = useCommandPalette();
   const roles = useMemo(() => normalizeRoles(user?.roles ?? []), [user?.roles]);
   const isApprover =
     roles.includes("ROLE_MANAGER") ||
@@ -124,7 +130,7 @@ export function HomePageClient() {
   const canSeeOrgOut = roles.includes("ROLE_HR") || roles.includes("ROLE_ADMIN");
   const [editMode, setEditMode] = useState(false);
   const [draggedWidgetId, setDraggedWidgetId] = useState<string | null>(null);
-  const { layout, reorder, toggleSize, setHidden, resetLayout } = useHomeDashboardLayout(HOME_WIDGET_IDS);
+  const { layout, reorder, toggleSize, setHidden, resetLayout } = useHomeDashboardLayout(HOME_WIDGET_IDS, HOME_WIDGET_DEFAULT_SIZES);
   const firstName = (user?.name ?? "").trim().split(/\s+/)[0] || "there";
 
   const today = useMemo(() => new Date(), []);
@@ -210,7 +216,7 @@ export function HomePageClient() {
   }, [whosOut.data, todayIso]);
 
   const upcomingHolidays = useMemo(() => {
-    const out: { key: string; name: string; label: string; optional: boolean }[] = [];
+    const out: { key: string; name: string; label: string; date: Date | null; optional: boolean }[] = [];
     for (const { year, rows } of holidays.data ?? []) {
       for (const row of upcomingHolidayRowsInYear(rows, year, today)) {
         const d = parseHolidayCalendarDate(row.date, year);
@@ -220,6 +226,7 @@ export function HomePageClient() {
           label: d
             ? d.toLocaleDateString(undefined, { day: "numeric", month: "short" })
             : row.date,
+          date: d,
           optional: Boolean(row.optional && row.optional.trim() && row.optional !== "—"),
         });
       }
@@ -254,46 +261,45 @@ export function HomePageClient() {
     learning: {
       eligible: true,
       node: (
-        <HomeCard
-          title="My learning"
-          tone="violet"
-          icon={<GraduationCap className="size-4" />}
-          href={DASHBOARD_ROUTES.learning}
-          cta="Open"
-        >
+        <HomeCard title="My learning" href={DASHBOARD_ROUTES.learning} cta="Open">
           {learning.status === "loading" ? (
             <CardSkeleton />
           ) : learning.status === "error" || !learning.data ? (
             <CardMessage text="Unavailable" />
           ) : learning.data.enrolled_count === 0 ? (
-            <CardEmpty icon={<GraduationCap className="size-[18px]" />} title={HOME_EMPTY_COPY.learning.title} hint={HOME_EMPTY_COPY.learning.hint} />
+            <CardEmpty icon={<GraduationCap className="size-5" />} title={HOME_EMPTY_COPY.learning.title} hint={HOME_EMPTY_COPY.learning.hint} />
           ) : (
-            <div className="space-y-2">
-              <div className="flex gap-5">
+            <div className="space-y-4">
+              {learning.data.overdue_mandatory_count > 0 ? (
+                <Link
+                  href={DASHBOARD_ROUTES.learning}
+                  className="flex items-start gap-3 rounded-2xl border border-rose-500/25 bg-rose-500/8 px-4 py-3.5 text-rose-800 transition-colors hover:bg-rose-500/12 dark:text-rose-200"
+                >
+                  <AlertTriangle className="mt-0.5 size-5 shrink-0" aria-hidden />
+                  <span className="min-w-0">
+                    <span className="block text-[15px] font-semibold">
+                      {learning.data.overdue_mandatory_count} mandatory training{learning.data.overdue_mandatory_count === 1 ? "" : "s"} overdue
+                    </span>
+                    <span className="mt-0.5 block text-sm font-semibold">Resume training</span>
+                  </span>
+                </Link>
+              ) : learning.data.next_deadline_training_name ? (
+                <p className="rounded-2xl bg-wt-surface-2 px-4 py-3 text-sm text-wt-text-muted">Next due: {learning.data.next_deadline_training_name}</p>
+              ) : null}
+              <div className="grid grid-cols-3 gap-3">
                 {[
                   { label: "Enrolled", value: learning.data.enrolled_count },
-                  { label: "Completed", value: learning.data.completed_count },
                   { label: "In progress", value: learning.data.in_progress_count },
+                  { label: "Completed", value: learning.data.completed_count },
                 ].map((b) => (
                   <div key={b.label}>
-                    <p className="text-2xl font-semibold tabular-nums text-wt-text">
+                    <p className="text-[1.65rem] font-bold leading-none tabular-nums text-wt-text">
                       <AnimatedNumber value={Number(b.value ?? 0)} />
                     </p>
-                    <p className="text-xs text-wt-text-muted">{b.label}</p>
+                    <p className="mt-1 text-sm text-wt-text-muted">{b.label}</p>
                   </div>
                 ))}
               </div>
-              <ProgressBar value={learning.data.completed_count} max={learning.data.enrolled_count} />
-              {learning.data.overdue_mandatory_count > 0 ? (
-                <p className="text-xs font-medium text-rose-600 dark:text-rose-400">
-                  {learning.data.overdue_mandatory_count} mandatory training
-                  {learning.data.overdue_mandatory_count === 1 ? "" : "s"} overdue
-                </p>
-              ) : learning.data.next_deadline_training_name ? (
-                <p className="text-xs text-wt-text-muted">
-                  Next due: {learning.data.next_deadline_training_name}
-                </p>
-              ) : null}
             </div>
           )}
         </HomeCard>
@@ -302,19 +308,13 @@ export function HomePageClient() {
     "whos-out": {
       eligible: isApprover,
       node: (
-        <HomeCard
-          title="Who's out today"
-          tone="amber"
-          icon={<CalendarRange className="size-4" />}
-          href={DASHBOARD_ROUTES["whos-out"]}
-          cta="Calendar"
-        >
+        <HomeCard title="Who's out today" href={DASHBOARD_ROUTES["whos-out"]} cta="Calendar">
           {whosOut.status === "loading" ? (
             <CardSkeleton />
           ) : whosOut.status === "error" ? (
             <CardMessage text="Unavailable" />
           ) : outToday.length === 0 ? (
-            <CardEmpty icon={<CalendarRange className="size-[18px]" />} title={HOME_EMPTY_COPY.whosOut.title} hint={HOME_EMPTY_COPY.whosOut.hint} />
+            <CardEmpty icon={<CalendarRange className="size-5" />} title={HOME_EMPTY_COPY.whosOut.title} hint={HOME_EMPTY_COPY.whosOut.hint} />
           ) : (
             <div className="flex flex-wrap gap-1.5">
               {outToday.slice(0, 5).map((p) => (
@@ -338,19 +338,13 @@ export function HomePageClient() {
     projects: {
       eligible: true,
       node: (
-        <HomeCard
-          title="My projects"
-          tone="sky"
-          icon={<LayoutGrid className="size-4" />}
-          href={DASHBOARD_ROUTES["my-allocations"]}
-          cta="Allocations"
-        >
+        <HomeCard title="My projects" href={DASHBOARD_ROUTES["my-allocations"]} cta="Allocations">
           {allocations.status === "loading" ? (
             <CardSkeleton />
           ) : allocations.status === "error" ? (
             <CardMessage text="Unavailable" />
           ) : activeProjects.length === 0 ? (
-            <CardEmpty icon={<LayoutGrid className="size-[18px]" />} title={HOME_EMPTY_COPY.projects.title} hint={HOME_EMPTY_COPY.projects.hint} />
+            <CardEmpty icon={<Folder className="size-5" />} title={HOME_EMPTY_COPY.projects.title} hint={HOME_EMPTY_COPY.projects.hint} />
           ) : (
             <ul className="space-y-1.5">
               {activeProjects.slice(0, 4).map((p) => (
@@ -372,32 +366,39 @@ export function HomePageClient() {
     holidays: {
       eligible: true,
       node: (
-        <HomeCard
-          title="Upcoming holidays"
-          tone="rose"
-          icon={<CalendarDays className="size-4" />}
-          href={DASHBOARD_ROUTES["annual-calendar"]}
-          cta="Calendar"
-        >
+        <HomeCard title="Upcoming holidays" href={DASHBOARD_ROUTES["annual-calendar"]} cta="Calendar">
           {holidays.status === "loading" ? (
             <CardSkeleton />
           ) : holidays.status === "error" ? (
             <CardMessage text="Unavailable" />
           ) : upcomingHolidays.length === 0 ? (
-            <CardEmpty icon={<CalendarDays className="size-[18px]" />} title={HOME_EMPTY_COPY.holidays.title} hint={HOME_EMPTY_COPY.holidays.hint} />
+            <CardEmpty icon={<CalendarDays className="size-5" />} title={HOME_EMPTY_COPY.holidays.title} hint={HOME_EMPTY_COPY.holidays.hint} />
           ) : (
-            <ul className="space-y-1.5">
-              {upcomingHolidays.map((h) => (
-                <li key={h.key} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="min-w-0 truncate text-wt-text">
-                    {h.name}
-                    {h.optional ? (
-                      <span className="ml-1.5 text-xs text-wt-text-faint">optional</span>
-                    ) : null}
-                  </span>
-                  <span className="shrink-0 text-xs text-wt-text-muted">{h.label}</span>
-                </li>
-              ))}
+            <ul className="space-y-2">
+              {upcomingHolidays.map((h, index) => {
+                const when = h.date ? holidayWhen(h.date, today) : null;
+                return (
+                  <li key={h.key} className={cn("flex items-center gap-3.5 rounded-2xl px-3 py-2.5", index === 0 && "bg-[var(--wt-brand-soft)]")}>
+                    <span
+                      className={cn(
+                        "flex size-12 shrink-0 flex-col items-center justify-center rounded-xl leading-none",
+                        index === 0 ? "bg-[var(--wt-brand)] text-[var(--wt-brand-text)]" : "border border-wt-border bg-wt-surface-1 text-wt-text"
+                      )}
+                      aria-hidden
+                    >
+                      <span className="text-[10px] font-semibold uppercase tracking-wider">{h.date ? h.date.toLocaleDateString("en-GB", { month: "short" }) : ""}</span>
+                      <span className="mt-0.5 text-lg font-bold tabular-nums">{h.date ? h.date.getDate() : ""}</span>
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] font-semibold text-wt-text">
+                        {h.name}
+                        {h.optional ? <span className="ml-1.5 text-xs font-normal text-wt-text-faint">optional</span> : null}
+                      </span>
+                      <span className={cn("block truncate text-sm", index === 0 ? "text-[var(--wt-brand)]" : "text-wt-text-muted")}>{when ?? h.label}</span>
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </HomeCard>
@@ -414,29 +415,29 @@ export function HomePageClient() {
     .filter((w) => widgetRegistry[w.id]?.eligible && w.hidden)
     .map((w) => ({ id: w.id, title: HOME_WIDGET_TITLES[w.id] ?? w.id }));
 
-  // Desktop: columns follow the window width. Rows are as tall as their content needs (they used to be stretched to fill
-  // the window, which left the cards mostly empty); the tall leave card spans two rows so its neighbours stay compact.
-  const shape = useHomeGridShape();
+  // Desktop: three columns, as in the redesign (a wide card takes two). Rows are as tall as their content needs.
   const attention = useHomeAttention(approvals.count);
-  const cells = cellsOf(visibleLayout);
-  const columns = shape.columnsFor(cells);
+  const columns = HOME_GRID.columnsDesktop;
+  const nextHoliday = upcomingHolidays[0];
+  const closedTomorrow = nextHoliday?.date && daysUntil(nextHoliday.date, today) === 1 ? nextHoliday.name : null;
 
   return (
     <DashboardPageShell
       className={cn(
-        "space-y-5 lg:!px-6 lg:!py-6"
+        "space-y-7 lg:!px-10 lg:!py-9"
       )}
     >
       <HomeHeader
         eyebrow={today.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
         title={`${greeting()}, ${firstName}`}
-        subtitle={attention}
+        subtitle={
+          <HomeSummaryLine approvals={approvals.count} overdueTrainings={learning.data?.overdue_mandatory_count ?? 0} closedTomorrow={closedTomorrow} fallback={attention} />
+        }
         editMode={editMode}
         onEditModeChange={setEditMode}
         hiddenWidgets={hiddenWidgets}
         onShowWidget={(id) => setHidden(id, false)}
         onReset={resetLayout}
-        onSearch={openSearch}
       />
 
       <SeasonalGreeting />
@@ -452,7 +453,7 @@ export function HomePageClient() {
         </div>
       ) : (
         <div
-          className="grid grid-cols-[minmax(0,1fr)] items-stretch gap-4 sm:grid-cols-2 lg:grid-flow-dense lg:auto-rows-min lg:grid-cols-[repeat(var(--home-cols),minmax(0,1fr))]"
+          className="grid grid-cols-[minmax(0,1fr)] items-stretch gap-5 sm:grid-cols-2 lg:gap-6 lg:grid-flow-dense lg:auto-rows-min min-[1280px]:grid-cols-[repeat(var(--home-cols),minmax(0,1fr))]"
           style={{ "--home-cols": columns } as React.CSSProperties}
         >
           {visibleLayout.map((w) => (
@@ -460,7 +461,6 @@ export function HomePageClient() {
               key={w.id}
               id={w.id}
               size={w.size}
-              tall={w.id === "leave-balance"}
               editing={editMode}
               draggedId={draggedWidgetId}
               onDragStart={setDraggedWidgetId}

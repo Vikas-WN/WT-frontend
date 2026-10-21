@@ -28,9 +28,6 @@ export function PageHero({
   surface?: boolean;
   raw?: boolean;
 }) {
-  // The top bar already names the page, so a second big title right below it is noise. Keep it for screen readers,
-  // and show it only when it is the sole text (or on the Home greeting, which is `raw`).
-  const visibleTitle = raw || (!description && !eyebrow);
   return (
     <header
       className={cn(
@@ -45,22 +42,15 @@ export function PageHero({
           aria-hidden
         />
       ) : null}
-      <div className="relative min-w-0 max-w-2xl space-y-2">
+      <div className="relative min-w-0 max-w-3xl space-y-1.5">
         {eyebrow ? (
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--wt-brand)]">
-            {formatUILabel(eyebrow)}
-          </p>
+          <p className="text-sm text-wt-text-muted">{raw ? eyebrow : formatUILabel(eyebrow)}</p>
         ) : null}
-        <h1
-          className={cn(
-            "text-2xl font-bold tracking-[-0.02em] text-wt-text sm:text-[1.75rem] sm:leading-tight",
-            !visibleTitle && "sr-only"
-          )}
-        >
+        <h1 className="text-[1.75rem] font-bold leading-tight tracking-[-0.025em] text-wt-text sm:text-[2rem]">
           {raw ? title : formatUILabel(title)}
         </h1>
         {description ? (
-          <p className="text-sm leading-relaxed text-wt-text-muted sm:text-[0.9375rem]">
+          <p className="text-[0.95rem] leading-relaxed text-wt-text-muted sm:text-base">
             {description}
           </p>
         ) : null}

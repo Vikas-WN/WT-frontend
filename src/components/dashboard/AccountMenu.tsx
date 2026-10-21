@@ -34,6 +34,8 @@ type AccountMenuProps = {
   isOffboarded?: boolean;
   collapsed?: boolean;
   placement?: "sidebar" | "header";
+  /** Shown under the name in the sidebar card (the person's role). Defaults to "Account & settings". */
+  roleLabel?: string;
   onLogout: () => void | Promise<void>;
   onNavigate?: () => void;
   className?: string;
@@ -57,6 +59,7 @@ export function AccountMenu({
   isOffboarded = false,
   collapsed = false,
   placement = "sidebar",
+  roleLabel,
   onLogout,
   onNavigate,
   className,
@@ -100,7 +103,7 @@ export function AccountMenu({
           <UserAvatar
             profile={profile}
             fallbackName={user?.name ?? user?.email}
-            size={placement === "header" ? "sm" : "xs"}
+            size="sm"
             className={cn(
               "transition-transform duration-[var(--wt-duration)] ease-[var(--wt-ease)] group-hover:scale-[1.03]",
               placement === "header" && "size-8 border-0"
@@ -125,11 +128,11 @@ export function AccountMenu({
                 "lg:pointer-events-none lg:absolute lg:-m-px lg:h-px lg:w-px lg:overflow-hidden lg:whitespace-nowrap lg:border-0 lg:p-0"
             )}
           >
-            <span className="block truncate text-xs font-semibold leading-tight text-[var(--wt-sidebar-text)]">
+            <span className="block truncate text-[14px] font-semibold leading-tight text-[var(--wt-sidebar-text)]">
               {displayName}
             </span>
-            <span className="mt-0.5 block truncate text-[10px] text-[var(--wt-sidebar-text-muted)]">
-              Account & settings
+            <span className="mt-0.5 block truncate text-[12px] text-[var(--wt-sidebar-text-muted)]">
+              {roleLabel ?? "Account & settings"}
             </span>
           </span>
         ) : null}

@@ -14,9 +14,8 @@ export const SECTION_DESCRIPTION_CLASS =
 
 /** Primary content card used on tabbed pages (Leave, Timelog, etc.). */
 export const CONTENT_CARD_CLASS = cn(
-  "wt-surface-card overflow-hidden rounded-2xl border border-wt-border bg-wt-surface-1 shadow-[var(--wt-shadow-sm)]",
-  "transition-[box-shadow,transform,border-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)]",
-  "hover:shadow-[var(--wt-shadow-md)] dark:border-wt-border dark:bg-wt-surface-1 dark:shadow-none dark:hover:shadow-none"
+  "wt-surface-card overflow-hidden rounded-[1.25rem] border border-wt-border bg-wt-surface-1 shadow-[var(--wt-shadow-sm)]",
+  "dark:border-wt-border dark:bg-wt-surface-1 dark:shadow-none"
 );
 
 /** Nested panel inside a content card — clear structure on pitch-black. */

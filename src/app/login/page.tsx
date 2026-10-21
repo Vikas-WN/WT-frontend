@@ -9,7 +9,7 @@ import {
   describeOAuthError,
 } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
-import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
+import { Activity, CalendarDays, Clock, Lock } from "lucide-react";
 import { WtLoaderCentered } from "@/components/dashboard/ui/WtLoader";
 import { applyResolvedTheme } from "@/utils/dashboard/theme";
 import { SessionLogoutDialog } from "@/components/auth/SessionLogoutDialog";
@@ -18,14 +18,20 @@ import {
   type SessionLogoutReason,
 } from "@/constants/sessionPolicy";
 
-const TAGLINE =
-  "Workforce visibility and project allocation—aligned in one secure workspace.";
-
-const HIGHLIGHTS = [
-  "Employee directory & profiles",
-  "Leave, allocation & time logs",
-  "Role-based HR & manager workflows",
+const FEATURES = [
+  { icon: CalendarDays, title: "Leave & WFH", hint: "Apply in seconds" },
+  { icon: Clock, title: "Time logs", hint: "Track your week" },
+  { icon: Activity, title: "Pulse", hint: "Reviews & KPIs" },
 ] as const;
+
+/** The WebTrak mark: a white rounded square with a navy "W", as in the redesign. */
+function Mark({ className = "" }: { className?: string }) {
+  return (
+    <span className={`grid size-12 shrink-0 place-items-center rounded-xl bg-white text-[1.35rem] font-bold text-[var(--wt-navy)] ${className}`} aria-hidden>
+      W
+    </span>
+  );
+}
 
 function GoogleIcon({ size = 20 }: { size?: number }) {
   return (
@@ -50,22 +56,9 @@ function GoogleIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-function LoginBackdrop() {
-  return (
-    <div className="pointer-events-none fixed inset-0 bg-[var(--wt-bg)]" aria-hidden="true">
-      <div className="absolute -left-24 top-0 h-[420px] w-[420px] rounded-full bg-[var(--wt-brand)]/20 blur-[100px]" />
-      <div className="absolute bottom-0 right-0 h-[360px] w-[360px] rounded-full bg-[var(--wt-brand)]/10 blur-[90px]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.04),transparent_55%)]" />
-    </div>
-  );
-}
-
 function ErrorBanner({ message }: { message: string }) {
   return (
-    <div
-      role="alert"
-      className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm leading-relaxed text-red-100"
-    >
+    <div role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm leading-relaxed text-rose-800">
       {message}
     </div>
   );
@@ -73,40 +66,32 @@ function ErrorBanner({ message }: { message: string }) {
 
 function LoginShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="wt-app-shell relative min-h-dvh bg-[var(--wt-bg)] text-wt-text [padding-bottom:env(safe-area-inset-bottom)] [padding-top:env(safe-area-inset-top)]">
-      <LoginBackdrop />
-      <div className="relative z-10 mx-auto grid min-h-dvh w-full max-w-6xl grid-cols-1 lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="hidden flex-col justify-between border-r border-wt-border px-10 py-12 lg:flex xl:px-14">
-          <WebTrakBrand variant="login" className="!justify-start" />
-          <div className="max-w-md space-y-8">
-            <div className="space-y-4">
-              <p className="text-sm font-medium text-[var(--wt-brand)]">Workforce Tracker</p>
-              <h1 className="text-3xl font-semibold leading-tight tracking-tight text-wt-text xl:text-4xl">
-                One workspace for your entire workforce.
-              </h1>
-              <p className="text-base leading-relaxed text-wt-text-muted">{TAGLINE}</p>
-            </div>
-            <ul className="space-y-3">
-              {HIGHLIGHTS.map((item) => (
-                <li key={item} className="flex items-center gap-3 text-sm text-wt-text-muted">
-                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--wt-brand-soft)] text-[10px] text-[var(--wt-brand)]">
-                    ✓
-                  </span>
-                  {item}
-                </li>
-              ))}
-            </ul>
+    <div className="min-h-dvh bg-[#f4f5f8] text-[#0b1220] [padding-bottom:env(safe-area-inset-bottom)] [padding-top:env(safe-area-inset-top)]">
+      <div className="grid min-h-dvh w-full grid-cols-1 lg:grid-cols-2">
+        <section className="flex flex-col justify-between bg-[var(--wt-navy)] px-6 py-8 text-white sm:px-10 lg:px-[4.5rem] lg:py-14">
+          <div className="flex items-center gap-3.5">
+            <Mark className="size-12" />
+            <span className="text-[1.4rem] font-bold tracking-[-0.02em]">WebTrak</span>
           </div>
-          <p className="text-xs text-wt-text-faint">
-            © {new Date().getFullYear()} WebTrak. All rights reserved.
-          </p>
+          <div className="mt-12 max-w-xl space-y-6 lg:mt-0">
+            <h1 className="text-[2.4rem] font-bold leading-[1.05] tracking-[-0.03em] sm:text-5xl xl:text-[4.25rem]">Everything about work at WebKnot, in one place.</h1>
+            <p className="max-w-md text-lg leading-relaxed text-white/70">Leave, time logs, project allocation, people and reviews — for everyone from new joiners to HR.</p>
+          </div>
+          <div className="mt-10 hidden max-w-[46rem] grid-cols-3 gap-3 xl:gap-4 lg:grid">
+            {FEATURES.map(({ icon: Icon, title, hint }) => (
+              <div key={title} className="min-w-0 rounded-2xl border border-white/12 bg-white/[0.07] p-4 xl:p-5">
+                <Icon className="size-5 text-white/80" aria-hidden />
+                <p className="mt-6 text-base font-semibold">{title}</p>
+                <p className="mt-0.5 text-sm text-white/65">{hint}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-10 hidden text-sm text-white/55 lg:block">© {new Date().getFullYear()} WebKnot Technologies</p>
         </section>
 
-        <section className="flex flex-col justify-center px-5 py-10 sm:px-8 lg:px-10 xl:px-14">
-          <div className="mx-auto w-full max-w-[400px]">{children}</div>
-          <p className="mx-auto mt-10 w-full max-w-[400px] text-center text-xs text-wt-text-faint lg:hidden">
-            © {new Date().getFullYear()} WebTrak. All rights reserved.
-          </p>
+        <section className="flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-[4.5rem]">
+          <div className="mx-auto w-full max-w-[26rem]">{children}</div>
+          <p className="mx-auto mt-12 w-full max-w-[26rem] text-center text-sm text-[#7a8294] lg:hidden">© {new Date().getFullYear()} WebKnot Technologies</p>
         </section>
       </div>
     </div>
@@ -161,7 +146,7 @@ function LoginPage() {
   const didPostLoginRefresh = useRef(false);
 
   useEffect(() => {
-    applyResolvedTheme("dark");
+    applyResolvedTheme("light");
   }, []);
 
   useEffect(() => {
@@ -247,55 +232,40 @@ function LoginPage() {
         reason={sessionLogoutReason ?? "server"}
         onConfirm={dismissSessionLogoutDialog}
       />
-      <div className="fade-up space-y-8">
-        <div className="space-y-6 lg:hidden">
-          <WebTrakBrand variant="login" />
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-[var(--wt-brand)]">Workforce Tracker</p>
-            <p className="text-sm leading-relaxed text-wt-text-muted">{TAGLINE}</p>
-          </div>
-        </div>
+      <div className="fade-up">
+        <h2 id="login-heading" className="text-[2rem] font-bold tracking-[-0.025em]">
+          Sign in
+        </h2>
+        <p className="mt-3 text-base leading-relaxed text-[#475569]">Use your WebKnot Google account. No separate password needed.</p>
 
-        <div
-          className="rounded-2xl border border-wt-border bg-wt-surface-1/95 p-6 shadow-xl backdrop-blur-sm sm:p-8"
-          aria-labelledby="login-heading"
-        >
-          <div className="space-y-2 text-center lg:text-left">
-            <h2 id="login-heading" className="text-2xl font-semibold tracking-tight text-wt-text">
-              Welcome Back
-            </h2>
-            <p className="text-sm leading-relaxed text-wt-text-muted">
-              Sign in with your company Google account to continue.
-            </p>
-          </div>
+        <div className="mt-8 space-y-5">
+          {error ? <ErrorBanner message={error} /> : null}
 
-          <div className="mt-8 space-y-4">
-            {error ? <ErrorBanner message={error} /> : null}
+          <Button
+            id="google-signin-btn"
+            type="button"
+            variant="outline"
+            onClick={handleGoogleSignIn}
+            disabled={googleLoading}
+            className="h-14 w-full rounded-xl border-black/10 bg-white text-base font-semibold text-[#0b1220] shadow-sm hover:bg-white/80"
+          >
+            {googleLoading ? (
+              <>
+                <span className="spinner-dark-sm" />
+                Redirecting to Google…
+              </>
+            ) : (
+              <>
+                <GoogleIcon size={22} />
+                Continue with Google
+              </>
+            )}
+          </Button>
 
-            <Button
-              id="google-signin-btn"
-              type="button"
-              variant="outline"
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
-              className="h-12 w-full rounded-xl border-wt-border bg-wt-surface-1 text-[15px] font-medium text-wt-text shadow-sm hover:bg-wt-surface-2"
-            >
-              {googleLoading ? (
-                <>
-                  <span className="spinner-dark-sm" />
-                  Redirecting to Google…
-                </>
-              ) : (
-                <>
-                  <GoogleIcon size={20} />
-                  Continue with Google
-                </>
-              )}
-            </Button>
-
-            <p className="text-center text-xs leading-relaxed text-wt-text-faint lg:text-left">
-              Only registered company accounts can sign in. Contact your administrator if you need
-              access.
+          <div className="flex items-start gap-3.5 rounded-2xl bg-[#eceff8] px-5 py-4 text-[15px] leading-relaxed text-[#34406b]">
+            <Lock className="mt-0.5 size-5 shrink-0" aria-hidden />
+            <p>
+              Only registered <strong className="font-semibold text-[var(--wt-navy)]">@webknot.in</strong> accounts can sign in. Can&apos;t get in? <span className="font-medium text-[var(--wt-brand)]">Contact HR</span>.
             </p>
           </div>
         </div>
