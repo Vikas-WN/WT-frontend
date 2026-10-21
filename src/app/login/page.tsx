@@ -24,11 +24,12 @@ const FEATURES = [
   { icon: Activity, title: "Pulse", hint: "Reviews & KPIs" },
 ] as const;
 
-/** The WebTrak mark: a white rounded square with a navy "W", as in the redesign. */
+/** The WebTrak logo on a white rounded square. */
 function Mark({ className = "" }: { className?: string }) {
   return (
-    <span className={`grid size-12 shrink-0 place-items-center rounded-xl bg-white text-[1.35rem] font-bold text-[var(--wt-navy)] ${className}`} aria-hidden>
-      W
+    <span className={`grid size-12 shrink-0 place-items-center rounded-xl bg-white ${className}`} aria-hidden>
+      {/* eslint-disable-next-line @next/next/no-img-element -- a 28px static mark; next/image adds nothing */}
+      <img src="/webtrak-logo.png" alt="" className="h-7 w-auto" />
     </span>
   );
 }
