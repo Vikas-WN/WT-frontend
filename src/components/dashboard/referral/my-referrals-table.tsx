@@ -44,10 +44,12 @@ function formatDate(iso: string): string {
 }
 
 function ResumeLink({ url }: { url: string | null | undefined }) {
-  if (!url) return <span className="text-wt-text-faint">-</span>;
+  // An old `local://…` upload was never kept, so there is nothing to open; show a dash rather than a dead link.
+  const href = documentHref(url);
+  if (!href) return <span className="text-wt-text-faint">-</span>;
   return (
     <a
-      href={documentHref(url) ?? url}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       className="inline-flex items-center gap-1 text-sm font-medium text-[var(--wt-brand)] hover:underline"
