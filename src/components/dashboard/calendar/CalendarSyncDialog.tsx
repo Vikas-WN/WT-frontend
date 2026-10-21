@@ -33,10 +33,10 @@ export function CalendarSyncDialog({ onClose }: { onClose: () => void }) {
       ) : (
         <div className="space-y-5">
           <div className="grid gap-2.5 sm:grid-cols-2">
-            <Button type="button" variant="brand" render={<a href={links.webcal_url} />}>
+            <Button type="button" variant="brand" nativeButton={false} render={<a href={links.webcal_url} />}>
               <Apple className="size-4" /> {COPY.apple}
             </Button>
-            <Button type="button" variant="outline" render={<a href={links.google_url} target="_blank" rel="noopener noreferrer" />}>
+            <Button type="button" variant="outline" nativeButton={false} render={<a href={links.google_url} target="_blank" rel="noopener noreferrer" />}>
               <CalendarPlus className="size-4" /> {COPY.google}
             </Button>
           </div>

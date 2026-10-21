@@ -24,7 +24,7 @@ export function AddToCalendarMenu({ event }: { event: AppEvent }) {
         </span>
       </summary>
       <div onClick={closeOnSelect} className="absolute bottom-full left-0 z-20 mb-1 w-56 rounded-xl border border-wt-border bg-wt-surface-1 p-1 shadow-[var(--wt-shadow-md)]">
-        <Button type="button" variant="ghost" size="sm" className="w-full justify-start" render={<a href={googleCalendarEventUrl(event, pageUrl)} target="_blank" rel="noopener noreferrer" />}>
+        <Button type="button" variant="ghost" size="sm" className="w-full justify-start" nativeButton={false} render={<a href={googleCalendarEventUrl(event, pageUrl)} target="_blank" rel="noopener noreferrer" />}>
           <CalendarPlus className="size-3.5" /> {COPY.addGoogle}
         </Button>
         <Button type="button" variant="ghost" size="sm" className="w-full justify-start" disabled={download.isPending} onClick={() => download.mutate(event.id)}>

@@ -35,7 +35,7 @@ export function QuickActionResult({ kind }: { kind: ResultKind }) {
         {detail}
       </p>
       <div className="wt-fade-up mt-6" style={{ animationDelay: "280ms" }}>
-        <Button variant="outline" render={<Link href="/dashboard/home" />}>
+        <Button variant="outline" nativeButton={false} render={<Link href="/dashboard/home" />}>
           {COPY.openWebTrak}
         </Button>
       </div>

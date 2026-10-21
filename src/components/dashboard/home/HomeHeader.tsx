@@ -42,10 +42,10 @@ export function HomeHeader({ eyebrow, title, subtitle, editMode, onEditModeChang
           </>
         ) : (
           <>
-            <Button variant="outline" size="lg" render={<Link href={DASHBOARD_ROUTES.timelog} />}>
+            <Button variant="outline" size="lg" nativeButton={false} render={<Link href={DASHBOARD_ROUTES.timelog} />}>
               <Clock className="size-4" /> Log time
             </Button>
-            <Button variant="brand" size="lg" render={<Link href={`${DASHBOARD_ROUTES.leave}?tab=my`} />}>
+            <Button variant="brand" size="lg" nativeButton={false} render={<Link href={`${DASHBOARD_ROUTES.leave}?tab=my`} />}>
               <CalendarPlus className="size-4" /> Apply for leave
             </Button>
             <Button variant="outline" size="icon-lg" onClick={() => onEditModeChange(true)} aria-label="Customize this page" title="Customize this page">
