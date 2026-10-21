@@ -91,7 +91,7 @@ export function AnnouncementsPageClient() {
           ) : undefined
         }
       />
-      {tabs.length > 0 ? <PageTabs value={tab} onValueChange={(value) => changeTab(value as Tab)} items={tabs} /> : null}
+      {tabs.length > 0 ? <PageTabs value={tab} onValueChange={(value) => changeTab(value as Tab)} items={tabs} variant="segmented" /> : null}
 
       {linked ? (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-2 px-4 py-2.5 text-sm text-wt-text-muted">

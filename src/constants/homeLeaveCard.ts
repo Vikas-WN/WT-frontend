@@ -1,5 +1,5 @@
 export const HOME_LEAVE_CARD = {
-  title: "My leave balance",
+  title: "My leave",
   cta: "Details",
   unavailable: "Unavailable",
   ringCaption: "days available",
@@ -19,8 +19,8 @@ export const HOME_LEAVE_CARD = {
   compOffLabel: "Comp-off",
   compOffHint: "Tracked separately from the ring",
   requestsHeading: "My leave requests",
-  requestsEmpty: "No upcoming or pending leave.",
-  requestsEmptyCta: "Apply for leave",
+  requestsEmpty: "No upcoming leave planned",
+  requestsEmptyCta: "Plan one",
   requestsError: "Could not load your requests.",
   moreRequests: (n: number) => `+${n} more`,
 } as const;

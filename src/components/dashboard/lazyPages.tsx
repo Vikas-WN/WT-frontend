@@ -141,6 +141,12 @@ export const LazyReferralPageClient = lazyPage(
   "Loading referral…"
 );
 
+export const LazyWfhPageClient = lazyPage(
+  () => import("@/components/dashboard/wfh/WfhPageClient"),
+  "WfhPageClient",
+  "Loading work from home…"
+);
+
 export const LazyLeavePageClient = lazyPage(
   () => import("@/components/dashboard/leave/LeavePageClient"),
   "LeavePageClient",

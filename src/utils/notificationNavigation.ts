@@ -370,13 +370,13 @@ export function resolveNotificationHref(
     case "WFH_EXCEPTION_REQUEST":
       return isRequestApprover(roles)
         ? withLeaveDeepLink(DASHBOARD_ROUTES["leave-team"], row, "team")
-        : withLeaveDeepLink(DASHBOARD_ROUTES.leave, row, "wfh");
+        : withLeaveDeepLink(DASHBOARD_ROUTES.wfh, row, "view");
 
     case "WFH_APPROVED":
     case "WFH_REJECTED":
     case "WFH_EXCEPTION_APPROVED":
     case "WFH_EXCEPTION_REJECTED":
-      return withLeaveDeepLink(DASHBOARD_ROUTES.leave, row, "wfh");
+      return withLeaveDeepLink(DASHBOARD_ROUTES.wfh, row, "view");
 
     case "COMP_OFF_REQUEST":
       return isRequestApprover(roles)

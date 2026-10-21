@@ -34,6 +34,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-21-01",
+    releasedOn: "2026-10-21",
+    title: "A fresh look, and Work from home on its own page",
+    highlights: [
+      {
+        area: "Design",
+        title: "WebTrak has a new look",
+        description:
+          "A lighter sidebar with counts, a search bar at the top, and redesigned pages: Home, People, Who's out, Meeting rooms, Assets, Clients and more.",
+      },
+      {
+        area: "Work from home",
+        title: "Work from home has its own page",
+        description:
+          "Apply for a WFH day, track your requests and ask for a custom exception from Work from home in the sidebar. It is no longer a tab inside Leave.",
+      },
+      {
+        area: "Leave",
+        title: "Submitting leave no longer waits on email",
+        description:
+          "Your request is saved and shown straight away; the emails to your approvers go out in the background.",
+      },
+    ],
+  },
+  {
     id: "2026-10-20-01",
     releasedOn: "2026-10-20",
     title: "Leave is credited at month end",

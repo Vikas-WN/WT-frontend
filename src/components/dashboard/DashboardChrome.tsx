@@ -43,19 +43,19 @@ import { learningSubNav, LEARNING_BASE } from "@/constants/learningNav";
 import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
 
 import { applyResolvedTheme } from "@/utils/dashboard/theme";
-import { readSidebarCollapsed, writeSidebarCollapsed } from "@/utils/dashboard/sidebarPrefs";
-import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
-import { AccountMenu } from "@/components/dashboard/AccountMenu";
+import { AppSidebar } from "@/components/dashboard/AppSidebar";
+import { HeaderSearch } from "@/components/dashboard/HeaderSearch";
+import { appBreadcrumb } from "@/constants/sidebarNavigation";
+import { useSidebarBadges } from "@/hooks/navigation/useSidebarBadges";
 import { AppNavButtons } from "@/components/dashboard/AppNavButtons";
 import { ReportBugButton } from "@/components/dashboard/bug-reports/ReportBugButton";
 import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
-import { WebTrakBrand } from "@/components/shared/WebTrakBrand";
 import { useUserPreferences } from "@/context/UserPreferencesContext";
 import { AppChromeHeader } from "@/components/dashboard/ui/AppChromeHeader";
 import { DASHBOARD_HEADER_MENU_BUTTON_CLASS } from "@/components/dashboard/ui/sidebarLayout";
 
 const HEADER_ICON_BUTTON_CLASS =
-  "flex size-10 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-1 text-wt-text transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:bg-wt-surface-2 hover:shadow-sm hover:-translate-y-px dark:border-wt-border dark:bg-wt-surface-2 dark:hover:bg-wt-surface-3";
+  "flex size-10 cursor-pointer items-center justify-center rounded-xl text-wt-text transition-colors hover:bg-wt-surface-3";
 
 function IconMenu({ className = "" }: { className?: string }) {
   return (
@@ -172,28 +172,11 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     () => new Map()
   );
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  // Seeded straight from localStorage (defaults to collapsed/icon-rail when
-  // nothing is stored) so the very first paint already matches the user's
-  // choice. DashboardChrome only ever mounts client-side, after auth status
-  // resolves from "loading", so there is no server-rendered markup to
-  // hydrate against here. The previous approach — default true, then correct
-  // via a post-mount effect — painted the collapsed rail first and then
-  // animated it open on every fresh page load for anyone who had expanded
-  // it, on every dashboard page (this component wraps all of them).
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
   const [actionLoading, setActionLoading] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const notificationsPanelRef = useRef<HTMLDetailsElement>(null);
   const { resolvedTheme } = useUserPreferences();
-
-  const toggleSidebarCollapsed = useCallback(() => {
-    setSidebarCollapsed((current) => {
-      const next = !current;
-      writeSidebarCollapsed(next);
-      return next;
-    });
-  }, []);
 
   const requestLogout = useCallback(() => {
     setLogoutConfirmOpen(true);
@@ -417,6 +400,20 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     return "Learning & Development";
   }, [pathname]);
 
+  // The header's breadcrumb uses the sidebar's own names ("Team / People"); anything it doesn't list falls back to the old page title.
+  const breadcrumb = useMemo(() => {
+    if (isOffboarded && !isLearningRoute) return { section: null, page: pageTitle, title: pageTitle };
+    if (isLearningRoute) return { section: "Learning", page: learningSectionTitle, title: learningSectionTitle };
+    if (pathname.includes("/dashboard/leave/team")) return appBreadcrumb("leave-team") ?? { section: null, page: pageTitle, title: pageTitle };
+    return appBreadcrumb(activeSection) ?? { section: null, page: pageTitle, title: pageTitle };
+  }, [activeSection, isLearningRoute, isOffboarded, learningSectionTitle, pageTitle, pathname]);
+
+  const sidebarBadges = useSidebarBadges({
+    isApprover: canActOnRequests,
+    hasHrAccess,
+    enabled: Boolean(user) && !isOffboarded && !requiresSelfOnboarding,
+  });
+
   const sidebarDisplayName = useMemo(() => {
     if (profile && typeof profile === "object") {
       const fromProfile = cleanEmployeeName(profile as Record<string, unknown>).trim();
@@ -453,27 +450,25 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
         <KnotPet />
       <TelemetryHost />
       </Suspense>
-      <DashboardSidebar
+      <AppSidebar
         visibleNavigation={visibleNavigation}
         activeSection={activeSection}
-        expandedSection={expandedSection}
-        toggleExpandedSection={toggleExpandedSection}
         isLearningRoute={isLearningRoute}
         isNavChildActive={isNavChildActive}
+        badges={sidebarBadges}
         mobileNavOpen={mobileNavOpen}
-        collapsed={sidebarCollapsed}
-        onToggleCollapsed={toggleSidebarCollapsed}
         closeMobileNav={closeMobileNav}
         user={user}
         profile={profile}
-        sidebarDisplayName={sidebarDisplayName}
+        displayName={sidebarDisplayName}
+        roleLabel={formatRoleLabel(activePersona ?? userRoles[0] ?? "")}
         canAccessProfile={canAccessProfile}
         isOffboarded={isOffboarded}
         onLogout={requestLogout}
-        mobileTopSlot={
+        accountSlot={
           activePersona ? (
-            <div className="rounded-xl bg-[var(--wt-sidebar-hover-bg)] p-2.5">
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--wt-sidebar-text-faint)]">Acting as</p>
+            <div className="rounded-xl bg-[var(--wt-sidebar-hover-bg)] p-2">
+              <p className="mb-1 px-0.5 text-[11px] font-medium text-[var(--wt-sidebar-text-faint)]">Acting as</p>
               <DropdownSelect
                 value={activePersona}
                 onChange={(next) => {
@@ -512,32 +507,18 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               <IconMenu />
             </button>
             <AppNavButtons />
-            <WebTrakBrand variant="header" compact className="hidden shrink-0 min-[420px]:flex lg:hidden" />
-            <div className="min-w-0">
-            <h2 className="truncate text-lg font-semibold tracking-tight text-wt-text sm:text-[1.35rem]">
-              {pageTitle}
-            </h2>
-            {isLearningRoute ? (
-              <p className="text-xs text-wt-text-muted">{learningSectionTitle}</p>
-            ) : null}
-            </div>
+            <nav aria-label="Breadcrumb" className="min-w-0 text-[15px]">
+              <ol className="flex min-w-0 items-center gap-2 text-wt-text-muted">
+                <li className="hidden shrink-0 sm:block">{breadcrumb.section ?? "WebTrak"}</li>
+                <li aria-hidden className="hidden shrink-0 text-wt-text-faint sm:block">/</li>
+                <li className="min-w-0 truncate font-medium text-wt-text" aria-current="page">
+                  {breadcrumb.page}
+                </li>
+              </ol>
+            </nav>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            {/* activePersona is only ever set for users with ROLE_ADMIN — see AuthContext.syncRolesAndPersona. */}
-            {activePersona ? (
-              // From tablet width up the switcher lives here; on a phone it has no room (it squeezed the page title to
-              // "E…"), so it moves into the navigation drawer — see `mobileTopSlot` below.
-              <DropdownSelect
-                value={activePersona}
-                onChange={(next) => setActivePersona(next)}
-                options={allRoles.map((role) => ({ value: role, label: formatRoleLabel(role) }))}
-                variant="compact"
-                className="w-[8.25rem] shrink-0 max-sm:hidden sm:w-35"
-                contentClassName="w-auto min-w-[9rem]"
-                aria-label="Switch active role"
-                clearSelectionOnEmptyInput={false}
-              />
-            ) : null}
+            <HeaderSearch />
             <ReportBugButton />
             <details
               ref={notificationsPanelRef}
@@ -552,9 +533,12 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               <summary className={`relative cursor-pointer list-none ${HEADER_ICON_BUTTON_CLASS} [&::-webkit-details-marker]:hidden`}>
                 <IconBell className="text-wt-text-muted" />
                 {unreadNotificationCount ? (
-                  <span className="absolute -right-1 -top-1 min-w-[18px] rounded-full bg-rose-600 dark:bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                    {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
-                  </span>
+                  <span
+                    className="absolute right-2 top-2 size-2.5 rounded-full border-2 border-wt-surface-1 bg-rose-500"
+                    title={`${unreadNotificationCount} unread`}
+                    role="status"
+                    aria-label={`${unreadNotificationCount} unread notifications`}
+                  />
                 ) : null}
               </summary>
               <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-[min(380px,calc(100vw-1rem))] rounded-2xl border border-wt-border bg-wt-surface-1 p-2 shadow-[var(--wt-shadow-lg)] dark:border-wt-border-md dark:shadow-none max-sm:fixed max-sm:inset-x-2 max-sm:top-[calc(3.25rem+env(safe-area-inset-top,0px))] max-sm:w-auto">
@@ -699,15 +683,6 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
                 </div>
               </div>
             </details>
-            <AccountMenu
-              profile={profile}
-              user={user}
-              displayName={sidebarDisplayName}
-              canAccessProfile={canAccessProfile}
-              isOffboarded={isOffboarded}
-              placement="header"
-              onLogout={requestLogout}
-            />
           </div>
         </AppChromeHeader>
 
@@ -715,7 +690,14 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
           {/* Cap content width on very large / TV screens so line lengths, forms
               and tables stay readable instead of stretching edge-to-edge. Below
               ~2000px viewport this has no visible effect. */}
-          <div className="mx-auto w-full max-w-[2000px] lg:h-full">{children}</div>
+          <div className="mx-auto w-full max-w-[2000px] lg:h-full">
+            {/* Pages that draw their own heading mark it `data-page-hero` and this one steps aside (see globals.css). */}
+            <div className="wt-chrome-title px-4 pt-5 sm:px-5 md:px-8 md:pt-7">
+              <h1 className="text-[1.75rem] font-bold leading-tight tracking-[-0.025em] text-wt-text sm:text-[2rem]">{breadcrumb.title}</h1>
+              {"description" in breadcrumb && breadcrumb.description ? <p className="mt-1.5 text-base text-wt-text-muted">{breadcrumb.description}</p> : null}
+            </div>
+            {children}
+          </div>
         </div>
       </div>
     </div>

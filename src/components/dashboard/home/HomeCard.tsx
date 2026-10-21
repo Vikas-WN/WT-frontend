@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 
-import { CONTENT_CARD_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { cn } from "@/lib/utils";
 
 export type HomeTone = "brand" | "emerald" | "amber" | "violet" | "rose" | "sky";
@@ -20,7 +18,9 @@ const TONE_TILE: Record<HomeTone, string> = {
 
 export function HomeCard({
   title,
-  icon,
+  subtitle,
+  titleBadge,
+  headerRight,
   href,
   cta,
   onAction,
@@ -29,11 +29,17 @@ export function HomeCard({
    *  that are genuinely more actionable than the rest (e.g. pending
    *  approvals) — spend sparingly, at most one or two per page. */
   featured = false,
-  tone = "brand",
   className,
 }: {
   title: string;
-  icon: React.ReactNode;
+  /** A quieter line under the title. */
+  subtitle?: string;
+  /** Sits right after the title (a count). */
+  titleBadge?: React.ReactNode;
+  /** Replaces the link at the right edge (tabs, buttons). */
+  headerRight?: React.ReactNode;
+  /** Kept so existing cards still compile; the redesigned cards show the title alone. */
+  icon?: React.ReactNode;
   href?: string;
   cta?: string;
   /** Alternative to `href` for cards whose "open" action isn't a route — e.g.
@@ -41,48 +47,40 @@ export function HomeCard({
   onAction?: () => void;
   children: React.ReactNode;
   featured?: boolean;
-  /** Colour of the icon tile. */
+  /** Kept so existing cards still compile. */
   tone?: HomeTone;
   className?: string;
 }) {
+  const linkClass = "shrink-0 text-sm font-semibold text-[var(--wt-brand)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)] rounded";
   return (
     <section
       className={cn(
-        CONTENT_CARD_CLASS,
-        "flex flex-col overflow-hidden p-4 sm:p-5 lg:h-full lg:min-h-0 lg:p-4",
-        (href || onAction) && "wt-lift",
-        featured &&
-          "shadow-[inset_3px_0_0_var(--wt-brand)] border-[color-mix(in_srgb,var(--wt-brand)_28%,transparent)] bg-[var(--wt-brand-soft)] dark:bg-[var(--wt-brand-soft)]",
+        "flex flex-col overflow-hidden rounded-[1.25rem] border border-wt-border bg-wt-surface-1 p-5 shadow-[var(--wt-shadow-sm)] sm:p-6 lg:h-full lg:min-h-0",
+        featured && "border-[color-mix(in_srgb,var(--wt-brand)_20%,var(--wt-border))]",
         className
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className={cn("grid size-7 shrink-0 place-items-center rounded-lg", TONE_TILE[tone])} aria-hidden>
-            {icon}
-          </span>
-          <h2 className="truncate text-sm font-semibold text-wt-text">{title}</h2>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <h2 className="truncate text-[1.2rem] font-semibold leading-tight tracking-[-0.015em] text-wt-text">{title}</h2>
+            {titleBadge}
+          </div>
+          {subtitle ? <p className="mt-0.5 text-sm text-wt-text-muted">{subtitle}</p> : null}
         </div>
-        {href ? (
-          <Link
-            href={href}
-            className="inline-flex shrink-0 items-center gap-0.5 text-xs font-medium text-[var(--wt-brand)] hover:underline"
-          >
+        {headerRight ? (
+          headerRight
+        ) : href ? (
+          <Link href={href} className={linkClass}>
             {cta ?? "Open"}
-            <ChevronRight className="size-3.5" />
           </Link>
         ) : onAction ? (
-          <button
-            type="button"
-            onClick={onAction}
-            className="inline-flex shrink-0 items-center gap-0.5 text-xs font-medium text-[var(--wt-brand)] hover:underline"
-          >
+          <button type="button" onClick={onAction} className={linkClass}>
             {cta ?? "Open"}
-            <ChevronRight className="size-3.5" />
           </button>
         ) : null}
       </div>
-      <div className="wt-tile-body mt-2.5 flex-1 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain">{children}</div>
+      <div className="wt-tile-body mt-4 flex-1 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain">{children}</div>
     </section>
   );
 }
@@ -91,17 +89,15 @@ export function CardMessage({ text }: { text: string }) {
   return <p className="py-4 text-sm text-wt-text-muted">{text}</p>;
 }
 
-/** A calm empty state: a small icon, what is missing, and what will appear — instead of a bare line of text. */
+/** A calm empty state: a small icon, what is missing, and what will appear — in a dashed box, as in the redesign. */
 export function CardEmpty({ icon, title, hint }: { icon: React.ReactNode; title: string; hint?: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-wt-surface-2/60 px-3.5 py-3">
-      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-wt-surface-1 text-wt-text-muted shadow-[var(--wt-shadow-sm)]" aria-hidden>
+    <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-wt-border-md px-4 py-7 text-center">
+      <span className="grid size-11 place-items-center rounded-xl bg-wt-surface-2 text-wt-text-muted" aria-hidden>
         {icon}
       </span>
-      <span className="min-w-0">
-        <span className="block text-sm font-medium text-wt-text">{title}</span>
-        {hint ? <span className="block text-xs text-wt-text-muted">{hint}</span> : null}
-      </span>
+      <span className="text-[15px] font-semibold text-wt-text">{title}</span>
+      {hint ? <span className="max-w-[16rem] text-sm leading-snug text-wt-text-muted">{hint}</span> : null}
     </div>
   );
 }

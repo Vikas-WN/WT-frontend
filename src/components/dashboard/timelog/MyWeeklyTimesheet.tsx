@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SegmentedTabs } from "@/components/dashboard/ui/SegmentedTabs";
+import { CONTENT_CARD_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { TimelogCalendar } from "@/components/dashboard/timelog/TimelogCalendar/TimelogCalendar";
 import { DayEntriesPanel } from "@/components/dashboard/timelog/DayEntriesPanel/DayEntriesPanel";
@@ -60,22 +60,20 @@ export function MyWeeklyTimesheet() {
   );
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <CardTitle>My Time Logs</CardTitle>
-        <RefreshIconButton onClick={() => reload()} loading={loading} />
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Tabs
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <SegmentedTabs
+          label="View mode"
           value={viewMode}
-          onValueChange={(v) => setViewMode(v as "calendar" | "table")}
-        >
-          <TabsList aria-label="View mode" variant="default">
-            <TabsTrigger value="table">All Entries</TabsTrigger>
-            <TabsTrigger value="calendar">Add Time Logs</TabsTrigger>
-          </TabsList>
-        </Tabs>
-
+          onChange={(v) => setViewMode(v as "calendar" | "table")}
+          options={[
+            { value: "table", label: "All entries" },
+            { value: "calendar", label: "Add time logs" },
+          ]}
+        />
+        <RefreshIconButton onClick={() => reload()} loading={loading} />
+      </div>
+      <div className={`${CONTENT_CARD_CLASS} space-y-4 p-5`}>
         {viewMode === "calendar" ? (
           <>
             <TimelogCalendar
@@ -133,7 +131,7 @@ export function MyWeeklyTimesheet() {
             projectOptions={projectOptions}
           />
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

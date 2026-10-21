@@ -24,9 +24,11 @@
   --wt-violet-500: #8b5cf6;
 
   /* Primary action — WebTrak brand blue */
-  --wt-brand: #355095;
-  --wt-brand-hover: #2d4369;
-  --wt-brand-active: #243754;
+  --wt-brand: #374795;
+  --wt-brand-hover: #2e3c82;
+  --wt-brand-active: #263270;
+  /* The deep navy of the sign-in panel and the profile banner (WebTrak redesign). */
+  --wt-navy: #1d2454;
   --wt-brand-text: #ffffff;
   --wt-brand-soft: color-mix(in srgb, var(--wt-brand) 10%, white);
   --wt-brand-muted: color-mix(in srgb, var(--wt-brand) 16%, transparent);
@@ -34,25 +36,23 @@
   /* Surface — a calm, low-saturation canvas so white cards lift off it with a
      hairline + soft shadow instead of tint. (Was a saturated blue-gray that,
      with the page-top brand gradient on top, read as a muddy blue band.) */
-  --wt-bg: #f7f8fb;
-  --wt-page-bg: #f3f5f9;
+  --wt-bg: #f4f5f8;
+  --wt-page-bg: #f4f5f8;
   --wt-surface-1: #ffffff;
   --wt-surface-2: #f7f9fc;
   --wt-surface-3: #edf0f6;
 
-  /* Sidebar — deliberately fixed dark regardless of the app's light/dark
-     theme (Vercel/Linear-style structural contrast against the light
-     content area). Defined once here, not overridden in the dark block,
-     so the sidebar never changes with the theme toggle. */
-  --wt-sidebar-bg: #0b1220;
-  --wt-sidebar-surface-2: #131c2e;
-  --wt-sidebar-border: rgba(255, 255, 255, 0.08);
-  --wt-sidebar-text: #f1f5f9;
-  --wt-sidebar-text-muted: #94a3b8;
-  --wt-sidebar-text-faint: #64748b;
-  --wt-sidebar-hover-bg: rgba(255, 255, 255, 0.07);
-  --wt-sidebar-active-bg: color-mix(in srgb, var(--wt-brand) 32%, transparent);
-  --wt-sidebar-active-bg-collapsed: color-mix(in srgb, var(--wt-brand) 40%, var(--wt-sidebar-surface-2));
+  /* Sidebar — light and sectioned (WebTrak redesign): a quiet grey rail, the active page a white pill with a hairline and a soft
+     shadow. The dark theme redefines these below. */
+  --wt-sidebar-bg: #f4f4f6;
+  --wt-sidebar-surface-2: #ffffff;
+  --wt-sidebar-border: rgba(15, 23, 42, 0.08);
+  --wt-sidebar-text: #0b1220;
+  --wt-sidebar-text-muted: #5b6475;
+  --wt-sidebar-text-faint: #7a8294;
+  --wt-sidebar-hover-bg: rgba(15, 23, 42, 0.05);
+  --wt-sidebar-active-bg: #ffffff;
+  --wt-sidebar-active-bg-collapsed: #ffffff;
 
   /* Text — every step clears WCAG AA (4.5:1) on both white cards and the canvas.
      Faint was #64748b, which dipped just under on the gray canvas. */
@@ -131,6 +131,16 @@
 
 :is(.dark, [data-theme="dark"]) {
   color-scheme: dark;
+
+  --wt-sidebar-bg: #0e1118;
+  --wt-sidebar-surface-2: #131c2e;
+  --wt-sidebar-border: rgba(255, 255, 255, 0.08);
+  --wt-sidebar-text: #f1f5f9;
+  --wt-sidebar-text-muted: #94a3b8;
+  --wt-sidebar-text-faint: #7a8699;
+  --wt-sidebar-hover-bg: rgba(255, 255, 255, 0.07);
+  --wt-sidebar-active-bg: #1b2231;
+  --wt-sidebar-active-bg-collapsed: #1b2231;
 
   /* Graphite canvas (not pure black): a cool, slightly blue-grey ladder — canvas → card → raised → hover — where each
      step is visibly lighter, so cards read as surfaces and borders as hairlines instead of everything melting into void. */
@@ -724,7 +734,6 @@ video {
 }
 
 .wt-surface-card:hover {
-  box-shadow: var(--wt-shadow-md);
   border-color: var(--wt-border-md);
 }
 
@@ -2640,4 +2649,11 @@ html.wt-reduce-motion .wt-deco-layer * { animation: none !important; }
 }
 .wt-confetti {
   animation: wt-confetti-burst 1.1s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+/* The generic page title (DashboardChrome) is hidden whenever the page renders its own heading (any other h1), and on the full-bleed chat. */
+.wt-page-scroll:has([data-page-hero]) .wt-chrome-title,
+.wt-page-scroll:has(:not(.wt-chrome-title) > h1) .wt-chrome-title,
+.wt-page-scroll:has([data-chat-page]) .wt-chrome-title {
+  display: none;
 }

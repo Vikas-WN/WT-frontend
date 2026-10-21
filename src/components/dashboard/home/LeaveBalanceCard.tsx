@@ -1,62 +1,98 @@
 "use client";
 
-import { Plane } from "lucide-react";
+import { CalendarDays } from "lucide-react";
+import Link from "next/link";
 
+import { LeaveRequestRow } from "@/components/dashboard/home/leave-card/LeaveRequestRow";
 import { CardMessage, CardSkeleton, HomeCard } from "@/components/dashboard/home/HomeCard";
-import { LeaveRequestsList } from "@/components/dashboard/home/leave-card/LeaveRequestsList";
-import { LeaveRing } from "@/components/dashboard/home/leave-card/LeaveRing";
-import { LeaveYearStats } from "@/components/dashboard/home/leave-card/LeaveYearStats";
+import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import { HOME_LEAVE_CARD, LEAVE_COLORS } from "@/constants/homeLeaveCard";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { useHomeLeaveSummary } from "@/hooks/dashboard/useHomeLeaveSummary";
 import { cn } from "@/lib/utils";
 import { formatBalanceDays } from "@/utils/leaveRequestDisplay";
 
-function Legend({ items }: { items: Array<{ label: string; value: number; dot: string; hint?: string }> }) {
+function Stat({ label, value, dot }: { label: string; value: number; dot: string }) {
   return (
-    <ul className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-      {items.map((i) => (
-        <li key={i.label} className="flex items-center gap-1.5 text-xs text-wt-text-muted" title={i.hint}>
-          <span className={cn("size-2 rounded-full", i.dot)} aria-hidden />
-          {i.label}
-          <span className="font-semibold tabular-nums text-wt-text">{formatBalanceDays(i.value).amount}</span>
-        </li>
-      ))}
-    </ul>
+    <div className="min-w-0">
+      <p className="flex items-center gap-1.5 text-sm text-wt-text-muted">
+        <span className={cn("size-2 rounded-[3px]", dot)} aria-hidden />
+        {label}
+      </p>
+      <p className="mt-0.5 text-lg font-semibold tabular-nums text-wt-text">{formatBalanceDays(value).amount}</p>
+    </div>
   );
 }
 
-/** Home card: how much leave is left (ring), where it came from and went, the primary/secondary/comp-off split, and what's coming up. */
+function Tally({ label, value }: { label: string; value: number }) {
+  return (
+    <p className="text-sm text-wt-text-muted">
+      {label} <span className="font-semibold tabular-nums text-wt-text">{formatBalanceDays(value).amount}</span>
+    </p>
+  );
+}
+
+/** Home card "My leave": what is left (big), how it splits, the year so far, and what is coming up. */
 export function LeaveBalanceCard() {
   const s = useHomeLeaveSummary();
+  const total = s.yearSummary?.balance ?? s.total;
+  const split = Math.max(s.primary, 0) + Math.max(s.secondary, 0);
+  const primaryShare = split > 0 ? (Math.max(s.primary, 0) / split) * 100 : 0;
+  const next = s.items[0];
+  const year = s.yearSummary;
+
   return (
-    <HomeCard
-      title={HOME_LEAVE_CARD.title}
-      tone="emerald"
-      icon={<Plane className="size-4" />}
-      href={`${DASHBOARD_ROUTES.leave}?tab=my`}
-      cta={HOME_LEAVE_CARD.cta}
-    >
+    <HomeCard title={HOME_LEAVE_CARD.title} href={`${DASHBOARD_ROUTES.leave}?tab=my`} cta={HOME_LEAVE_CARD.cta}>
       {s.balanceStatus === "loading" ? (
         <CardSkeleton />
       ) : s.balanceStatus === "error" ? (
         <CardMessage text={HOME_LEAVE_CARD.unavailable} />
       ) : (
-        <div className="@container">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-            <LeaveRing primary={s.primary} secondary={s.secondary} balance={s.yearSummary?.balance ?? s.total} />
-            {s.yearSummary ? <LeaveYearStats summary={s.yearSummary} /> : null}
+        <div className="flex h-full flex-col">
+          <p className="flex items-baseline gap-2">
+            <span className="text-[3.25rem] font-bold leading-none tracking-[-0.03em] tabular-nums text-wt-text">
+              <AnimatedNumber value={total} decimals={Number.isInteger(total) ? 0 : 1} />
+            </span>
+            <span className="text-base text-wt-text-muted">{HOME_LEAVE_CARD.ringCaption}</span>
+          </p>
+
+          <div className="mt-4 flex h-2 gap-0.5 overflow-hidden rounded-full bg-wt-surface-3" role="img" aria-label={`${formatBalanceDays(s.primary).amount} primary, ${formatBalanceDays(s.secondary).amount} secondary`}>
+            {split > 0 ? (
+              <>
+                <span className="h-full rounded-full" style={{ width: `${primaryShare}%`, background: LEAVE_COLORS.primary.stroke }} />
+                <span className="h-full flex-1 rounded-full" style={{ background: LEAVE_COLORS.secondary.stroke }} />
+              </>
+            ) : null}
           </div>
-          <Legend
-            items={[
-              { label: HOME_LEAVE_CARD.primaryLabel, value: s.primary, dot: LEAVE_COLORS.primary.dot },
-              { label: HOME_LEAVE_CARD.secondaryLabel, value: s.secondary, dot: LEAVE_COLORS.secondary.dot, hint: HOME_LEAVE_CARD.secondaryHint },
-              { label: HOME_LEAVE_CARD.compOffLabel, value: s.compOff, dot: LEAVE_COLORS.compOff.dot, hint: HOME_LEAVE_CARD.compOffHint },
-            ]}
-          />
-          <div className="mt-4 border-t border-wt-border pt-3.5">
-            <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-wt-text-muted">{HOME_LEAVE_CARD.requestsHeading}</p>
-            <LeaveRequestsList status={s.requestsStatus} items={s.items} />
+
+          <div className="mt-3 grid grid-cols-3 gap-3">
+            <Stat label={HOME_LEAVE_CARD.primaryLabel} value={s.primary} dot={LEAVE_COLORS.primary.dot} />
+            <Stat label={HOME_LEAVE_CARD.secondaryLabel} value={s.secondary} dot={LEAVE_COLORS.secondary.dot} />
+            <Stat label={HOME_LEAVE_CARD.compOffLabel} value={s.compOff} dot={LEAVE_COLORS.compOff.dot} />
+          </div>
+
+          {year ? (
+            <div className="mt-4 flex items-center justify-between gap-3 border-t border-wt-border pt-4">
+              <Tally label={HOME_LEAVE_CARD.creditedShort} value={year.credited ?? year.carried_forward + year.accrued} />
+              <Tally label={HOME_LEAVE_CARD.takenShort} value={year.taken_approved ?? year.leaves_taken} />
+              <Tally label={HOME_LEAVE_CARD.pendingShort} value={year.taken_pending ?? 0} />
+            </div>
+          ) : null}
+
+          <div className="mt-auto pt-4">
+            {s.requestsStatus === "ready" && next ? (
+              <ul>
+                <LeaveRequestRow item={next} />
+              </ul>
+            ) : (
+              <div className="flex items-center gap-3 rounded-xl bg-wt-surface-2 px-3.5 py-3">
+                <CalendarDays className="size-4 shrink-0 text-wt-text-muted" aria-hidden />
+                <span className="min-w-0 flex-1 text-sm text-wt-text-muted">{HOME_LEAVE_CARD.requestsEmpty}</span>
+                <Link href={DASHBOARD_ROUTES.leave} className="shrink-0 text-sm font-semibold text-[var(--wt-brand)] hover:underline">
+                  {HOME_LEAVE_CARD.requestsEmptyCta}
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       )}

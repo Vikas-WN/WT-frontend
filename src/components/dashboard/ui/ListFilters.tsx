@@ -46,9 +46,9 @@ export function ListFilters({
             aria-pressed={chipValue === chip.value}
             onClick={() => onChip(chip.value)}
             className={cn(
-              "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+              "shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
               chipValue === chip.value
-                ? "border-[var(--wt-brand)] bg-[var(--wt-brand)] text-[var(--wt-brand-text)]"
+                ? "border-[var(--wt-navy)] bg-[var(--wt-navy)] text-white"
                 : "border-wt-border bg-wt-surface-1 text-wt-text-muted hover:text-wt-text"
             )}
           >

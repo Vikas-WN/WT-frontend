@@ -43,7 +43,7 @@ export function ChatPageClient() {
 
   return (
     <DashboardPageShell>
-      <div className="grid h-[calc(100dvh-8.5rem)] min-h-[28rem] overflow-hidden rounded-2xl border border-wt-border bg-wt-surface-1 shadow-[var(--wt-shadow-sm)] md:grid-cols-[20rem_minmax(0,1fr)] lg:grid-cols-[22rem_minmax(0,1fr)]">
+      <div data-chat-page className="grid h-[calc(100dvh-8.5rem)] min-h-[28rem] overflow-hidden rounded-2xl border border-wt-border bg-wt-surface-1 shadow-[var(--wt-shadow-sm)] md:grid-cols-[20rem_minmax(0,1fr)] lg:grid-cols-[22rem_minmax(0,1fr)]">
         <aside className={cn("min-h-0 border-wt-border md:border-r", selected ? "max-md:hidden" : "")}>
           <ConversationList
             conversations={conversations.data ?? []}

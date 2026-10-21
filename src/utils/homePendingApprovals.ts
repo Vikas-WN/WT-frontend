@@ -50,3 +50,16 @@ export function collectPendingApprovals(
   }
   return out.sort((a, b) => (a.start?.getTime() ?? Infinity) - (b.start?.getTime() ?? Infinity));
 }
+
+/** Which tab of the Home approvals card a request type belongs on. */
+export function approvalTab(type: string): "comp_off" | "wfh" | "leave" | "all" {
+  if (type.startsWith("COMP_OFF")) return "comp_off";
+  if (type.startsWith("WFH")) return "wfh";
+  if (type === "LEAVE" || type === "OPTIONAL" || type === "OPTIONAL_LEAVE") return "leave";
+  return "all";
+}
+
+/** Leave, optional leave and WFH can be approved with one tap; comp-off credits and anything else go through the full review. */
+export function canApproveInline(type: string): boolean {
+  return approvalTab(type) === "leave" || approvalTab(type) === "wfh";
+}

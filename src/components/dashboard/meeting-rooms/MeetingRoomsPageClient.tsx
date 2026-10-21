@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Repeat } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Plus, Repeat } from "lucide-react";
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { PageHero } from "@/components/dashboard/ui/PageHero";
-import { PageTabs, type PageTabItem } from "@/components/dashboard/ui/PageTabs";
 import { ManagementListCard, ManagementListContent } from "@/components/dashboard/ui/ManagementListCard";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
@@ -30,6 +29,7 @@ import {
 import { BookRoomDialog } from "@/components/dashboard/meeting-rooms/BookRoomDialog";
 import { CancelBookingDialog } from "@/components/dashboard/meeting-rooms/CancelBookingDialog";
 import { MEETING_ROOM_REPEAT_COPY } from "@/constants/meetingRooms";
+import { addDays, sameDay, startOfDay } from "@/utils/meetingRoomSchedule";
 import { DayScheduleView } from "@/components/dashboard/meeting-rooms/DayScheduleView";
 import { RoomFormDialog } from "@/components/dashboard/meeting-rooms/RoomFormDialog";
 import type { MeetingRoom, MeetingRoomBooking } from "@/types/meetingRoom";
@@ -58,7 +58,7 @@ function MyBookingsSection() {
     : null;
 
   return (
-    <ManagementListCard title="My upcoming bookings">
+    <ManagementListCard embedded title="My upcoming bookings">
       <ManagementListContent
         isLoading={myBookingsQ.isLoading}
         isEmpty={rows.length === 0}
@@ -120,15 +120,6 @@ function MyBookingsSection() {
   );
 }
 
-function BookRoomTab() {
-  return (
-    <div className="space-y-6">
-      <DayScheduleView />
-      <MyBookingsSection />
-    </div>
-  );
-}
-
 function ManageRoomsTab() {
   const roomsQ = useMeetingRoomsList(true);
   const rooms = roomsQ.data ?? [];
@@ -137,6 +128,7 @@ function ManageRoomsTab() {
 
   return (
     <ManagementListCard
+      embedded
       title="All rooms"
       description="Register a new room, or edit/deactivate an existing one."
       headerAction={
@@ -211,25 +203,51 @@ export function MeetingRoomsPageClient() {
   const { user } = useAuth();
   const roles = user?.roles ?? [];
   const isRoomAdmin = ROOM_ADMIN_ROLES.some((role) => roles.includes(role));
+  // UI state: which tab is showing, and which day the timeline is on.
   const [tab, setTab] = useState<"book" | "manage">("book");
-
-  const tabs: PageTabItem[] = isRoomAdmin
-    ? [
-        { value: "book", label: "Book a Room" },
-        { value: "manage", label: "Manage Rooms" },
-      ]
-    : [{ value: "book", label: "Book a Room" }];
+  const today = useMemo(() => startOfDay(new Date()), []);
+  const [day, setDay] = useState<Date>(today);
+  const isToday = sameDay(day, today);
+  const dayLabel = day.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+  const managing = tab === "manage" && isRoomAdmin;
 
   return (
     <DashboardPageShell>
       <PageHero
-        title="Meeting Rooms"
-        description="Book a room for your next meeting — or, if you manage facilities, register new rooms here."
+        title="Meeting rooms"
+        raw
+        description={managing ? "Register new rooms, or edit and deactivate existing ones." : "Pick a slot on the timeline to book a room."}
+        action={
+          <>
+            {managing ? null : (
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="outline" size="icon" onClick={() => setDay(addDays(day, -1))} aria-label="Previous day">
+                  <ChevronLeft className="size-4" />
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setDay(today)} aria-label="Jump to today">
+                  {isToday ? "Today, " : ""}
+                  {dayLabel}
+                </Button>
+                <Button type="button" variant="outline" size="icon" onClick={() => setDay(addDays(day, 1))} aria-label="Next day">
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            )}
+            {isRoomAdmin ? (
+              <Button type="button" variant="outline" onClick={() => setTab(managing ? "book" : "manage")}>
+                {managing ? "Back to booking" : "Manage rooms"}
+              </Button>
+            ) : null}
+          </>
+        }
       />
-      {tabs.length > 1 ? (
-        <PageTabs value={tab} onValueChange={(v) => setTab(v as "book" | "manage")} items={tabs} />
-      ) : null}
-      {tab === "manage" && isRoomAdmin ? <ManageRoomsTab /> : <BookRoomTab />}
+      {managing ? (
+        <ManageRoomsTab />
+      ) : (
+        <DayScheduleView day={day}>
+          <MyBookingsSection />
+        </DayScheduleView>
+      )}
     </DashboardPageShell>
   );
 }

@@ -371,46 +371,32 @@ export function EmployeeDirectoryPageClient() {
     <DashboardPageShell className="wt-detail-page">
       <OnboardingGate>
         <div className="space-y-5">
-          <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {DIRECTORY_STATS.map((stat) => {
-              const value = directoryStats[stat.key as keyof typeof directoryStats];
-              return (
-                <div
-                  key={stat.key}
-                  className="wt-lift flex items-center justify-between gap-3 rounded-2xl border border-wt-border bg-wt-surface-1 px-4 py-3.5 shadow-[var(--wt-shadow-sm)]"
-                >
-                  <div className="min-w-0">
-                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-wt-text-muted">
-                      <span className={cn("size-2 rounded-full", STAT_DOT[stat.tone], stat.key === "online" && "animate-pulse-slow")} aria-hidden />
-                      {stat.label}
-                    </p>
-                    <p className="mt-1.5 text-3xl font-semibold leading-none tracking-tight text-wt-text">
-                      <AnimatedNumber value={Number(value) || 0} />
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </section>
 
           <ManagementListCard
-            title="People directory"
-            description="Search, filter, and manage employee profiles, portal roles, and presence."
-            headerAction={
-              <div className="hidden items-center gap-2 rounded-xl border border-wt-border bg-wt-surface-2/60 px-3 py-2 text-xs text-wt-text-muted sm:flex">
-                <Users className="size-3.5 text-[var(--wt-brand)]" />
-                <span>
-                  Showing{" "}
-                  <span className="font-semibold text-wt-text">{pagination.totalItems}</span>
-                  {pagination.totalItems !== directoryStats.total ? (
-                    <>
-                      {" "}
-                      of <span className="font-semibold text-wt-text">{directoryStats.total}</span>
-                    </>
-                  ) : null}{" "}
-                  people
-                </span>
-              </div>
+            title="People"
+            description={`${directoryStats.total} people across WebKnot. Find anyone, see their role and how they work.`}
+            aboveCard={
+          <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                {DIRECTORY_STATS.map((stat) => {
+                  const value = directoryStats[stat.key as keyof typeof directoryStats];
+                  return (
+                    <div
+                      key={stat.key}
+                      className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-wt-border bg-wt-surface-1 px-5 py-4"
+                    >
+                      <div className="min-w-0">
+                        <p className="flex items-center gap-1.5 text-sm text-wt-text-muted">
+                          <span className={cn("size-2 rounded-full", STAT_DOT[stat.tone], stat.key === "online" && "animate-pulse-slow")} aria-hidden />
+                          {stat.label}
+                        </p>
+                        <p className="mt-2 text-[2rem] font-bold leading-none tracking-tight text-wt-text">
+                          <AnimatedNumber value={Number(value) || 0} />
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </section>
             }
             toolbar={
               <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">

@@ -3,7 +3,9 @@
 import { Button } from "@/components/ui/button";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
-import { MetricCard } from "@/components/dashboard/ui/MetricCard";
+import { SegmentedTabs } from "@/components/dashboard/ui/SegmentedTabs";
+import { Plus } from "lucide-react";
+import { useState } from "react";
 import { PageHero } from "@/components/dashboard/ui/PageHero";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
@@ -17,9 +19,9 @@ function EmployeeLearningDashboard({ showTeamCompletion = false }: { showTeamCom
   return (
     <div className="space-y-8">
       <PageHero
-        eyebrow="Learning"
-        title="Learning & Development"
-        description="Browse optional open trainings available to everyone. Enroll to access materials and marks."
+        raw
+        title="Learning"
+        description="Your trainings, and the open programs you can join. Enroll to access materials and marks."
       />
       <EmployeeLearningCatalog />
       {showTeamCompletion ? <TeamTrainingCompletionPanel /> : null}
@@ -29,46 +31,55 @@ function EmployeeLearningDashboard({ showTeamCompletion = false }: { showTeamCom
 
 function HrLearningDashboard() {
   const hrTrainingsQ = useHrTrainingsList();
-  const trainings = hrTrainingsQ.data ?? [];
+  const allTrainings = hrTrainingsQ.data ?? [];
   const isLoading = hrTrainingsQ.isLoading;
+  // UI state: which group of programs is showing.
+  const [group, setGroup] = useState<"active" | "cancelled" | "all">("active");
+  const isCancelled = (row: { status?: unknown }) => String(row.status ?? "").toUpperCase() === "CANCELLED";
+  const counts = {
+    active: allTrainings.filter((row) => !isCancelled(row)).length,
+    cancelled: allTrainings.filter(isCancelled).length,
+    all: allTrainings.length,
+  };
+  const trainings = group === "all" ? allTrainings : allTrainings.filter((row) => (group === "cancelled") === isCancelled(row));
 
   return (
     <div className="space-y-8">
       <PageHero
-        eyebrow="Learning"
-        title="Learning Overview"
-        description="Open a training card to manage sessions, trainers, trainees, attendance, and scores."
+        raw
+        title="Learning"
+        description="Your trainings, and the programs you run for others. Open a card to manage sessions, trainers, trainees, attendance and scores."
         action={
           <Button
             variant="brand"
-            size="sm"
             nativeButton={false}
             render={<Link href="/dashboard/learning-development/trainings?create=1" />}
           >
-            New Training
+            <Plus className="size-4" /> New training
           </Button>
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        <MetricCard label="Total Trainings" value={trainings.length} loading={isLoading} />
-      </div>
-
       <section className="space-y-5">
         <div className="flex items-end justify-between gap-3">
-          <h2 className="text-lg font-semibold tracking-tight text-wt-text">Trainings</h2>
-          {!isLoading && trainings.length > 0 ? (
-            <p className="text-sm text-wt-text-muted">
-              {trainings.length} program{trainings.length === 1 ? "" : "s"}
-            </p>
-          ) : null}
+          <h2 className="text-xl font-bold tracking-tight text-wt-text">Programs</h2>
+          <SegmentedTabs
+            label="Program group"
+            value={group}
+            onChange={(value) => setGroup(value as "active" | "cancelled" | "all")}
+            options={[
+              { value: "active", label: `Active ${counts.active}` },
+              { value: "cancelled", label: `Cancelled ${counts.cancelled}` },
+              { value: "all", label: `All ${counts.all}` },
+            ]}
+          />
         </div>
         {isLoading ? (
           <SectionLoading label="Loading Trainings…" />
         ) : trainings.length === 0 ? (
           <EmptyState
-            title="No Trainings Yet"
-            description="Create your first training to start building the learning library."
+            title={allTrainings.length === 0 ? "No Trainings Yet" : "Nothing in this group"}
+            description={allTrainings.length === 0 ? "Create your first training to start building the learning library." : "Try another group above."}
             action={
               <Button
                 variant="brand"

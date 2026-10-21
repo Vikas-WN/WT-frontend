@@ -38,3 +38,12 @@ export const WFH_REVOKE_CONFIRM = {
   description: "The request will be withdrawn and your manager notified. This can't be undone.",
   confirmLabel: "Delete request",
 } as const;
+
+export const WFH_PAGE_COPY = {
+  title: "Work from home",
+  description: "Apply for a work-from-home day, track your requests, or ask for a custom exception.",
+  allocationsQueryKey: ["wfh", "my-allocations"],
+  exceptionSubmitted: "Custom Work From Home request submitted to HR for approval.",
+  exceptionSplash: "Request submitted",
+  processing: "Processing request…",
+} as const;

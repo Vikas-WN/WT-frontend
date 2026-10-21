@@ -37,21 +37,21 @@ function writeStoredLayout(layout: WidgetLayoutItem[]): void {
   }
 }
 
-function defaultLayout(defaultOrder: readonly string[]): WidgetLayoutItem[] {
-  return defaultOrder.map((id) => ({ id, size: "normal", hidden: false }));
+function defaultLayout(defaultOrder: readonly string[], defaultSizes: Readonly<Record<string, WidgetSize>> = {}): WidgetLayoutItem[] {
+  return defaultOrder.map((id) => ({ id, size: defaultSizes[id] ?? "normal", hidden: false }));
 }
 
 /** Merges saved layout with the current widget catalog: keeps the saved
  *  order/size/hidden for ids that still exist, drops ids that no longer do,
  *  and appends any new widget ids (shipped after the user last customized)
  *  at the end, visible by default. */
-function reconcile(defaultOrder: readonly string[], saved: WidgetLayoutItem[] | null): WidgetLayoutItem[] {
-  if (!saved || saved.length === 0) return defaultLayout(defaultOrder);
+function reconcile(defaultOrder: readonly string[], saved: WidgetLayoutItem[] | null, defaultSizes: Readonly<Record<string, WidgetSize>> = {}): WidgetLayoutItem[] {
+  if (!saved || saved.length === 0) return defaultLayout(defaultOrder, defaultSizes);
   const knownIds = new Set(defaultOrder);
   const savedIds = new Set(saved.map((item) => item.id));
   const result = saved.filter((item) => knownIds.has(item.id));
   for (const id of defaultOrder) {
-    if (!savedIds.has(id)) result.push({ id, size: "normal", hidden: false });
+    if (!savedIds.has(id)) result.push({ id, size: defaultSizes[id] ?? "normal", hidden: false });
   }
   return result;
 }
@@ -59,14 +59,14 @@ function reconcile(defaultOrder: readonly string[], saved: WidgetLayoutItem[] | 
 /** Per-browser, drag-to-reorder / resize / show-hide layout for the Home
  *  dashboard's widget grid. Persisted to localStorage — a personal device
  *  preference, not shared state, so it doesn't need a backend round-trip. */
-export function useHomeDashboardLayout(defaultOrder: readonly string[]) {
+export function useHomeDashboardLayout(defaultOrder: readonly string[], defaultSizes: Readonly<Record<string, WidgetSize>> = {}) {
   // Seed straight from localStorage so the first paint already shows the
   // user's saved widget order/sizes/hidden state — reconciling only after
   // mount (the previous approach) always painted the untouched default
   // layout first, then snapped every customized grid to the real one a
   // moment later.
   const [layout, setLayout] = useState<WidgetLayoutItem[]>(() =>
-    reconcile(defaultOrder, readStoredLayout())
+    reconcile(defaultOrder, readStoredLayout(), defaultSizes)
   );
   const isFirstRender = useRef(true);
 
@@ -75,7 +75,7 @@ export function useHomeDashboardLayout(defaultOrder: readonly string[]) {
       isFirstRender.current = false;
       return;
     }
-    setLayout(reconcile(defaultOrder, readStoredLayout()));
+    setLayout(reconcile(defaultOrder, readStoredLayout(), defaultSizes));
     // Only re-reconcile if the widget catalog itself changes, not on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultOrder.join(",")]);
@@ -125,7 +125,7 @@ export function useHomeDashboardLayout(defaultOrder: readonly string[]) {
 
   const defaultOrderKey = defaultOrder.join(",");
   const resetLayout = useCallback(() => {
-    persist(defaultLayout(defaultOrder));
+    persist(defaultLayout(defaultOrder, defaultSizes));
     // Depend on the joined ids (a stable primitive), not the `defaultOrder`
     // array reference itself, which callers typically pass as a new literal
     // on every render.

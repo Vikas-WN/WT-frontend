@@ -40,3 +40,22 @@ export const MEETING_ROOM_REPEAT_COPY = {
 
 /** How many skipped dates the booking toast names before saying "and N more". */
 export const MEETING_ROOM_SKIPPED_PREVIEW_LIMIT = 5;
+
+export const TIMELINE_START_HOUR = 8;
+export const TIMELINE_END_HOUR = 20;
+export const TIMELINE_SLOT_MINUTES = 30;
+
+export const TIMELINE_COPY = {
+  freeNow: "Free now",
+  inUse: "In use",
+  bookSlot: "Book",
+  legendFree: "Free",
+  legendBooked: "Booked",
+  legendMine: "Your booking",
+  legendPast: "Past",
+  bookTitle: "Book",
+  bookHint: "Choose a room and time on the timeline above.",
+  earliest: (room: string, time: string) => `The earliest free slot is ${time} in ${room}.`,
+  noneFree: "No free slots are left on this day.",
+  myTitle: "My upcoming bookings",
+} as const;

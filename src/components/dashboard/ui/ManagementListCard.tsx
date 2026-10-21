@@ -11,6 +11,7 @@ import {
   CardToolbar,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { PageHero } from "@/components/dashboard/ui/PageHero";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
 import {
@@ -33,6 +34,10 @@ type ManagementListCardProps = {
   title: string;
   description?: string;
   headerAction?: ReactNode;
+  /** A section inside a page that has its own heading: the title stays inside the card. */
+  embedded?: boolean;
+  /** Summary cards shown between the page heading and the list card. */
+  aboveCard?: ReactNode;
   toolbar?: ReactNode;
   search?: ReactNode;
   filters?: ReactNode;
@@ -46,6 +51,8 @@ export function ManagementListCard({
   title,
   description,
   headerAction,
+  aboveCard,
+  embedded = false,
   toolbar,
   search,
   filters,
@@ -57,25 +64,28 @@ export function ManagementListCard({
   const compact = density === "compact";
 
   return (
-    <Card className={cn("p-0 wt-soft-in", CONTENT_CARD_CLASS, className)}>
-      <CardHeader
-        className={cn(
-          "flex flex-col space-y-0 sm:flex-row sm:items-start sm:justify-between",
-          compact ? "gap-2" : "gap-3",
-          compact ? CARD_HEADER_COMPACT_CLASS : CARD_HEADER_CLASS
-        )}
-      >
-        <div className="min-w-0 flex-1">
-          <CardTitle>{title}</CardTitle>
-          {description ? (
-            <CardDescription className={compact ? "mt-0.5" : undefined}>{description}</CardDescription>
-          ) : null}
-        </div>
-        {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
-      </CardHeader>
-
-      <Separator />
-
+    <div className={cn("space-y-6 wt-soft-in", className)}>
+      {embedded ? null : <PageHero title={title} description={description} action={headerAction} raw />}
+      {aboveCard}
+      <Card className={cn("p-0", CONTENT_CARD_CLASS)}>
+      {embedded ? (
+        <>
+          <CardHeader
+            className={cn(
+              "flex flex-col space-y-0 sm:flex-row sm:items-start sm:justify-between",
+              compact ? "gap-2" : "gap-3",
+              compact ? CARD_HEADER_COMPACT_CLASS : CARD_HEADER_CLASS
+            )}
+          >
+            <div className="min-w-0 flex-1">
+              <CardTitle>{title}</CardTitle>
+              {description ? <CardDescription className={compact ? "mt-0.5" : undefined}>{description}</CardDescription> : null}
+            </div>
+            {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
+          </CardHeader>
+          <Separator />
+        </>
+      ) : null}
       {hasToolbar ? (
         <CardToolbar className={compact ? CARD_TOOLBAR_COMPACT_CLASS : CARD_TOOLBAR_CLASS}>
           {toolbar ?? (
@@ -109,7 +119,8 @@ export function ManagementListCard({
           {children}
         </div>
       </CardContent>
-    </Card>
+      </Card>
+    </div>
   );
 }
 

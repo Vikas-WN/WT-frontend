@@ -66,34 +66,6 @@ function ProfileHeaderAvatar({
   );
 }
 
-function MetaChip({
-  icon,
-  label,
-  value,
-}: {
-  icon?: ReactNode;
-  label: string;
-  value: ReactNode;
-}) {
-  return (
-    <div className="flex min-w-0 max-w-full items-start gap-2.5 rounded-xl border border-wt-border/80 bg-wt-surface-2/45 px-3 py-2.5">
-      {icon ? (
-        <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-wt-surface-1 text-[var(--wt-brand)] shadow-sm">
-          {icon}
-        </span>
-      ) : null}
-      <span className="min-w-0">
-        <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-wt-text-faint">
-          {label}
-        </span>
-        <span className="mt-0.5 block text-sm font-medium text-wt-text [overflow-wrap:anywhere]">
-          {value}
-        </span>
-      </span>
-    </div>
-  );
-}
-
 export function EmployeeProfileHeaderCard({
   profile,
   displayName,
@@ -173,26 +145,22 @@ export function EmployeeProfileHeaderCard({
 
   return (
     <Card className={cn("w-full overflow-hidden p-0 wt-soft-in", CONTENT_CARD_CLASS)}>
-      <div className="h-1.5 w-full bg-gradient-to-r from-[var(--wt-brand)] via-[color-mix(in_srgb,var(--wt-brand)_55%,#f59e0b)] to-emerald-400" />
-      <CardContent className="px-4 py-5 sm:px-6">
-        {/* Mobile: avatar centred on top, everything full-width below. From `sm`
-            up: avatar beside the details (the original two-column layout). */}
-        <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:gap-5 sm:text-left">
-          <ProfileHeaderAvatar profile={profile} displayName={displayName} isBirthday={isBirthday} />
-
-          <div className="min-w-0 w-full flex-1">
-            <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0 w-full sm:w-auto">
+      <div className="h-28 w-full bg-[var(--wt-navy)] sm:h-32" aria-hidden />
+      <CardContent className="px-5 pb-0 pt-0 sm:px-8">
+        <div className="-mt-12 flex flex-col items-center gap-4 text-center sm:-mt-14 sm:flex-row sm:items-end sm:gap-6 sm:text-left">
+          <div className="rounded-full bg-wt-surface-1 p-1.5">
+            <ProfileHeaderAvatar profile={profile} displayName={displayName} isBirthday={isBirthday} />
+          </div>
+          <div className="min-w-0 w-full flex-1 pb-1 sm:pb-2">
+            <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div className="min-w-0">
                 {editModeLabel ? (
                   <span className="mb-1.5 inline-flex rounded-md bg-[var(--wt-brand)] px-2 py-0.5 text-xs font-semibold text-[var(--wt-brand-text)]">
                     {editModeLabel}
                   </span>
                 ) : null}
-                <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                  <h1
-                    className="text-xl font-bold tracking-tight text-wt-text [overflow-wrap:anywhere] sm:text-2xl"
-                    title={displayName}
-                  >
+                <div className="flex flex-wrap items-center justify-center gap-2.5 sm:justify-start">
+                  <h1 className="text-2xl font-bold tracking-tight text-wt-text [overflow-wrap:anywhere] sm:text-[1.75rem]" title={displayName}>
                     {displayName}
                   </h1>
                   {status ? <EmployeeStatusBadge status={status} /> : null}
@@ -203,22 +171,21 @@ export function EmployeeProfileHeaderCard({
                     </span>
                   ) : null}
                 </div>
-                {subtitle ? (
-                  <p className="mt-1 text-sm text-wt-text-muted">{subtitle}</p>
-                ) : null}
+                {subtitle ? <p className="mt-1 text-base text-wt-text-muted">{subtitle}</p> : null}
               </div>
-              {headerAction ? (
-                <div className="shrink-0">{headerAction}</div>
-              ) : null}
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 gap-2.5 text-left sm:grid-cols-2 xl:grid-cols-4">
-              {metaItems.map((item) => (
-                <MetaChip key={item.key} icon={item.icon} label={item.label} value={item.value} />
-              ))}
+              {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
             </div>
           </div>
         </div>
+
+        <dl className="mt-5 grid grid-cols-1 gap-x-8 gap-y-4 border-t border-wt-border py-5 text-left sm:grid-cols-2 xl:grid-cols-4">
+          {metaItems.map((item) => (
+            <div key={item.key} className="min-w-0">
+              <dt className="text-sm text-wt-text-muted">{item.label}</dt>
+              <dd className={cn("mt-0.5 font-semibold text-wt-text [overflow-wrap:anywhere]", item.key === "emp-id" && "font-mono")}>{item.value}</dd>
+            </div>
+          ))}
+        </dl>
       </CardContent>
     </Card>
   );

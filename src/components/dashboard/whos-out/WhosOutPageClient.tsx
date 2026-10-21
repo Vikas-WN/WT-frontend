@@ -5,7 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, CalendarRange, RotateCw } from "lucide-react";
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
+import { PageHero } from "@/components/dashboard/ui/PageHero";
+import { SegmentedTabs } from "@/components/dashboard/ui/SegmentedTabs";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -19,7 +20,7 @@ import { normalizeRoles } from "@/utils/roles";
 import { notifyError } from "@/lib/notify";
 import { CALENDAR_COPY } from "@/constants/whosOutCalendar";
 import { pickDefaultDay, type CalendarOccurrence } from "@/utils/whosOutCalendar";
-import { WhosOutCalendar } from "@/components/dashboard/whos-out/WhosOutCalendar";
+import { Legend, WhosOutCalendar } from "@/components/dashboard/whos-out/WhosOutCalendar";
 import { WhosOutDayPanel } from "@/components/dashboard/whos-out/WhosOutDayPanel";
 import { cn } from "@/lib/utils";
 
@@ -226,10 +227,7 @@ export function WhosOutPageClient() {
   if (!isApprover) {
     return (
       <DashboardPageShell>
-        <PageSectionHeader
-          title="Who's Out"
-          description="Team leave and work-from-home at a glance."
-        />
+        <PageHero title="Who's out" description="Team leave and work-from-home at a glance." raw />
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-wt-border px-6 py-16 text-center">
           <CalendarRange className="size-8 text-wt-text-faint" aria-hidden />
           <p className="max-w-xs text-sm text-wt-text-muted">
@@ -243,85 +241,53 @@ export function WhosOutPageClient() {
 
   return (
     <DashboardPageShell>
-      <PageSectionHeader
-        title="Who's Out"
-        description={
+      <PageHero
+        raw
+        title="Who's out"
+        description={`${
           scope === "org"
-            ? "Approved leave and work-from-home across the organisation, plus holidays."
-            : "Approved leave and work-from-home across your team, plus holidays."
+            ? "Approved leave, work from home and holidays."
+            : "Approved leave, work from home and holidays for your team."
+        }${status === "done" ? ` ${totalPeople} ${totalPeople === 1 ? "person has" : "people have"} time off in ${MONTHS[anchor.getMonth()]}.` : ""}`}
+        action={
+          canSeeOrg ? (
+            <SegmentedTabs
+              label="Scope"
+              value={scope}
+              onChange={(value) => setScope(value as "team" | "org")}
+              options={[
+                { value: "team", label: "My team" },
+                { value: "org", label: "Everyone" },
+              ]}
+            />
+          ) : undefined
         }
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon-sm"
-            onClick={() => goMonth(-1)}
-            aria-label="Previous month"
-          >
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-wt-border bg-wt-surface-1 px-5 py-3.5">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon-sm" onClick={() => goMonth(-1)} aria-label="Previous month">
             <ChevronLeft className="size-4" />
           </Button>
-          <span className="min-w-[9.5rem] text-center text-sm font-semibold text-wt-text">
-            {monthLabel}
-          </span>
-          <Button
-            variant="outline"
-            size="icon-sm"
-            onClick={() => goMonth(1)}
-            aria-label="Next month"
-          >
+          <span className="min-w-[9.5rem] text-center text-lg font-bold tracking-tight text-wt-text">{monthLabel}</span>
+          <Button variant="outline" size="icon-sm" onClick={() => goMonth(1)} aria-label="Next month">
             <ChevronRight className="size-4" />
           </Button>
-          {anchor.getMonth() !== new Date().getMonth() ||
-          anchor.getFullYear() !== new Date().getFullYear() ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setAnchor(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
-            >
-              Today
-            </Button>
-          ) : null}
+          <Button variant="outline" size="sm" onClick={() => setAnchor(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}>
+            Today
+          </Button>
         </div>
-
-        <div className="flex items-center gap-2">
-          {canSeeOrg ? (
-            <div className="inline-flex rounded-lg border border-wt-border p-0.5">
-              {(["team", "org"] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setScope(s)}
-                  className={cn(
-                    "rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors",
-                    scope === s
-                      ? "bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]"
-                      : "text-wt-text-muted hover:text-wt-text"
-                  )}
-                >
-                  {s === "org" ? "Everyone" : "My team"}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          <div className="inline-flex rounded-lg border border-wt-border p-0.5">
-            {(["month", "agenda"] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setView(v)}
-                className={cn(
-                  "rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors",
-                  view === v
-                    ? "bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]"
-                    : "text-wt-text-muted hover:text-wt-text"
-                )}
-              >
-                {v === "month" ? CALENDAR_COPY.viewCalendar : CALENDAR_COPY.viewAgenda}
-              </button>
-            ))}
-          </div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <Legend />
+          <SegmentedTabs
+            label="View"
+            value={view}
+            onChange={(value) => setView(value as "month" | "agenda")}
+            options={[
+              { value: "month", label: CALENDAR_COPY.viewCalendar },
+              { value: "agenda", label: CALENDAR_COPY.viewAgenda },
+            ]}
+          />
         </div>
       </div>
 
@@ -329,7 +295,7 @@ export function WhosOutPageClient() {
         <button
           type="button"
           onClick={() => (view === "month" ? setPickedDay(todayIso) : openDayInAgenda(todayIso))}
-          className="group flex w-full items-center gap-3 rounded-2xl border border-wt-border bg-gradient-to-br from-wt-surface-1 to-wt-surface-2/40 px-4 py-3 text-left transition-colors hover:border-[var(--wt-brand)]/40"
+          className="group flex w-full items-center gap-3 lg:hidden rounded-2xl border border-wt-border bg-gradient-to-br from-wt-surface-1 to-wt-surface-2/40 px-4 py-3 text-left transition-colors hover:border-[var(--wt-brand)]/40"
         >
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]">
             <CalendarRange className="size-[18px]" />
@@ -370,6 +336,7 @@ export function WhosOutPageClient() {
         </div>
       ) : view === "month" ? (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+          <div className="rounded-[1.25rem] border border-wt-border bg-wt-surface-1 p-4 sm:p-5">
           <WhosOutCalendar
             fromIso={fromIso}
             toIso={toIso}
@@ -379,6 +346,7 @@ export function WhosOutPageClient() {
             selectedDay={selectedDay}
             onSelectDay={setPickedDay}
           />
+          </div>
           <WhosOutDayPanel
             day={selectedDay}
             todayIso={todayIso}

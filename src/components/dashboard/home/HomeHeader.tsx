@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, Check, Plane, Search, Settings2 } from "lucide-react";
+import { CalendarPlus, Check, Clock, SlidersHorizontal } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { AddWidgetMenu } from "@/components/dashboard/home/AddWidgetMenu";
 import { Button } from "@/components/ui/button";
@@ -10,59 +11,45 @@ import { DASHBOARD_ROUTES } from "@/constants/routes";
 interface HomeHeaderProps {
   eyebrow: string;
   title: string;
-  /** One line under the greeting, e.g. what is waiting. */
-  subtitle?: string | null;
+  /** One line under the greeting — what is waiting. May carry highlighted counts. */
+  subtitle?: ReactNode;
   editMode: boolean;
   onEditModeChange: (editing: boolean) => void;
   hiddenWidgets: { id: string; title: string }[];
   onShowWidget: (id: string) => void;
   onReset: () => void;
-  onSearch: () => void;
 }
 
-/** One compact row: who/when on the left, quick actions and customise on the right. */
-export function HomeHeader({
-  eyebrow,
-  title,
-  subtitle,
-  editMode,
-  onEditModeChange,
-  hiddenWidgets,
-  onShowWidget,
-  onReset,
-  onSearch,
-}: HomeHeaderProps) {
+/** The greeting: the date, "Good afternoon, Name", what is waiting — and the two things people do most, plus customise. */
+export function HomeHeader({ eyebrow, title, subtitle, editMode, onEditModeChange, hiddenWidgets, onShowWidget, onReset }: HomeHeaderProps) {
   return (
-    <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
+    <header data-page-hero className="flex shrink-0 flex-wrap items-end justify-between gap-x-6 gap-y-4">
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--wt-brand)]">{eyebrow}</p>
-        <h1 className="truncate text-xl font-bold tracking-[-0.02em] text-wt-text sm:text-2xl">{title}</h1>
-        {subtitle ? <p className="mt-0.5 truncate text-sm text-wt-text-muted">{subtitle}</p> : null}
+        <p className="text-sm text-wt-text-muted">{eyebrow}</p>
+        <h1 className="mt-1 text-[1.75rem] font-bold leading-tight tracking-[-0.025em] text-wt-text sm:text-[2.25rem]">{title}</h1>
+        {subtitle ? <p className="mt-1 text-base text-wt-text-muted">{subtitle}</p> : null}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2.5">
         {editMode ? (
           <>
             <AddWidgetMenu hiddenWidgets={hiddenWidgets} onShow={onShowWidget} />
-            <Button variant="outline" size="sm" onClick={onReset}>
+            <Button variant="outline" onClick={onReset}>
               Reset layout
             </Button>
-            <Button variant="brand" size="sm" onClick={() => onEditModeChange(false)}>
+            <Button variant="brand" onClick={() => onEditModeChange(false)}>
               <Check className="size-4" /> Done
             </Button>
           </>
         ) : (
           <>
-            <Button variant="brand" size="sm" render={<Link href={`${DASHBOARD_ROUTES.leave}?tab=my`} />}>
-              <Plane className="size-4" /> Apply for leave
+            <Button variant="outline" size="lg" render={<Link href={DASHBOARD_ROUTES.timelog} />}>
+              <Clock className="size-4" /> Log time
             </Button>
-            <Button variant="outline" size="sm" render={<Link href={DASHBOARD_ROUTES.timelog} />}>
-              <CalendarDays className="size-4" /> Log time
+            <Button variant="brand" size="lg" render={<Link href={`${DASHBOARD_ROUTES.leave}?tab=my`} />}>
+              <CalendarPlus className="size-4" /> Apply for leave
             </Button>
-            <Button variant="outline" size="sm" onClick={onSearch}>
-              <Search className="size-4" /> Search
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => onEditModeChange(true)}>
-              <Settings2 className="size-4" /> Customize
+            <Button variant="outline" size="icon-lg" onClick={() => onEditModeChange(true)} aria-label="Customize this page" title="Customize this page">
+              <SlidersHorizontal className="size-4" />
             </Button>
           </>
         )}

@@ -35,7 +35,7 @@ export function WhosOutDayPanel({
 }) {
   if (!day) {
     return (
-      <aside className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-wt-border p-6 text-center text-sm text-wt-text-muted">
+      <aside className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-[1.25rem] border border-dashed border-wt-border p-6 text-center text-sm text-wt-text-muted">
         <CalendarDays className="size-6 text-wt-text-faint" aria-hidden />
         {CALENDAR_COPY.panelPick}
       </aside>
@@ -43,40 +43,34 @@ export function WhosOutDayPanel({
   }
   const date = new Date(`${day}T00:00:00`);
   const groups = groupByKind(occurrences, orderOf);
+  const outCount = occurrences.length;
   return (
-    <aside className="rounded-2xl border border-wt-border bg-wt-surface-1 p-4 lg:sticky lg:top-4" aria-live="polite">
-      <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-sm font-semibold text-wt-text">
-          {date.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
-        </h2>
-        {day === todayIso ? <span className="text-[11px] font-medium text-[var(--wt-brand)]">{CALENDAR_COPY.today}</span> : null}
-      </div>
-      {holiday ? (
-        <p className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-700 dark:text-rose-300">
-          {holiday.name}
-          {holiday.is_optional ? <span className="text-rose-500/70">· {CALENDAR_COPY.optionalTag}</span> : null}
-        </p>
-      ) : null}
+    <aside className="rounded-[1.25rem] border border-wt-border bg-wt-surface-1 p-5 lg:sticky lg:top-4" aria-live="polite">
+      {day === todayIso ? <p className="text-xs font-semibold uppercase tracking-[0.06em] text-[var(--wt-brand)]">{CALENDAR_COPY.today}</p> : null}
+      <h2 className="text-xl font-bold tracking-tight text-wt-text">
+        {date.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
+      </h2>
+      <p className="mt-0.5 text-sm text-wt-text-muted">{CALENDAR_COPY.peopleOut(outCount)}</p>
       {groups.length === 0 ? (
-        <p className="mt-4 text-sm text-wt-text-muted">{CALENDAR_COPY.panelEmpty}</p>
+        <p className="mt-5 text-sm text-wt-text-muted">{CALENDAR_COPY.panelEmpty}</p>
       ) : (
-        <div className="mt-3 space-y-4">
+        <div className="mt-5 space-y-5 divide-y divide-wt-border [&>section:not(:first-child)]:pt-5">
           {groups.map((g) => {
             const kind = OUT_KINDS[g.type] ?? OUT_KIND_FALLBACK;
             return (
               <section key={g.type}>
-                <h3 className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-wt-text-muted">
-                  <span className={cn("size-2 rounded-full", kind.dot)} aria-hidden />
-                  {kind.label} · {g.items.length}
+                <h3 className={cn("mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.06em]", kind.heading)}>
+                  <span>{g.type === "LEAVE" ? "On leave" : g.type === "WFH" ? "Working from home" : kind.label}</span>
+                  <span className="tabular-nums">{g.items.length}</span>
                 </h3>
-                <ul className="space-y-1.5">
+                <ul className="space-y-3.5">
                   {g.items.map(({ person, entry }, i) => (
-                    <li key={`${person.email}-${i}`} className="flex items-center gap-2.5">
-                      <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold", kind.chip)}>
+                    <li key={`${person.email}-${i}`} className="flex items-center gap-3">
+                      <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold", kind.chip)}>
                         {initials(person.name)}
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-sm text-wt-text">{person.name}</span>
-                      {entry.is_half_day ? <span className="shrink-0 text-[11px] text-wt-text-muted">{CALENDAR_COPY.halfDay}</span> : null}
+                      <span className="min-w-0 flex-1 truncate text-[15px] text-wt-text">{person.name}</span>
+                      {entry.is_half_day ? <span className="shrink-0 text-xs text-wt-text-muted">{CALENDAR_COPY.halfDay}</span> : null}
                     </li>
                   ))}
                 </ul>
@@ -85,6 +79,13 @@ export function WhosOutDayPanel({
           })}
         </div>
       )}
+      {holiday ? (
+        <p className="mt-5 flex items-center gap-2.5 rounded-xl bg-[var(--wt-brand-soft)] px-3.5 py-3 text-sm font-medium text-[var(--wt-brand)]">
+          <CalendarDays className="size-4 shrink-0" aria-hidden />
+          {holiday.name}
+          {holiday.is_optional ? <span className="opacity-70">· {CALENDAR_COPY.optionalTag}</span> : null}
+        </p>
+      ) : null}
     </aside>
   );
 }
