@@ -167,6 +167,7 @@ export function WhosOutPageClient() {
     const map = new Map<string, DayOccurrence[]>();
     for (const person of data?.people ?? []) {
       for (const entry of person.entries) {
+        const holidayDays = new Set(entry.excluded_dates ?? []);
         for (const day of eachDayIso(
           entry.from_date < fromIso ? fromIso : entry.from_date,
           entry.to_date > toIso ? toIso : entry.to_date
@@ -176,6 +177,8 @@ export function WhosOutPageClient() {
           // still show. Dropping weekend days silently hid people from the
           // agenda and from the "out today" count whenever the check
           // happened to land on a weekend.
+          // A mandatory holiday inside a leave is not a leave day, so nobody is shown out on it.
+          if (holidayDays.has(day)) continue;
           const list = map.get(day) ?? [];
           list.push({ person, entry });
           map.set(day, list);
@@ -217,7 +220,12 @@ export function WhosOutPageClient() {
   );
 
   const selectedDay = pickDefaultDay(pickedDay, fromIso, toIso, todayIso, agendaDays);
-  const totalPeople = data?.people.length ?? 0;
+  // People who are actually out on at least one day of the month (a leave that is only a holiday doesn't count).
+  const totalPeople = useMemo(() => {
+    const seen = new Set<string>();
+    for (const list of occByDay.values()) for (const o of list) seen.add(o.person.email || o.person.name);
+    return seen.size;
+  }, [occByDay]);
 
   const outTodayCount = useMemo(
     () => (occByDay.get(todayIso) ?? []).length,
