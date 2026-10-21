@@ -3,11 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Boxes,
   History,
   Package,
-  PackageCheck,
-  PackageX,
   Pencil,
   Plus,
   QrCode,
@@ -16,15 +13,13 @@ import {
   Trash2,
   Upload,
   UserPlus,
-  Wrench,
 } from "lucide-react";
 
+import { PageHero } from "@/components/dashboard/ui/PageHero";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
-import { MetricCard } from "@/components/dashboard/ui/MetricCard";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
-import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import {
   TableBody,
@@ -65,7 +60,16 @@ import { cn } from "@/lib/utils";
 import { AssetQrDialog } from "@/components/dashboard/assets/AssetQrDialog";
 import { AssetQrScanDialog, type AssetQrScanCloseReason } from "@/components/dashboard/assets/AssetQrScanDialog";
 import { AssetScanResultDialog } from "@/components/dashboard/assets/AssetScanResultDialog";
-import { ASSET_STATUS_LABELS, ASSET_STATUS_ORDER, ASSET_STATUS_TONE, statusLabel } from "@/utils/assetStatus";
+import { ASSET_STATUS_TONE, statusLabel } from "@/utils/assetStatus";
+
+const ASSET_STATUS_CHIPS: ReadonlyArray<{ value: AssetStatus | ""; label: string; dot: string; count: (stats: AssetStats) => number }> = [
+  { value: "", label: "All", dot: "bg-slate-900", count: (s) => s.total },
+  { value: "AVAILABLE", label: "Available", dot: "bg-emerald-600", count: (s) => s.available },
+  { value: "ASSIGNED", label: "Assigned", dot: "bg-[var(--wt-brand)]", count: (s) => s.assigned },
+  { value: "IN_REPAIR", label: "In repair", dot: "bg-amber-500", count: (s) => s.in_repair },
+  { value: "RETIRED", label: "Retired", dot: "bg-slate-400", count: (s) => s.retired },
+  { value: "LOST", label: "Lost", dot: "bg-red-600", count: (s) => s.lost },
+];
 
 type Load<T> = { status: "loading" | "done" | "error"; data: T | null };
 
@@ -91,10 +95,6 @@ function useLoad<T>(fn: () => Promise<T>, deps: unknown[] = []): Load<T> {
   return state;
 }
 
-const STATUS_OPTIONS: { value: AssetStatus | ""; label: string }[] = [
-  { value: "", label: "All statuses" },
-  ...ASSET_STATUS_ORDER.map((value) => ({ value, label: ASSET_STATUS_LABELS[value] })),
-];
 
 const NEXT_STATUS_OPTIONS = [
   { value: "AVAILABLE", label: "Available (back on the shelf)" },
@@ -521,16 +521,12 @@ export function AssetTrackingPageClient() {
 
   return (
     <DashboardPageShell className="wt-detail-page">
-      <ContentCard>
-        <div className="flex flex-col gap-3 border-b border-wt-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6">
-          <div>
-            <h2 className="text-lg font-semibold text-wt-text">Asset Tracking</h2>
-            <p className="mt-1 text-sm text-wt-text-muted">
-              Laptops, phones, chargers — everything the company owns and who has it.
-            </p>
-          </div>
-          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-            <RefreshIconButton onClick={refresh} loading={listQuery.status === "loading"} />
+      <PageHero
+        raw
+        title="Assets"
+        description="Laptops, phones and chargers the company owns, and who has them."
+        action={
+          <>
             <input
               ref={importInputRef}
               type="file"
@@ -543,47 +539,54 @@ export function AssetTrackingPageClient() {
                 void handleImport(file);
               }}
             />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => importInputRef.current?.click()}
-              disabled={importing}
-            >
-              <Upload className="mr-1.5 size-4" />
-              <span className="sm:hidden">{importing ? "…" : "CSV"}</span>
-              <span className="hidden sm:inline">{importing ? "Importing…" : "Import CSV"}</span>
-            </Button>
             <Button type="button" variant="outline" onClick={openScan}>
               <ScanLine className="mr-1.5 size-4" />
-              <span className="sm:hidden">Scan</span>
-              <span className="hidden sm:inline">Scan QR</span>
+              Scan tag
             </Button>
-            <Button type="button" onClick={openAdd}>
+            <Button type="button" variant="outline" onClick={() => importInputRef.current?.click()} disabled={importing}>
+              <Upload className="mr-1.5 size-4" />
+              {importing ? "Importing…" : "Import CSV"}
+            </Button>
+            <Button type="button" variant="brand" onClick={openAdd}>
               <Plus className="mr-1.5 size-4" />
-              <span className="sm:hidden">Add</span>
-              <span className="hidden sm:inline">Add asset</span>
+              Add asset
             </Button>
-          </div>
+          </>
+        }
+      />
+
+      <div className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-[1.25rem] border border-wt-border bg-wt-surface-1 px-6 py-4">
+        <div>
+          <p className="text-sm text-wt-text-muted">Total assets</p>
+          <p className="text-[2rem] font-bold leading-tight tabular-nums text-wt-text">{stats ? stats.total : "—"}</p>
         </div>
+        {stats ? (
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by status">
+            {ASSET_STATUS_CHIPS.map((chip) => {
+              const active = statusFilter === chip.value;
+              return (
+                <button
+                  key={chip.value || "all"}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setStatusFilter(chip.value)}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
+                    active ? "border-[var(--wt-brand)] bg-[var(--wt-brand-soft)] text-wt-text" : "border-wt-border bg-wt-surface-1 text-wt-text-muted hover:text-wt-text"
+                  )}
+                >
+                  <span className={cn("size-2 rounded-full", chip.dot)} aria-hidden />
+                  {chip.label}
+                  <span className="font-mono tabular-nums">{chip.count(stats)}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
 
+      <ContentCard>
         <div className="space-y-4 p-4 sm:p-6">
-          {stats ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-              <MetricCard label="Total" value={stats.total} loading={false} icon={Boxes} />
-              <MetricCard label="Available" value={stats.available} loading={false} icon={PackageCheck} />
-              <MetricCard label="Assigned" value={stats.assigned} loading={false} icon={Package} />
-              <MetricCard label="In Repair" value={stats.in_repair} loading={false} icon={Wrench} />
-              <MetricCard label="Retired" value={stats.retired} loading={false} icon={PackageX} />
-              <MetricCard label="Lost" value={stats.lost} loading={false} icon={PackageX} />
-            </div>
-          ) : statsQuery.status === "loading" ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <MetricCard key={i} label="—" value={0} loading icon={Boxes} />
-              ))}
-            </div>
-          ) : null}
-
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Input
               value={searchInput}
@@ -601,13 +604,6 @@ export function AssetTrackingPageClient() {
               onChange={setCategory}
               options={categoryOptions}
               className="sm:w-48"
-            />
-            <SelectField
-              label="Status"
-              value={statusFilter}
-              onChange={(v) => setStatusFilter(v as AssetStatus | "")}
-              options={STATUS_OPTIONS}
-              className="sm:w-44"
             />
           </div>
 

@@ -15,3 +15,13 @@ export const LEAVE_YEAR_COPY = {
   balanceNote:
     "This is your balance today. 1.5 days are credited on the last day of every month — to Primary until its 11 days are credited, then to Secondary. Leave is taken from Primary first, and from Secondary only once Primary is used up.",
 } as const;
+
+export const LEAVE_HOW_COPY = {
+  title: "How leave works",
+  points: [
+    "Leave is credited on the last day of each month.",
+    "In the month you join, the credit depends on how many days you worked.",
+    "Comp-off is credited separately, for a day you worked.",
+  ],
+  policyLink: "Read the leave policy",
+} as const;

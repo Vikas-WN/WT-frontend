@@ -69,7 +69,7 @@ import {
   resolveInternBandId,
   formatAllocatedHoursPercentLabel,
 } from "@/utils/dashboard/validation";
-import { apiDateToInputValue, formatApiDateDisplay, normalizeToApiDate } from "@/utils/apiDate";
+import { apiDateToInputValue, formatApiDateDisplay, fromApiDate, normalizeToApiDate } from "@/utils/apiDate";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
 import {
   allocationPercentLabelByCode,
@@ -144,6 +144,21 @@ import {
 } from "@/hooks/allocation/useHrProjects";
 
 
+
+/** A project is "Ended" once its end date (dd/mm/yyyy) has passed; no end date means still running. */
+function projectEnded(endApiDate: string): boolean {
+  const value = endApiDate.trim();
+  if (!value) return false;
+  try {
+    const end = fromApiDate(value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return end.getTime() < today.getTime();
+  } catch {
+    // Unparseable dates (bad upstream data) are treated as still running rather than hiding the project.
+    return false;
+  }
+}
 
 export function AllocationPageClient() {
   const isManagerRoleLabel = (value: unknown): boolean =>
@@ -3413,25 +3428,13 @@ export function AllocationPageClient() {
                               <div className={PAGE_TAB_BODY_CLASS}>
                               {allocationHrSubTab === "project" ? (
                               <div ref={projectCrudFormRef} className="space-y-4">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                  <div>
-                                    <h3 className="font-semibold">Projects</h3>
-                                    <p className="text-sm text-wt-text-muted">
-                                      Projects sync from WK Business. Click a project to view
-                                      employees and allocation dates.
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-3 space-y-3">
-                                  <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <p className="text-sm font-medium">All Projects</p>
-                                    <RefreshIconButton
-                                      onClick={() => refreshHrProjects()}
-                                      loading={hrProjectsQ.isFetching}
-                                      label="Refresh Projects"
-                                    />
-                                  </div>
-                                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                <p className="text-sm text-wt-text-muted">
+                                  Projects sync from WK Business. Click a project to view
+                                  employees and allocation dates.
+                                </p>
+                                <div className="space-y-3">
+                                  <div className="flex flex-wrap items-end gap-3">
+                                    <div className="min-w-[14rem] flex-1">
                                     <InputField
                                       label="Search by name"
                                       value={projectFilters.search}
@@ -3442,6 +3445,7 @@ export function AllocationPageClient() {
                                         }))
                                       }
                                     />
+                                    </div>
                                     <ProjectTypeFilterSelect
                                       enabled={hasAllocationAccess}
                                       value={projectFilters.project_type}
@@ -3451,6 +3455,11 @@ export function AllocationPageClient() {
                                           project_type: v,
                                         }))
                                       }
+                                    />
+                                    <RefreshIconButton
+                                      onClick={() => refreshHrProjects()}
+                                      loading={hrProjectsQ.isFetching}
+                                      label="Refresh Projects"
                                     />
                                   </div>
                                   {filteredProjects.length ? (
@@ -3483,6 +3492,7 @@ export function AllocationPageClient() {
                                             <TableHead>Opportunities</TableHead>
                                             <TableHead>Start Date</TableHead>
                                             <TableHead>End Date</TableHead>
+                                            <TableHead>Status</TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
                                           </TableRow>
                                         </TableHeader>
@@ -3579,6 +3589,13 @@ export function AllocationPageClient() {
                                                 </TableCell>
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{startDate || "—"}</TableCell>
                                                 <TableCell className="px-3 py-2 whitespace-nowrap">{endDate || "—"}</TableCell>
+                                                <TableCell className="px-3 py-2 whitespace-nowrap">
+                                                  {projectEnded(String(row.end_date ?? row.endDate ?? "")) ? (
+                                                    <span className="text-sm font-medium text-wt-text-muted">Ended</span>
+                                                  ) : (
+                                                    <span className="text-sm font-semibold text-emerald-700">Active</span>
+                                                  )}
+                                                </TableCell>
                                                 <TableCell
                                                   className="px-3 py-2 text-right"
                                                   onClick={(e) => e.stopPropagation()}

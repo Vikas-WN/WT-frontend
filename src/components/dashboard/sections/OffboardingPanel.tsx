@@ -672,6 +672,7 @@ export function OffboardingPanel() {
       </Card>
 
       <ManagementListCard
+        embedded
         title="Offboarded Employees"
         description={
           loadingList

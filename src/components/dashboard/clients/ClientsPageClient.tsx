@@ -26,9 +26,8 @@ import {
   ManagementListContent,
 } from "@/components/dashboard/ui/ManagementListCard";
 import { SearchInput } from "@/components/dashboard/ui/SearchInput";
-import { ToolbarFilterSelect } from "@/components/dashboard/ui/ToolbarFilterSelect";
+import { SegmentedTabs } from "@/components/dashboard/ui/SegmentedTabs";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
-import { WtStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import {
@@ -45,7 +44,7 @@ import type { ClientRecord } from "@/types/client";
 type StatusFilter = "all" | "active" | "inactive";
 
 const STATUS_FILTER_OPTIONS = [
-  { value: "all", label: "All statuses" },
+  { value: "all", label: "All" },
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
 ];
@@ -115,18 +114,21 @@ function ProjectsCell({ client }: { client: ClientRecord }) {
   );
 }
 
-function StatChip({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
+function StatCard({ label, value, note, tone = "neutral" }: { label: string; value: number; note: string; tone?: "neutral" | "good" | "warn" }) {
   return (
-    <div className="rounded-xl border border-wt-border bg-wt-surface-2/60 px-3.5 py-2.5">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-wt-text-muted">{label}</p>
-      <p className="mt-0.5 text-lg font-semibold tabular-nums tracking-tight text-wt-text">{value}</p>
+    <div className={cn("rounded-[1.25rem] border bg-wt-surface-1 px-5 py-4", tone === "warn" ? "border-amber-300/60" : "border-wt-border")}>
+      <p className={cn("text-sm", tone === "warn" ? "text-amber-800" : "text-wt-text-muted")}>{label}</p>
+      <p className="mt-1 text-[2rem] font-bold leading-none tracking-tight tabular-nums text-wt-text">{value}</p>
+      <p className={cn("mt-2 text-sm font-semibold", tone === "good" ? "text-emerald-700" : tone === "warn" ? "text-amber-800" : "font-normal text-wt-text-muted")}>{note}</p>
     </div>
+  );
+}
+
+function ClientAvatar({ name }: { name: string }) {
+  return (
+    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-wt-surface-3 text-xs font-semibold uppercase text-wt-text-muted" aria-hidden>
+      {name.replace(/[^A-Za-z0-9]/g, "").slice(0, 2) || "?"}
+    </span>
   );
 }
 
@@ -185,8 +187,17 @@ export function ClientsPageClient() {
     <DashboardPageShell className="wt-detail-page">
       <ManagementListCard
         density="compact"
+        aboveCard={
+          !isLoading && !isError && summary ? (
+            <div className="grid gap-4 sm:grid-cols-3">
+              <StatCard label="Clients" value={summary.total} note={summary.inactive === 0 ? "All active" : `${summary.active} active`} tone={summary.inactive === 0 ? "good" : "neutral"} />
+              <StatCard label="With linked projects" value={summary.withProjects} note={`${summary.total ? Math.round((summary.withProjects / summary.total) * 100) : 0}% of clients`} />
+              <StatCard label="Inactive" value={summary.inactive} note={summary.inactive === 0 ? "None" : "Review"} tone={summary.inactive === 0 ? "neutral" : "warn"} />
+            </div>
+          ) : null
+        }
         title="Clients"
-        description="Manage client masters and link projects to the right account."
+        description="Client accounts, who owns them, and which projects they're linked to."
         headerAction={
           <RefreshIconButton onClick={() => void refetch()} loading={isLoading || isFetching} />
         }
@@ -201,15 +212,7 @@ export function ClientsPageClient() {
           />
         }
         filters={
-          <ToolbarFilterSelect
-            id="clients-status-filter"
-            value={statusFilter}
-            onChange={(value) => setStatusFilter(value as StatusFilter)}
-            options={STATUS_FILTER_OPTIONS}
-            placeholder="All statuses"
-            aria-label="Filter by status"
-            compact
-          />
+          <SegmentedTabs value={statusFilter} onChange={(value) => setStatusFilter(value as StatusFilter)} options={STATUS_FILTER_OPTIONS} label="Filter by status" />
         }
       >
         {isError ? (
@@ -227,14 +230,6 @@ export function ClientsPageClient() {
           </div>
         ) : null}
 
-        {!isLoading && !isError && summary ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <StatChip label="Total" value={summary.total} />
-            <StatChip label="Active" value={summary.active} />
-            <StatChip label="Inactive" value={summary.inactive} />
-            <StatChip label="With projects" value={summary.withProjects} />
-          </div>
-        ) : null}
 
         <ManagementListContent
           isLoading={isLoading && !clients.length}
@@ -272,7 +267,9 @@ export function ClientsPageClient() {
                       onClick={() => setSelectedClient(client)}
                     >
                       <TableCell className={cn(WT_TABLE_CELL_COMPACT_CLASS, "align-top")}>
-                        <div className="min-w-0 max-w-[14rem]">
+                        <div className="flex min-w-0 max-w-[16rem] items-center gap-3">
+                          <ClientAvatar name={client.name} />
+                          <div className="min-w-0">
                           <p className="truncate font-semibold text-wt-text">{client.name}</p>
                           {client.address ? (
                             <p
@@ -284,6 +281,7 @@ export function ClientsPageClient() {
                           ) : (
                             <p className="mt-0.5 text-xs text-wt-text-faint">No address</p>
                           )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className={cn(WT_TABLE_CELL_COMPACT_CLASS, "align-top")}>
@@ -302,9 +300,10 @@ export function ClientsPageClient() {
                         <ProjectsCell client={client} />
                       </TableCell>
                       <TableCell className={cn(WT_TABLE_CELL_COMPACT_CLASS, "align-top")}>
-                        <WtStatusBadge tone={client.isActive ? "success" : "neutral"}>
+                        <span className={cn("inline-flex items-center gap-2 text-sm font-semibold", client.isActive ? "text-emerald-700" : "text-wt-text-muted")}>
+                          <span className={cn("size-1.5 rounded-full", client.isActive ? "bg-emerald-600" : "bg-wt-text-faint")} aria-hidden />
                           {client.isActive ? "Active" : "Inactive"}
-                        </WtStatusBadge>
+                        </span>
                       </TableCell>
                     </TableRow>
                   ))}

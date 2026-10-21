@@ -51,7 +51,7 @@ function BalanceStatCard({
 
 function BalanceCardsSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-hidden>
+    <div className="grid grid-cols-2 gap-3" aria-hidden>
       {Array.from({ length: 4 }).map((_, index) => (
         <div key={index} className="rounded-2xl border border-wt-border p-4">
           <Skeleton className="h-10 w-10 rounded-xl" />
@@ -94,7 +94,7 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
 
   return (
     <>
-    <div className={`grid grid-cols-1 gap-4 ${isCompOffOnly ? "" : "sm:grid-cols-2 lg:grid-cols-4"}`}>
+    <div className={`grid gap-3 ${isCompOffOnly ? "" : "grid-cols-2"}`}>
       {showAll ? (
         <BalanceStatCard
           label={

@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { PageHero } from "@/components/dashboard/ui/PageHero";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
 import { KpiDefinitionsPanel } from "@/components/dashboard/pulse/KpiDefinitionsPanel";
@@ -85,11 +86,8 @@ function PulseTabsPage<T extends string>({
   };
   return (
     <DashboardPageShell className="wt-detail-page">
+      <PageHero title="Pulse" raw description={description} />
       <ContentCard>
-        <div className="border-b border-wt-border px-5 py-4 sm:px-8">
-          <h2 className="text-lg font-semibold text-wt-text">Pulse</h2>
-          <p className="mt-1 text-sm text-wt-text-muted">{description}</p>
-        </div>
         <PageTabs
           embedded
           aria-label="Pulse tabs"

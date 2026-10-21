@@ -582,7 +582,7 @@ export function TimelogPageClient() {
       }
     >
       <DashboardPageShell>
-        <ContentCard>
+        <ContentCard className={!isTeamView && !isProjectView ? "!border-0 !bg-transparent !p-0 !shadow-none" : undefined}>
           {/*
             Personal Time Logs (/dashboard/timelog)
             is My-only — no Team tab.
@@ -591,7 +591,7 @@ export function TimelogPageClient() {
             /dashboard/timelog/projects for
             manager/HR/admin roles only.
           */}
-          <div className="space-y-6 p-4 sm:p-6">
+          <div className={!isTeamView && !isProjectView ? "space-y-6" : "space-y-6 p-4 sm:p-6"}>
             {hasAmRole ? (
               <HrReviewNoticeBanner />
             ) : null}

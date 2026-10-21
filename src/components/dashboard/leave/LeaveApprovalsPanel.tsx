@@ -3,20 +3,9 @@
 import { giveFeedback } from "@/lib/feedback";
 import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  WT_STICKY_TABLE_HEAD_CLASS,
-  WtTable,
-} from "@/components/dashboard/ui/wtTable";
-import { FormSection } from "@/components/dashboard/ui/FormSection";
+import { SegmentedTabs } from "@/components/dashboard/ui/SegmentedTabs";
 import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { LeaveRequestStatusBadge } from "@/components/dashboard/leave/LeaveRequestStatusBadge";
@@ -33,7 +22,6 @@ import { formatUserRequestTypeLabel, userRequestActionLabel } from "@/utils/acti
 import { formatLeaveDateRange, formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
 import { fireConfetti } from "@/lib/confetti";
 import {
-  canAssignedLeaveManagerActOnLeave,
   canPrimaryManagerApproveOnLeave,
   canPrimaryManagerRejectOnLeave,
   canSecondaryManagerApproveOnLeave,
@@ -80,6 +68,29 @@ function requestIdFromRow(row: Record<string, unknown>): string {
   ).trim();
 }
 
+function rowStatusFor(row: Record<string, unknown>): string {
+  const rawFinalStatus = requestFinalStatus(row);
+  if (rawFinalStatus !== "PENDING" || !isLeaveRequestClosedForManagerAction(row)) return rawFinalStatus;
+  const primaryStage = requestManagerStatus(row);
+  const secondaryStage = requestSecondaryManagerStatus(row);
+  if (primaryStage === "APPROVED" || secondaryStage === "APPROVED") return "APPROVED";
+  if (primaryStage === "REJECTED" || secondaryStage === "REJECTED") return "REJECTED";
+  return rawFinalStatus;
+}
+
+type InboxTab = "pending" | "decided" | "all";
+
+function initials(name: string): string {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") || "?"
+  );
+}
+
 export function LeaveApprovalsPanel({
   actorEmail,
   actionLoading,
@@ -95,6 +106,8 @@ export function LeaveApprovalsPanel({
   const inboxQ = usePrimaryManagerLeaveInbox(actorEmail, Boolean(actorEmail));
   const holidayDates = useNonOptionalHolidayDates();
   const [search, setSearch] = useState("");
+  // UI state: which group of requests is showing.
+  const [tab, setTab] = useState<InboxTab>("pending");
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
   const [pendingReject, setPendingReject] = useState<{
     requestId: string;
@@ -117,10 +130,20 @@ export function LeaveApprovalsPanel({
     [inboxQ.rows, decisions, inboxQ.dataUpdatedAt, actorEmail]
   );
 
+  const tabCounts = useMemo(() => {
+    const pending = displayRows.filter((row) => rowStatusFor(row) === "PENDING").length;
+    return { pending, decided: displayRows.length - pending, all: displayRows.length };
+  }, [displayRows]);
+
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return displayRows;
-    return displayRows.filter((row) => {
+    const inTab = displayRows.filter((row) => {
+      if (tab === "all") return true;
+      const pending = rowStatusFor(row) === "PENDING";
+      return tab === "pending" ? pending : !pending;
+    });
+    if (!q) return inTab;
+    return inTab.filter((row) => {
       const haystack = [
         employeeDisplayName(row),
         row.request_from_date,
@@ -140,17 +163,12 @@ export function LeaveApprovalsPanel({
         .join(" ");
       return haystack.includes(q);
     });
-  }, [displayRows, search]);
+  }, [displayRows, search, tab]);
 
   const pagination = useClientPagination(filteredRows, {
-    resetKeys: [search, inboxQ.dataUpdatedAt, decisions],
+    resetKeys: [search, tab, inboxQ.dataUpdatedAt, decisions],
   });
 
-  const pendingCount = useMemo(
-    () =>
-      displayRows.filter((row) => canAssignedLeaveManagerActOnLeave(row, actorEmail)).length,
-    [displayRows, actorEmail]
-  );
 
   function applyLocalDecision(
     requestId: string,
@@ -238,240 +256,182 @@ export function LeaveApprovalsPanel({
   return (
     <>
       <div className="space-y-4">
-        <FormSection title="Leave & WFH Approvals" className="rounded-2xl shadow-sm">
-          <div className="space-y-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-wt-text-muted">
-                Leave and WFH requests where you are listed as a primary or secondary approver.
-                {pendingCount > 0 ? (
-                  <span className="ml-1 font-medium text-amber-800">
-                    {pendingCount} pending
-                  </span>
-                ) : null}
-              </p>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <input
-                  type="search"
-                  className="input-field h-10 w-full px-3 py-2 text-sm sm:min-w-[240px]"
-                  placeholder="Search by employee, date, status..."
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  aria-label="Search leave and WFH approvals"
-                />
-                <RefreshIconButton
-                  onClick={() => void runAction("Refresh leave and WFH approvals", refreshInbox)}
-                  disabled={actionLoading}
-                  loading={inboxQ.isFetching}
-                  label="Refresh Approvals"
-                />
-              </div>
-            </div>
-
-            <ScrollableTable maxHeightClass="max-h-[min(55vh,420px)]" className="min-h-[240px]">
-              <WtTable>
-                <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Date Range</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Days</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {inboxQ.isLoading ? (
-                    Array.from({ length: 4 }).map((_, rowIndex) => (
-                      <TableRow key={`approval-skeleton-${rowIndex}`}>
-                        {Array.from({ length: 6 }).map((_, colIndex) => (
-                          <TableCell key={colIndex} className="px-3 py-2.5">
-                            <Skeleton className="h-4 w-full" />
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  ) : pagination.pageItems.length ? (
-                    pagination.pageItems.map((row, idx) => {
-                      const rowRecord = row as Record<string, unknown>;
-                      const requestId = requestIdFromRow(rowRecord);
-                      const fromDate = String(
-                        rowRecord.request_from_date ?? rowRecord.requestFromDate ?? ""
-                      );
-                      const toDate = String(
-                        rowRecord.request_to_date ?? rowRecord.requestToDate ?? ""
-                      );
-                      const isHalfDay = Boolean(
-                        rowRecord.is_half_day ?? rowRecord.isHalfDay ?? false
-                      );
-                      const isUpdating = statusUpdatingId === requestId;
-                      const rawFinalStatus = requestFinalStatus(rowRecord);
-                      const primaryStage = requestManagerStatus(rowRecord);
-                      const secondaryStage = requestSecondaryManagerStatus(rowRecord);
-                      const leaveClosed = isLeaveRequestClosedForManagerAction(rowRecord);
-                      const rowStatus =
-                        rawFinalStatus === "PENDING" && leaveClosed
-                          ? primaryStage === "APPROVED" || secondaryStage === "APPROVED"
-                            ? "APPROVED"
-                            : primaryStage === "REJECTED" || secondaryStage === "REJECTED"
-                              ? "REJECTED"
-                              : rawFinalStatus
-                          : rawFinalStatus;
-                      const canApprove =
-                        canPrimaryManagerApproveOnLeave(rowRecord, actorEmail) ||
-                        canSecondaryManagerApproveOnLeave(rowRecord, actorEmail);
-                      const canReject =
-                        canPrimaryManagerRejectOnLeave(rowRecord, actorEmail) ||
-                        canSecondaryManagerRejectOnLeave(rowRecord, actorEmail);
-                      const rejectionReason =
-                        rowStatus === "REJECTED" ? requestRejectionReason(rowRecord) : null;
-                      const leaveReason = String(rowRecord.comments ?? "").trim();
-
-                      return (
-                        <TableRow key={`${requestId || "approval"}-${idx}`}>
-                          <TableCell className="px-3 py-2.5 whitespace-nowrap">
-                            <div className="inline-flex items-center gap-1.5">
-                              <span>{employeeDisplayName(rowRecord)}</span>
-                              {leaveReason ? (
-                                <span
-                                  title={leaveReason}
-                                  className="inline-flex cursor-help text-wt-text-muted"
-                                  aria-label={`Leave reason: ${leaveReason}`}
-                                >
-                                  <Info className="size-3.5 shrink-0" aria-hidden />
-                                </span>
-                              ) : null}
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-3 py-2.5 whitespace-nowrap">
-                            {formatLeaveDateRange(fromDate, toDate, isHalfDay)}
-                          </TableCell>
-                          <TableCell className="px-3 py-2.5 whitespace-nowrap">
-                            {formatUserRequestTypeLabel(
-                              rowRecord.request_type ?? rowRecord.requestType,
-                              isHalfDay
-                            )}
-                          </TableCell>
-                          <TableCell className="px-3 py-2.5">
-                            <div className="flex flex-col items-start gap-1">
-                              <LeaveRequestStatusBadge status={rowStatus} request={rowRecord} />
-                              {hasSecondaryLeaveManagers(rowRecord) &&
-                              (primaryStage !== "PENDING" || secondaryStage !== "PENDING") ? (
-                                <p className="text-[11px] text-wt-text-muted">
-                                  Primary: {primaryStage || "PENDING"} · Secondary:{" "}
-                                  {secondaryStage || "PENDING"}
-                                </p>
-                              ) : null}
-                              {rejectionReason ? (
-                                <p
-                                  className="max-w-[14rem] truncate text-xs text-rose-700/90"
-                                  title={rejectionReason}
-                                >
-                                  {rejectionReason}
-                                </p>
-                              ) : null}
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-3 py-2.5 whitespace-nowrap tabular-nums">
-                            {formatLeaveDaysCount(fromDate, toDate, isHalfDay, holidayDates)}
-                          </TableCell>
-                          <TableCell className="px-3 py-2.5 text-right">
-                            {canApprove || canReject ? (
-                            <div className="inline-flex items-center justify-end gap-1">
-                              {canApprove ? (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="xs"
-                                className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
-                                disabled={actionLoading || !requestId || isUpdating}
-                                onClick={() =>
-                                  void runAction(
-                                    userRequestActionLabel(
-                                      rowRecord.request_type ?? rowRecord.requestType,
-                                      "approve"
-                                    ),
-                                    async () => {
-                                      setStatusUpdatingId(requestId);
-                                      try {
-                                        await submitDecision(requestId, "APPROVED");
-                                        fireConfetti();
-                                      } finally {
-                                        setStatusUpdatingId(null);
-                                      }
-                                    }
-                                  )
-                                }
-                              >
-                                {isUpdating ? "…" : "Approve"}
-                              </Button>
-                              ) : null}
-                              {canReject ? (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="xs"
-                                className="border-rose-600/30 text-rose-700 hover:bg-rose-500/10"
-                                disabled={actionLoading || !requestId || isUpdating}
-                                onClick={() =>
-                                  openRejectDialog(
-                                    requestId,
-                                    rowRecord.request_type ?? rowRecord.requestType
-                                  )
-                                }
-                              >
-                                Reject
-                              </Button>
-                              ) : null}
-                            </div>
-                            ) : (
-                              <RequestReversalActions
-                                row={rowRecord}
-                                actorEmail={actorEmail}
-                                isHrOrAdmin={isHrOrAdmin}
-                                onChanged={async () => {
-                                  forgetDecision(requestId);
-                                  await refreshInbox();
-                                }}
-                                fallback={<span className="text-xs text-wt-text-muted">—</span>}
-                              />
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  ) : (
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell
-                        colSpan={6}
-                        className="h-[220px] text-center align-middle text-sm text-wt-text-muted"
-                      >
-                        {inboxQ.isError
-                          ? "Could not load leave approvals. Try refreshing."
-                          : search.trim()
-                            ? "No requests match your search."
-                            : "No leave requests assigned to you for approval."}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </WtTable>
-            </ScrollableTable>
-
-            {pagination.totalItems > 0 ? (
-              <ListPagination
-                page={pagination.page}
-                totalPages={pagination.totalPages}
-                totalItems={pagination.totalItems}
-                rangeStart={pagination.rangeStart}
-                rangeEnd={pagination.rangeEnd}
-                pageSize={pagination.pageSize}
-                pageSizeOptions={pagination.pageSizeOptions}
-                onPageChange={pagination.setPage}
-                onPageSizeChange={pagination.setPageSize}
-              />
-            ) : null}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <SegmentedTabs
+            label="Request group"
+            value={tab}
+            onChange={(value) => setTab(value as InboxTab)}
+            options={[
+              { value: "pending", label: `Pending ${tabCounts.pending}` },
+              { value: "decided", label: `Decided ${tabCounts.decided}` },
+              { value: "all", label: `All ${tabCounts.all}` },
+            ]}
+          />
+          <div className="flex items-center gap-2">
+            <input
+              type="search"
+              className="input-field h-10 w-full px-3 py-2 text-sm sm:min-w-[240px]"
+              placeholder="Search by employee, date, status..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              aria-label="Search leave and WFH approvals"
+            />
+            <RefreshIconButton
+              onClick={() => void runAction("Refresh leave and WFH approvals", refreshInbox)}
+              disabled={actionLoading}
+              loading={inboxQ.isFetching}
+              label="Refresh Approvals"
+            />
           </div>
-        </FormSection>
+        </div>
+
+        {inboxQ.isLoading ? (
+          <ul className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <li key={`approval-skeleton-${i}`} className="rounded-[1.25rem] border border-wt-border bg-wt-surface-1 p-5">
+                <Skeleton className="h-10 w-full" />
+              </li>
+            ))}
+          </ul>
+        ) : pagination.pageItems.length ? (
+          <ul className="space-y-3">
+            {pagination.pageItems.map((row, idx) => {
+              const rowRecord = row as Record<string, unknown>;
+              const requestId = requestIdFromRow(rowRecord);
+              const fromDate = String(rowRecord.request_from_date ?? rowRecord.requestFromDate ?? "");
+              const toDate = String(rowRecord.request_to_date ?? rowRecord.requestToDate ?? "");
+              const isHalfDay = Boolean(rowRecord.is_half_day ?? rowRecord.isHalfDay ?? false);
+              const isUpdating = statusUpdatingId === requestId;
+              const primaryStage = requestManagerStatus(rowRecord);
+              const secondaryStage = requestSecondaryManagerStatus(rowRecord);
+              const rowStatus = rowStatusFor(rowRecord);
+              const canApprove =
+                canPrimaryManagerApproveOnLeave(rowRecord, actorEmail) ||
+                canSecondaryManagerApproveOnLeave(rowRecord, actorEmail);
+              const canReject =
+                canPrimaryManagerRejectOnLeave(rowRecord, actorEmail) ||
+                canSecondaryManagerRejectOnLeave(rowRecord, actorEmail);
+              const rejectionReason = rowStatus === "REJECTED" ? requestRejectionReason(rowRecord) : null;
+              const leaveReason = String(rowRecord.comments ?? "").trim();
+              const name = employeeDisplayName(rowRecord);
+
+              return (
+                <li
+                  key={`${requestId || "approval"}-${idx}`}
+                  className="grid items-center gap-x-6 gap-y-3 rounded-[1.25rem] border border-wt-border bg-wt-surface-1 px-5 py-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1.3fr)_auto]"
+                >
+                  <div className="flex min-w-0 items-center gap-3.5">
+                    <span className="grid size-11 shrink-0 place-items-center rounded-full bg-[var(--wt-brand-soft)] text-sm font-semibold text-[var(--wt-brand)]" aria-hidden>
+                      {initials(name)}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-[15px] font-semibold text-wt-text">{name}</span>
+                      <span className="mt-0.5 inline-block rounded-md bg-amber-500/14 px-2 py-0.5 text-[13px] font-medium text-amber-800 dark:text-amber-300">
+                        {formatUserRequestTypeLabel(rowRecord.request_type ?? rowRecord.requestType, isHalfDay)}
+                      </span>
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-wt-text">{formatLeaveDateRange(fromDate, toDate, isHalfDay)}</p>
+                    <p className="text-sm text-wt-text-muted">{formatLeaveDaysCount(fromDate, toDate, isHalfDay, holidayDates)}</p>
+                  </div>
+                  <div className="min-w-0 text-[15px] text-wt-text-muted">
+                    {leaveReason ? <p className="line-clamp-2" title={leaveReason}>{leaveReason}</p> : <span aria-hidden>—</span>}
+                    {rejectionReason ? (
+                      <p className="mt-1 truncate text-xs text-rose-700/90" title={rejectionReason}>
+                        {rejectionReason}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {rowStatus !== "PENDING" || !(canApprove || canReject) ? (
+                      <div className="flex flex-col items-end gap-1">
+                        <LeaveRequestStatusBadge status={rowStatus} request={rowRecord} />
+                        {hasSecondaryLeaveManagers(rowRecord) && (primaryStage !== "PENDING" || secondaryStage !== "PENDING") ? (
+                          <p className="text-[11px] text-wt-text-muted">
+                            Primary: {primaryStage || "PENDING"} · Secondary: {secondaryStage || "PENDING"}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {canApprove || canReject ? (
+                      <>
+                        {canReject ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={actionLoading || !requestId || isUpdating}
+                            onClick={() => openRejectDialog(requestId, rowRecord.request_type ?? rowRecord.requestType)}
+                          >
+                            Reject
+                          </Button>
+                        ) : null}
+                        {canApprove ? (
+                          <Button
+                            type="button"
+                            variant="brand"
+                            disabled={actionLoading || !requestId || isUpdating}
+                            onClick={() =>
+                              void runAction(
+                                userRequestActionLabel(rowRecord.request_type ?? rowRecord.requestType, "approve"),
+                                async () => {
+                                  setStatusUpdatingId(requestId);
+                                  try {
+                                    await submitDecision(requestId, "APPROVED");
+                                    fireConfetti();
+                                  } finally {
+                                    setStatusUpdatingId(null);
+                                  }
+                                }
+                              )
+                            }
+                          >
+                            {isUpdating ? "…" : "Approve"}
+                          </Button>
+                        ) : null}
+                      </>
+                    ) : (
+                      <RequestReversalActions
+                        row={rowRecord}
+                        actorEmail={actorEmail}
+                        isHrOrAdmin={isHrOrAdmin}
+                        onChanged={async () => {
+                          forgetDecision(requestId);
+                          await refreshInbox();
+                        }}
+                        fallback={null}
+                      />
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="rounded-[1.25rem] border border-dashed border-wt-border px-6 py-14 text-center text-sm text-wt-text-muted">
+            {inboxQ.isError
+              ? "Could not load leave approvals. Try refreshing."
+              : search.trim()
+                ? "No requests match your search."
+                : tab === "pending"
+                  ? "Nothing is waiting for your decision."
+                  : "No leave requests assigned to you for approval."}
+          </p>
+        )}
+
+        {pagination.totalItems > 0 ? (
+          <ListPagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
+            rangeStart={pagination.rangeStart}
+            rangeEnd={pagination.rangeEnd}
+            pageSize={pagination.pageSize}
+            pageSizeOptions={pagination.pageSizeOptions}
+            onPageChange={pagination.setPage}
+            onPageSizeChange={pagination.setPageSize}
+          />
+        ) : null}
       </div>
 
       <UserRequestRejectDialog

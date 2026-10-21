@@ -164,6 +164,7 @@ import { buildUserRequestBody } from "@/utils/leaveRequestPayload";
 import { activeAllocationsRequireClientApproval, isTalentPoolLeaveRouting } from "@/utils/leaveAllocations";
 import { RequestReversalActions } from "@/components/dashboard/leave/RequestReversalActions";
 import { REQUEST_REVERSAL_COPY } from "@/constants/requestReversal";
+import { LeaveHowItWorks } from "@/components/dashboard/leave/LeaveHowItWorks";
 import { LeaveYearSummaryStrip } from "@/components/dashboard/leave/LeaveYearSummaryStrip";
 import { LeaveBalanceSummary } from "@/components/dashboard/leave/LeaveBalanceSummary";
 import { HrLeaveBalancesPanel } from "@/components/dashboard/leave/HrLeaveBalancesPanel";
@@ -1880,7 +1881,7 @@ export function LeavePageClient() {
     <>
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
-          <section className={cn(CONTENT_CARD_CLASS, "p-5 sm:p-6")}>
+          <section className={leaveSubTab === "my" ? undefined : cn(CONTENT_CARD_CLASS, "p-5 sm:p-6")}>
                            {showLeaveSubTabBar ? (
                              <Tabs value={leaveSubTab} onValueChange={(value) => {
                                if (actionLoading) return;
@@ -1894,7 +1895,7 @@ export function LeavePageClient() {
                                    | "balances"
                                );
                              }} className="gap-0">
-                                 <div className="w-full overflow-x-auto border-b border-wt-border pb-5">
+                                 <div className={cn("w-full overflow-x-auto", leaveSubTab !== "my" && "border-b border-wt-border pb-5")}>
                                    <TabsList aria-label="Leave views" variant="default" className="min-w-max">
                                       {leaveTabItems.map((item) => (
                                         <TabsTrigger key={item.value} value={item.value}>
@@ -1960,14 +1961,14 @@ export function LeavePageClient() {
                           ) : (
                             <>
                               {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
-                              <div className="mb-6"><LeaveBalanceSummary selectedType={normalizeUserRequestType(leaveRequestForm.request_type)} /></div>
-                              {normalizeUserRequestType(leaveRequestForm.request_type) !== "COMP_OFF" ? <LeaveYearSummaryStrip /> : null}
-                              <Tabs value={requestViewTab} onValueChange={(v) => setRequestViewTab(v as "request" | "view")} orientation="horizontal">
-                                <TabsList variant="line" className="w-full justify-start border-b border-wt-border/80">
-                                  <TabsTrigger value="request">Apply for Leave</TabsTrigger>
-                                  <TabsTrigger value="view">History</TabsTrigger>
-                                </TabsList>
-                                <TabsContent value="request" className="pt-6">
+                              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+                                <div className="space-y-6 lg:order-2">
+                                  <LeaveBalanceSummary selectedType={normalizeUserRequestType(leaveRequestForm.request_type)} />
+                                  {normalizeUserRequestType(leaveRequestForm.request_type) !== "COMP_OFF" ? <LeaveYearSummaryStrip /> : null}
+                                  <LeaveHowItWorks />
+                                </div>
+                                <section className={cn(CONTENT_CARD_CLASS, "p-5 sm:p-6 lg:order-1")} aria-label="New request">
+                                  <h2 className="mb-5 text-xl font-bold tracking-tight text-wt-text">{editingLeaveRequestId ? "Edit request" : "New request"}</h2>
                                   <LeaveRequestForm
                                     values={leaveRequestForm}
                                     onChange={(v) => setLeaveRequestForm(v)}
@@ -2248,8 +2249,10 @@ export function LeavePageClient() {
                                       setEditingLeaveRequestId("");
                                     }}
                                   />
-                                </TabsContent>
-                                <TabsContent value="view" className="pt-3">
+                                </section>
+                              </div>
+                              <section className={cn(CONTENT_CARD_CLASS, "mt-6 p-5 sm:p-6")} aria-label="My requests">
+                                  <h2 className="mb-4 text-xl font-bold tracking-tight text-wt-text">My requests</h2>
                                   <MyLeaveRequestsView
                                     rows={filteredLeaveTabRequests}
                                     loading={myLeaveRequestsLoading}
@@ -2342,8 +2345,7 @@ export function LeavePageClient() {
                                       })
                                     }
                                   />
-                                </TabsContent>
-                              </Tabs>
+                              </section>
                             </>
                           )}
                         </div>
