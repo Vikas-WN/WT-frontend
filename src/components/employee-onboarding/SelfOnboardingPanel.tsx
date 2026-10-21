@@ -499,6 +499,7 @@ export function SelfOnboardingPanel({
           label="Profile Photo"
           required
           accept="image/*"
+          cropToSquare
           onPick={(file) => setFiles((p) => ({ ...p, profile_photo: file }))}
         />
         <FileField label="Aadhaar" required accept=".pdf,image/*" onPick={(file) => setFiles((p) => ({ ...p, aadhaar: file }))} />
