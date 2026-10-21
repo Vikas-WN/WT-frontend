@@ -43,6 +43,10 @@ export interface AppNavEntry {
   navId: string;
   label: string;
   icon: LucideIcon;
+  /** The page's own heading when it differs from the sidebar label ("Leave" -> "My leave"). */
+  title?: string;
+  /** The line under the page heading. */
+  description?: string;
   /** A count shown at the right edge, computed elsewhere. */
   badge?: "requests" | "learning" | "compliance";
   /** Always shown to a signed-in person (not filtered by the role-based navigation). */
@@ -73,11 +77,11 @@ export const APP_NAVIGATION: readonly AppNavSection[] = [
     label: "Me",
     entries: [
       { navId: "profile", label: "Profile", icon: User, alwaysVisible: true },
-      { navId: "leave", label: "Leave", icon: Calendar },
-      { navId: "timelog", label: "Time logs", icon: Clock },
+      { navId: "leave", label: "Leave", icon: Calendar, title: "My leave", description: "Request leave, work from home or comp-off credit, and see where your balance stands." },
+      { navId: "timelog", label: "Time logs", icon: Clock, description: "Fill in your week in one place. Hours save as you type." },
       { navId: "my-allocations", label: "My allocations", icon: MapPin },
-      { navId: "my-assets", label: "My assets", icon: Laptop },
-      { navId: "policies", label: "Policies", icon: BookOpen },
+      { navId: "my-assets", label: "My assets", icon: Laptop, description: "What the company has given you." },
+      { navId: "policies", label: "Policies", icon: BookOpen, description: "Company policies, and the ones waiting for your acknowledgement." },
       { navId: "exit-interview", label: "Exit survey", icon: FileText },
     ],
   },
@@ -86,20 +90,20 @@ export const APP_NAVIGATION: readonly AppNavSection[] = [
     label: "Team",
     entries: [
       { navId: "employee-directory", label: "People", icon: Users },
-      { navId: "leave-team", label: "Requests", icon: CheckSquare, badge: "requests" },
-      { navId: "whos-out", label: "Who's out", icon: CalendarX2 },
+      { navId: "leave-team", label: "Requests", icon: CheckSquare, badge: "requests", title: "Team requests", description: "Leave, work-from-home and comp-off requests from your team." },
+      { navId: "whos-out", label: "Who's out", icon: CalendarX2, description: "Approved leave, work from home and holidays." },
       { navId: "timelog-team", label: "Team time", icon: Timer },
-      { navId: "skills-matrix", label: "Skills matrix", icon: LayoutGrid },
+      { navId: "skills-matrix", label: "Skills matrix", icon: LayoutGrid, description: "Who has which skills, and how strongly." },
     ],
   },
   {
     id: "work",
     label: "Work",
     entries: [
-      { navId: "allocation", label: "Projects", icon: Folder },
+      { navId: "allocation", label: "Projects", icon: Folder, description: "Projects synced from WK Business. Open one to see who is allocated and until when." },
       { navId: "allocation-extension", label: "Extensions", icon: ArrowRightToLine },
       { navId: "talent-pool", label: "Talent pool", icon: Users },
-      { navId: "clients", label: "Clients", icon: Briefcase },
+      { navId: "clients", label: "Clients", icon: Briefcase, description: "Client accounts, who owns them, and which projects they are linked to." },
       { navId: "resumes", label: "Resumes", icon: FileUser },
       {
         navId: "reports",
@@ -125,17 +129,17 @@ export const APP_NAVIGATION: readonly AppNavSection[] = [
     entries: [
       { navId: "learning", label: "Learning", icon: GraduationCap, badge: "learning" },
       { navId: "pulse", label: "Pulse", icon: Activity },
-      { navId: "announcements", label: "Announcements", icon: Megaphone },
-      { navId: "events", label: "Events", icon: Star },
-      { navId: "forms", label: "Forms", icon: FileText },
+      { navId: "announcements", label: "Announcements", icon: Megaphone, description: "News and notices from HR, Admin and your managers." },
+      { navId: "events", label: "Events", icon: Star, description: "What is happening at WebKnot, and what you are invited to." },
+      { navId: "forms", label: "Forms", icon: FileText, description: "Forms and surveys waiting for you." },
     ],
   },
   {
     id: "workplace",
     label: "Workplace",
     entries: [
-      { navId: "meeting-rooms", label: "Meeting rooms", icon: DoorOpen },
-      { navId: "assets", label: "Assets", icon: Box },
+      { navId: "meeting-rooms", label: "Meeting rooms", icon: DoorOpen, description: "Pick a slot on the timeline to book a room." },
+      { navId: "assets", label: "Assets", icon: Box, description: "Laptops, phones and chargers the company owns, and who has them." },
       { navId: "annual-calendar", label: "Holidays", icon: Sun },
     ],
   },
@@ -162,14 +166,14 @@ export const APP_NAV_FOOTER: readonly AppNavEntry[] = [
 ];
 
 /** Breadcrumb for a page: the section heading and the page name, from the sidebar's own labels. */
-export function appBreadcrumb(navId: string): { section: string | null; page: string } | null {
+export function appBreadcrumb(navId: string): { section: string | null; page: string; title: string; description?: string } | null {
   for (const section of APP_NAVIGATION) {
     for (const entry of section.entries) {
-      if (entry.navId === navId) return { section: section.label, page: entry.label };
+      if (entry.navId === navId) return { section: section.label, page: entry.label, title: entry.title ?? entry.label, description: entry.description };
       const child = entry.children?.find((c) => c.navId === navId);
-      if (child) return { section: entry.label, page: child.label };
+      if (child) return { section: entry.label, page: child.label, title: child.label };
     }
   }
   const footer = APP_NAV_FOOTER.find((e) => e.navId === navId);
-  return footer ? { section: null, page: footer.label } : null;
+  return footer ? { section: null, page: footer.label, title: footer.label } : null;
 }

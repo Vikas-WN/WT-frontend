@@ -2650,3 +2650,10 @@ html.wt-reduce-motion .wt-deco-layer * { animation: none !important; }
 .wt-confetti {
   animation: wt-confetti-burst 1.1s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
 }
+
+/* The generic page title (DashboardChrome) is hidden whenever the page renders its own heading (any other h1), and on the full-bleed chat. */
+.wt-page-scroll:has([data-page-hero]) .wt-chrome-title,
+.wt-page-scroll:has(:not(.wt-chrome-title) > h1) .wt-chrome-title,
+.wt-page-scroll:has([data-chat-page]) .wt-chrome-title {
+  display: none;
+}

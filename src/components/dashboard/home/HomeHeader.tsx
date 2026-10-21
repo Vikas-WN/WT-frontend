@@ -23,7 +23,7 @@ interface HomeHeaderProps {
 /** The greeting: the date, "Good afternoon, Name", what is waiting — and the two things people do most, plus customise. */
 export function HomeHeader({ eyebrow, title, subtitle, editMode, onEditModeChange, hiddenWidgets, onShowWidget, onReset }: HomeHeaderProps) {
   return (
-    <header className="flex shrink-0 flex-wrap items-end justify-between gap-x-6 gap-y-4">
+    <header data-page-hero className="flex shrink-0 flex-wrap items-end justify-between gap-x-6 gap-y-4">
       <div className="min-w-0">
         <p className="text-sm text-wt-text-muted">{eyebrow}</p>
         <h1 className="mt-1 text-[1.75rem] font-bold leading-tight tracking-[-0.025em] text-wt-text sm:text-[2.25rem]">{title}</h1>

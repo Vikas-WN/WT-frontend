@@ -402,10 +402,10 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
 
   // The header's breadcrumb uses the sidebar's own names ("Team / People"); anything it doesn't list falls back to the old page title.
   const breadcrumb = useMemo(() => {
-    if (isOffboarded && !isLearningRoute) return { section: null, page: pageTitle };
-    if (isLearningRoute) return { section: "Learning", page: learningSectionTitle };
-    if (pathname.includes("/dashboard/leave/team")) return appBreadcrumb("leave-team") ?? { section: null, page: pageTitle };
-    return appBreadcrumb(activeSection) ?? { section: null, page: pageTitle };
+    if (isOffboarded && !isLearningRoute) return { section: null, page: pageTitle, title: pageTitle };
+    if (isLearningRoute) return { section: "Learning", page: learningSectionTitle, title: learningSectionTitle };
+    if (pathname.includes("/dashboard/leave/team")) return appBreadcrumb("leave-team") ?? { section: null, page: pageTitle, title: pageTitle };
+    return appBreadcrumb(activeSection) ?? { section: null, page: pageTitle, title: pageTitle };
   }, [activeSection, isLearningRoute, isOffboarded, learningSectionTitle, pageTitle, pathname]);
 
   const sidebarBadges = useSidebarBadges({
@@ -690,7 +690,14 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
           {/* Cap content width on very large / TV screens so line lengths, forms
               and tables stay readable instead of stretching edge-to-edge. Below
               ~2000px viewport this has no visible effect. */}
-          <div className="mx-auto w-full max-w-[2000px] lg:h-full">{children}</div>
+          <div className="mx-auto w-full max-w-[2000px] lg:h-full">
+            {/* Pages that draw their own heading mark it `data-page-hero` and this one steps aside (see globals.css). */}
+            <div className="wt-chrome-title px-4 pt-5 sm:px-5 md:px-8 md:pt-7">
+              <h1 className="text-[1.75rem] font-bold leading-tight tracking-[-0.025em] text-wt-text sm:text-[2rem]">{breadcrumb.title}</h1>
+              {"description" in breadcrumb && breadcrumb.description ? <p className="mt-1.5 text-base text-wt-text-muted">{breadcrumb.description}</p> : null}
+            </div>
+            {children}
+          </div>
         </div>
       </div>
     </div>
