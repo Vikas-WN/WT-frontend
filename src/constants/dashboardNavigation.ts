@@ -205,6 +205,12 @@ export const dashboardNavigation: NavItem[] = [
         icon: "calendarDays",
       },
       {
+        id: "wfh",
+        label: "Work From Home",
+        roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
+        icon: "calendarDays",
+      },
+      {
         id: "my-allocations",
         label: "My Allocations",
         roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],

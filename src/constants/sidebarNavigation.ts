@@ -14,6 +14,7 @@ import {
   Gift,
   GraduationCap,
   Home,
+  HouseWifi,
   KeyRound,
   Laptop,
   LayoutGrid,
@@ -78,6 +79,7 @@ export const APP_NAVIGATION: readonly AppNavSection[] = [
     entries: [
       { navId: "profile", label: "Profile", icon: User, alwaysVisible: true },
       { navId: "leave", label: "Leave", icon: Calendar, title: "My leave", description: "Request leave, work from home or comp-off credit, and see where your balance stands." },
+      { navId: "wfh", label: "Work from home", icon: HouseWifi, description: "Apply for a work-from-home day, track your requests, or ask for a custom exception." },
       { navId: "timelog", label: "Time logs", icon: Clock, description: "Fill in your week in one place. Hours save as you type." },
       { navId: "my-allocations", label: "My allocations", icon: MapPin },
       { navId: "my-assets", label: "My assets", icon: Laptop, description: "What the company has given you." },

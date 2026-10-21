@@ -21,8 +21,9 @@ import { showActionSplash } from "@/lib/actionSplash";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { apiClient } from "@/api/httpClient";
 import { endpoints } from "@/api/endpoints";
 import { hrmsService } from "@/services/hrms.service";
@@ -190,9 +191,6 @@ import {
   type LeaveRequestDetailView,
 } from "@/components/dashboard/leave/LeaveRequestDetailDialog";
 import { CompOffCreditsDialog } from "@/components/dashboard/leave/CompOffCreditsDialog";
-import { WfhExceptionModal } from "@/components/dashboard/leave/WfhExceptionModal";
-import { WfhRequestSection } from "@/components/dashboard/leave/wfh/WfhRequestSection";
-import { useWfhRequestActions } from "@/components/dashboard/leave/wfh/useWfhRequestActions";
 import { createDefaultLeaveRequestForm } from "@/utils/leaveRequestForm";
 import type { LeaveConfirmState } from "@/types/leaveRequestForm";
 import dynamic from "next/dynamic";
@@ -275,6 +273,14 @@ export function LeavePageClient() {
   const deepLinkRequestType = String(searchParams.get("requestType") ?? "")
     .trim()
     .toUpperCase();
+  const router = useRouter();
+  // Work from home has its own page now; old links (bookmarks, earlier notifications) to the tab move there.
+  useEffect(() => {
+    if (tabFromQuery !== "wfh" || isTeamLeaveRoute) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", "view");
+    router.replace(`${DASHBOARD_ROUTES.wfh}?${params.toString()}`);
+  }, [tabFromQuery, isTeamLeaveRoute, searchParams, router]);
   const [highlightRequestId, setHighlightRequestId] = useState("");
   const deepLinkAppliedKeyRef = useRef("");
   const [leaveSubTab, setLeaveSubTab] = useState<
@@ -369,30 +375,6 @@ export function LeavePageClient() {
     if (myLeaveRequestsQ.refetch) await myLeaveRequestsQ.refetch();
   }, [myLeaveRequestsQ.refetch]);
 
-  const handleSubmitWfhException = useCallback(
-    async (payload: { request_from_date: string; request_to_date: string; comments: string }) => {
-      const body = buildUserRequestBody({
-        request_from_date: payload.request_from_date,
-        request_to_date: payload.request_to_date,
-        request_type: "WFH_EXCEPTION",
-        comments: payload.comments,
-        is_half_day: false,
-      });
-      await apiClient.post(endpoints.userRequest.root, {
-        contentType: "application/json",
-        body: JSON.stringify(body),
-      });
-      showSuccessToast("Custom Work From Home request submitted to HR for approval.");
-      showActionSplash("Request submitted");
-      invalidateLeaveBalance();
-      try {
-        await loadMyLeaveRequests();
-      } catch {
-        /* Request already created — refresh failure should not look like a submit failure. */
-      }
-    },
-    [invalidateLeaveBalance, loadMyLeaveRequests]
-  );
   const [actionLoading, setActionLoading] = useState(false);
   const [actionBusyLabel, setActionBusyLabel] = useState<string | null>(null);
   const [invitedListFromDate, setInvitedListFromDate] = useState(
@@ -540,12 +522,9 @@ export function LeavePageClient() {
 
   const [leaveRequestForm, setLeaveRequestForm] = useState(createDefaultLeaveRequestForm);
   const [selectedLeaveManagerEmails, setSelectedLeaveManagerEmails] = useState<string[]>([]);
-  const [selectedWfhManagerEmails, setSelectedWfhManagerEmails] = useState<string[]>([]);
   const [selectedAdditionalRecipientEmails, setSelectedAdditionalRecipientEmails] = useState<string[]>([]);
   const [editingLeaveRequestId, setEditingLeaveRequestId] = useState<string>("");
   const [requestViewTab, setRequestViewTab] = useState<"request" | "view">("request");
-  const [wfhRequestViewTab, setWfhRequestViewTab] = useState<"request" | "view">("request");
-  const [wfhExceptionOpen, setWfhExceptionOpen] = useState(false);
   const [employeeRequestFilters, setEmployeeRequestFilters] = useState({
     fromDate: "",
     toDate: "",
@@ -593,8 +572,7 @@ export function LeavePageClient() {
     // above land correctly but the user still sees a blank Apply form instead
     // of their highlighted request.
     if (deepLinkRequestId) {
-      if (effectiveSubTab === "wfh") setWfhRequestViewTab("view");
-      else if (effectiveSubTab === "my") setRequestViewTab("view");
+      if (effectiveSubTab === "my") setRequestViewTab("view");
     }
 
     // Always use a wide unfiltered range so every leave request stays visible for review.
@@ -625,7 +603,6 @@ export function LeavePageClient() {
     pathname,
     tabFromQuery,
     setRequestViewTab,
-    setWfhRequestViewTab,
   ]);
 
   const [onboardForm, setOnboardForm] = useState({
@@ -1004,22 +981,6 @@ export function LeavePageClient() {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [actionLoading]);
 
-  const wfhActions = useWfhRequestActions({
-    form: leaveRequestForm,
-    setForm: setLeaveRequestForm,
-    editingRequestId: editingLeaveRequestId,
-    setEditingRequestId: setEditingLeaveRequestId,
-    managerEmails: selectedWfhManagerEmails,
-    setManagerEmails: setSelectedWfhManagerEmails,
-    setAdditionalRecipientEmails: setSelectedAdditionalRecipientEmails,
-    setViewTab: setWfhRequestViewTab,
-    requiresClientApproval,
-    routesToHr: routesLeaveWfhToHr,
-    runAction,
-    reloadRequests: loadMyLeaveRequests,
-    invalidateBalance: invalidateLeaveBalance,
-    confirm: setConfirmState,
-  });
 
   function buildUserIdToNameMap(users: Array<Record<string, unknown>>) {
     const map: Record<string, string> = {};
@@ -1867,7 +1828,6 @@ export function LeavePageClient() {
     return [
       { value: "my", label: "Leave Requests" },
       showCompOffTab ? { value: "comp-off", label: "Compensation Off Credit" } : null,
-      { value: "wfh", label: "Work From Home" },
     ].filter((item): item is { value: string; label: string } => Boolean(item));
   }, [
     canViewTeamLeave,
@@ -1925,40 +1885,7 @@ export function LeavePageClient() {
                           ) : null}
                           {(leaveSubTab === "my" || leaveSubTab === "wfh") ? (
                           <div>
-                          {leaveSubTab === "wfh" ? (
-                            <WfhRequestSection
-                              showHrReviewNotice={submitsToHrForReview}
-                              tab={wfhRequestViewTab}
-                              onTabChange={setWfhRequestViewTab}
-                              actions={wfhActions}
-                              busy={actionLoading}
-                              form={{
-                                form: leaveRequestForm,
-                                onFormChange: setLeaveRequestForm,
-                                managerEmails: selectedWfhManagerEmails,
-                                onManagerEmailsChange: setSelectedWfhManagerEmails,
-                                editing: Boolean(editingLeaveRequestId),
-                                busy: actionLoading,
-                                projectsLoading: profileAssignedProjectsLoading,
-                                requiresClientApproval,
-                                routesToHr: routesLeaveWfhToHr,
-                                onOpenException: () => setWfhExceptionOpen(true),
-                              }}
-                              history={{
-                                rows: filteredWfhTabRequests,
-                                loading: myLeaveRequestsLoading,
-                                sortId: myLeaveSortId,
-                                onSortChange: setMyLeaveSortId,
-                                sortOptions: LEAVE_REQUEST_SORT_OPTIONS,
-                                pagination: myLeavePagination,
-                                highlightRequestId,
-                                fromDate: myRequestsFromDate,
-                                toDate: myRequestsToDate,
-                                onFromDateChange: setMyRequestsFromDate,
-                                onToDateChange: setMyRequestsToDate,
-                              }}
-                            />
-                          ) : (
+                          {(
                             <>
                               {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
                               <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
@@ -2158,7 +2085,6 @@ export function LeavePageClient() {
                                           }
                                           setLeaveRequestForm(createDefaultLeaveRequestForm());
                                           setSelectedLeaveManagerEmails([]);
-                                          setSelectedWfhManagerEmails([]);
                                           setSelectedAdditionalRecipientEmails([]);
                                           setEditingLeaveRequestId("");
                                           try {
@@ -2232,11 +2158,11 @@ export function LeavePageClient() {
                                         }
                                         setLeaveRequestForm(createDefaultLeaveRequestForm());
                                         setSelectedLeaveManagerEmails([]);
-                                        setSelectedWfhManagerEmails([]);
                                         setSelectedAdditionalRecipientEmails([]);
                                         setEditingLeaveRequestId("");
                                         try {
-                                          await loadMyLeaveRequests();
+                                          // Refresh the list in the background; the submit is done, so don't hold the form on a second round-trip.
+                                          void loadMyLeaveRequests();
                                         } catch {
                                           /* submission succeeded; ignore refresh issue */
                                         }
@@ -2987,11 +2913,6 @@ export function LeavePageClient() {
               }}
             />
             <CompOffCreditsDialog open={compOffCreditsOpen} onClose={() => setCompOffCreditsOpen(false)} />
-            <WfhExceptionModal
-              open={wfhExceptionOpen}
-              onClose={() => setWfhExceptionOpen(false)}
-              onSubmit={handleSubmitWfhException}
-            />
             {actionLoading ? (
               <WtLoadingOverlay
                 label={

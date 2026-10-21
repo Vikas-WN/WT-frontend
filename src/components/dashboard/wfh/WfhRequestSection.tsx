@@ -4,10 +4,10 @@ import type { ComponentProps } from "react";
 
 import { HrReviewNoticeBanner } from "@/components/hr-review/HrReviewNoticeBanner";
 import { MyLeaveRequestsView } from "@/components/dashboard/leave/MyLeaveRequestsView";
-import { WfhApplyForm } from "@/components/dashboard/leave/wfh/WfhApplyForm";
+import { WfhApplyForm } from "@/components/dashboard/wfh/WfhApplyForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WFH_COPY } from "@/constants/wfhRequest";
-import type { WfhRequestActions } from "@/components/dashboard/leave/wfh/useWfhRequestActions";
+import type { WfhRequestActions } from "@/hooks/wfh/useWfhRequestActions";
 
 type WfhTab = "request" | "view";
 type HistoryProps = ComponentProps<typeof MyLeaveRequestsView>;
