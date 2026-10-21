@@ -289,18 +289,13 @@
 }
 
 /* One knob for the size of the whole interface: everything is in rem, so the root size scales text, cards, buttons and
-   spacing together. 15px is the everyday size; roomy screens get 16px and small phones a touch less. */
+   spacing together. 14px is the everyday size (what the WebTrak design uses); very large screens get 15px. */
 html {
-  font-size: 15px;
+  font-size: 14px;
 }
 @media (min-width: 1920px) {
   html {
-    font-size: 16px;
-  }
-}
-@media (max-width: 420px) {
-  html {
-    font-size: 14.5px;
+    font-size: 15px;
   }
 }
 
