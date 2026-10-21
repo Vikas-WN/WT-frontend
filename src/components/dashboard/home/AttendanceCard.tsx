@@ -32,7 +32,7 @@ function BucketTile({ bucketKey, bucket, onOpen }: { bucketKey: BucketKey; bucke
           <span className={cn("size-2.5 shrink-0 rounded-full", meta.bar)} aria-hidden />
           <span className="truncate">{meta.short}</span>
         </span>
-        <span className="text-[1.65rem] font-bold leading-none tabular-nums text-wt-text">
+        <span className="text-[1.4rem] font-bold leading-none tabular-nums text-wt-text">
           <AnimatedNumber value={bucket.count} />
         </span>
       </span>

@@ -61,19 +61,19 @@ function PendingRow({ item, onApproved }: { item: PendingApprovalItem; onApprove
   };
 
   return (
-    <li className="flex items-center gap-3.5 border-t border-wt-border py-3.5 first:border-t-0">
-      <span className={cn("grid size-11 shrink-0 place-items-center rounded-full text-sm font-semibold", tone)} aria-hidden>
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-wt-border py-3 first:border-t-0">
+      <span className={cn("grid size-9 shrink-0 place-items-center rounded-full text-sm font-semibold", tone)} aria-hidden>
         {initials(item.requester)}
       </span>
-      <span className="min-w-0 flex-1">
+      <span className="min-w-[10rem] flex-1">
         <span className="block truncate text-[15px] font-semibold text-wt-text">{item.requester}</span>
         <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-wt-text-muted">
           {tab !== "all" ? <span className={cn("rounded-md px-2 py-0.5 text-[13px] font-medium", TYPE_CHIP[tab])}>{formatUserRequestTypeLabel(item.type, item.isHalfDay)}</span> : <span>{formatUserRequestTypeLabel(item.type, item.isHalfDay)}</span>}
           <span className="truncate">{range}</span>
         </span>
       </span>
-      <span className="flex shrink-0 items-center gap-2">
-        <Link href={reviewHref} className="inline-flex h-10 items-center rounded-xl border border-wt-border bg-wt-surface-1 px-4 text-sm font-medium text-wt-text hover:bg-wt-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)]" title={HOME_APPROVALS_COPY.declineHint}>
+      <span className="ml-auto flex shrink-0 items-center gap-2">
+        <Link href={reviewHref} className="inline-flex h-9 items-center rounded-xl border border-wt-border bg-wt-surface-1 px-3.5 text-sm font-medium text-wt-text hover:bg-wt-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)]" title={HOME_APPROVALS_COPY.declineHint}>
           {HOME_APPROVALS_COPY.decline}
         </Link>
         {inline ? (
@@ -81,13 +81,13 @@ function PendingRow({ item, onApproved }: { item: PendingApprovalItem; onApprove
             type="button"
             disabled={busy}
             onClick={approve}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-[var(--wt-brand-soft)] px-4 text-sm font-semibold text-[var(--wt-brand)] transition-colors hover:bg-[color-mix(in_srgb,var(--wt-brand)_18%,white)] disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)]"
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[var(--wt-brand-soft)] px-3.5 text-sm font-semibold text-[var(--wt-brand)] transition-colors hover:bg-[color-mix(in_srgb,var(--wt-brand)_18%,white)] disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)]"
           >
             {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Check className="size-4" aria-hidden />}
             {HOME_APPROVALS_COPY.approve}
           </button>
         ) : (
-          <Link href={reviewHref} className="inline-flex h-10 items-center rounded-xl bg-[var(--wt-brand-soft)] px-4 text-sm font-semibold text-[var(--wt-brand)] hover:bg-[color-mix(in_srgb,var(--wt-brand)_18%,white)]">
+          <Link href={reviewHref} className="inline-flex h-9 items-center rounded-xl bg-[var(--wt-brand-soft)] px-3.5 text-sm font-semibold text-[var(--wt-brand)] hover:bg-[color-mix(in_srgb,var(--wt-brand)_18%,white)]">
             {HOME_APPROVALS_COPY.review}
           </Link>
         )}
