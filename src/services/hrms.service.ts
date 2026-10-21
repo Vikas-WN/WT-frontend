@@ -176,6 +176,8 @@ export interface WhosOutEntry {
   from_date: string;
   to_date: string;
   is_half_day: boolean;
+  /** ISO days inside this entry that are mandatory holidays for the person: not leave days, so not shown as out. */
+  excluded_dates?: string[];
 }
 
 export interface WhosOutPerson {
