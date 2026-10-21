@@ -132,8 +132,9 @@ export function AppSidebar({
         )}
       >
         <div className="flex items-center gap-3 px-4 pb-3 pt-4">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#0b0d12] text-[17px] font-bold text-white dark:bg-white dark:text-[#0b0d12]" aria-hidden>
-            W
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-[var(--wt-sidebar-border)] bg-white" aria-hidden>
+            {/* eslint-disable-next-line @next/next/no-img-element -- a 25px static mark; next/image adds nothing */}
+            <img src="/webtrak-logo.png" alt="" className="h-[22px] w-auto" />
           </span>
           <span className="min-w-0 flex-1 leading-tight">
             <span className="block truncate text-[15px] font-semibold text-[var(--wt-sidebar-text)]">WebTrak</span>
