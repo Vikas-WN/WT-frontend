@@ -1,11 +1,14 @@
 "use client";
 
+import { documentHref } from "@/utils/documentLinks";
+
 export function EmployeeResumeLink({
   href,
 }: {
   href?: string | null;
 }) {
-  const url = href ?? null;
+  // `s3://…` resumes open through the API; a typed web link opens as is; anything else has nothing to open.
+  const url = documentHref(href);
   if (!url) {
     return <span className="text-wt-text-muted">—</span>;
   }

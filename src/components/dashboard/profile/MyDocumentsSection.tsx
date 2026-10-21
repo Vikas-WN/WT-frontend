@@ -1,6 +1,8 @@
 "use client";
 
 import { FileText, CheckCircle2, ExternalLink } from "lucide-react";
+import { resolveProfilePhotoSrc } from "@/components/dashboard/ui/profile";
+import { documentHref } from "@/utils/documentLinks";
 import { cn } from "@/lib/utils";
 
 type DocumentItem = {
@@ -10,7 +12,16 @@ type DocumentItem = {
    *  (e.g. relieving letter/payslip "on file" flags from older submissions). */
   onFile?: boolean;
   note?: string;
+  /** An old upload recorded as `local://…` whose file was never kept: there is nothing to open, so ask for it again. */
+  lost?: boolean;
 };
+
+/** A stored value as something a browser can open (our download URL for `s3://…`, a web link as is). */
+function linkFor(raw: string): Pick<DocumentItem, "href" | "lost"> {
+  const href = documentHref(raw);
+  if (href) return { href };
+  return { href: null, lost: Boolean(raw) && !/^https?:\/\//i.test(raw) };
+}
 
 function readString(profile: Record<string, unknown>, ...keys: string[]): string {
   for (const key of keys) {
@@ -43,20 +54,20 @@ function buildDocumentItems(profile: Record<string, unknown>): DocumentItem[] {
 
   items.push({
     label: "Profile Photo",
-    href: readString(profile, "profile_photo", "profilePhoto") || null,
+    href: resolveProfilePhotoSrc(profile) || null,
   });
   items.push({
     label: "Resume",
-    href: readString(profile, "resume_share_link", "resumeShareLink") || null,
+    ...linkFor(readString(profile, "resume_share_link", "resumeShareLink")),
   });
   items.push({
     label: "Aadhaar",
-    href: readString(profile, "aadhaar", "aadhar_card", "aadharCard") || null,
+    ...linkFor(readString(profile, "aadhaar", "aadhar_card", "aadharCard")),
     onFile: readBool(profile, "aadhaar_on_file", "aadhaarOnFile"),
   });
   items.push({
     label: "PAN Card",
-    href: readString(profile, "pan_card", "panCard") || null,
+    ...linkFor(readString(profile, "pan_card", "panCard")),
     onFile: readBool(profile, "pan_card_on_file", "panCardOnFile"),
   });
 
@@ -73,7 +84,7 @@ function buildDocumentItems(profile: Record<string, unknown>): DocumentItem[] {
     "reliving_letter_on_file"
   );
   if (relievingLetter || relievingOnFile) {
-    items.push({ label: "Relieving Letter", href: relievingLetter || null, onFile: relievingOnFile });
+    items.push({ label: "Relieving Letter", ...linkFor(relievingLetter), onFile: relievingOnFile && !relievingLetter });
   }
 
   const salarySlips = readStringArray(profile, "salary_slip_urls", "salarySlipUrls");
@@ -82,7 +93,7 @@ function buildDocumentItems(profile: Record<string, unknown>): DocumentItem[] {
     salarySlips.forEach((url, index) => {
       items.push({
         label: salarySlips.length > 1 ? `Payslip ${index + 1}` : "Payslip",
-        href: url,
+        ...linkFor(url),
       });
     });
   } else if (salarySlipsOnFile) {
@@ -104,6 +115,7 @@ function buildDocumentItems(profile: Record<string, unknown>): DocumentItem[] {
 
 function DocumentRow({ item }: { item: DocumentItem }) {
   const hasFile = Boolean(item.href) || Boolean(item.onFile);
+  const lost = Boolean(item.lost) && !item.href;
   return (
     <div className="flex items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-2/40 px-4 py-3">
       <div className="flex min-w-0 items-center gap-3">
@@ -134,6 +146,10 @@ function DocumentRow({ item }: { item: DocumentItem }) {
           View
           <ExternalLink className="size-3.5" />
         </a>
+      ) : lost ? (
+        <span className="shrink-0 text-xs font-medium text-amber-700 dark:text-amber-400" title="This file was not saved when it was uploaded. Please upload it again.">
+          Upload again
+        </span>
       ) : hasFile ? (
         <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
           <CheckCircle2 className="size-3.5" />
