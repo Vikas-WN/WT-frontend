@@ -452,8 +452,11 @@ export function HomePageClient() {
           {editMode ? "Use “Add widget” above to bring one back." : "Click “Customize” to add one back."}
         </div>
       ) : (
+        // Columns follow the width of the page area (not the window): the sidebar takes ~250px, so a window-based
+        // breakpoint thinks a laptop has room for more columns than it does and makes the cards too wide and large.
+        <div className="@container">
         <div
-          className="grid grid-cols-[minmax(0,1fr)] items-stretch gap-5 sm:grid-cols-2 lg:gap-6 lg:grid-flow-dense lg:auto-rows-min min-[1280px]:grid-cols-[repeat(var(--home-cols),minmax(0,1fr))]"
+          className="grid grid-cols-[minmax(0,1fr)] items-stretch gap-4 @2xl:grid-cols-2 @2xl:gap-5 @2xl:grid-flow-dense @2xl:auto-rows-min @5xl:grid-cols-[repeat(var(--home-cols),minmax(0,1fr))]"
           style={{ "--home-cols": columns } as React.CSSProperties}
         >
           {visibleLayout.map((w) => (
@@ -475,6 +478,7 @@ export function HomePageClient() {
               {widgetRegistry[w.id]?.node}
             </DashboardWidgetFrame>
           ))}
+        </div>
         </div>
       )}
     </DashboardPageShell>

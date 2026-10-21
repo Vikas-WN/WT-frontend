@@ -39,9 +39,9 @@ export function DashboardWidgetFrame({
       className={cn(
         // Heights are only pinned from lg up (where a card can span two rows). On a phone the grid row is the card's own content
         // height; pinning it there made iOS Safari size every row to the same short height and clip the cards.
-        "min-w-0 lg:h-full lg:min-h-0",
-        size === "wide" && "sm:col-span-2",
-        tall && "lg:row-span-2",
+        "min-w-0 @2xl:h-full @2xl:min-h-0",
+        size === "wide" && "@2xl:col-span-2",
+        tall && "@2xl:row-span-2",
         editing && "relative rounded-2xl outline outline-2 outline-transparent transition-[outline-color]",
         editing && isDropTarget && draggedId && draggedId !== id && "outline-[var(--wt-brand)]",
         isDragging && "opacity-40"
@@ -101,7 +101,7 @@ export function DashboardWidgetFrame({
           </button>
         </div>
       ) : null}
-      <div className={cn("lg:h-full lg:min-h-0", editing && "pointer-events-none select-none")}>{children}</div>
+      <div className={cn("@2xl:h-full @2xl:min-h-0", editing && "pointer-events-none select-none")}>{children}</div>
     </div>
   );
 }

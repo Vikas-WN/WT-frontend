@@ -50,7 +50,7 @@ export function LeaveBalanceCard() {
       ) : (
         <div className="flex h-full flex-col">
           <p className="flex items-baseline gap-2">
-            <span className="text-[3.25rem] font-bold leading-none tracking-[-0.03em] tabular-nums text-wt-text">
+            <span className="text-[2.5rem] font-bold leading-none tracking-[-0.03em] tabular-nums text-wt-text">
               <AnimatedNumber value={total} decimals={Number.isInteger(total) ? 0 : 1} />
             </span>
             <span className="text-base text-wt-text-muted">{HOME_LEAVE_CARD.ringCaption}</span>

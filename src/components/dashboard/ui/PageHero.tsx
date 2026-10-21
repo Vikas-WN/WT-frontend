@@ -47,7 +47,7 @@ export function PageHero({
         {eyebrow ? (
           <p className="text-sm text-wt-text-muted">{raw ? eyebrow : formatUILabel(eyebrow)}</p>
         ) : null}
-        <h1 className="text-[1.75rem] font-bold leading-tight tracking-[-0.025em] text-wt-text sm:text-[2rem]">
+        <h1 className="text-[1.5rem] font-bold leading-tight tracking-[-0.025em] text-wt-text sm:text-[1.75rem]">
           {raw ? title : formatUILabel(title)}
         </h1>
         {description ? (

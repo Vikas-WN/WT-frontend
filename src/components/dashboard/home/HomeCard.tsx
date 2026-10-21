@@ -55,15 +55,15 @@ export function HomeCard({
   return (
     <section
       className={cn(
-        "flex flex-col overflow-hidden rounded-[1.25rem] border border-wt-border bg-wt-surface-1 p-5 shadow-[var(--wt-shadow-sm)] sm:p-6 lg:h-full lg:min-h-0",
+        "flex flex-col overflow-hidden rounded-[1.25rem] border border-wt-border bg-wt-surface-1 p-4 shadow-[var(--wt-shadow-sm)] sm:p-5 @2xl:h-full @2xl:min-h-0",
         featured && "border-[color-mix(in_srgb,var(--wt-brand)_20%,var(--wt-border))]",
         className
       )}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2.5">
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2.5">
-            <h2 className="truncate text-[1.2rem] font-semibold leading-tight tracking-[-0.015em] text-wt-text">{title}</h2>
+            <h2 className="truncate text-[1.0625rem] font-semibold leading-tight tracking-[-0.015em] text-wt-text">{title}</h2>
             {titleBadge}
           </div>
           {subtitle ? <p className="mt-0.5 text-sm text-wt-text-muted">{subtitle}</p> : null}
