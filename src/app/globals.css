@@ -748,7 +748,7 @@ video {
   transform: none;
 }
 
-/* Soft ambient page canvas */
+/* A flat canvas (the redesign has no tinted wash behind the pages). */
 .wt-page-scroll {
   overflow-x: hidden;
   overflow-y: auto;
@@ -756,18 +756,7 @@ video {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in oklab, var(--wt-text-muted) 45%, transparent)
     transparent;
-  background:
-    radial-gradient(
-      1100px 520px at 8% -12%,
-      color-mix(in srgb, var(--wt-brand) 9%, transparent),
-      transparent 58%
-    ),
-    radial-gradient(
-      900px 420px at 92% 0%,
-      color-mix(in srgb, var(--wt-brand) 5%, transparent),
-      transparent 50%
-    ),
-    var(--wt-page-bg);
+  background: var(--wt-page-bg);
 }
 
 :is(.dark, [data-theme="dark"]) .wt-page-scroll {
