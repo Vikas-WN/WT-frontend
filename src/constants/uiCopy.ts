@@ -17,3 +17,14 @@ export const UI_COPY = {
   adjustFilters: "Try adjusting your search or filters.",
   loading: "Loading…",
 } as const;
+
+export const IMAGE_CROP_COPY = {
+  title: "Crop your photo",
+  hint: "Drag the photo to position it, and use the slider to zoom.",
+  zoom: "Zoom",
+  cancel: "Cancel",
+  confirm: "Use this photo",
+  saving: "Preparing…",
+  loadError: "That image could not be opened. Please pick a different one.",
+  fileName: "profile-picture.jpg",
+} as const;

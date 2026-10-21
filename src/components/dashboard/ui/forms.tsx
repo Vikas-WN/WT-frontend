@@ -1,5 +1,6 @@
 "use client";
 
+import { ImageCropDialog } from "@/components/dashboard/ui/ImageCropDialog";
 import { Button } from "@/components/ui/button";
 import { Children, isValidElement, useId, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { CalendarIcon } from "lucide-react";
@@ -611,6 +612,7 @@ export function FileField({
   currentPreviewSrc,
   onDelete,
   maxSizeBytes,
+  cropToSquare = false,
 }: {
   label: string;
   accept?: string;
@@ -625,8 +627,12 @@ export function FileField({
   onDelete?: () => void;
   /** Override the default 10MB cap (ID docs, payslips, resumes — not video). */
   maxSizeBytes?: number;
+  /** For profile photos: let the person drag and zoom to choose the square to keep before it is used. */
+  cropToSquare?: boolean;
 }) {
   const fieldId = useId();
+  // UI state: the picked photo (as an object URL) while its crop dialog is open.
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const isMulti = Boolean(multiple);
   const hasFile = Boolean(currentFileName);
   // Track the src that failed to load so a new src automatically clears the state
@@ -691,10 +697,30 @@ export function FileField({
               }
             }
             setFileError(null);
+            if (cropToSquare && !isMulti && picked[0]?.type.startsWith("image/")) {
+              setCropSrc(URL.createObjectURL(picked[0]));
+              return;
+            }
             if (isMulti) onPickFiles?.(picked);
             else onPick?.(picked[0] ?? null);
           }}
         />
+        {cropSrc ? (
+          <ImageCropDialog
+            imageSrc={cropSrc}
+            onCancel={() => {
+              URL.revokeObjectURL(cropSrc);
+              setCropSrc(null);
+              if (inputRef.current) inputRef.current.value = "";
+            }}
+            onConfirm={(cropped) => {
+              URL.revokeObjectURL(cropSrc);
+              setCropSrc(null);
+              if (inputRef.current) inputRef.current.value = "";
+              onPick?.(cropped);
+            }}
+          />
+        ) : null}
         {showDeleteButton && hasFile && onDelete ? (
           <Button
             type="button"

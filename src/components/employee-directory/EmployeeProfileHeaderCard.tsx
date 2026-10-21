@@ -147,20 +147,21 @@ export function EmployeeProfileHeaderCard({
     <Card className={cn("w-full overflow-hidden p-0 wt-soft-in", CONTENT_CARD_CLASS)}>
       <div className="h-28 w-full bg-[var(--wt-navy)] sm:h-32" aria-hidden />
       <CardContent className="px-5 pb-0 pt-0 sm:px-8">
-        <div className="-mt-12 flex flex-col items-center gap-4 text-center sm:-mt-14 sm:flex-row sm:items-end sm:gap-6 sm:text-left">
-          <div className="rounded-full bg-wt-surface-1 p-1.5">
+        {/* The picture rides up over the banner; the name and role sit wholly below it, with room to breathe. */}
+        <div className="flex flex-col items-center gap-x-6 gap-y-3 text-center sm:flex-row sm:items-start sm:text-left">
+          <div className="-mt-12 shrink-0 rounded-full bg-wt-surface-1 p-1.5 sm:-mt-14">
             <ProfileHeaderAvatar profile={profile} displayName={displayName} isBirthday={isBirthday} />
           </div>
-          <div className="min-w-0 w-full flex-1 pb-1 sm:pb-2">
-            <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 w-full flex-1 pt-1 sm:pt-5">
+            <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 {editModeLabel ? (
                   <span className="mb-1.5 inline-flex rounded-md bg-[var(--wt-brand)] px-2 py-0.5 text-xs font-semibold text-[var(--wt-brand-text)]">
                     {editModeLabel}
                   </span>
                 ) : null}
-                <div className="flex flex-wrap items-center justify-center gap-2.5 sm:justify-start">
-                  <h1 className="text-2xl font-bold tracking-tight text-wt-text [overflow-wrap:anywhere] sm:text-[1.75rem]" title={displayName}>
+                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 sm:justify-start">
+                  <h1 className="text-2xl font-bold leading-tight tracking-tight text-wt-text [overflow-wrap:anywhere] sm:text-[1.75rem]" title={displayName}>
                     {displayName}
                   </h1>
                   {status ? <EmployeeStatusBadge status={status} /> : null}
@@ -171,14 +172,14 @@ export function EmployeeProfileHeaderCard({
                     </span>
                   ) : null}
                 </div>
-                {subtitle ? <p className="mt-1 text-base text-wt-text-muted">{subtitle}</p> : null}
+                {subtitle ? <p className="mt-2 text-base text-wt-text-muted">{subtitle}</p> : null}
               </div>
               {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
             </div>
           </div>
         </div>
 
-        <dl className="mt-5 grid grid-cols-1 gap-x-8 gap-y-4 border-t border-wt-border py-5 text-left sm:grid-cols-2 xl:grid-cols-4">
+        <dl className="mt-6 grid grid-cols-1 gap-x-8 gap-y-4 border-t border-wt-border py-5 text-left sm:grid-cols-2 xl:grid-cols-4">
           {metaItems.map((item) => (
             <div key={item.key} className="min-w-0">
               <dt className="text-sm text-wt-text-muted">{item.label}</dt>

@@ -566,6 +566,7 @@ export function ProfilePageLeanClient() {
           label={currentProfilePhotoName ? "Profile Picture" : "Profile Picture (required)"}
           required={!currentProfilePhotoName}
           accept="image/*"
+          cropToSquare
           onPick={setSelfProfilePic}
           currentFileName={currentProfilePhotoName || undefined}
           currentPreviewSrc={profilePhotoPreviewSrc || undefined}

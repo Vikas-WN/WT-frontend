@@ -2349,7 +2349,7 @@ export function UploadsPageClient() {
       </div>
       <div className="grid sm:grid-cols-2 gap-3 mt-3">
         <FileField label="Resume" accept=".pdf,.doc,.docx,image/*" onPick={(file) => setSelfOnboardFiles((p) => ({ ...p, resume: file }))} />
-        <FileField label="Profile Photo" accept="image/*" onPick={(file) => setSelfOnboardFiles((p) => ({ ...p, profile_photo: file }))} />
+        <FileField label="Profile Photo" accept="image/*" cropToSquare onPick={(file) => setSelfOnboardFiles((p) => ({ ...p, profile_photo: file }))} />
         <FileField label="Aadhaar" accept=".pdf,image/*" onPick={(file) => setSelfOnboardFiles((p) => ({ ...p, aadhaar: file }))} />
         <FileField label="PAN Card" accept=".pdf,image/*" onPick={(file) => setSelfOnboardFiles((p) => ({ ...p, pan_card: file }))} />
       </div>
@@ -2635,7 +2635,7 @@ export function UploadsPageClient() {
         </p>
       )}
       <div className="mt-3">
-        <FileField label="Profile Picture (required)" required accept="image/*" onPick={setSelfProfilePic} />
+        <FileField label="Profile Picture (required)" required accept="image/*" cropToSquare onPick={setSelfProfilePic} />
       </div>
       <div className="mt-4">
         <Button variant="brand" type="button" className="px-3 py-2" onClick={() =>
