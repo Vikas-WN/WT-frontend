@@ -443,6 +443,13 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
 
   return (
     <div className="wt-app-shell flex h-dvh overflow-hidden text-wt-text">
+      {/* First stop for keyboard and screen-reader users: jump past the sidebar and header to the page. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[200] focus:rounded-xl focus:bg-[var(--wt-brand)] focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-[var(--wt-brand-text)] focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
       <Suspense fallback={null}>
         <SeasonalHost />
       </Suspense>

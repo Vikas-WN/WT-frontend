@@ -149,11 +149,6 @@ export function LeaveBalanceSummary({ enabled = true, selectedType }: { enabled?
         />
       ) : null}
     </div>
-    {showAll ? (
-      <p className="mt-2 text-xs text-wt-text-muted">
-        {LEAVE_YEAR_COPY.balanceNote}
-      </p>
-    ) : null}
     </>
   );
 }
