@@ -30,7 +30,7 @@ const tabsListVariants = cva(
       variant: {
         /** Soft segmented control */
         default:
-          "h-11 gap-1 rounded-xl bg-wt-surface-2 p-1 ring-1 ring-wt-border dark:bg-wt-surface-2 dark:ring-wt-border-md",
+          "h-11 gap-1 rounded-xl bg-wt-surface-3/70 p-1 dark:bg-wt-surface-2 dark:ring-wt-border-md",
         /** Underline row for page / card headers */
         line: "h-auto gap-0 rounded-none bg-transparent p-0",
       },
@@ -61,7 +61,7 @@ function TabsList({
           "pointer-events-none absolute z-0 transition-[left,width,top,height] duration-[360ms] ease-[var(--wt-ease)] motion-reduce:transition-none",
           variant === "line"
             ? "bottom-0 left-[var(--active-tab-left)] h-0.5 w-[var(--active-tab-width)] rounded-full bg-[var(--wt-brand)] group-data-vertical/tabs:hidden"
-            : "left-[var(--active-tab-left)] top-[var(--active-tab-top)] h-[var(--active-tab-height)] w-[var(--active-tab-width)] rounded-lg bg-wt-surface-1 shadow-sm ring-1 ring-wt-border dark:bg-wt-surface-3 dark:shadow-none dark:ring-wt-border-md"
+            : "left-[var(--active-tab-left)] top-[var(--active-tab-top)] h-[var(--active-tab-height)] w-[var(--active-tab-width)] rounded-lg bg-wt-surface-1 shadow-[0_1px_3px_#18215912] dark:bg-wt-surface-3 dark:shadow-none dark:ring-wt-border-md"
         )}
       />
     </TabsPrimitive.List>

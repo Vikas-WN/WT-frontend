@@ -44,6 +44,7 @@ import { useDashboardNav } from "@/components/dashboard/DashboardNavContext";
 
 import { applyResolvedTheme } from "@/utils/dashboard/theme";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
+import { DATA_CHANGED, DATA_REVISION_KEY } from "@/lib/dataRefresh";
 import { HeaderSearch } from "@/components/dashboard/HeaderSearch";
 import { appBreadcrumb } from "@/constants/sidebarNavigation";
 import { useSidebarBadges } from "@/hooks/navigation/useSidebarBadges";
@@ -312,6 +313,15 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
     return () => {
       window.clearInterval(intervalId);
     };
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const refresh = () => { clearTimeout(timer); timer = setTimeout(() => { void loadNotifications(); }, 300); };
+    const storage = (event: StorageEvent) => { if (event.key === DATA_REVISION_KEY) refresh(); };
+    window.addEventListener(DATA_CHANGED, refresh);
+    window.addEventListener("storage", storage);
+    return () => { clearTimeout(timer); window.removeEventListener(DATA_CHANGED, refresh); window.removeEventListener("storage", storage); };
   }, [loadNotifications]);
 
   const runAction = useCallback(async (label: string, fn: () => Promise<unknown>) => {

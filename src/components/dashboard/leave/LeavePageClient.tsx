@@ -1,5 +1,7 @@
 "use client";
 
+import { PageHero } from "@/components/dashboard/ui/PageHero";
+
 import { lastMonthToThisMonthRange } from "@/utils/leaveRequestRange";
 import { REASON_COPY, REQUEST_REASON_MAX_LENGTH } from "@/constants/requestReason";
 import { giveFeedback } from "@/lib/feedback";
@@ -1841,6 +1843,7 @@ export function LeavePageClient() {
     <>
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
+          <PageHero title={leaveSubTab === "my" ? "Time for yourself" : "Team requests"} description={leaveSubTab === "my" ? "Plan your time away, understand your balance, and keep every request in one place." : "Review requests with the context you need to make a decision."}/>
           <section className={leaveSubTab === "my" ? undefined : cn(CONTENT_CARD_CLASS, "p-5 sm:p-6")}>
                            {showLeaveSubTabBar ? (
                              <Tabs value={leaveSubTab} onValueChange={(value) => {
@@ -1889,13 +1892,13 @@ export function LeavePageClient() {
                             <>
                               {submitsToHrForReview ? <HrReviewNoticeBanner /> : null}
                               <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-                                <div className="space-y-6 lg:order-2">
+                                <div className="order-2 space-y-6">
                                   <LeaveBalanceSummary selectedType={normalizeUserRequestType(leaveRequestForm.request_type)} />
                                   {normalizeUserRequestType(leaveRequestForm.request_type) !== "COMP_OFF" ? <LeaveYearSummaryStrip /> : null}
                                   <LeaveHowItWorks />
                                 </div>
-                                <section className={cn(CONTENT_CARD_CLASS, "p-5 sm:p-6 lg:order-1")} aria-label="New request">
-                                  <h2 className="mb-5 text-xl font-bold tracking-tight text-wt-text">{editingLeaveRequestId ? "Edit request" : "New request"}</h2>
+                                <section className={cn(CONTENT_CARD_CLASS, "order-1 p-5 sm:p-7")} aria-label="New request">
+                                  <h2 className="mb-6 text-lg font-semibold tracking-tight text-wt-text">{editingLeaveRequestId ? "Edit request" : "New request"}</h2>
                                   <LeaveRequestForm
                                     values={leaveRequestForm}
                                     onChange={(v) => setLeaveRequestForm(v)}

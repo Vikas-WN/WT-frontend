@@ -21,11 +21,11 @@ export function HeaderSearch() {
       <button
         type="button"
         onClick={open}
-        className="hidden h-10 w-[19rem] items-center gap-2.5 rounded-xl border border-wt-border bg-wt-surface-2 px-3 text-left text-sm text-wt-text-muted transition-colors hover:bg-wt-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)] md:flex lg:w-[22rem]"
+        className="hidden h-10 w-[19rem] items-center gap-2.5 rounded-xl border border-wt-border bg-wt-surface-2 px-3 text-left text-sm text-wt-text-muted transition-colors hover:bg-wt-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)] md:flex lg:w-[20rem]"
         aria-label="Search or jump to"
       >
         <Search className="size-4 shrink-0" aria-hidden />
-        <span className="min-w-0 flex-1 truncate">Search or jump to…</span>
+        <span className="min-w-0 flex-1 truncate">Find anything in your workspace…</span>
         <kbd className="shrink-0 rounded-md border border-wt-border bg-wt-surface-1 px-1.5 py-0.5 font-sans text-[11px] text-wt-text-faint">{shortcut}</kbd>
       </button>
       <button

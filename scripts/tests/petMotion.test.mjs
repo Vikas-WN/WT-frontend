@@ -71,9 +71,13 @@ test("the waddle follows distance walked, so a faster walk waddles faster", () =
   assert.ok(quarter.bob > 3 && Math.abs(quarter.sway) > 4);
 });
 
-test("the body transform keeps volume roughly constant and flips through the edge", () => {
+test("the body preserves volume and never collapses or reflects during a turn", () => {
   const tall = bodyTransform({ turn: 1, stretch: 0.15, breath: 0, tilt: 0, bob: 0 });
   assert.match(tall, /scale\(0\.93\d+, 1\.1500\)/);
   const mid = bodyTransform({ turn: 0, stretch: 0, breath: 0, tilt: 0, bob: 0 });
-  assert.match(mid, /scale\(0\.0000, 1\.0000\)/);
+  assert.match(mid, /scale\(1\.0000, 1\.0000\)/);
+  for (let turn = -1; turn <= 1; turn += .1) {
+    const frame = bodyTransform({ turn, stretch: 0, breath: 0, tilt: 0, bob: 0 });
+    assert.match(frame, /scale\(1\.0000, 1\.0000\)/);
+  }
 });

@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { createPortal } from "react-dom";
-import { AlertTriangle } from "lucide-react";
-
+import { AlertDialog } from "@base-ui/react/alert-dialog";
+import { AlertTriangle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -13,105 +11,33 @@ export type ConfirmDialogProps = {
   description?: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  /** "danger" paints the confirm button red — use it for destructive actions. */
   tone?: "default" | "danger";
   loading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 };
 
-/** Shared confirmation dialog for destructive / irreversible actions
- *  (delete, revoke, discard, …). Keyboard: Esc cancels. */
-export function ConfirmDialog({
-  open,
-  title,
-  description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
-  tone = "default",
-  loading = false,
-  onConfirm,
-  onCancel,
-}: ConfirmDialogProps) {
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !loading) onCancel();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, loading, onCancel]);
-
-  if (!open || typeof document === "undefined") return null;
-
+/** Accessible focus trapping, Escape handling and focus restoration come from Base UI. */
+export function ConfirmDialog({ open, title, description, confirmLabel = "Confirm", cancelLabel = "Cancel", tone = "default", loading = false, onConfirm, onCancel }: ConfirmDialogProps) {
   const danger = tone === "danger";
-
-  // Portaled to <body>: rendered inline, the fixed overlay was positioned
-  // against the nearest transformed/animated ancestor instead of the viewport.
-  return createPortal(
-    <div
-      className="wt-modal-overlay fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-black/55 p-4 backdrop-blur-[2px] dark:bg-black/75"
-      role="presentation"
-      onClick={loading ? undefined : onCancel}
-    >
-      <div
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="wt-confirm-title"
-        aria-describedby={description ? "wt-confirm-description" : undefined}
-        className="my-auto w-full max-w-md rounded-2xl border border-wt-border bg-wt-surface-1 p-6 shadow-2xl dark:border-wt-border-md"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div
-          className={cn(
-            "mx-auto flex size-12 items-center justify-center rounded-full",
-            danger
-              ? "bg-rose-500/12 text-rose-600 dark:text-rose-400"
-              : "bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]"
-          )}
-        >
-          <AlertTriangle className="size-6" aria-hidden />
-        </div>
-        <h2
-          id="wt-confirm-title"
-          className="mt-4 text-center text-lg font-semibold text-wt-text"
-        >
-          {title}
-        </h2>
-        {description ? (
-          <p
-            id="wt-confirm-description"
-            className="mt-2 text-center text-sm leading-relaxed text-wt-text-muted [overflow-wrap:anywhere]"
-          >
-            {description}
-          </p>
-        ) : null}
-        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={loading}
-            className="sm:min-w-[7.5rem]"
-          >
-            {cancelLabel}
-          </Button>
-          <Button
-            type="button"
-            variant={danger ? "outline" : "brand"}
-            onClick={onConfirm}
-            disabled={loading}
-            className={cn(
-              "sm:min-w-[7.5rem]",
-              danger &&
-                "border-rose-600 bg-rose-600 text-white hover:bg-rose-700 hover:text-white dark:border-rose-500 dark:bg-rose-600 dark:hover:bg-rose-500"
-            )}
-          >
-            {loading ? "Working…" : confirmLabel}
-          </Button>
-        </div>
-      </div>
-    </div>,
-    document.body
+  return (
+    <AlertDialog.Root open={open} onOpenChange={(next) => { if (!next && !loading) onCancel(); }}>
+      <AlertDialog.Portal>
+        <AlertDialog.Backdrop className="wt-modal-overlay fixed inset-0 z-[200] bg-slate-950/45 backdrop-blur-sm" />
+        <AlertDialog.Popup className="wt-confirm-panel fixed left-1/2 top-1/2 z-[201] max-h-[calc(100dvh-32px)] w-[min(440px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-wt-border bg-wt-surface-1 text-wt-text shadow-[var(--wt-shadow-lg)] outline-none">
+          <div className="p-6 sm:p-7">
+            <span className={cn("mb-5 grid size-11 place-items-center rounded-xl", danger ? "bg-rose-500/10 text-rose-600 dark:text-rose-300" : "bg-wt-brand-soft text-wt-brand")}>
+              {danger ? <AlertTriangle className="size-5" aria-hidden /> : <ArrowRight className="size-5" aria-hidden />}
+            </span>
+            <AlertDialog.Title className="font-[family-name:var(--font-brand)] text-xl font-semibold tracking-tight">{title}</AlertDialog.Title>
+            {description ? <AlertDialog.Description className="mt-3 text-sm leading-relaxed text-wt-text-muted [overflow-wrap:anywhere]">{description}</AlertDialog.Description> : null}
+          </div>
+          <div className="flex flex-wrap justify-end gap-2 border-t border-wt-border bg-wt-surface-2 px-6 py-4 sm:px-7">
+            <Button variant="outline" disabled={loading} onClick={onCancel}>{cancelLabel}</Button>
+            <Button variant={danger ? "destructive" : "brand"} disabled={loading} onClick={onConfirm}>{loading ? "Please wait…" : confirmLabel}</Button>
+          </div>
+        </AlertDialog.Popup>
+      </AlertDialog.Portal>
+    </AlertDialog.Root>
   );
 }

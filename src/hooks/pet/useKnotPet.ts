@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 
+import { COMPANION_MOTION, companionGait } from "@/utils/companionMotion";
+import { companionById, type CompanionId } from "@/constants/companions";
 import type { KnotAction, KnotCostume, KnotMood } from "@/components/mascot/Knot";
 import type { SeasonalThemeId } from "@/types/seasonal";
 import { burstSparks, launchRocket, throwPowder } from "@/lib/fireworks";
@@ -19,7 +21,6 @@ import {
   leanForSpeed,
   stepSpring,
   stretchForSpeed,
-  waddle,
   type Spring,
 } from "@/utils/petMotion";
 import {
@@ -38,7 +39,6 @@ import {
 type Mode = "idle" | "walk" | "fall" | "drag" | "sleep";
 export type BubbleAlign = "left" | "center" | "right";
 
-const WALK_SPEED = 54;
 const WANDER_MIN_MS = 5_000;
 const WANDER_MAX_MS = 12_000;
 const SLEEP_AFTER_MS = 90_000;
@@ -52,7 +52,7 @@ const HOP_SPEED = 640;
 
 function reducedMotion(): boolean {
   try {
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    return document.documentElement.classList.contains("wt-reduce-motion") || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   } catch {
     return false;
   }
@@ -77,7 +77,7 @@ const ROCKET_GAP_MS = 650;
 
 const pick = <T,>(items: readonly T[]): T => items[Math.floor(Math.random() * items.length)];
 
-export function useKnotPet({ size, firstName, season }: { size: number; firstName: string | null; season: SeasonalThemeId | null }) {
+export function useKnotPet({ size, firstName, season, character = "knot" }: { size: number; firstName: string | null; season: SeasonalThemeId | null; character?: CompanionId }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
 
@@ -89,10 +89,11 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
   const lastActiveAt = useRef(0);
   // How the body is posed right now. These are springs (they settle with a little overshoot) rather than values that jump, which
   // is what makes landings, turns and leans look fluid.
-  const pose = useRef<{ turn: Spring; stretch: Spring; tilt: Spring; walkBlend: number; walked: number; vx: number; prevX: number }>({
+  const pose = useRef<{ turn: Spring; stretch: Spring; tilt: Spring; walkBlend: number; walked: number; vx: number; prevX: number; walkSpeed: number }>({
     turn: { x: -1, v: 0 },
     stretch: { x: 0, v: 0 },
     tilt: { x: 0, v: 0 },
+    walkSpeed: 0,
     walkBlend: 0,
     walked: 0,
     vx: 0,
@@ -111,6 +112,11 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
   const [align, setAlign] = useState<BubbleAlign>("center");
   const [hearts, setHearts] = useState<number[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuOpenRef = useRef(false);
+  useEffect(() => {
+    menuOpenRef.current = menuOpen;
+    if (menuOpen && mode.current === "walk") mode.current = "idle";
+  }, [menuOpen]);
   const [action, setAction] = useState<KnotAction>(null);
   const [diya, setDiya] = useState<{ x: number } | null>(null);
   const seasonRef = useRef<SeasonalThemeId | null>(season);
@@ -305,10 +311,17 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
 
   const party = useCallback(() => {
     setMood("party", 2200);
-    hop(720);
+    if (character === "knot") hop(500);
+    else {
+      mode.current = "idle";
+      body.current.vx = 0;
+      pose.current.walkSpeed = 0;
+      nextWanderAt.current = performance.now() + 4000;
+      return;
+    }
     const world = worldFor(size);
     fireConfetti({ originYRatio: Math.min(0.9, (body.current.y + size / 2) / Math.max(1, world.height)), particleCount: 90 });
-  }, [hop, setMood, size]);
+  }, [character, hop, setMood, size]);
 
   const poke = useCallback(() => {
     touch();
@@ -330,9 +343,10 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
       return;
     }
     const isDouble = recent.length >= 2 && now - recent[recent.length - 2] < DOUBLE_CLICK_MS;
-    if (playOnPokeRef.current(isDouble)) return;
+    if (character === "knot" && playOnPokeRef.current(isDouble)) return;
     if (isDouble) {
       party();
+      if (character !== "knot") say(companionById(character).line);
       return;
     }
     hop();
@@ -340,8 +354,8 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
       setMood("love", 1800);
       sprinkleHearts(3);
     }
-    say(PET_LINES[Math.floor(Math.random() * PET_LINES.length)]);
-  }, [hop, party, say, setMood, sprinkleHearts, touch, wake]);
+    say(character === "knot" ? PET_LINES[Math.floor(Math.random() * PET_LINES.length)] : companionById(character).line);
+  }, [character, hop, party, say, setMood, sprinkleHearts, touch, wake]);
 
 
   const nap = useCallback(() => {
@@ -355,8 +369,8 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
     setMenuOpen(false);
     touch();
     wake();
-    say(PET_LINES[Math.floor(Math.random() * PET_LINES.length)]);
-  }, [say, touch, wake]);
+    say(character === "knot" ? PET_LINES[Math.floor(Math.random() * PET_LINES.length)] : companionById(character).line);
+  }, [character, say, touch, wake]);
 
   // Side effect: the loop and the click handlers read the latest season and play functions through refs.
   useEffect(() => {
@@ -367,6 +381,7 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
 
   // ---- the loop ----------------------------------------------------------------------------------------------
   useEffect(() => {
+    const motion = COMPANION_MOTION[character];
     const world = () => worldFor(size);
     const place = (now: number, dt: number) => {
       const root = rootRef.current;
@@ -374,6 +389,7 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
       if (!root || !inner) return;
       const b = body.current;
       const m = mode.current;
+      if (root.dataset.petMode !== m) root.dataset.petMode = m;
       const p = pose.current;
       root.style.transform = `translate3d(${b.x.toFixed(2)}px, ${b.y.toFixed(2)}px, 0)`;
 
@@ -394,7 +410,11 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
         p.stretch = stepSpring(p.stretch, flying && m === "fall" ? stretchForSpeed(b.vy) : 0, dt, BODY_SPRING);
         p.walkBlend = ease(p.walkBlend, m === "walk" ? 1 : 0, dt, 10);
         if (m === "walk") p.walked += Math.abs(p.vx) * dt;
-        const w = waddle(p.walked);
+        const w = companionGait(character, p.walked, p.walkBlend);
+        inner.style.setProperty("--wt-foot-left", `translate(${w.leftX}px, ${w.leftY}px)`);
+        inner.style.setProperty("--wt-foot-right", `translate(${w.rightX}px, ${w.rightY}px)`);
+        inner.style.setProperty("--wt-arm-left", `rotate(${w.leftArm}deg)`);
+        inner.style.setProperty("--wt-arm-right", `rotate(${w.rightArm}deg)`);
         const lean = flying ? leanForSpeed(p.vx) : 0;
         p.tilt = stepSpring(p.tilt, lean + w.sway * p.walkBlend, dt, TILT_SPRING);
         const calm = flying ? 0 : 1;
@@ -402,8 +422,8 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
           turn: p.turn.x,
           stretch: p.stretch.x,
           breath: breathe(now / 1000, m === "sleep") * calm,
-          tilt: p.tilt.x,
-          bob: w.bob * p.walkBlend,
+          tilt: p.tilt.x + Math.max(-2, Math.min(2, p.turn.v * .18)),
+          bob: w.bob,
         });
       }
 
@@ -411,9 +431,9 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
       const target = pointer.current ? lookOffset({ x: b.x + size / 2, y: b.y + size / 2 }, pointer.current) : { x: 0, y: 0 };
       look.current.x = ease(look.current.x, target.x, dt, 16);
       look.current.y = ease(look.current.y, target.y, dt, 16);
-      // The inner box is mirrored while the pet faces left, so flip the horizontal look with it.
-      const side = p.turn.x < 0 ? -1 : 1;
-      inner.style.setProperty("--wt-knot-look-x", `${(look.current.x * side).toFixed(2)}px`);
+      // Artwork stays front-facing. Direction is conveyed by the gaze and a
+      // small shoulder lead, preserving readable jerseys and a solid silhouette.
+      inner.style.setProperty("--wt-knot-look-x", `${look.current.x.toFixed(2)}px`);
       inner.style.setProperty("--wt-knot-look-y", `${look.current.y.toFixed(2)}px`);
     };
 
@@ -451,21 +471,25 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
           nextWanderAt.current = now + 2500 + Math.random() * 3000;
         }
       } else if (mode.current === "walk") {
-        const r = stepWalk(body.current.x, target.current, WALK_SPEED, dt);
+        const remaining = Math.abs(target.current - body.current.x);
+        const desired = motion.speed * Math.min(1, Math.max(.22, remaining / 36));
+        pose.current.walkSpeed = ease(pose.current.walkSpeed, desired, dt, 5);
+        const r = stepWalk(body.current.x, target.current, pose.current.walkSpeed, dt);
         body.current.x = clampX(r.x, ww);
         if (r.direction !== 0) facing.current = r.direction === 1 ? 1 : -1;
         if (r.arrived) {
           mode.current = "idle";
+          pose.current.walkSpeed = 0;
           nextWanderAt.current = now + WANDER_MIN_MS + Math.random() * (WANDER_MAX_MS - WANDER_MIN_MS);
         }
-      } else if (mode.current === "idle") {
+      } else if (mode.current === "idle" && !menuOpenRef.current) {
         if (now - lastActiveAt.current > SLEEP_AFTER_MS) {
           mode.current = "sleep";
           setMood("sleep");
         } else if (!reducedMotion() && now > nextWanderAt.current && moodRef.current === "hello") {
           target.current = pickWanderTarget(body.current.x, ww, Math.random);
           mode.current = "walk";
-        } else if (!reducedMotion() && seasonRef.current && now > nextPlayAt.current && moodRef.current === "hello") {
+        } else if (!reducedMotion() && character === "knot" && seasonRef.current && now > nextPlayAt.current && moodRef.current === "hello") {
           nextPlayAt.current = now + 14_000 + Math.random() * 18_000;
           playIdleRef.current();
         }
@@ -545,7 +569,7 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
     };
     // The loop is built once per pet size; everything it needs changes through refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [size]);
+  }, [character, size]);
 
   // ---- pointer: drag, throw, click, pet ----------------------------------------------------------------------
   const holdTimer = useRef<number | null>(null);
@@ -585,6 +609,7 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
     holdTimer.current = window.setTimeout(() => {
       if (mode.current === "drag" && !drag.current.moved) {
         drag.current.petted = true;
+        if (e.pointerType === "touch") { mode.current = "idle"; setMenuOpen(true); return; }
         setMood("love");
         sprinkleHearts(4);
         say(PET_COPY.love);
@@ -660,7 +685,9 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Enter" || e.key === " ") {
+    if (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) {
+      e.preventDefault(); setMenuOpen((open) => !open);
+    } else if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       poke();
     } else if (e.key === "Escape") {
@@ -683,6 +710,7 @@ export function useKnotPet({ size, firstName, season }: { size: number; firstNam
     asleep: mood === "sleep",
     nap,
     talk,
+    play: () => { setMenuOpen(false); touch(); party(); say(companionById(character).line); },
     wake,
     handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp, onContextMenu, onKeyDown },
   };

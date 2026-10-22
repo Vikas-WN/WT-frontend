@@ -33,7 +33,7 @@ const rockets: Rocket[] = [];
 
 function reduced(): boolean {
   try {
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    return document.documentElement.classList.contains("wt-reduce-motion") || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   } catch {
     return false;
   }

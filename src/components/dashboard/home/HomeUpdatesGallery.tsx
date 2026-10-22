@@ -7,6 +7,7 @@ import { HomeUpdateSlide } from "@/components/dashboard/home/HomeUpdateSlide";
 import { HOME_UPDATES, HOME_UPDATES_COPY as COPY } from "@/constants/homeUpdates";
 import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { useHomeUpdates } from "@/hooks/dashboard/useHomeUpdates";
+import { cn } from "@/lib/utils";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
 
 /**
@@ -40,8 +41,8 @@ export function HomeUpdatesGallery() {
         role="list"
       >
         {items.map((update) => (
-          <div key={update.key} role="listitem" className="h-[7.25rem] w-[17.5rem] shrink-0 [@media(max-height:780px)]:h-[5.75rem] [@media(max-height:780px)]:w-[15rem]">
-            <HomeUpdateSlide update={update} />
+          <div key={update.key} role="listitem" className={cn("min-h-28 w-[min(85vw,340px)] shrink-0", items.length === 1 && "w-full")}>
+            <HomeUpdateSlide update={update} horizontal={items.length === 1} />
           </div>
         ))}
       </div>

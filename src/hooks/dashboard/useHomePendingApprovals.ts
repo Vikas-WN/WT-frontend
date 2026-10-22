@@ -36,7 +36,7 @@ async function loadPending(): Promise<PendingApprovalItem[]> {
 
 /** Requests waiting for this person's decision — the count and the soonest few. Not fetched for people who cannot approve. */
 export function useHomePendingApprovals(enabled: boolean): { status: Status; count: number | null; items: PendingApprovalItem[] } {
-  const query = useQuery({ queryKey: HOME_APPROVALS_QUERY_KEY, queryFn: loadPending, enabled, staleTime: HOME_APPROVALS_WINDOW.staleMs });
+  const query = useQuery({ queryKey: HOME_APPROVALS_QUERY_KEY, queryFn: loadPending, enabled, refetchInterval: 30_000, refetchOnWindowFocus: "always", staleTime: HOME_APPROVALS_WINDOW.staleMs });
   if (!enabled) return { status: "done", count: null, items: [] };
   if (query.isError) return { status: "error", count: null, items: [] };
   if (query.isPending) return { status: "loading", count: null, items: [] };

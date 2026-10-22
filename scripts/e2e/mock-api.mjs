@@ -2,6 +2,7 @@
 // preferences to behave like the real ones: they are remembered server-side, so what one
 // browser saves is what a different browser is told. Failures can be switched on per test.
 import http from "node:http";
+import { designFixture } from "./design-fixtures.mjs";
 
 const DEFAULT_PREFS = {
   timezone: "Asia/Kolkata", theme: "light", density: "comfortable", reduce_motion: false,
@@ -9,7 +10,7 @@ const DEFAULT_PREFS = {
 };
 const RELEASE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/; // what the real backend accepts
 
-export function startMockApi({ port }) {
+export function startMockApi({ port, designPreview = false, appPort = 3111 }) {
   const state = {
     lastSeen: null, // the user's saved last_seen_release — server-side, shared by every browser
     putStatus: 200, // set to 500 to simulate the save failing
@@ -37,10 +38,23 @@ export function startMockApi({ port }) {
         state.writes.push({ method: req.method, path: url.pathname, body });
       }
       const path = url.pathname.replace(/^\/api\/v1/, "");
+      if (designPreview && path === "/__preview") {
+        if (url.searchParams.has("open")) {
+          res.writeHead(303,{Location:`http://127.0.0.1:${appPort}/dashboard/home`,"Set-Cookie":["accessToken","tokenId","refreshToken","email"].map(name=>`${name}=synthetic-preview; Path=/; HttpOnly; SameSite=Lax`)});
+          return res.end();
+        }
+        res.writeHead(200,{"Content-Type":"text/html"});
+        return res.end('<!doctype html><title>WebTrak synthetic design preview</title><h1>Synthetic design preview</h1><p>This preview uses invented records and cannot contact the real WebTrak service.</p><a href="/__preview?open=1">Open synthetic preview</a>');
+      }
+
       // Like the real API: no session cookie forwarded, no access. (Without this the sign-in page
       // would think you are logged in and bounce you to the dashboard.)
       if (!/(^|;\s*)(accessToken|tokenId)=/.test(req.headers.cookie ?? "")) {
         return json(res, 401, { detail: "Not authenticated" });
+      }
+      if (designPreview) {
+        const fixture = designFixture(path,url);
+        if (fixture !== undefined) return json(res,200,{message:"ok",data:fixture});
       }
       if (path === "/auth/me") {
         return json(res, 200, {

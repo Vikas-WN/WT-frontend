@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
-/** Sidebar shell — fixed viewport height; nav scrolls inside. Deliberately
- *  dark regardless of the app theme (see --wt-sidebar-* tokens). */
+/** Sidebar shell — fixed viewport height; nav scrolls inside. Theme-aware
+ *  navigation surface (see --wt-sidebar-* tokens). */
 export const SIDEBAR_SHELL_BASE =
   "wt-sidebar wt-mobile-drawer z-40 flex h-dvh max-h-dvh shrink-0 flex-col border-r border-[var(--wt-sidebar-border)] bg-[var(--wt-sidebar-bg)] transition-[width,transform,padding] duration-[var(--wt-duration)] ease-[var(--wt-ease)] max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,288px)] lg:min-w-0 lg:translate-x-0";
 
@@ -105,7 +105,7 @@ export const DASHBOARD_HEADER_CLASS =
 
 /** Inner bar — design padding and flex row. Never put py-* on the surface. */
 export const DASHBOARD_HEADER_BAR_CLASS =
-  "flex min-h-14 items-center justify-between gap-2 px-3 py-2 sm:gap-4 sm:px-6";
+  "flex min-h-[68px] items-center justify-between gap-2 px-3 py-2 sm:gap-4 sm:px-8";
 
 export const DASHBOARD_HEADER_MENU_BUTTON_CLASS =
   "flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2 text-wt-text shadow-sm transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:bg-wt-surface-3 hover:-translate-y-px lg:hidden";

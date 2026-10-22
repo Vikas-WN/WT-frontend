@@ -1,25 +1,7 @@
 import type { ReactNode } from "react";
-
 import { cn } from "@/lib/utils";
-import { formatUILabel } from "@/utils/titleCase";
 
-/**
- * Page-level hero header — consistent title hierarchy across dashboard routes.
- *
- * `surface` opts into a bordered, brand-tinted card treatment (used by Home)
- * instead of the default bare header — existing callers are unaffected since
- * it defaults to off. `raw` skips the automatic title-casing for content that
- * shouldn't be reshaped, like a personalized greeting ("Good morning, Asha").
- */
-export function PageHero({
-  title,
-  description,
-  eyebrow,
-  action,
-  className,
-  surface = false,
-  raw = false,
-}: {
+type PageHeroProps = {
   title: string;
   description?: string;
   eyebrow?: string;
@@ -27,38 +9,16 @@ export function PageHero({
   className?: string;
   surface?: boolean;
   raw?: boolean;
-}) {
-  return (
-    <header
-      data-page-hero
-      className={cn(
-        "relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between",
-        surface && "overflow-hidden rounded-3xl border border-wt-border bg-wt-surface-1 px-5 py-6 sm:px-8 sm:py-8",
-        className
-      )}
-    >
-      {surface ? (
-        <div
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_120%_100%_at_0%_0%,color-mix(in_srgb,var(--wt-brand)_7%,transparent),transparent_60%)]"
-          aria-hidden
-        />
-      ) : null}
-      <div className="relative min-w-0 max-w-3xl space-y-1.5">
-        {eyebrow ? (
-          <p className="text-sm text-wt-text-muted">{raw ? eyebrow : formatUILabel(eyebrow)}</p>
-        ) : null}
-        <h1 className="text-[1.5rem] font-semibold leading-tight tracking-[-0.02em] text-wt-text">
-          {raw ? title : formatUILabel(title)}
-        </h1>
-        {description ? (
-          <p className="text-sm leading-relaxed text-wt-text-muted">
-            {description}
-          </p>
-        ) : null}
-      </div>
-      {action ? (
-        <div className="relative flex shrink-0 flex-wrap items-center gap-3">{action}</div>
-      ) : null}
-    </header>
-  );
+};
+
+/** A single page heading and action zone; typography follows authored copy. */
+export function PageHero({title, description, eyebrow, action, className, surface = false}: PageHeroProps) {
+  return <header data-page-hero className={cn("wt-page-hero", surface && "wt-page-hero-surface", className)}>
+    <div className="min-w-0 max-w-3xl">
+      {eyebrow ? <p className="wt-page-eyebrow">{eyebrow}</p> : null}
+      <h1>{title}</h1>
+      {description ? <p className="wt-page-description">{description}</p> : null}
+    </div>
+    {action ? <div className="wt-page-actions">{action}</div> : null}
+  </header>;
 }

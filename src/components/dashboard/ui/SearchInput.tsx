@@ -1,5 +1,6 @@
 "use client";
 
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,8 @@ export function SearchInput({
   "aria-label": ariaLabel = "Search",
 }: SearchInputProps) {
   return (
+    <div className={cn("relative w-full", className)}>
+      <Search className="pointer-events-none absolute left-3.5 top-1/2 z-10 size-4 -translate-y-1/2 text-wt-text-faint" aria-hidden />
     <Input
       id={id}
       type="search"
@@ -33,7 +36,8 @@ export function SearchInput({
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
       aria-label={ariaLabel}
-      className={cn("h-10 w-full", className)}
+      className="h-11 w-full rounded-xl bg-wt-surface-1 pl-10"
     />
+    </div>
   );
 }

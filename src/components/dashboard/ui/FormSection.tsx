@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import {
-  INNER_PANEL_CLASS,
   SECTION_DESCRIPTION_CLASS,
   SECTION_HEADER_CLASS,
   SECTION_TITLE_CLASS,
@@ -26,7 +25,7 @@ export function FormSection({
   className?: string;
 }) {
   return (
-    <section className={cn(INNER_PANEL_CLASS, className)}>
+    <section className={cn("wt-form-section", className)}>
       <header className={SECTION_HEADER_CLASS}>
         <h4 className={cn(SECTION_TITLE_CLASS, "text-base")}>{formatUILabel(title)}</h4>
         {description ? <p className={SECTION_DESCRIPTION_CLASS}>{description}</p> : null}

@@ -2,6 +2,8 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 
+import { companionById, type CompanionId } from "@/constants/companions";
+
 const KEY = "wt-pet-enabled";
 const CHANGED = "wt-pet-changed";
 
@@ -34,4 +36,19 @@ export function usePetEnabled(): [boolean, (enabled: boolean) => void] {
     window.dispatchEvent(new Event(CHANGED));
   }, []);
   return [enabled, set];
+}
+
+// Device-local choice, synchronized across open tabs and usable without storage.
+let memoryCharacter = "knot";
+export function usePetCharacter() {
+  const character = useSyncExternalStore(subscribe, () => {
+    try { return companionById(window.localStorage.getItem("wt-pet-character")).id; }
+    catch { return companionById(memoryCharacter).id; }
+  }, () => "knot" as CompanionId);
+  const setCharacter = useCallback((id: CompanionId) => {
+    memoryCharacter = id;
+    try { window.localStorage.setItem("wt-pet-character", id); } catch { /* memory fallback */ }
+    window.dispatchEvent(new Event(CHANGED));
+  }, []);
+  return [character, setCharacter] as const;
 }

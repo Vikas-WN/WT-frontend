@@ -8,6 +8,7 @@ import { RouteProgress } from "@/components/motion/RouteProgress";
 import { Suspense } from "react";
 import { themeInitScript } from "@/components/shared/ThemeInitScript";
 import "./globals.css";
+import "./workspace.css";
 import { cn } from "@/lib/utils";
 
 // Self-hosted (latin subset, variable) rather than next/font/google: the Google

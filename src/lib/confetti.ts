@@ -17,7 +17,7 @@ const COLORS = ["#5b8def", "#f97066", "#f5c451", "#3ccb7f", "#a78bfa", "#22c1c3"
 
 function prefersReducedMotion(): boolean {
   try {
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    return document.documentElement.classList.contains("wt-reduce-motion") || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   } catch {
     return false;
   }

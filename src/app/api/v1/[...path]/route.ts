@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 type RouteContext = {
-  params: Promise<{ path?: string | string[] }> | { path?: string | string[] };
+  params: Promise<{ path: string[] }>;
 };
 
 async function handleProxy(request: NextRequest, context: RouteContext) {

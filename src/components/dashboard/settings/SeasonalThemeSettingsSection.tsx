@@ -31,8 +31,8 @@ export function SeasonalThemeSettingsSection() {
   // Side effect: take on what the server says, whenever it (re)loads.
   useEffect(() => {
     if (!data) return;
-    setEnabled(data.enabled);
-    setThemes(data.themes);
+    setEnabled(Boolean(data.enabled));
+    setThemes(data.themes ?? []);
   }, [data]);
 
   const save = useMutation({
@@ -45,7 +45,7 @@ export function SeasonalThemeSettingsSection() {
     onError: (error) => notifyError(toUserFriendlyApiErrorMessage(error, "Couldn't save the seasonal look.")),
   });
 
-  const dirty = data ? enabled !== data.enabled || themes.slice().sort().join() !== data.themes.slice().sort().join() : false;
+  const dirty = data ? enabled !== data.enabled || themes.slice().sort().join() !== (data.themes ?? []).slice().sort().join() : false;
   const toggleTheme = (id: SeasonalThemeId) =>
     setThemes((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
 
@@ -57,7 +57,7 @@ export function SeasonalThemeSettingsSection() {
         <span className="ml-auto text-[11px] text-wt-text-faint">HR / Admin</span>
       </div>
       <p className="mb-4 text-xs text-wt-text-muted">
-        A subtle festive touch — a coloured ribbon across the top and a greeting on Home. Off until you switch it on; the date decides
+        Illustrated festival cards and optional celebrations on Home. The date decides
         which one appears, and anyone can turn it off for themselves in their own settings.
       </p>
 
@@ -93,11 +93,11 @@ export function SeasonalThemeSettingsSection() {
             ))}
           </div>
 
-          {data.upcoming.length > 0 ? (
+          {data.upcoming?.length > 0 ? (
             <div>
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-wt-text-faint">Coming up</p>
               <ul className="space-y-1 text-sm text-wt-text-muted">
-                {data.upcoming.map((w) => (
+                {data.upcoming?.map((w) => (
                   <li key={`${w.theme}-${w.start}`} className="flex items-center justify-between gap-3">
                     <span className={cn(!w.enabled && "line-through opacity-60")}>{w.label}</span>
                     <span className="tabular-nums text-xs">{formatRange(w.start, w.end)}</span>

@@ -10,5 +10,5 @@ export function ContentCard({
   children: ReactNode;
   className?: string;
 }) {
-  return <section className={cn(CONTENT_CARD_CLASS, className)}>{children}</section>;
+  return <section className={cn(CONTENT_CARD_CLASS, "wt-content-panel", className)}>{children}</section>;
 }

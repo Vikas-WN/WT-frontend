@@ -1,5 +1,8 @@
 "use client";
 
+import { PageHero } from "@/components/dashboard/ui/PageHero";
+import { SettingsNavigation } from "./SettingsNavigation";
+import { CompanionPicker } from "@/components/mascot/CompanionPicker";
 import { usePetEnabled } from "@/lib/petPreference";
 import { configureFeedback, giveFeedback } from "@/lib/feedback";
 import { useEffect, useMemo, useState } from "react";
@@ -215,34 +218,12 @@ export function SettingsPageClient() {
   return (
     <DashboardPageShell className="wt-detail-page">
       <OnboardingGate>
-        <div className="mx-auto w-full max-w-3xl space-y-6 wt-soft-in">
-          <header className="relative overflow-hidden rounded-3xl border border-wt-border bg-wt-surface-1 p-6 shadow-[var(--wt-shadow-md)] dark:bg-wt-surface-2 dark:shadow-none sm:p-8">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,color-mix(in_srgb,var(--wt-brand)_16%,transparent),transparent_55%)]" />
-            <div className="relative flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-wt-text-faint">
-                  Preferences
-                </p>
-                <h1 className="mt-1 text-2xl font-semibold tracking-tight text-wt-text sm:text-3xl">
-                  Settings
-                </h1>
-                <p className="mt-2 max-w-xl text-sm text-wt-text-muted">
-                  Appearance, notifications, calendar defaults, and timezone — synced to your account.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-wt-border bg-wt-surface-2/80 px-4 py-3 backdrop-blur-sm dark:bg-black/30">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-wt-text-faint">
-                  Local time
-                </p>
-                <p className="mt-1 flex items-center gap-2 text-sm font-medium text-wt-text">
-                  <Clock3 className="size-4 text-[var(--wt-brand)]" />
-                  {clock}
-                </p>
-              </div>
-            </div>
-          </header>
+        <div className="mx-auto w-full max-w-6xl space-y-7 wt-soft-in">
+          <PageHero eyebrow="Make it yours" title="Settings" description="A workspace that feels right for you. Adjust the details, then save your preferences." action={<span className="flex items-center gap-2 rounded-lg border border-wt-border bg-wt-surface-1 px-3 py-2 text-xs text-wt-text-muted"><Clock3 className="size-3.5"/>{clock}</span>}/>
+          <div className="wt-settings-workspace"><SettingsNavigation admin={canManagePulseScoring}/><div className="min-w-0 space-y-6">
 
-          <section className="rounded-3xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm dark:bg-wt-surface-2 dark:shadow-none sm:p-6">
+
+          <section id="settings-appearance" className="rounded-3xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm dark:bg-wt-surface-2 dark:shadow-none sm:p-6">
             <div className="mb-4 flex items-center gap-2">
               <Sparkles className="size-4 text-[var(--wt-brand)]" />
               <h2 className="text-sm font-semibold text-wt-text">Appearance</h2>
@@ -281,7 +262,7 @@ export function SettingsPageClient() {
               })}
             </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="mt-5 space-y-4">
               <div className="rounded-2xl border border-wt-border bg-wt-surface-2/50 p-4 dark:bg-black/20">
                 <div className="mb-3 flex items-center gap-2 text-sm font-medium text-wt-text">
                   <Contrast className="size-4 text-wt-text-muted" />
@@ -311,8 +292,8 @@ export function SettingsPageClient() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-wt-border bg-wt-surface-2/50 p-4 dark:bg-black/20">
-                <div className="mb-3 flex items-center gap-2 text-sm font-medium text-wt-text">
+              <div className="grid items-start gap-3 rounded-2xl border border-wt-border bg-wt-surface-2/50 p-4 dark:bg-black/20 sm:grid-cols-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-wt-text sm:col-span-2">
                   <Waves className="size-4 text-wt-text-muted" />
                   Motion
                 </div>
@@ -325,12 +306,12 @@ export function SettingsPageClient() {
                   </span>
                   <input
                     type="checkbox"
-                    className="size-4 accent-[var(--wt-brand)]"
+                    className="size-4 shrink-0 accent-[var(--wt-brand)]"
                     checked={reduceMotion}
                     onChange={(e) => setReduceMotion(e.target.checked)}
                   />
                 </label>
-                <label className="mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-3 py-3 dark:bg-wt-surface-3">
+                <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-3 py-3 dark:bg-wt-surface-3">
                   <span>
                     <span className="block text-sm font-medium text-wt-text">Festive look</span>
                     <span className="block text-xs text-wt-text-muted">
@@ -339,33 +320,33 @@ export function SettingsPageClient() {
                   </span>
                   <input
                     type="checkbox"
-                    className="size-4 accent-[var(--wt-brand)]"
+                    className="size-4 shrink-0 accent-[var(--wt-brand)]"
                     checked={festiveLook}
                     onChange={(e) => setFestiveLook(e.target.checked)}
                   />
                 </label>
-                <label className="mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-3 py-3 dark:bg-wt-surface-3">
+                <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-3 py-3 dark:bg-wt-surface-3">
                   <span>
-                    <span className="block text-sm font-medium text-wt-text">Knot, your desk pet</span>
+                    <span className="block text-sm font-medium text-wt-text">Your desk companion</span>
                     <span className="block text-xs text-wt-text-muted">
                       A little companion that wanders the screen. Drag it, poke it, pet it — right-click for options. Applies to this browser.
                     </span>
                   </span>
                   <input
                     type="checkbox"
-                    className="size-4 accent-[var(--wt-brand)]"
+                    className="size-4 shrink-0 accent-[var(--wt-brand)]"
                     checked={petEnabled}
                     onChange={(e) => setPetEnabled(e.target.checked)}
                   />
                 </label>
-                <label className="mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-3 py-3 dark:bg-wt-surface-3">
+                <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-3 py-3 dark:bg-wt-surface-3">
                   <span>
                     <span className="block text-sm font-medium text-wt-text">Sound on approvals</span>
                     <span className="block text-xs text-wt-text-muted">A short, soft tone when you approve, reject or undo a request</span>
                   </span>
                   <input
                     type="checkbox"
-                    className="size-4 accent-[var(--wt-brand)]"
+                    className="size-4 shrink-0 accent-[var(--wt-brand)]"
                     checked={soundEffects}
                     onChange={(e) => {
                       setSoundEffects(e.target.checked);
@@ -378,14 +359,14 @@ export function SettingsPageClient() {
                     }}
                   />
                 </label>
-                <label className="mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-3 py-3 dark:bg-wt-surface-3">
+                <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-3 py-3 dark:bg-wt-surface-3">
                   <span>
                     <span className="block text-sm font-medium text-wt-text">Vibration on approvals</span>
                     <span className="block text-xs text-wt-text-muted">A light buzz on phones and tablets that support it</span>
                   </span>
                   <input
                     type="checkbox"
-                    className="size-4 accent-[var(--wt-brand)]"
+                    className="size-4 shrink-0 accent-[var(--wt-brand)]"
                     checked={hapticFeedback}
                     onChange={(e) => setHapticFeedback(e.target.checked)}
                   />
@@ -394,7 +375,9 @@ export function SettingsPageClient() {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm dark:bg-wt-surface-2 dark:shadow-none sm:p-6">
+          <CompanionPicker />
+
+          <section id="settings-notifications" className="rounded-3xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm dark:bg-wt-surface-2 dark:shadow-none sm:p-6">
             <div className="mb-4 flex items-center gap-2">
               <Bell className="size-4 text-[var(--wt-brand)]" />
               <h2 className="text-sm font-semibold text-wt-text">Notifications</h2>
@@ -417,7 +400,7 @@ export function SettingsPageClient() {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm dark:bg-wt-surface-2 dark:shadow-none sm:p-6">
+          <section id="settings-calendar" className="rounded-3xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm dark:bg-wt-surface-2 dark:shadow-none sm:p-6">
             <div className="mb-4 flex items-center gap-2">
               <CalendarDays className="size-4 text-[var(--wt-brand)]" />
               <h2 className="text-sm font-semibold text-wt-text">Calendar & dates</h2>
@@ -466,7 +449,7 @@ export function SettingsPageClient() {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm dark:bg-wt-surface-2 dark:shadow-none sm:p-6">
+          <section id="settings-timezone" className="rounded-3xl border border-wt-border bg-wt-surface-1 p-5 shadow-sm dark:bg-wt-surface-2 dark:shadow-none sm:p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Clock3 className="size-4 text-[var(--wt-brand)]" />
@@ -494,11 +477,12 @@ export function SettingsPageClient() {
             </p>
           </section>
 
-          {canManagePulseScoring ? <SeasonalThemeSettingsSection /> : null}
-          {canManagePulseScoring ? <PulseScoreSettingsSection /> : null}
+          {canManagePulseScoring ? <div id="settings-seasonal"><SeasonalThemeSettingsSection /></div> : null}
+          {canManagePulseScoring ? <div id="settings-scoring"><PulseScoreSettingsSection /></div> : null}
 
-          <div className="sticky bottom-6 right-6 z-10 flex justify-end">
-            <div className="flex items-center gap-2 rounded-2xl border border-wt-border bg-wt-surface-1/95 p-2 shadow-lg backdrop-blur-md dark:bg-wt-surface-2/95">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-wt-border bg-wt-surface-1 p-4">
+            <p role="status" className="text-xs text-wt-text-muted">{dirty ? "You have unsaved preferences." : "Your preferences are up to date."}</p>
+            <div className="flex items-center gap-2">
               <Button type="button" variant="ghost" disabled={!dirty || isSaving} onClick={handleReset}>
                 Reset
               </Button>
@@ -507,6 +491,7 @@ export function SettingsPageClient() {
               </Button>
             </div>
           </div>
+          </div></div>
         </div>
       </OnboardingGate>
     </DashboardPageShell>

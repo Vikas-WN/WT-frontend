@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Pencil, Plus, Search as SearchIcon, Trash2 } from "lucide-react";
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { apiCollection, apiRecord } from "@/utils/apiCollection";
+import { PageHero } from "@/components/dashboard/ui/PageHero";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
@@ -48,8 +50,8 @@ function useLoad<T>(fn: () => Promise<T>, deps: unknown[] = []): Load<T> {
 
 type View = "list" | "detail" | "form";
 
-function initials(email: string): string {
-  const name = email.split("@")[0] ?? "?";
+function initials(email: string | null | undefined): string {
+  const name = (email ?? "").split("@")[0] ?? "?";
   return name.slice(0, 2).toUpperCase();
 }
 
@@ -78,8 +80,8 @@ export function WikiSpacePageClient({
     [space, category, search, listTick]
   );
   const categoriesQuery = useLoad(() => hrmsService.listWikiCategories(space), [space, listTick]);
-  const pages: WikiPageSummary[] = listQuery.data?.data?.data ?? [];
-  const categories: string[] = categoriesQuery.data?.data ?? [];
+  const pages = apiCollection<WikiPageSummary>(listQuery.data).filter((page) => page && typeof page.title === "string");
+  const categories = apiCollection<unknown>(categoriesQuery.data).filter((value): value is string => typeof value === "string");
 
   const [selected, setSelected] = useState<WikiPageDetail | null>(null);
   const [detailStatus, setDetailStatus] = useState<"loading" | "error" | "done">("done");
@@ -101,7 +103,7 @@ export function WikiSpacePageClient({
     setDetailStatus("loading");
     try {
       const res = await hrmsService.getWikiPage(id);
-      setSelected(res.data ?? null);
+      setSelected(apiRecord<WikiPageDetail>(res));
       setDetailStatus("done");
     } catch {
       setDetailStatus("error");
@@ -147,7 +149,7 @@ export function WikiSpacePageClient({
           content: formContent,
         });
         notifySuccess("Page updated.");
-        setSelected(res.data ?? null);
+        setSelected(apiRecord<WikiPageDetail>(res));
         setView("detail");
       } else {
         const res = await hrmsService.createWikiPage({
@@ -157,7 +159,7 @@ export function WikiSpacePageClient({
           content: formContent,
         });
         notifySuccess("Page created.");
-        setSelected(res.data ?? null);
+        setSelected(apiRecord<WikiPageDetail>(res));
         setView("detail");
       }
       refreshList();
@@ -203,11 +205,11 @@ export function WikiSpacePageClient({
 
   return (
     <DashboardPageShell className="wt-detail-page">
+      <PageHero title={title} description={description} eyebrow="Your reference library" />
       <ContentCard>
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-wt-border px-4 py-4 sm:px-6">
           <div>
-            <h2 className="text-lg font-semibold text-wt-text">{title}</h2>
-            <p className="mt-1 text-sm text-wt-text-muted">{description}</p>
+            <h2 className="text-sm font-semibold text-wt-text">{view === "list" ? "Browse policies" : view === "form" ? "Policy editor" : "Policy details"}</h2>
           </div>
           {view === "list" ? (
             <div className="flex shrink-0 items-center gap-2">
@@ -274,13 +276,13 @@ export function WikiSpacePageClient({
                 className="py-12"
               />
             ) : (
-              <ul className="divide-y divide-wt-border overflow-hidden rounded-xl border border-wt-border">
+              <ul className="grid gap-3 md:grid-cols-2">
                 {pages.map((p) => (
                   <li key={p.id}>
                     <button
                       type="button"
                       onClick={() => void openDetail(p.id)}
-                      className="flex w-full flex-col gap-1 px-4 py-3.5 text-left transition-colors hover:bg-wt-surface-2"
+                      className="flex h-full w-full flex-col gap-2 rounded-xl border border-wt-border px-5 py-5 text-left transition-colors hover:border-wt-border-md hover:bg-wt-surface-2"
                     >
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium text-wt-text">{p.title}</span>
