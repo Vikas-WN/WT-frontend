@@ -6,14 +6,14 @@ import { cn } from "@/lib/utils"
 const buttonVariants = cva(
   // Soft focus-visible:ring-* glows looked like a light halo after click.
   // Keyboard focus uses the global :focus-visible outline in globals.css.
-  "group/button inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[background-color,border-color,box-shadow,color,transform,opacity] duration-[var(--wt-duration)] ease-[var(--wt-ease)] outline-none select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent bg-clip-padding text-[0.8125rem] font-medium whitespace-nowrap transition-[background-color,border-color,box-shadow,color,transform,opacity] duration-[var(--wt-duration)] ease-[var(--wt-ease)] outline-none select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default:
-          "wt-sheen bg-[var(--wt-brand)] bg-linear-to-b from-white/[0.14] to-transparent text-[var(--wt-brand-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_1px_2px_rgba(16,24,40,0.14)] hover:bg-[var(--wt-brand-hover)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_2px_6px_rgba(53,80,149,0.28)] active:bg-[var(--wt-brand-active)] active:shadow-none",
+          "bg-[var(--wt-brand)] text-[var(--wt-brand-text)] shadow-[0_1px_2px_rgba(16,17,21,0.12),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-[var(--wt-brand-hover)] active:bg-[var(--wt-brand-active)] active:shadow-none",
         brand:
-          "wt-sheen bg-[var(--wt-brand)] bg-linear-to-b from-white/[0.14] to-transparent text-[var(--wt-brand-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_1px_2px_rgba(16,24,40,0.14)] hover:bg-[var(--wt-brand-hover)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_2px_6px_rgba(53,80,149,0.28)] active:bg-[var(--wt-brand-active)] active:shadow-none",
+          "bg-[var(--wt-brand)] text-[var(--wt-brand-text)] shadow-[0_1px_2px_rgba(16,17,21,0.12),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-[var(--wt-brand-hover)] active:bg-[var(--wt-brand-active)] active:shadow-none",
         outline:
           "border-wt-border bg-wt-surface-1 text-wt-text shadow-[var(--wt-shadow-sm)] hover:bg-wt-surface-2 hover:text-wt-text aria-expanded:bg-wt-surface-2 dark:border-wt-border dark:bg-wt-surface-1 dark:hover:bg-wt-surface-2",
         secondary:
@@ -26,16 +26,16 @@ const buttonVariants = cva(
       },
       size: {
         default:
-          "h-10 gap-2 px-4 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
+          "h-9 gap-1.5 px-3.5 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
         xs: "h-7 gap-1 rounded-lg px-2.5 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-9 gap-1.5 rounded-xl px-3.5 text-[0.8125rem] in-data-[slot=button-group]:rounded-xl has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-11 gap-2 px-5 has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4",
-        icon: "size-10",
+        sm: "h-8 gap-1.5 rounded-lg px-3 text-[0.8125rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3.5",
+        lg: "h-10 gap-2 px-4 has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4",
+        icon: "size-9",
         "icon-xs":
           "size-7 rounded-lg in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
         "icon-sm":
-          "size-9 rounded-xl in-data-[slot=button-group]:rounded-xl",
-        "icon-lg": "size-11",
+          "size-8 rounded-lg in-data-[slot=button-group]:rounded-lg",
+        "icon-lg": "size-10",
       },
     },
     defaultVariants: {

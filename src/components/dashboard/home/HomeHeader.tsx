@@ -26,7 +26,7 @@ export function HomeHeader({ eyebrow, title, subtitle, editMode, onEditModeChang
     <header data-page-hero className="flex shrink-0 flex-wrap items-end justify-between gap-x-6 gap-y-4">
       <div className="min-w-0">
         <p className="text-sm text-wt-text-muted">{eyebrow}</p>
-        <h1 className="mt-1 text-[1.5rem] font-bold leading-tight tracking-[-0.025em] text-wt-text sm:text-[1.875rem]">{title}</h1>
+        <h1 className="mt-1 text-[1.5rem] font-semibold leading-tight tracking-[-0.02em] text-wt-text sm:text-[1.75rem]">{title}</h1>
         {subtitle ? <p className="mt-1 text-base text-wt-text-muted">{subtitle}</p> : null}
       </div>
       <div className="flex flex-wrap items-center gap-2.5">

@@ -24,50 +24,50 @@
   --wt-violet-500: #8b5cf6;
 
   /* Primary action — WebTrak brand blue */
-  --wt-brand: #374795;
-  --wt-brand-hover: #2e3c82;
-  --wt-brand-active: #263270;
+  --wt-brand: #3a56d4;
+  --wt-brand-hover: #2e46b8;
+  --wt-brand-active: #263a9c;
   /* The deep navy of the sign-in panel and the profile banner (WebTrak redesign). */
-  --wt-navy: #1d2454;
+  --wt-navy: #182159;
   --wt-brand-text: #ffffff;
-  --wt-brand-soft: color-mix(in srgb, var(--wt-brand) 10%, white);
+  --wt-brand-soft: color-mix(in srgb, var(--wt-brand) 9%, white);
   --wt-brand-muted: color-mix(in srgb, var(--wt-brand) 16%, transparent);
 
   /* Surface — a calm, low-saturation canvas so white cards lift off it with a
      hairline + soft shadow instead of tint. (Was a saturated blue-gray that,
      with the page-top brand gradient on top, read as a muddy blue band.) */
-  --wt-bg: #f4f5f8;
-  --wt-page-bg: #f4f5f8;
+  --wt-bg: #f6f6f7;
+  --wt-page-bg: #f6f6f7;
   --wt-surface-1: #ffffff;
-  --wt-surface-2: #f7f9fc;
-  --wt-surface-3: #edf0f6;
+  --wt-surface-2: #f9f9fa;
+  --wt-surface-3: #efeff2;
 
   /* Sidebar — light and sectioned (WebTrak redesign): a quiet grey rail, the active page a white pill with a hairline and a soft
      shadow. The dark theme redefines these below. */
-  --wt-sidebar-bg: #f4f4f6;
+  --wt-sidebar-bg: #fbfbfc;
   --wt-sidebar-surface-2: #ffffff;
   --wt-sidebar-border: rgba(15, 23, 42, 0.08);
-  --wt-sidebar-text: #0b1220;
-  --wt-sidebar-text-muted: #5b6475;
-  --wt-sidebar-text-faint: #667085;
-  --wt-sidebar-hover-bg: rgba(15, 23, 42, 0.05);
-  --wt-sidebar-active-bg: #ffffff;
-  --wt-sidebar-active-bg-collapsed: #ffffff;
+  --wt-sidebar-text: #0f1115;
+  --wt-sidebar-text-muted: #52525b;
+  --wt-sidebar-text-faint: #6b6b76;
+  --wt-sidebar-hover-bg: rgba(15, 17, 21, 0.05);
+  --wt-sidebar-active-bg: color-mix(in srgb, var(--wt-brand) 9%, white);
+  --wt-sidebar-active-bg-collapsed: color-mix(in srgb, var(--wt-brand) 9%, white);
 
   /* Text — every step clears WCAG AA (4.5:1) on both white cards and the canvas.
      Faint was #64748b, which dipped just under on the gray canvas. */
-  --wt-text: #0b1220;
-  --wt-text-muted: #475569;
-  --wt-text-faint: #5b6779;
+  --wt-text: #0f1115;
+  --wt-text-muted: #52525b;
+  --wt-text-faint: #6b6b76;
 
   /* Border — hairlines with enough weight to define a card edge on the canvas */
-  --wt-border: rgba(15, 23, 42, 0.075);
-  --wt-border-md: rgba(15, 23, 42, 0.14);
+  --wt-border: rgba(15, 17, 21, 0.09);
+  --wt-border-md: rgba(15, 17, 21, 0.16);
 
   /* Elevation — neutral, layered and soft. Cards rest on a hairline plus a 1px
      contact shadow; overlays get a long, low-opacity ambient shadow. */
-  --wt-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04), 0 0 0 0.5px rgba(16, 24, 40, 0.02);
-  --wt-shadow-md: 0 1px 2px rgba(16, 24, 40, 0.04), 0 6px 16px -4px rgba(16, 24, 40, 0.08);
+  --wt-shadow-sm: 0 1px 1px rgba(16, 17, 21, 0.03);
+  --wt-shadow-md: 0 1px 2px rgba(16, 17, 21, 0.05), 0 4px 12px -2px rgba(16, 17, 21, 0.07);
   --wt-shadow-lg: 0 2px 4px -1px rgba(16, 24, 40, 0.05), 0 20px 40px -12px rgba(16, 24, 40, 0.16);
 
   /* Accent glow — brand-tinted (not indigo/violet) */
@@ -291,11 +291,13 @@
 /* One knob for the size of the whole interface: everything is in rem, so the root size scales text, cards, buttons and
    spacing together. 14px is the everyday size (what the WebTrak design uses); very large screens get 15px. */
 html {
-  font-size: 14px;
+  /* 15px root: text-sm is ~13px and text-xs ~11px (the sizes design tools use), and nothing falls below 11px. Density comes
+     from the component sizes (36px controls, 32px nav rows), not from shrinking the type. */
+  font-size: 15px;
 }
 @media (min-width: 1920px) {
   html {
-    font-size: 15px;
+    font-size: 16px;
   }
 }
 

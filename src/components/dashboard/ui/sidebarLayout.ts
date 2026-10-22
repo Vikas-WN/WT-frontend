@@ -105,7 +105,7 @@ export const DASHBOARD_HEADER_CLASS =
 
 /** Inner bar — design padding and flex row. Never put py-* on the surface. */
 export const DASHBOARD_HEADER_BAR_CLASS =
-  "flex min-h-[4.25rem] items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-8";
+  "flex min-h-14 items-center justify-between gap-2 px-3 py-2 sm:gap-4 sm:px-6";
 
 export const DASHBOARD_HEADER_MENU_BUTTON_CLASS =
   "flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-wt-border bg-wt-surface-2 text-wt-text shadow-sm transition-all duration-[var(--wt-duration)] ease-[var(--wt-ease)] hover:bg-wt-surface-3 hover:-translate-y-px lg:hidden";

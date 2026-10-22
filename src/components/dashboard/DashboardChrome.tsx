@@ -700,8 +700,8 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
           <div className="mx-auto w-full max-w-[2000px] lg:h-full">
             {/* Pages that draw their own heading mark it `data-page-hero` and this one steps aside (see globals.css). */}
             <div className="wt-chrome-title px-4 pt-5 sm:px-5 md:px-8 md:pt-7">
-              <h1 className="text-[1.5rem] font-bold leading-tight tracking-[-0.025em] text-wt-text sm:text-[1.75rem]">{breadcrumb.title}</h1>
-              {"description" in breadcrumb && breadcrumb.description ? <p className="mt-1.5 text-base text-wt-text-muted">{breadcrumb.description}</p> : null}
+              <h1 className="text-[1.5rem] font-semibold leading-tight tracking-[-0.02em] text-wt-text">{breadcrumb.title}</h1>
+              {"description" in breadcrumb && breadcrumb.description ? <p className="mt-1 text-sm text-wt-text-muted">{breadcrumb.description}</p> : null}
             </div>
             {children}
           </div>

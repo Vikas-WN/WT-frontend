@@ -14,7 +14,7 @@ export const SECTION_DESCRIPTION_CLASS =
 
 /** Primary content card used on tabbed pages (Leave, Timelog, etc.). */
 export const CONTENT_CARD_CLASS = cn(
-  "wt-surface-card overflow-hidden rounded-[1.25rem] border border-wt-border bg-wt-surface-1 shadow-[var(--wt-shadow-sm)]",
+  "wt-surface-card overflow-hidden rounded-xl border border-wt-border bg-wt-surface-1 shadow-[var(--wt-shadow-sm)]",
   "dark:border-wt-border dark:bg-wt-surface-1 dark:shadow-none"
 );
 
@@ -62,7 +62,7 @@ export const FORM_FIELD_CLASS = "flex flex-col gap-2";
 export const FIELD_LABEL_CLASS = "text-sm font-medium leading-none text-wt-text";
 /** Shared height/padding for text inputs and selects in forms. */
 export const FORM_CONTROL_CLASS = cn(
-  "h-11 w-full min-w-0 rounded-xl border border-wt-border bg-wt-surface-1 px-3.5 py-2 text-sm text-wt-text",
+  "h-9 w-full min-w-0 rounded-lg border border-wt-border-md bg-wt-surface-1 px-3 py-1.5 text-sm text-wt-text",
   "transition-[border-color,box-shadow,background-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)]",
   "outline-none placeholder:text-wt-text-faint",
   "focus-visible:border-[var(--wt-brand)] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)]",
@@ -73,7 +73,7 @@ export const FORM_CONTROL_WITH_CHEVRON_CLASS = cn(FORM_CONTROL_CLASS, "pr-10");
 
 /** Toolbar / list filter selects — aligned with SearchInput and wt surfaces. */
 export const TOOLBAR_SELECT_TRIGGER_CLASS = cn(
-  "h-11 w-full min-w-0 rounded-xl border border-wt-border bg-wt-surface-1 px-3.5 text-sm font-normal text-wt-text",
+  "h-9 w-full min-w-0 rounded-lg border border-wt-border-md bg-wt-surface-1 px-3 text-sm font-normal text-wt-text",
   "transition-[background-color,border-color,box-shadow] duration-[var(--wt-duration)] ease-[var(--wt-ease)]",
   "hover:bg-wt-surface-2 focus-visible:border-[var(--wt-brand)] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)]",
   "disabled:cursor-not-allowed disabled:opacity-50",
@@ -109,7 +109,7 @@ export const BRAND_FOCUS_RING_CLASS =
 
 /** Native <select> / one-off controls — matches FORM_CONTROL look. */
 export const NATIVE_CONTROL_CLASS = cn(
-  "h-11 w-full min-w-0 rounded-xl border border-wt-border bg-wt-surface-1 px-3.5 text-sm text-wt-text",
+  "h-9 w-full min-w-0 rounded-lg border border-wt-border-md bg-wt-surface-1 px-3 text-sm text-wt-text",
   "transition-[border-color,box-shadow,background-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)]",
   BRAND_FOCUS_RING_CLASS,
   "disabled:cursor-not-allowed disabled:opacity-50",

@@ -272,7 +272,7 @@ export function WhosOutPageClient() {
         }
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-wt-border bg-wt-surface-1 px-5 py-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-5 py-3.5">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon-sm" onClick={() => goMonth(-1)} aria-label="Previous month">
             <ChevronLeft className="size-4" />
@@ -344,7 +344,7 @@ export function WhosOutPageClient() {
         </div>
       ) : view === "month" ? (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-          <div className="rounded-[1.25rem] border border-wt-border bg-wt-surface-1 p-4 sm:p-5">
+          <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-4 sm:p-5">
           <WhosOutCalendar
             fromIso={fromIso}
             toIso={toIso}

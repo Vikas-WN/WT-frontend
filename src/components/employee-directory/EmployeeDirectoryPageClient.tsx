@@ -382,7 +382,7 @@ export function EmployeeDirectoryPageClient() {
                   return (
                     <div
                       key={stat.key}
-                      className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-wt-border bg-wt-surface-1 px-5 py-4"
+                      className="flex items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-5 py-4"
                     >
                       <div className="min-w-0">
                         <p className="flex items-center gap-1.5 text-sm text-wt-text-muted">

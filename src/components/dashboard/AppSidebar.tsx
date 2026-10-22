@@ -51,13 +51,13 @@ function EntryLink({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex h-9 items-center gap-3 rounded-xl px-2.5 text-[14px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)]",
+        "flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)]",
         active
-          ? "border border-[var(--wt-sidebar-border)] bg-[var(--wt-sidebar-active-bg)] font-semibold text-[var(--wt-sidebar-text)] shadow-[var(--wt-shadow-sm)]"
-          : "border border-transparent text-[var(--wt-sidebar-text)] hover:bg-[var(--wt-sidebar-hover-bg)]"
+          ? "bg-[var(--wt-sidebar-active-bg)] font-semibold text-[var(--wt-brand)]"
+          : "text-[var(--wt-sidebar-text-muted)] hover:bg-[var(--wt-sidebar-hover-bg)] hover:text-[var(--wt-sidebar-text)]"
       )}
     >
-      <Icon className={cn("size-[18px] shrink-0", active ? "text-[var(--wt-brand)]" : "text-[var(--wt-sidebar-text-muted)]")} strokeWidth={1.75} aria-hidden />
+      <Icon className={cn("size-4 shrink-0", active ? "text-[var(--wt-brand)]" : "text-[var(--wt-sidebar-text-faint)]")} strokeWidth={1.75} aria-hidden />
       <span className="min-w-0 flex-1 truncate">{entry.label}</span>
       {badge}
       {trailing}
@@ -126,19 +126,19 @@ export function AppSidebar({
       {mobileNavOpen ? <button type="button" className={SIDEBAR_BACKDROP_CLASS} aria-label="Close navigation" onClick={closeMobileNav} /> : null}
       <aside
         className={cn(
-          "wt-appsidebar z-40 flex h-dvh w-[15.5rem] shrink-0 flex-col border-r border-[var(--wt-sidebar-border)] bg-[var(--wt-sidebar-bg)] transition-transform duration-200 ease-out",
+          "wt-appsidebar z-40 flex h-dvh w-[14.5rem] shrink-0 flex-col border-r border-[var(--wt-sidebar-border)] bg-[var(--wt-sidebar-bg)] transition-transform duration-200 ease-out",
           "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,300px)]",
           mobileNavOpen ? "max-lg:translate-x-0 max-lg:shadow-[0_24px_64px_rgba(0,0,0,0.3)]" : "max-lg:pointer-events-none max-lg:-translate-x-full"
         )}
       >
-        <div className="flex items-center gap-3 px-4 pb-3 pt-4">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-[var(--wt-sidebar-border)] bg-white" aria-hidden>
+        <div className="flex items-center gap-2.5 px-4 pb-3 pt-4">
+          <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-[var(--wt-sidebar-border)] bg-white" aria-hidden>
             {/* eslint-disable-next-line @next/next/no-img-element -- a 25px static mark; next/image adds nothing */}
-            <img src="/webtrak-logo.png" alt="" className="h-[22px] w-auto" />
+            <img src="/webtrak-logo.png" alt="" className="h-[18px] w-auto" />
           </span>
           <span className="min-w-0 flex-1 leading-tight">
-            <span className="block truncate text-[15px] font-semibold text-[var(--wt-sidebar-text)]">WebTrak</span>
-            <span className="block truncate text-[12.5px] text-[var(--wt-sidebar-text-muted)]">WebKnot Technologies</span>
+            <span className="block truncate text-[13.5px] font-semibold tracking-[-0.01em] text-[var(--wt-sidebar-text)]">WebTrak</span>
+            <span className="block truncate text-[11.5px] text-[var(--wt-sidebar-text-faint)]">WebKnot Technologies</span>
           </span>
           <ChevronsUpDown className="size-4 shrink-0 text-[var(--wt-sidebar-text-faint)]" aria-hidden />
         </div>
@@ -148,8 +148,8 @@ export function AppSidebar({
             const entries = section.entries.filter(isAllowed);
             if (entries.length === 0) return null;
             return (
-              <div key={section.id} className={section.label ? "mt-4" : "mt-1"}>
-                {section.label ? <p className="px-2.5 pb-1.5 text-[12.5px] font-medium text-[var(--wt-sidebar-text-faint)]">{section.label}</p> : null}
+              <div key={section.id} className={section.label ? "mt-5" : "mt-1"}>
+                {section.label ? <p className="px-2.5 pb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--wt-sidebar-text-faint)]">{section.label}</p> : null}
                 <div className="space-y-0.5">
                   {entries.map((entry) => {
                     if (entry.children) {
@@ -165,14 +165,14 @@ export function AppSidebar({
                             onClick={() => setReportsOpen((v) => !v)}
                             aria-expanded={open}
                             className={cn(
-                              "flex h-9 w-full items-center gap-3 rounded-xl border px-2.5 text-left text-[14px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)]",
+                              "flex h-8 w-full items-center gap-2.5 rounded-lg border px-2.5 text-left text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)]",
                               reportActive && !open
-                                ? "border-[var(--wt-sidebar-border)] bg-[var(--wt-sidebar-active-bg)] shadow-[var(--wt-shadow-sm)]"
+                                ? "border-transparent bg-[var(--wt-sidebar-active-bg)] text-[var(--wt-brand)]"
                                 : "border-transparent hover:bg-[var(--wt-sidebar-hover-bg)]"
                             )}
                           >
-                            <Icon className={cn("size-[18px] shrink-0", reportActive ? "text-[var(--wt-brand)]" : "text-[var(--wt-sidebar-text-muted)]")} strokeWidth={1.75} aria-hidden />
-                            <span className="min-w-0 flex-1 truncate text-[var(--wt-sidebar-text)]">{entry.label}</span>
+                            <Icon className={cn("size-4 shrink-0", reportActive ? "text-[var(--wt-brand)]" : "text-[var(--wt-sidebar-text-faint)]")} strokeWidth={1.75} aria-hidden />
+                            <span className="min-w-0 flex-1 truncate text-[var(--wt-sidebar-text-muted)]">{entry.label}</span>
                             <ChevronDown className={cn("size-4 text-[var(--wt-sidebar-text-faint)] transition-transform", open && "rotate-180")} aria-hidden />
                           </button>
                           {open ? (
@@ -186,8 +186,8 @@ export function AppSidebar({
                                     href={dashboardHref(child.navId)}
                                     onClick={closeMobileNav}
                                     className={cn(
-                                      "block rounded-lg px-2.5 py-1.5 text-[13px] transition-colors",
-                                      active ? "bg-[var(--wt-sidebar-active-bg)] font-semibold text-[var(--wt-brand)] shadow-[var(--wt-shadow-sm)]" : "text-[var(--wt-sidebar-text-muted)] hover:bg-[var(--wt-sidebar-hover-bg)] hover:text-[var(--wt-sidebar-text)]"
+                                      "block rounded-lg px-2.5 py-1.5 text-[12.5px] transition-colors",
+                                      active ? "bg-[var(--wt-sidebar-active-bg)] font-semibold text-[var(--wt-brand)]" : "text-[var(--wt-sidebar-text-muted)] hover:bg-[var(--wt-sidebar-hover-bg)] hover:text-[var(--wt-sidebar-text)]"
                                     )}
                                   >
                                     {child.label}

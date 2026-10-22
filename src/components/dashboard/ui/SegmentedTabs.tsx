@@ -19,7 +19,7 @@ export function SegmentedTabs({
   className?: string;
 }) {
   return (
-    <div role="tablist" aria-label={label} className={cn("inline-flex shrink-0 rounded-xl bg-wt-surface-3 p-1", className)}>
+    <div role="tablist" aria-label={label} className={cn("inline-flex shrink-0 rounded-lg bg-wt-surface-3 p-0.5", className)}>
       {options.map((option) => (
         <button
           key={option.value}
@@ -28,7 +28,7 @@ export function SegmentedTabs({
           aria-selected={value === option.value}
           onClick={() => onChange(option.value)}
           className={cn(
-            "rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)]",
+            "rounded-md px-3 py-1 text-[0.8125rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)]",
             value === option.value ? "bg-wt-surface-1 text-wt-text shadow-[var(--wt-shadow-sm)]" : "text-wt-text-muted hover:text-wt-text"
           )}
         >
