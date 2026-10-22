@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["127.0.0.1"],
+  // Isolated preview/test servers must not share the active dev server’s build files.
+  distDir: process.env.NEXT_BUILD_DIR || ".next",
   // Traces the actual runtime dependency graph and emits a minimal
   // .next/standalone server bundle + only the node_modules it really needs,
   // instead of the Dockerfile shipping the full 700MB+ node_modules in the

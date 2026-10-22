@@ -1,6 +1,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { ProjectCollection } from "@/components/dashboard/allocation/ProjectCollection";
+import { projectSelection } from "@/utils/projectSelection";
+import { ListSortSelect } from "@/components/dashboard/ui/ListSortSelect";
+import { PageHero } from "@/components/dashboard/ui/PageHero";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { PageTabs, PAGE_TAB_BODY_CLASS } from "@/components/dashboard/ui/PageTabs";
@@ -3408,6 +3412,7 @@ export function AllocationPageClient() {
       <DashboardPageShell>
         <OnboardingGate requiresSelfOnboarding={requiresSelfOnboarding}>
           <>
+            <PageHero title="Projects & capacity" description="A clear view of your projects, people, and the work ahead."/>
                           {hasHrAccess ? (
                             <ContentCard>
                               <PageTabs
@@ -3433,8 +3438,8 @@ export function AllocationPageClient() {
                                   employees and allocation dates.
                                 </p>
                                 <div className="space-y-3">
-                                  <div className="flex flex-wrap items-end gap-3">
-                                    <div className="min-w-[14rem] flex-1">
+                                  <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_200px_auto]">
+                                    <div className="min-w-0">
                                     <InputField
                                       label="Search by name"
                                       value={projectFilters.search}
@@ -3464,171 +3469,9 @@ export function AllocationPageClient() {
                                   </div>
                                   {filteredProjects.length ? (
                                     <>
-                                    <ScrollableTable maxHeightClass="max-h-[min(50vh,420px)]" scrollChain>
-                                      <WtTable>
-                                        <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-                                          <TableRow className="hover:bg-transparent">
-                                            <TableHead>
-                                              <TableSortHeader
-                                                label="Project name"
-                                                activeDirection={activeSortDirectionForColumn(
-                                                  "project_name",
-                                                  projectSortId,
-                                                  PROJECT_SORT_OPTIONS
-                                                )}
-                                                sortable
-                                                onSort={() =>
-                                                  setProjectSortId(
-                                                    toggleColumnSort(
-                                                      "project_name",
-                                                      projectSortId,
-                                                      PROJECT_SORT_OPTIONS
-                                                    )
-                                                  )
-                                                }
-                                              />
-                                            </TableHead>
-                                            <TableHead>Type</TableHead>
-                                            <TableHead>Opportunities</TableHead>
-                                            <TableHead>Start Date</TableHead>
-                                            <TableHead>End Date</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead className="text-right">Actions</TableHead>
-                                          </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                          {projectPagination.pageItems.map((row, idx) => {
-                                            const code = String(row.project_code ?? row.projectCode ?? "").trim();
-                                            const name = String(row.project_name ?? row.projectName ?? "");
-                                            const typCode = projectTypeCodeFromRow(
-                                              row as Record<string, unknown>
-                                            );
-                                            const typ = formatProjectTypeCode(typCode, projectTypeLabels);
-                                            const startDate = formatApiDateDisplay(
-                                              String(row.start_date ?? row.startDate ?? "")
-                                            );
-                                            const endDate = formatApiDateDisplay(
-                                              String(row.end_date ?? row.endDate ?? "")
-                                            );
-                                            const opportunitiesRaw = Array.isArray(row.opportunities)
-                                              ? (row.opportunities as Array<Record<string, unknown>>)
-                                              : [];
-                                            const opportunityLabels = opportunitiesRaw
-                                              .map((item) => {
-                                                const oppId = String(
-                                                  item.opp_id ?? item.oppId ?? ""
-                                                ).trim();
-                                                const oppName = String(
-                                                  item.opportunity_name ??
-                                                    item.opportunityName ??
-                                                    ""
-                                                ).trim();
-                                                if (oppId && oppName) return `${oppId} — ${oppName}`;
-                                                return oppId || oppName;
-                                              })
-                                              .filter(Boolean);
-                                            const openProjectDetail = () => {
-                                              if (!code) return;
-                                              const oppIdsRaw = Array.isArray(row.opportunity_ids)
-                                                ? (row.opportunity_ids as unknown[])
-                                                : Array.isArray(row.opportunityIds)
-                                                  ? (row.opportunityIds as unknown[])
-                                                  : [];
-                                              setProjectDetail({
-                                                code,
-                                                name: name || code,
-                                                clientExternalId:
-                                                  String(
-                                                    row.client_external_id ??
-                                                      row.clientExternalId ??
-                                                      ""
-                                                  ).trim() || null,
-                                                clientName:
-                                                  String(row.client_name ?? row.clientName ?? "").trim() ||
-                                                  null,
-                                                projectType: typ,
-                                                startDate:
-                                                  String(row.start_date ?? row.startDate ?? "").trim() ||
-                                                  null,
-                                                endDate:
-                                                  String(row.end_date ?? row.endDate ?? "").trim() || null,
-                                                opportunityIds: oppIdsRaw
-                                                  .map((id) => String(id ?? "").trim())
-                                                  .filter(Boolean),
-                                              });
-                                            };
-                                            return (
-                                              <TableRow
-                                                key={code || String(idx)}
-                                                className="cursor-pointer transition hover:bg-blue-50/50 dark:hover:bg-wt-surface-2"
-                                                onClick={openProjectDetail}
-                                              >
-                                                <TableCell className="px-3 py-2 max-w-[240px] truncate font-medium">{name || "—"}</TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{typ}</TableCell>
-                                                <TableCell className="px-3 py-2 align-top">
-                                                  {opportunityLabels.length ? (
-                                                    <div className="flex min-w-[12rem] flex-col gap-1">
-                                                      {opportunityLabels.slice(0, 2).map((label) => (
-                                                        <span
-                                                          key={label}
-                                                          title={label}
-                                                          className="inline-flex max-w-[16rem] truncate rounded-md bg-wt-surface-2 px-1.5 py-0.5 text-[11px] text-wt-text-muted"
-                                                        >
-                                                          {label}
-                                                        </span>
-                                                      ))}
-                                                      {opportunityLabels.length > 2 ? (
-                                                        <span className="text-[11px] text-wt-text-muted">
-                                                          +{opportunityLabels.length - 2} more
-                                                        </span>
-                                                      ) : null}
-                                                    </div>
-                                                  ) : (
-                                                    <span className="text-wt-text-muted">—</span>
-                                                  )}
-                                                </TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{startDate || "—"}</TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">{endDate || "—"}</TableCell>
-                                                <TableCell className="px-3 py-2 whitespace-nowrap">
-                                                  {projectEnded(String(row.end_date ?? row.endDate ?? "")) ? (
-                                                    <span className="text-sm font-medium text-wt-text-muted">Ended</span>
-                                                  ) : (
-                                                    <span className="text-sm font-semibold text-emerald-700">Active</span>
-                                                  )}
-                                                </TableCell>
-                                                <TableCell
-                                                  className="px-3 py-2 text-right"
-                                                  onClick={(e) => e.stopPropagation()}
-                                                >
-                                                  <div className="inline-flex items-center justify-end gap-1">
-                                                    <Button
-                                                      type="button"
-                                                      variant="ghost"
-                                                      size="icon-sm"
-                                                      className="text-wt-text-muted hover:text-wt-text"
-                                                      disabled={!code}
-                                                      aria-label={`View details for ${name || code}`}
-                                                      title="View project details"
-                                                      onClick={openProjectDetail}
-                                                    >
-                                                      <IconUsers />
-                                                    </Button>
-                                                    {/*
-                                                      Projects are not editable or deletable from here. They are owned
-                                                      upstream (WK Business sync / the Projects master), and HR and Admin
-                                                      manage allocations against them rather than the projects themselves,
-                                                      so the Edit and Delete actions were removed (BUG_ID_338). The
-                                                      backend rejects these operations too, so re-adding a button here
-                                                      would only produce a 403.
-                                                    */}
-                                                  </div>
-                                                </TableCell>
-                                              </TableRow>
-                                            );
-                                          })}
-                                        </TableBody>
-                                      </WtTable>
-                                    </ScrollableTable>
+                                    <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><p className="text-xs text-wt-text-muted">{projectPagination.totalItems} projects</p><ListSortSelect value={projectSortId} onChange={setProjectSortId} options={PROJECT_SORT_OPTIONS} className="w-full sm:w-52"/></div>
+                                    <ProjectCollection rows={projectPagination.pageItems} typeLabels={projectTypeLabels} onSelect={(row)=>setProjectDetail(projectSelection(row,formatProjectTypeCode(projectTypeCodeFromRow(row),projectTypeLabels)))}/>
+
                                     <ListPagination
                                       className="mt-3 px-1"
                                       page={projectPagination.page}
@@ -3652,7 +3495,7 @@ export function AllocationPageClient() {
                                 </div>
                               </div>
                               ) : null}
-          
+
                               {allocationHrSubTab === "allocate" ? (
                               <div className="space-y-4">
                                 <div className="flex flex-wrap items-center justify-between gap-3">

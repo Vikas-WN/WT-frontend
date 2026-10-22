@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { PageHero } from "@/components/dashboard/ui/PageHero";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
@@ -582,6 +583,7 @@ export function TimelogPageClient() {
       }
     >
       <DashboardPageShell>
+        <PageHero title={isTeamView || isProjectView ? "Your team’s time" : "Your working week"} description={isTeamView || isProjectView ? "Review logged work, follow up on gaps, and keep the week moving." : "Capture your work as you go. Review your week before you submit."}/>
         <ContentCard className={!isTeamView && !isProjectView ? "!border-0 !bg-transparent !p-0 !shadow-none" : undefined}>
           {/*
             Personal Time Logs (/dashboard/timelog)

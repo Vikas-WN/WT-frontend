@@ -312,7 +312,8 @@ export const dashboardNavigation: NavItem[] = [
       { id: "reports-lop", label: "LOP Report" },
     ],
   },
-  { kind: "link", id: "uploads", label: "Uploads", roles: ["ROLE_HR", "ROLE_ADMIN"], icon: "upload" },
+  { kind: "link", id: "masters", label: "Data management", roles: ["ROLE_HR", "ROLE_ADMIN"], icon: "layoutGrid" },
+  { kind: "link", id: "uploads", label: "Bulk imports", roles: ["ROLE_HR", "ROLE_ADMIN"], icon: "upload" },
   {
     kind: "link",
     id: "assets",

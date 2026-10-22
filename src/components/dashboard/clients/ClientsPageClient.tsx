@@ -116,7 +116,7 @@ function ProjectsCell({ client }: { client: ClientRecord }) {
 
 function StatCard({ label, value, note, tone = "neutral" }: { label: string; value: number; note: string; tone?: "neutral" | "good" | "warn" }) {
   return (
-    <div className={cn("rounded-[1.25rem] border bg-wt-surface-1 px-5 py-4", tone === "warn" ? "border-amber-300/60" : "border-wt-border")}>
+    <div className={cn("rounded-xl border bg-wt-surface-1 px-5 py-4", tone === "warn" ? "border-amber-300/60" : "border-wt-border")}>
       <p className={cn("text-sm", tone === "warn" ? "text-amber-800" : "text-wt-text-muted")}>{label}</p>
       <p className="mt-1 text-[2rem] font-bold leading-none tracking-tight tabular-nums text-wt-text">{value}</p>
       <p className={cn("mt-2 text-sm font-semibold", tone === "good" ? "text-emerald-700" : tone === "warn" ? "text-amber-800" : "font-normal text-wt-text-muted")}>{note}</p>

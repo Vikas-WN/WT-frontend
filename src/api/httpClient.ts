@@ -1,3 +1,4 @@
+import { announceDataChange } from "@/lib/dataRefresh";
 import { ApiError, parseApiErrorMessage } from "@/api/error";
 import { recordCall } from "@/lib/diagnostics/recorder";
 import { reportApiFailure } from "@/lib/telemetry/client";
@@ -289,7 +290,9 @@ export class HttpClient {
         );
       }
 
-      return (await this.readBody<T>(response, responseType)) as T;
+      const result = (await this.readBody<T>(response, responseType)) as T;
+      if (method !== "GET") announceDataChange();
+      return result;
     } catch (error) {
       let nextError: unknown = error;
       if (timedOut && error instanceof Error && error.name === "AbortError") {

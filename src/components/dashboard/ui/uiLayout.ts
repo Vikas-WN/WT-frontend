@@ -8,19 +8,19 @@ export const SECTION_STACK_CLASS = PAGE_STACK_CLASS;
 export const SECTION_HEADER_CLASS =
   "mb-5 border-b border-wt-border pb-4 dark:border-wt-border/80";
 export const SECTION_TITLE_CLASS =
-  "text-lg font-semibold tracking-tight text-wt-text";
+  "font-[family-name:var(--font-brand)] text-base font-semibold tracking-tight text-wt-text";
 export const SECTION_DESCRIPTION_CLASS =
   "mt-1.5 text-sm leading-relaxed text-wt-text-muted";
 
 /** Primary content card used on tabbed pages (Leave, Timelog, etc.). */
 export const CONTENT_CARD_CLASS = cn(
-  "wt-surface-card overflow-hidden rounded-[1.25rem] border border-wt-border bg-wt-surface-1 shadow-[var(--wt-shadow-sm)]",
+  "wt-surface-card overflow-hidden rounded-2xl border border-wt-border bg-wt-surface-1",
   "dark:border-wt-border dark:bg-wt-surface-1 dark:shadow-none"
 );
 
 /** Nested panel inside a content card — clear structure on pitch-black. */
 export const INNER_PANEL_CLASS = cn(
-  "rounded-xl border border-wt-border bg-wt-surface-2/60 p-5 sm:p-6",
+  "rounded-xl bg-wt-surface-2/60 p-5 sm:p-6",
   "dark:border-wt-border dark:bg-wt-surface-2"
 );
 
@@ -62,7 +62,7 @@ export const FORM_FIELD_CLASS = "flex flex-col gap-2";
 export const FIELD_LABEL_CLASS = "text-sm font-medium leading-none text-wt-text";
 /** Shared height/padding for text inputs and selects in forms. */
 export const FORM_CONTROL_CLASS = cn(
-  "h-11 w-full min-w-0 rounded-xl border border-wt-border bg-wt-surface-1 px-3.5 py-2 text-sm text-wt-text",
+  "h-10 w-full min-w-0 rounded-lg border border-wt-border bg-wt-surface-1 px-3.5 py-2 text-sm text-wt-text",
   "transition-[border-color,box-shadow,background-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)]",
   "outline-none placeholder:text-wt-text-faint",
   "focus-visible:border-[var(--wt-brand)] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)]",
@@ -73,7 +73,7 @@ export const FORM_CONTROL_WITH_CHEVRON_CLASS = cn(FORM_CONTROL_CLASS, "pr-10");
 
 /** Toolbar / list filter selects — aligned with SearchInput and wt surfaces. */
 export const TOOLBAR_SELECT_TRIGGER_CLASS = cn(
-  "h-11 w-full min-w-0 rounded-xl border border-wt-border bg-wt-surface-1 px-3.5 text-sm font-normal text-wt-text",
+  "h-10 w-full min-w-0 rounded-lg border border-wt-border-md bg-wt-surface-1 px-3 text-sm font-normal text-wt-text",
   "transition-[background-color,border-color,box-shadow] duration-[var(--wt-duration)] ease-[var(--wt-ease)]",
   "hover:bg-wt-surface-2 focus-visible:border-[var(--wt-brand)] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--wt-brand)_25%,transparent)]",
   "disabled:cursor-not-allowed disabled:opacity-50",
@@ -109,7 +109,7 @@ export const BRAND_FOCUS_RING_CLASS =
 
 /** Native <select> / one-off controls — matches FORM_CONTROL look. */
 export const NATIVE_CONTROL_CLASS = cn(
-  "h-11 w-full min-w-0 rounded-xl border border-wt-border bg-wt-surface-1 px-3.5 text-sm text-wt-text",
+  "h-10 w-full min-w-0 rounded-lg border border-wt-border-md bg-wt-surface-1 px-3 text-sm text-wt-text",
   "transition-[border-color,box-shadow,background-color] duration-[var(--wt-duration)] ease-[var(--wt-ease)]",
   BRAND_FOCUS_RING_CLASS,
   "disabled:cursor-not-allowed disabled:opacity-50",
@@ -140,6 +140,6 @@ export const MODAL_FOOTER_CLASS =
 
 /** Filter / toolbar strip inside a content card. */
 export const FILTER_BAR_CLASS = cn(
-  "rounded-xl border border-wt-border bg-wt-surface-2/50 p-4 sm:p-5",
+  "wt-filter-bar rounded-xl bg-wt-surface-2/70 p-4",
   "dark:border-wt-border dark:bg-wt-surface-2"
 );

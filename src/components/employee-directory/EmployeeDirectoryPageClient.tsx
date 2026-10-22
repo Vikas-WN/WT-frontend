@@ -32,6 +32,7 @@ import { EmployeeUserTypeSelect } from "@/components/employee-directory/Employee
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { ManagementListCard, ManagementListContent } from "@/components/dashboard/ui/ManagementListCard";
 import { FieldLabel, SelectField } from "@/components/dashboard/ui/forms";
+import { FilterDisclosure } from "@/components/dashboard/ui/FilterDisclosure";
 import { SearchInput } from "@/components/dashboard/ui/SearchInput";
 import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -376,20 +377,20 @@ export function EmployeeDirectoryPageClient() {
             title="People"
             description={`${directoryStats.total} people across WebKnot. Find anyone, see their role and how they work.`}
             aboveCard={
-          <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <section className="wt-directory-stats grid grid-cols-2 sm:grid-cols-4">
                 {DIRECTORY_STATS.map((stat) => {
                   const value = directoryStats[stat.key as keyof typeof directoryStats];
                   return (
                     <div
                       key={stat.key}
-                      className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-wt-border bg-wt-surface-1 px-5 py-4"
+                      className="wt-directory-stat flex items-center justify-between gap-3 px-5 py-4"
                     >
                       <div className="min-w-0">
                         <p className="flex items-center gap-1.5 text-sm text-wt-text-muted">
                           <span className={cn("size-2 rounded-full", STAT_DOT[stat.tone], stat.key === "online" && "animate-pulse-slow")} aria-hidden />
                           {stat.label}
                         </p>
-                        <p className="mt-2 text-[2rem] font-bold leading-none tracking-tight text-wt-text">
+                        <p className="mt-2 font-[family-name:var(--font-brand)] text-[1.85rem] font-semibold leading-none tracking-tight text-wt-text">
                           <AnimatedNumber value={Number(value) || 0} />
                         </p>
                       </div>
@@ -411,6 +412,7 @@ export function EmployeeDirectoryPageClient() {
                     className="h-10 border-wt-border bg-wt-surface-1 shadow-sm"
                   />
                 </div>
+                <FilterDisclosure activeCount={[departmentFilter,userTypeFilter,primarySkillFilter,secondarySkillFilter].filter(Boolean).length}>
                 <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4 xl:flex xl:flex-wrap xl:items-end">
                   <SelectField
                     label="Department"
@@ -448,7 +450,7 @@ export function EmployeeDirectoryPageClient() {
                     align="end"
                     contentClassName="max-w-[min(20rem,calc(100vw-1rem))]"
                   />
-                </div>
+                </div></FilterDisclosure>
               </div>
             }
           >
@@ -486,8 +488,8 @@ export function EmployeeDirectoryPageClient() {
               <>
                 <div className="wt-detail-scroll-section min-h-0 overflow-hidden rounded-2xl border border-wt-border/80">
                   <div className="wt-table-quiet">
-                  <ScrollableTable scrollChain maxHeightClass="max-h-[min(68vh,640px)]">
-                    <WtTable className="w-full min-w-[820px] text-sm">
+                  <ScrollableTable scrollChain className="wt-directory-scroll" maxHeightClass="max-h-[min(68vh,640px)]">
+                    <WtTable className="wt-directory-table w-full min-w-[820px] text-sm">
                       <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
                         <TableRow className="hover:bg-transparent">
                           {LIST_COLUMNS.map((col) => {
@@ -578,6 +580,7 @@ export function EmployeeDirectoryPageClient() {
                             >
                               {LIST_COLUMNS.map((col) => (
                                 <TableCell
+                                  data-label={col.label}
                                   key={col.key}
                                   className={cn(
                                     WT_TABLE_CELL_COMPACT_CLASS,

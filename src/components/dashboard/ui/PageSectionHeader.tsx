@@ -6,7 +6,6 @@ import {
   SECTION_TITLE_CLASS,
 } from "@/components/dashboard/ui/uiLayout";
 import { cn } from "@/lib/utils";
-import { formatUILabel } from "@/utils/titleCase";
 
 export function PageSectionHeader({
   title,
@@ -35,7 +34,7 @@ export function PageSectionHeader({
       )}
     >
       <div className="min-w-0 flex-1">
-        <TitleTag className={SECTION_TITLE_CLASS}>{formatUILabel(title)}</TitleTag>
+        <TitleTag className={SECTION_TITLE_CLASS}>{title}</TitleTag>
         {description ? <p className={SECTION_DESCRIPTION_CLASS}>{description}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}

@@ -1,24 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
-import { Knot } from "@/components/mascot/Knot";
+import { Companion } from "@/components/mascot/Companion";
+import { COMPANIONS, companionById } from "@/constants/companions";
 import { PET_COPY, PET_NAME } from "@/constants/petCopy";
 import { useAuth } from "@/context/AuthContext";
 import { useActiveSeason } from "@/hooks/seasonal/useActiveSeason";
 import type { SeasonalThemeId } from "@/types/seasonal";
 import { useKnotPet } from "@/hooks/pet/useKnotPet";
-import { usePetEnabled } from "@/lib/petPreference";
+import { usePetCharacter, usePetEnabled } from "@/lib/petPreference";
 import { cn } from "@/lib/utils";
 
-const SIZE_DESKTOP = 72;
+const SIZE_DESKTOP = 68;
 const SIZE_PHONE = 58;
+function subscribeViewport(update: () => void) {
+  window.addEventListener("resize", update);
+  return () => window.removeEventListener("resize", update);
+}
+function readPetSize() { return window.innerWidth < 640 ? SIZE_PHONE : SIZE_DESKTOP; }
+function serverPetSize() { return 0; }
 
 function Pet({ size, firstName, season, onHide }: { size: number; firstName: string | null; season: SeasonalThemeId | null; onHide: () => void }) {
   // The refs are taken out of the hook's result first so the rest (plain state and handlers) can be read freely during render.
-  const { rootRef, innerRef, ...pet } = useKnotPet({ size, firstName, season });
-  const bubbleSide =
-    pet.align === "left" ? "left-0 items-start" : pet.align === "right" ? "right-0 items-end" : "left-1/2 -translate-x-1/2 items-center";
+  const [character, selectCharacter] = usePetCharacter();
+  const definition = companionById(character);
+  const { rootRef, innerRef, ...pet } = useKnotPet({ size, firstName, season, character });
+
 
   return (
     <>
@@ -28,17 +36,9 @@ function Pet({ size, firstName, season, onHide }: { size: number; firstName: str
       style={{ width: size, height: size, cursor: "grab" }}
       role="button"
       tabIndex={0}
-      aria-label={PET_COPY.ariaLabel}
+      aria-label={`${definition.name}, your desk companion. Enter to play, Shift F10 for options.`}
       {...pet.handlers}
     >
-      {pet.bubble ? (
-        <div className={cn("pointer-events-none absolute bottom-full mb-1 flex w-max max-w-[15rem] flex-col", bubbleSide)} role="status">
-          <span className="wt-pet-bubble rounded-2xl border border-wt-border bg-wt-surface-1 px-3 py-1.5 text-xs font-medium text-wt-text shadow-[var(--wt-shadow-md)]">
-            {pet.bubble}
-          </span>
-        </div>
-      ) : null}
-
       {pet.hearts.map((id, i) => (
         <span
           key={id}
@@ -51,28 +51,30 @@ function Pet({ size, firstName, season, onHide }: { size: number; firstName: str
       ))}
 
       <div ref={innerRef} className="wt-pet-inner h-full w-full" style={{ transformOrigin: "50% 100%" }}>
-        <Knot mood={pet.mood} size={size} animate={pet.mood !== "held"} costume={pet.costume} action={pet.action} />
+        <Companion character={character} mood={pet.mood} size={size} animate={pet.mood !== "held"} costume={pet.costume} action={pet.action} />
       </div>
 
       {pet.menuOpen ? (
         <div
-          className={cn("absolute bottom-full z-10 mb-2 w-48 overflow-hidden rounded-2xl border border-wt-border bg-wt-surface-1 p-1 text-sm shadow-[var(--wt-shadow-lg)]", pet.align === "left" ? "left-0" : "right-0")}
-          role="menu"
+          className={cn("absolute bottom-full z-10 mb-2 w-60 overflow-hidden rounded-2xl border border-wt-border bg-wt-surface-1 p-1 text-sm shadow-[var(--wt-shadow-lg)]", pet.align === "left" ? "left-0" : "right-0")}
+          role="group" aria-label="Companion options"
           onPointerDown={(e) => e.stopPropagation()}
+          onKeyDown={(event) => { if (event.key === "Escape") pet.setMenuOpen(false); event.stopPropagation(); }}
         >
-          <button type="button" role="menuitem" className="block w-full rounded-xl px-3 py-2 text-left text-wt-text hover:bg-wt-surface-2" onClick={pet.talk}>
-            {PET_COPY.menuTalk}
-          </button>
+          <p className="px-3 py-2 text-xs font-semibold text-wt-text-muted">{definition.name}</p>
+          <button type="button" className="block w-full rounded-xl px-3 py-2 text-left text-wt-text hover:bg-wt-surface-2" onClick={pet.play}>{definition.action}</button>
+          <label className="block border-y border-wt-border px-3 py-2 text-xs text-wt-text-muted">Switch companion
+            <select aria-label="Switch companion" value={character} onChange={(event) => { selectCharacter(companionById(event.target.value).id); pet.setMenuOpen(false); }} className="mt-2 h-10 w-full rounded-lg border border-wt-border bg-wt-surface-1 px-2 text-sm text-wt-text">{COMPANIONS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+          </label>
           <button
             type="button"
-            role="menuitem"
             className="block w-full rounded-xl px-3 py-2 text-left text-wt-text hover:bg-wt-surface-2"
             onClick={pet.asleep ? () => { pet.setMenuOpen(false); pet.wake(); } : pet.nap}
           >
             {pet.asleep ? PET_COPY.menuWake : PET_COPY.menuNap}
           </button>
-          <button type="button" role="menuitem" className="block w-full rounded-xl px-3 py-2 text-left text-wt-text hover:bg-wt-surface-2" onClick={onHide}>
-            {PET_COPY.menuHide}
+          <button type="button" className="block w-full rounded-xl px-3 py-2 text-left text-wt-text hover:bg-wt-surface-2" onClick={onHide}>
+            Hide {definition.name}
             <span className="block text-[11px] font-normal text-wt-text-faint">{PET_COPY.menuHideHint}</span>
           </button>
         </div>
@@ -104,20 +106,8 @@ export function KnotPet() {
   const { user } = useAuth();
   const [enabled, setEnabled] = usePetEnabled();
   const season = useActiveSeason();
-  // UI state: render only after mount — the pet is positioned from the real window size, which the server does not know.
-  const [mounted, setMounted] = useState(false);
-  const [size, setSize] = useState(SIZE_DESKTOP);
-
-  // Side effect: read the window size, and follow it when the phone is turned.
-  useEffect(() => {
-    const update = () => setSize(window.innerWidth < 640 ? SIZE_PHONE : SIZE_DESKTOP);
-    update();
-    setMounted(true);
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
-
-  if (!mounted || !enabled) return null;
+  const size = useSyncExternalStore(subscribeViewport, readPetSize, serverPetSize);
+  if (!size || !enabled) return null;
   const firstName = (user?.name ?? "").trim().split(/\s+/)[0] || null;
   return <Pet key={size} size={size} firstName={firstName} season={season} onHide={() => setEnabled(false)} />;
 }

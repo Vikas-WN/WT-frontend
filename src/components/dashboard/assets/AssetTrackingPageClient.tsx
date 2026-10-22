@@ -555,7 +555,7 @@ export function AssetTrackingPageClient() {
         }
       />
 
-      <div className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-[1.25rem] border border-wt-border bg-wt-surface-1 px-6 py-4">
+      <div className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-wt-border bg-wt-surface-1 px-6 py-4">
         <div>
           <p className="text-sm text-wt-text-muted">Total assets</p>
           <p className="text-[2rem] font-bold leading-tight tabular-nums text-wt-text">{stats ? stats.total : "—"}</p>

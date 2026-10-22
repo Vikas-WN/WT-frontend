@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
+import { WorkspacePaths } from "@/components/dashboard/home/WorkspacePaths";
 import { HomeHeader } from "@/components/dashboard/home/HomeHeader";
 import { AnimatedBar } from "@/components/motion/AnimatedBar";
 import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
@@ -424,11 +425,11 @@ export function HomePageClient() {
   return (
     <DashboardPageShell
       className={cn(
-        "space-y-7 lg:!px-10 lg:!py-9"
+        "wt-home-workspace space-y-7"
       )}
     >
       <HomeHeader
-        eyebrow={today.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
+        eyebrow={`${canSeeOrgOut ? "Organization workspace" : isApprover ? "Team workspace" : "Your workspace"} · ${today.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}`}
         title={`${greeting()}, ${firstName}`}
         subtitle={
           <HomeSummaryLine approvals={approvals.count} overdueTrainings={learning.data?.overdue_mandatory_count ?? 0} closedTomorrow={closedTomorrow} fallback={attention} />
@@ -439,6 +440,8 @@ export function HomePageClient() {
         onShowWidget={(id) => setHidden(id, false)}
         onReset={resetLayout}
       />
+
+      <WorkspacePaths mode={canSeeOrgOut ? "admin" : isApprover ? "manager" : "employee"} />
 
       <SeasonalGreeting />
 

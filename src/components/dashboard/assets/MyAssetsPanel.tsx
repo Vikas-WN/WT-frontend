@@ -1,109 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Package } from "lucide-react";
-
+import { useQuery } from "@tanstack/react-query";
+import { Laptop, Package, RefreshCw } from "lucide-react";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
-import { ContentCard } from "@/components/dashboard/ui/ContentCard";
+import { PageHero } from "@/components/dashboard/ui/PageHero";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
-import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
+import { TableRowsSkeleton } from "@/components/dashboard/ui/SectionSkeleton";
+import { Button } from "@/components/ui/button";
 import { hrmsService } from "@/services/hrms.service";
+import { apiCollection } from "@/utils/apiCollection";
 import type { AssetItem } from "@/types/asset";
 import { ASSET_STATUS_TONE } from "@/utils/assetStatus";
 import { cn } from "@/lib/utils";
 
-type Load<T> = { status: "loading" | "done" | "error"; data: T | null };
-
-/** File-local copy of the small async-fetch hook used across dashboard
- *  pages — see HomePageClient's own copy for why it isn't shared. */
-function useLoad<T>(fn: () => Promise<T>, deps: unknown[] = []): Load<T> {
-  const [state, setState] = useState<Load<T>>({ status: "loading", data: null });
-  useEffect(() => {
-    let alive = true;
-    void (async () => {
-      try {
-        const data = await fn();
-        if (alive) setState({ status: "done", data });
-      } catch {
-        if (alive) setState({ status: "error", data: null });
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-  return state;
-}
-
-/** Every employee's read-only view of what's currently assigned to them —
- *  the self-service side of Asset Tracking (admin-only until now, even
- *  though the backend's GET /assets/mine has always supported this). */
 export function MyAssetsPanel() {
-  const assetsQuery = useLoad(() => hrmsService.getMyAssets(), []);
-  const assets: AssetItem[] = assetsQuery.data?.data ?? [];
-
+  const query = useQuery({ queryKey: ["assets", "mine"], queryFn: async () => apiCollection<AssetItem>(await hrmsService.getMyAssets()), retry: 1 });
+  const assets = query.data ?? [];
   return (
-    <DashboardPageShell className="wt-detail-page">
-      <ContentCard>
-        <div className="border-b border-wt-border px-4 py-4 sm:px-6">
-          <h2 className="text-lg font-semibold text-wt-text">My Assets</h2>
-          <p className="mt-1 text-sm text-wt-text-muted">
-            Company equipment currently assigned to you.
-          </p>
-        </div>
-
-        <div className="p-4 sm:p-6">
-          {assetsQuery.status === "loading" ? (
-            <SectionLoading label="" />
-          ) : assetsQuery.status === "error" ? (
-            <EmptyState title="Couldn't Load Your Assets" className="py-12" />
-          ) : assets.length === 0 ? (
-            <EmptyState
-              title="Nothing Assigned"
-              description="You don't have any company assets checked out right now."
-              icon={<Package className="size-6" />}
-              className="py-12"
-            />
-          ) : (
-            <ul className="space-y-2">
-              {assets.map((asset) => (
-                <li
-                  key={asset.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-wt-border bg-wt-surface-1 px-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-wt-text">
-                      {asset.asset_tag}
-                      {[asset.brand, asset.model].filter(Boolean).length ? (
-                        <span className="font-normal text-wt-text-muted">
-                          {" "}
-                          — {[asset.brand, asset.model].filter(Boolean).join(" ")}
-                        </span>
-                      ) : null}
-                    </p>
-                    <p className="mt-0.5 text-xs text-wt-text-muted">
-                      {asset.category}
-                      {asset.serial_number ? ` · SN ${asset.serial_number}` : ""}
-                    </p>
-                    {asset.notes ? (
-                      <p className="mt-1 text-xs text-wt-text-faint">{asset.notes}</p>
-                    ) : null}
-                  </div>
-                  <span
-                    className={cn(
-                      "shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium",
-                      ASSET_STATUS_TONE[asset.status]
-                    )}
-                  >
-                    {asset.status === "ASSIGNED" ? "With you" : asset.status.replace("_", " ")}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </ContentCard>
+    <DashboardPageShell>
+      <PageHero title="My assets" description="Your equipment, all in one place. Keep these details handy when you need support." eyebrow="Your workspace essentials" action={<Button variant="outline" onClick={() => void query.refetch()} disabled={query.isFetching}><RefreshCw className="size-4" />Refresh</Button>} />
+      {query.isPending ? <TableRowsSkeleton rows={3} columns={3} /> : query.isError ? <EmptyState title="We couldn't load your equipment" description="Please try again. Your assigned equipment hasn't changed." icon={<Package className="size-6" />} action={<Button variant="outline" onClick={() => void query.refetch()}>Try again</Button>} /> : assets.length === 0 ? <EmptyState title="No equipment assigned yet" description="Your company equipment will appear here once it is assigned to you." icon={<Laptop className="size-6" />} /> : (
+        <>
+          <p className="text-sm text-wt-text-muted">{assets.length} {assets.length === 1 ? "item" : "items"} assigned to you</p>
+          <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {assets.filter((asset) => asset && typeof asset === "object").map((asset, index) => (
+              <li key={asset.id ?? index} className="rounded-2xl border border-wt-border bg-wt-surface-1 p-6 shadow-[var(--wt-shadow-sm)]">
+                <div className="flex items-start justify-between gap-3"><span className="grid size-12 place-items-center rounded-xl bg-wt-brand-soft text-wt-brand"><Laptop className="size-6" aria-hidden /></span><span className={cn("rounded-md px-2 py-1 text-xs font-medium", ASSET_STATUS_TONE[asset.status] ?? "bg-wt-surface-2 text-wt-text-muted")}>{asset.status === "ASSIGNED" ? "With you" : String(asset.status ?? "Assigned").replaceAll("_", " ")}</span></div>
+                <h2 className="mt-5 font-[family-name:var(--font-brand)] text-lg font-semibold text-wt-text">{[asset.brand, asset.model].filter(Boolean).join(" ") || asset.category || "Company equipment"}</h2>
+                <p className="mt-1 text-sm text-wt-text-muted">{asset.category ?? "Equipment"}</p>
+                <dl className="mt-5 space-y-3 border-t border-wt-border pt-4 text-sm"><div className="flex flex-wrap justify-between gap-2"><dt className="text-wt-text-muted">Asset tag</dt><dd className="font-medium text-wt-text">{asset.asset_tag ?? "—"}</dd></div><div className="flex flex-wrap justify-between gap-2"><dt className="text-wt-text-muted">Serial number</dt><dd className="max-w-full break-all font-medium text-wt-text">{asset.serial_number || "Not recorded"}</dd></div></dl>
+                {asset.notes ? <p className="mt-4 rounded-lg bg-wt-surface-2 p-3 text-xs leading-relaxed text-wt-text-muted">{asset.notes}</p> : null}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </DashboardPageShell>
   );
 }

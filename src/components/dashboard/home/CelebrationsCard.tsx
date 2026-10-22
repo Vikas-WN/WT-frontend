@@ -44,7 +44,7 @@ function relativeLabel(daysUntil: number, nextDate: string): string {
   // app, and returns null instead of an unparseable "Invalid Date" — the bug
   // this replaced.
   const d = parseApiDate(nextDate);
-  if (!d) return `In ${daysUntil} days`;
+  if (!d) return Number.isFinite(daysUntil) ? `In ${daysUntil} days` : "Upcoming";
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
 }
 

@@ -69,14 +69,14 @@ function LoginShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh bg-[#f4f5f8] text-[#0b1220] [padding-bottom:env(safe-area-inset-bottom)] [padding-top:env(safe-area-inset-top)]">
       <div className="grid min-h-dvh w-full grid-cols-1 lg:grid-cols-2">
-        <section className="flex flex-col justify-between bg-[var(--wt-navy)] px-6 py-8 text-white sm:px-10 lg:px-[4.5rem] lg:py-14">
+        <section className="wt-login-story flex flex-col justify-between bg-[var(--wt-navy)] px-6 py-8 text-white sm:px-10 lg:px-[4.5rem] lg:py-14">
           <div className="flex items-center gap-3.5">
             <Mark className="size-12" />
             <span className="text-[1.4rem] font-bold tracking-[-0.02em]">WebTrak</span>
           </div>
           <div className="mt-12 max-w-xl space-y-6 lg:mt-0">
-            <h1 className="text-[2.4rem] font-bold leading-[1.05] tracking-[-0.03em] sm:text-5xl xl:text-[4.25rem]">Everything about work at WebKnot, in one place.</h1>
-            <p className="max-w-md text-lg leading-relaxed text-white/70">Leave, time logs, project allocation, people and reviews — for everyone from new joiners to HR.</p>
+            <h1 className="text-[2.4rem] font-bold leading-[1.05] tracking-[-0.03em] sm:text-5xl xl:text-[4.25rem]">A little less admin. A lot more possibility.</h1>
+            <p className="max-w-md text-lg leading-relaxed text-white/70">Your people, projects and everyday work. Connected in one thoughtful workspace.</p>
           </div>
           <div className="mt-10 hidden max-w-[46rem] grid-cols-3 gap-3 xl:gap-4 lg:grid">
             {FEATURES.map(({ icon: Icon, title, hint }) => (
@@ -90,7 +90,7 @@ function LoginShell({ children }: { children: React.ReactNode }) {
           <p className="mt-10 hidden text-sm text-white/55 lg:block">© {new Date().getFullYear()} WebKnot Technologies</p>
         </section>
 
-        <section className="flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-[4.5rem]">
+        <section className="wt-login-panel flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-[4.5rem]">
           <div className="mx-auto w-full max-w-[26rem]">{children}</div>
           <p className="mx-auto mt-12 w-full max-w-[26rem] text-center text-sm text-[#7a8294] lg:hidden">© {new Date().getFullYear()} WebKnot Technologies</p>
         </section>

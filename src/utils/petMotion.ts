@@ -97,11 +97,11 @@ export interface Pose {
   bob: number;
 }
 
-/** The body's horizontal and vertical scale for a pose. Volume is kept roughly constant (taller means thinner), and the
- *  horizontal scale carries `turn`, so turning round passes smoothly through the pet's edge instead of flipping. */
+/** Preserve the silhouette when changing direction. Front-facing vector characters
+ * turn through gaze and shoulder cues; reflecting through zero made them look like paper. */
 export function bodyScale(pose: Pick<Pose, "turn" | "stretch" | "breath">): { sx: number; sy: number } {
   const sy = 1 + pose.stretch + pose.breath;
-  return { sx: pose.turn * (1 / Math.sqrt(Math.max(0.5, sy))), sy };
+  return { sx: 1 / Math.sqrt(Math.max(0.5, sy)), sy };
 }
 
 /** The CSS transform for the pet's body from its current pose. */

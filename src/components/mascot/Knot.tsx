@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useId, type CSSProperties } from "react";
 
 export type KnotMood = "hello" | "loading" | "oops" | "lost" | "party" | "sleep" | "held" | "love" | "dizzy" | "laugh" | "cry";
 
@@ -8,7 +8,6 @@ export type KnotCostume = "cricket" | "diwali" | "christmas" | "holi" | null;
 /** A pose held for a moment: swinging the cricket bat. */
 export type KnotAction = "swing" | null;
 
-const BRAND = "var(--wt-brand, #355095)";
 const KNOT = "#f5c451";
 
 /** Mouth and extras for each mood, drawn in the mascot's 96×96 box. */
@@ -157,7 +156,7 @@ function CostumeFront({ costume, action }: { costume: KnotCostume; action: KnotA
 }
 
 /**
- * Knot — WebTrak's mascot, a little blue blob with a golden knot on its head (Web-knot). Shown while things load, when something
+ * Knot — WebTrak's mascot, a little blue companion with leaf loops and a dark glass face. Shown while things load, when something
  * goes wrong, when a page can't be found and when someone is welcomed. Pure SVG, so it works anywhere — including the
  * error page that renders outside the app's styles — and it holds still for people who prefer reduced motion.
  */
@@ -180,6 +179,7 @@ export function Knot({
   action?: KnotAction;
 }) {
   const looking = mood === "lost" ? 3 : 0;
+  const shellId = useId().replace(/:/g, "");
   const style: CSSProperties = { width: size, height: size };
   return (
     <svg
@@ -190,6 +190,13 @@ export function Knot({
       aria-label={label}
       aria-hidden={label ? undefined : true}
     >
+      <defs>
+        <linearGradient id={shellId} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#c0d1ff" />
+          <stop offset="55%" stopColor="#7795ee" />
+          <stop offset="100%" stopColor="#3a56d4" />
+        </linearGradient>
+      </defs>
       <style>{`
         .wt-knot-hidden{display:none}
         .wt-knot-body{transform-origin:48px 84px}
@@ -228,19 +235,22 @@ export function Knot({
       <g className={`${animate ? "wt-knot-on" : ""} wt-knot-${mood}`}>
         <ellipse cx="48" cy="90" rx="22" ry="3.5" fill="#000" opacity=".12" />
         <g className="wt-knot-body">
-          {/* feet */}
-          <ellipse cx="36" cy="85" rx="7" ry="4" fill={BRAND} />
-          <ellipse cx="60" cy="85" rx="7" ry="4" fill={BRAND} />
-          {/* body */}
-          <path d="M20 58 C20 36 32 24 48 24 C64 24 76 36 76 58 C76 74 64 86 48 86 C32 86 20 74 20 58z" fill={BRAND} />
-          <path d="M30 40 C34 32 42 28 50 28" fill="none" stroke="#fff" strokeOpacity=".28" strokeWidth="4" strokeLinecap="round" />
+          {/* A soft blue companion with a dark glass face and little pebble feet. */}
+          <ellipse className="wt-companion-leg-left" cx="34" cy="84" rx="8" ry="4" fill="#3048a5" />
+          <ellipse className="wt-companion-leg-right" cx="62" cy="84" rx="8" ry="4" fill="#3048a5" />
+          <path d="M17 52 Q17 24 43 24 H53 Q79 24 79 52 V61 Q79 85 55 85 H41 Q17 85 17 61Z" fill={`url(#${shellId})`} stroke="#3048a5" strokeWidth="1" />
+          <path d="M24 43 Q26 30 42 30" fill="none" stroke="#f3f7ff" strokeOpacity=".7" strokeWidth="3" strokeLinecap="round" />
+          <rect x="25" y="38" width="46" height="34" rx="16" fill="#182159" />
+          <path d="M34 41 H59" stroke="#a3b8ff" strokeOpacity=".17" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="28" cy="75" r="2" fill="#e0e9ff" />
+          <path d="M61 76 h6" stroke="#dce7ff" strokeWidth="2" strokeLinecap="round" />
           <CostumeBody costume={costume} />
-          {/* the knot */}
+          {/* Two leaf loops retain Knot's signature, with a quieter silhouette. */}
           <g className={costume === "christmas" || costume === "cricket" ? "wt-knot-loop wt-knot-hidden" : "wt-knot-loop"}>
-            <ellipse cx="38" cy="19" rx="10" ry="6" transform="rotate(-24 38 19)" fill="none" stroke={KNOT} strokeWidth="4" />
-            <ellipse cx="58" cy="19" rx="10" ry="6" transform="rotate(24 58 19)" fill="none" stroke={KNOT} strokeWidth="4" />
+            <path d="M48 27 C30 27 28 10 35 10 C45 10 50 20 48 27Z" fill={KNOT} stroke="#c0942f" strokeWidth="1.2" />
+            <path d="M48 27 C66 27 68 10 61 10 C51 10 46 20 48 27Z" fill="#ffda79" stroke="#c0942f" strokeWidth="1.2" />
+            <path d="M36 15 L48 27 L60 15" fill="none" stroke="#c0942f" strokeWidth="1.2" strokeLinecap="round" />
           </g>
-          {costume === "christmas" || costume === "cricket" ? null : <circle cx="48" cy="22" r="5" fill={KNOT} />}
           {/* eyes — closed, hearts or crosses for some moods; otherwise they look where `--wt-knot-look-*` points (the pet follows the cursor) */}
           {mood === "sleep" ? (
             <g fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round">

@@ -288,7 +288,7 @@ export function LeaveApprovalsPanel({
         {inboxQ.isLoading ? (
           <ul className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <li key={`approval-skeleton-${i}`} className="rounded-[1.25rem] border border-wt-border bg-wt-surface-1 p-5">
+              <li key={`approval-skeleton-${i}`} className="rounded-xl border border-wt-border bg-wt-surface-1 p-5">
                 <Skeleton className="h-10 w-full" />
               </li>
             ))}
@@ -318,7 +318,7 @@ export function LeaveApprovalsPanel({
               return (
                 <li
                   key={`${requestId || "approval"}-${idx}`}
-                  className="grid items-center gap-x-6 gap-y-3 rounded-[1.25rem] border border-wt-border bg-wt-surface-1 px-5 py-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1.3fr)_auto]"
+                  className="grid items-center gap-x-6 gap-y-3 rounded-xl border border-wt-border bg-wt-surface-1 px-5 py-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1.3fr)_auto]"
                 >
                   <div className="flex min-w-0 items-center gap-3.5">
                     <span className="grid size-11 shrink-0 place-items-center rounded-full bg-[var(--wt-brand-soft)] text-sm font-semibold text-[var(--wt-brand)]" aria-hidden>
@@ -408,7 +408,7 @@ export function LeaveApprovalsPanel({
             })}
           </ul>
         ) : (
-          <p className="rounded-[1.25rem] border border-dashed border-wt-border px-6 py-14 text-center text-sm text-wt-text-muted">
+          <p className="rounded-xl border border-dashed border-wt-border px-6 py-14 text-center text-sm text-wt-text-muted">
             {inboxQ.isError
               ? "Could not load leave approvals. Try refreshing."
               : search.trim()

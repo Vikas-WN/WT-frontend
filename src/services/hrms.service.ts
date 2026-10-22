@@ -608,12 +608,15 @@ export const hrmsService = {
     return apiClient.get<SkillsSearchResult>(endpoints.skillsMatrix.search, { query: { q: query } });
   },
 
-  getSeasonalTheme() {
-    return apiClient.get<{ active: string | null; label: string | null }>(endpoints.seasonalTheme.current);
+  async getSeasonalTheme() {
+    type Theme = { active: string | null; label: string | null };
+    const result = await apiClient.get<Theme | ApiEnvelope<Theme>>(endpoints.seasonalTheme.current);
+    return "data" in result ? result.data : result;
   },
 
-  getSeasonalThemeSettings() {
-    return apiClient.get<SeasonalThemeSettings>(endpoints.seasonalTheme.admin);
+  async getSeasonalThemeSettings() {
+    const result = await apiClient.get<SeasonalThemeSettings | ApiEnvelope<SeasonalThemeSettings>>(endpoints.seasonalTheme.admin);
+    return "data" in result ? result.data : result;
   },
 
   updateSeasonalThemeSettings(payload: { enabled: boolean; themes: string[] }) {

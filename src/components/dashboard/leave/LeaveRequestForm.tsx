@@ -78,8 +78,8 @@ export function LeaveRequestForm({
     <div className="space-y-6">
       {/* The page already titles this card ("New request" / "Edit request"), so the fields sit directly in it. */}
       <div>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <Field>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <Field className="sm:col-span-2">
             <FieldLabel>
               Leave Type
               <span className="text-destructive" aria-hidden>
@@ -108,7 +108,7 @@ export function LeaveRequestForm({
           </Field>
 
           <DatePicker
-            label="From Date"
+            label="First day"
             required
             value={values.request_from_date}
             disabled={actionLoading}
@@ -123,7 +123,7 @@ export function LeaveRequestForm({
           />
 
           <DatePicker
-            label="To Date"
+            label="Last day"
             required
             value={values.is_half_day ? values.request_from_date : values.request_to_date}
             disabled={actionLoading || values.is_half_day}
@@ -199,7 +199,7 @@ export function LeaveRequestForm({
         ) : null}
       </div>
 
-      <div className="space-y-5">
+      <div className="space-y-5 border-t border-wt-border pt-6">
         {routesToHr && isLeaveOrOptional ? (
           <p className="rounded-lg border border-wt-border/70 bg-wt-surface-2/40 px-3 py-2 text-xs leading-relaxed text-wt-text-muted">
             You are in the talent pool (bench or no client allocation). This leave request will go
@@ -207,7 +207,7 @@ export function LeaveRequestForm({
           </p>
         ) : null}
         {showManagerSelectors ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4"><p className="text-sm font-semibold text-wt-text">Who needs to know</p><div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="flex flex-col gap-1.5 min-w-0">
               <LeaveManagerSelector
                 label="Primary Managers"
@@ -235,21 +235,21 @@ export function LeaveRequestForm({
                 id="leave-secondary-managers"
               />
             </div>
-          </div>
+          </div></div>
         ) : null}
 
         <Field>
-          <FieldLabel>
+          <FieldLabel htmlFor="leave-comments">
             Comments
             <span className="text-destructive" aria-hidden>
               *
             </span>
           </FieldLabel>
           <Textarea
-            placeholder="Enter your comments..."
+            placeholder="Add the context your approver needs."
             value={values.comments}
             onChange={(e) => onChange({ ...values, comments: e.target.value })}
-            className="min-h-[100px] resize-y bg-background"
+            className="min-h-[120px] resize-y bg-background"
             id="leave-comments"
           />
         </Field>
@@ -269,7 +269,7 @@ export function LeaveRequestForm({
                   : "Submitting…"
                 : editingLeaveRequestId
                   ? "Save Changes"
-                  : "Submit Request"}
+                  : "Submit request"}
             </Button>
             {editingLeaveRequestId ? (
               <Button

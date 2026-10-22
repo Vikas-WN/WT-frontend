@@ -62,7 +62,7 @@ export function PageTabs({
   );
 
   return (
-    <Tabs value={value} onValueChange={onValueChange} className={cn("gap-0", className)}>
+    <Tabs data-page-tabs value={value} onValueChange={onValueChange} className={cn("gap-0", className)}>
       {embedded && listVariant === "line" ? (
         <div className={PAGE_TABS_EMBEDDED_HEADER_CLASS}>{tabsList}</div>
       ) : (
@@ -79,6 +79,6 @@ export const PAGE_CONTENT_CARD_CLASS = cn(
 
 /** Use directly below embedded `PageTabs` for consistent tab-to-content spacing. */
 export const PAGE_TAB_BODY_CLASS = cn(
-  "pt-6",
+  "wt-tab-body pt-6",
   "space-y-7 px-5 pb-7 sm:px-8 sm:pb-8"
 );

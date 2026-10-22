@@ -35,7 +35,7 @@ export function WhosOutDayPanel({
 }) {
   if (!day) {
     return (
-      <aside className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-[1.25rem] border border-dashed border-wt-border p-6 text-center text-sm text-wt-text-muted">
+      <aside className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-wt-border p-6 text-center text-sm text-wt-text-muted">
         <CalendarDays className="size-6 text-wt-text-faint" aria-hidden />
         {CALENDAR_COPY.panelPick}
       </aside>
@@ -45,7 +45,7 @@ export function WhosOutDayPanel({
   const groups = groupByKind(occurrences, orderOf);
   const outCount = occurrences.length;
   return (
-    <aside className="rounded-[1.25rem] border border-wt-border bg-wt-surface-1 p-5 lg:sticky lg:top-4" aria-live="polite">
+    <aside className="rounded-xl border border-wt-border bg-wt-surface-1 p-5 lg:sticky lg:top-4" aria-live="polite">
       {day === todayIso ? <p className="text-xs font-semibold uppercase tracking-[0.06em] text-[var(--wt-brand)]">{CALENDAR_COPY.today}</p> : null}
       <h2 className="text-xl font-bold tracking-tight text-wt-text">
         {date.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}

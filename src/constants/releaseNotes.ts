@@ -34,6 +34,17 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-10-22-01",
+    releasedOn: "2026-10-22",
+    title: "A calmer workspace, built around your day",
+    highlights: [
+      {area:"Workspace",title:"A clearer view of your work",description:"Refined navigation, page layouts, forms and lists across the portals. Home puts useful actions first, and project cards bring names, status and dates together."},
+      {area:"Mobile",title:"Comfortable on every screen",description:"A compact desktop navigation rail, a full mobile drawer, and readable record views on phones. Settings now gives each companion room to breathe."},
+      {area:"HR & Admin",title:"Review your data before importing",description:"Find organization editors in Data management. Bulk imports include current templates, local file checks, a preview and confirmation before records are sent."},
+      {area:"Your space",title:"Companions with a little more character",description:"Choose Knot, a Virat Kohli fan-art companion, Goku, Pikachu or Charmander in Settings. Character actions, smoother movement and contained festival celebrations make the workspace feel more personal."},
+    ],
+  },
+  {
     id: "2026-10-21-01",
     releasedOn: "2026-10-21",
     title: "A fresh look, and Work from home on its own page",

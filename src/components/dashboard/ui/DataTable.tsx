@@ -1,143 +1,35 @@
 "use client";
 
-import { isValidElement, type ReactNode, useMemo, useState } from "react";
 import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
 import { ScrollableTable } from "@/components/dashboard/ui/ScrollableTable";
 import { TableSortHeader } from "@/components/dashboard/ui/TableSortHeader";
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  WT_STICKY_TABLE_HEAD_CLASS,
-  WtTable,
-} from "@/components/dashboard/ui/wtTable";
-import { useClientPagination } from "@/hooks/useClientPagination";
-import {
-  activeSortDirectionForColumn,
-  applyListSort,
-  sortOptionsForColumn,
-  toggleColumnSort,
-  type ListSortOption,
-} from "@/utils/listSort";
-import { formatTableColumnHeader, formatTableCellValue, prepareTableForDisplay } from "@/utils/tableDisplay";
+import { TableBody,TableCell,TableHead,TableHeader,TableRow,WT_STICKY_TABLE_HEAD_CLASS,WtTable } from "@/components/dashboard/ui/wtTable";
+import { RecordList, RecordValue } from "@/components/dashboard/ui/RecordList";
+import { ListPagination } from "@/components/dashboard/ui/ListPagination";
+import { useWorkspaceTable } from "@/hooks/useWorkspaceTable";
+import { activeSortDirectionForColumn,sortOptionsForColumn,toggleColumnSort } from "@/utils/listSort";
+import { formatTableColumnHeader } from "@/utils/tableDisplay";
+import type { WorkspaceTableProps } from "@/types/workspaceTable";
+import { cn } from "@/lib/utils";
 
-export function DataTable({
-  title,
-  columns,
-  rows,
-  emptyLabel,
-  compact = false,
-  sortOptions,
-  defaultSortId,
-  sortId: controlledSortId,
-  onSortIdChange,
-  paginate = true,
-  pageSize: initialPageSize,
-  resetPaginationKeys,
-  maxHeightClass,
-  scrollChain = true,
-}: {
-  title?: string;
-  columns: string[];
-  rows: Array<Record<string, unknown | ReactNode>>;
-  emptyLabel: string;
-  compact?: boolean;
-  sortOptions?: ListSortOption<Record<string, unknown>>[];
-  defaultSortId?: string;
-  sortId?: string;
-  onSortIdChange?: (sortId: string) => void;
-  paginate?: boolean;
-  pageSize?: number;
-  resetPaginationKeys?: readonly unknown[];
-  maxHeightClass?: string;
-  scrollChain?: boolean;
-}) {
-  const [internalSortId, setInternalSortId] = useState(
-    () => defaultSortId ?? sortOptions?.[0]?.id ?? ""
-  );
-  const sortId = controlledSortId ?? internalSortId;
-  const setSortId = onSortIdChange ?? setInternalSortId;
-
-  const { columns: displayColumns, rows: displaySourceRows } = useMemo(
-    () =>
-      prepareTableForDisplay(
-        columns,
-        rows.map((row) => ({ ...row })) as Array<Record<string, unknown>>
-      ),
-    [columns, rows]
-  );
-
-  const sortedRows = useMemo(() => {
-    if (!sortOptions?.length) return displaySourceRows;
-    return applyListSort(displaySourceRows, sortId, sortOptions);
-  }, [displaySourceRows, sortId, sortOptions]);
-
-  useClientPagination(sortedRows, {
-    pageSize: initialPageSize,
-    resetKeys: resetPaginationKeys ?? (sortOptions?.length ? [sortId] : undefined),
-  });
-
-  const displayRows = sortedRows;
-
-  if (!displaySourceRows.length) {
-    return (
-      <div className="space-y-3">
-        {title ? <PageSectionHeader title={title} titleAs="h4" /> : null}
-        <EmptyState title={emptyLabel} description="There is nothing to show in this table yet." />
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {title ? <PageSectionHeader title={title} titleAs="h4" /> : null}
-      <ScrollableTable maxHeightClass={maxHeightClass} scrollChain={scrollChain}>
-        <WtTable>
-          <TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}>
-            <TableRow className="hover:bg-transparent">
-              {displayColumns.map((col) => {
-                const columnSortOpts = sortOptions?.length ? sortOptionsForColumn(col, sortOptions) : [];
-                const activeDir =
-                  sortOptions?.length && columnSortOpts.length
-                    ? activeSortDirectionForColumn(col, sortId, sortOptions)
-                    : null;
-                return (
-                  <TableHead key={col}>
-                    <TableSortHeader
-                      label={formatTableColumnHeader(col)}
-                      activeDirection={activeDir}
-                      sortable={columnSortOpts.length > 0}
-                      onSort={
-                        columnSortOpts.length && sortOptions
-                          ? () => setSortId(toggleColumnSort(col, sortId, sortOptions))
-                          : undefined
-                      }
-                    />
-                  </TableHead>
-                );
-              })}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {displayRows.map((row, idx) => (
-              <TableRow key={idx}>
-                {displayColumns.map((col) => (
-                  <TableCell key={col}>
-                    {row[col] === null || row[col] === undefined
-                      ? "—"
-                      : isValidElement(row[col])
-                        ? (row[col] as ReactNode)
-                        : formatTableCellValue(col, row[col])}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </WtTable>
-      </ScrollableTable>
-    </div>
-  );
+/** One data view: sortable table on desktop, complete records on phones. */
+export function DataTable(props: WorkspaceTableProps) {
+  const view=useWorkspaceTable(props);
+  return <div className={cn("wt-data-view space-y-4",props.compact&&"wt-data-compact")}>
+    {props.title?<PageSectionHeader title={props.title} titleAs="h4"/>:null}
+    {view.total===0?<EmptyState title={props.emptyLabel} description="Records will appear here when available."/>:<>
+      {view.compactViewport ? <div className="wt-record-mobile">
+        {props.sortOptions?.length?<label className="mb-3 flex items-center justify-between gap-3 text-xs text-wt-text-muted">Sort by<select aria-label="Sort records" value={view.sortId} onChange={(event)=>view.setSortId(event.target.value)} className="h-10 max-w-[70%] rounded-lg border border-wt-border bg-wt-surface-1 px-3 text-wt-text">{props.sortOptions.map(option=><option key={option.id} value={option.id}>{option.label}</option>)}</select></label>:null}
+        <RecordList columns={view.columns} rows={view.rows}/>
+      </div> : <div className="wt-record-desktop"><ScrollableTable maxHeightClass={props.maxHeightClass} scrollChain={props.scrollChain??true}>
+        <WtTable><TableHeader className={WT_STICKY_TABLE_HEAD_CLASS}><TableRow>{view.columns.map(column=>{
+          const sorts=props.sortOptions?.length?sortOptionsForColumn(column,props.sortOptions):[];
+          const direction=props.sortOptions?.length&&sorts.length?activeSortDirectionForColumn(column,view.sortId,props.sortOptions):null;
+          return <TableHead key={column}><TableSortHeader label={formatTableColumnHeader(column)} activeDirection={direction} sortable={sorts.length>0} onSort={sorts.length&&props.sortOptions?()=>view.setSortId(toggleColumnSort(column,view.sortId,props.sortOptions!)):undefined}/></TableHead>;
+        })}</TableRow></TableHeader><TableBody>{view.rows.map((row,index)=><TableRow key={String(row.id??row.emp_id??index)}>{view.columns.map(column=><TableCell key={column}><RecordValue column={column} value={row[column]}/></TableCell>)}</TableRow>)}</TableBody></WtTable>
+      </ScrollableTable></div>}
+      {props.paginate!==false&&(view.total>(props.pageSize??10)||view.pagination.pageSize>(props.pageSize??10))?<div className="wt-data-pagination"><ListPagination page={view.pagination.page} totalPages={view.pagination.totalPages} totalItems={view.total} rangeStart={view.pagination.rangeStart} rangeEnd={view.pagination.rangeEnd} pageSize={view.pagination.pageSize} onPageChange={view.pagination.setPage} onPageSizeChange={view.pagination.setPageSize}/></div>:null}
+    </>}
+  </div>;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarHeart, ClipboardList, Megaphone } from "lucide-react";
+import { ArrowUpRight, CalendarHeart, ClipboardList, Megaphone } from "lucide-react";
 
 import { filledBadgeClass } from "@/components/dashboard/ui/badgeTones";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +37,7 @@ function Kind({ icon, label, tone }: { icon: React.ReactNode; label: string; ton
 }
 
 /** One card in the Home strip. The whole card is a link to the item. */
-export function HomeUpdateSlide({ update }: { update: HomeUpdate }) {
+export function HomeUpdateSlide({ update, horizontal = false }: { update: HomeUpdate; horizontal?: boolean }) {
   if (update.kind === "form") {
     const { form } = update;
     return (
@@ -85,6 +85,19 @@ export function HomeUpdateSlide({ update }: { update: HomeUpdate }) {
     );
   }
   const { announcement } = update;
+  if (horizontal) {
+    return (
+      <Link href={`${DASHBOARD_ROUTES.announcements}?announcementId=${announcement.id}`} className="group flex h-full items-center gap-4 rounded-2xl border border-wt-border bg-wt-surface-1 p-5 shadow-[var(--wt-shadow-sm)] transition-colors hover:border-wt-border-md">
+        <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]" aria-hidden><Megaphone className="size-5" /></span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-wt-text-faint">{COPY.announcement}{!announcement.is_read ? <span className="rounded bg-[var(--wt-brand-soft)] px-1.5 py-0.5 text-[var(--wt-brand)]">{COPY.newBadge}</span> : null}</span>
+          <span className="mt-1 block truncate text-sm font-semibold text-wt-text">{announcement.title}</span>
+          <span className="mt-1 block line-clamp-2 text-sm text-wt-text-muted">{announcement.body}</span>
+        </span>
+        <ArrowUpRight className="size-5 shrink-0 text-wt-text-faint transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden />
+      </Link>
+    );
+  }
   return (
     <Link href={`${DASHBOARD_ROUTES.announcements}?announcementId=${announcement.id}`} className={SLIDE_CLASS}>
       <Accent kind="announcement" />

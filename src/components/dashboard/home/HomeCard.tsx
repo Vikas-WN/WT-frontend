@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CalendarDays, CalendarRange, CheckCheck, Folder, GraduationCap, PartyPopper, Users, LayoutGrid } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,8 @@ export function HomeCard({
    *  that are genuinely more actionable than the rest (e.g. pending
    *  approvals) — spend sparingly, at most one or two per page. */
   featured = false,
+  icon,
+  tone = "brand",
   className,
 }: {
   title: string;
@@ -38,7 +41,7 @@ export function HomeCard({
   titleBadge?: React.ReactNode;
   /** Replaces the link at the right edge (tabs, buttons). */
   headerRight?: React.ReactNode;
-  /** Kept so existing cards still compile; the redesigned cards show the title alone. */
+  /** Optional custom icon for the section tile. */
   icon?: React.ReactNode;
   href?: string;
   cta?: string;
@@ -47,23 +50,25 @@ export function HomeCard({
   onAction?: () => void;
   children: React.ReactNode;
   featured?: boolean;
-  /** Kept so existing cards still compile. */
+  /** Semantic accent for the section tile. */
   tone?: HomeTone;
   className?: string;
 }) {
-  const linkClass = "shrink-0 text-sm font-semibold text-[var(--wt-brand)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)] rounded";
+  const TileIcon = /approval/i.test(title) ? CheckCheck : /leave|holiday/i.test(title) ? CalendarDays : /learning/i.test(title) ? GraduationCap : /project/i.test(title) ? Folder : /celebrat/i.test(title) ? PartyPopper : /where|attendance/i.test(title) ? Users : /out/i.test(title) ? CalendarRange : LayoutGrid;
+  const linkClass = "wt-card-link shrink-0 rounded text-xs font-medium text-wt-text-muted transition-colors hover:text-wt-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wt-brand";
   return (
     <section
       className={cn(
-        "flex flex-col overflow-hidden rounded-[1.25rem] border border-wt-border bg-wt-surface-1 p-4 shadow-[var(--wt-shadow-sm)] sm:p-5 @2xl:h-full @2xl:min-h-0",
+        "wt-home-card flex flex-col overflow-hidden rounded-2xl border border-wt-border bg-wt-surface-1 p-5 sm:p-6 @2xl:h-full @2xl:min-h-0",
         featured && "border-[color-mix(in_srgb,var(--wt-brand)_20%,var(--wt-border))]",
         className
       )}
     >
-      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2.5">
+      <div className="wt-home-card-heading flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5">
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2.5">
-            <h2 className="truncate text-[1.0625rem] font-semibold leading-tight tracking-[-0.015em] text-wt-text">{title}</h2>
+            <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg [&_svg]:size-4", TONE_TILE[tone])} aria-hidden>{icon ?? <TileIcon className="size-4" />}</span>
+            <h2 className="truncate text-[0.9375rem] font-semibold leading-tight tracking-[-0.01em] text-wt-text">{title}</h2>
             {titleBadge}
           </div>
           {subtitle ? <p className="mt-0.5 text-sm text-wt-text-muted">{subtitle}</p> : null}
@@ -92,7 +97,7 @@ export function CardMessage({ text }: { text: string }) {
 /** A calm empty state: a small icon, what is missing, and what will appear — in a dashed box, as in the redesign. */
 export function CardEmpty({ icon, title, hint }: { icon: React.ReactNode; title: string; hint?: string }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-wt-border-md px-4 py-7 text-center">
+    <div className="flex flex-col items-center gap-2 rounded-xl bg-wt-surface-2/60 px-4 py-6 text-center">
       <span className="grid size-11 place-items-center rounded-xl bg-wt-surface-2 text-wt-text-muted" aria-hidden>
         {icon}
       </span>

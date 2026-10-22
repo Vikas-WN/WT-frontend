@@ -40,7 +40,7 @@ export function MetricCard({
     <article
       className={cn(
         CONTENT_CARD_CLASS,
-        "group/metric p-5 transition-[border-color,box-shadow] duration-[var(--wt-duration)] ease-[var(--wt-ease)] sm:p-6"
+        "wt-metric group/metric relative p-5 transition-[border-color,box-shadow] duration-[var(--wt-duration)] ease-[var(--wt-ease)] sm:p-6"
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -55,7 +55,7 @@ export function MetricCard({
         <Skeleton className="mt-3 h-9 w-24" />
       ) : (
         <>
-          <p className="mt-2 text-3xl font-bold tracking-[-0.02em] text-wt-text tabular-nums">
+          <p className="mt-4 font-[family-name:var(--font-brand)] text-3xl font-semibold tracking-[-0.02em] text-wt-text tabular-nums">
             {value.toLocaleString()}
           </p>
           {trend ? (
