@@ -76,11 +76,8 @@ export function LeaveRequestForm({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl bg-muted/40 p-6 shadow-sm border border-border/40">
-        <h3 className="text-sm font-semibold tracking-tight text-foreground mb-5">
-          {editingLeaveRequestId ? "Edit Leave Request" : "Request Leave"}
-        </h3>
-
+      {/* The page already titles this card ("New request" / "Edit request"), so the fields sit directly in it. */}
+      <div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <Field>
             <FieldLabel>
@@ -202,7 +199,7 @@ export function LeaveRequestForm({
         ) : null}
       </div>
 
-      <div className="rounded-xl bg-muted/40 p-5 space-y-5 shadow-sm border border-border/40">
+      <div className="space-y-5">
         {routesToHr && isLeaveOrOptional ? (
           <p className="rounded-lg border border-wt-border/70 bg-wt-surface-2/40 px-3 py-2 text-xs leading-relaxed text-wt-text-muted">
             You are in the talent pool (bench or no client allocation). This leave request will go

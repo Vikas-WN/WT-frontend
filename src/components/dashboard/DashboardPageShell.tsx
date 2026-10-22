@@ -11,6 +11,8 @@ export function DashboardPageShell({
 }) {
   return (
     <main
+      id="main-content"
+      tabIndex={-1}
       className={cn(
         "wt-page-enter relative mx-auto min-h-0 w-full min-w-0 max-w-[1440px] flex-1 p-4 sm:p-5 md:px-6 md:py-6 xl:px-8",
         "transition-[padding] duration-[var(--wt-duration)] ease-[var(--wt-ease)]",

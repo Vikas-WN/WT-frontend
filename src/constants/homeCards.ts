@@ -18,7 +18,7 @@ export const HOME_APPROVALS_COPY = {
   approve: "Approve",
   approved: "Approved.",
   approveFailed: "Couldn't approve that request.",
-  decline: "Decline",
+  decline: "Decline…",
   declineHint: "Declining needs a reason, so this opens the full review",
   review: "Review",
   reviewAll: "Review all",
