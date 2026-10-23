@@ -8,7 +8,7 @@
  * A new version waits until the person chooses "Refresh" (the page sends SKIP_WAITING), so we never swap code
  * underneath someone who is in the middle of filling in a form.
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const STATIC_CACHE = `wt-static-${VERSION}`;
 const ASSET_CACHE = `wt-assets-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
@@ -84,4 +84,50 @@ self.addEventListener("fetch", (event) => {
   if (/\.(?:png|jpg|jpeg|gif|webp|svg|ico|woff2?)$/i.test(url.pathname)) {
     event.respondWith(staleWhileRevalidate(request));
   }
+});
+
+
+/* ---- Web push (chat messages) ------------------------------------------------------------------------------
+ * The server sends {title, body, url, tag}. If WebTrak is already open and in front the page shows the message
+ * itself, so no notification is raised then. Otherwise one notification per conversation (the tag replaces the
+ * previous one rather than stacking), and clicking it opens or focuses WebTrak on that conversation.
+ */
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: "WebTrak", body: event.data ? event.data.text() : "" };
+  }
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      if (windows.some((client) => client.visibilityState === "visible" && client.focused)) return;
+      await self.registration.showNotification(data.title || "WebTrak", {
+        body: data.body || "",
+        tag: data.tag || "webtrak",
+        renotify: true,
+        icon: "/icons/icon-192.png",
+        badge: "/icons/icon-192.png",
+        data: { url: data.url || "/dashboard/chat" },
+      });
+    })()
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL((event.notification.data && event.notification.data.url) || "/dashboard/chat", self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const open = windows.find((client) => new URL(client.url).origin === self.location.origin);
+      if (open) {
+        await open.focus();
+        if ("navigate" in open) await open.navigate(target).catch(() => undefined);
+        return;
+      }
+      await self.clients.openWindow(target);
+    })()
+  );
 });

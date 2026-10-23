@@ -220,6 +220,11 @@ export const endpoints = {
     options: `${api}/audience/options`,
   },
 
+  push: {
+    config: `${api}/push/config`,
+    subscriptions: `${api}/push/subscriptions`,
+  },
+
   chat: {
     people: `${api}/chat/people`,
     conversations: `${api}/chat/conversations`,

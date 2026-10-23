@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { ChatAvatar } from "@/components/dashboard/chat/ChatAvatar";
 import { Input } from "@/components/ui/input";
 import { CHAT_COPY as COPY } from "@/constants/chat";
+import { ChatNotificationsBanner, ChatNotificationsButton } from "@/components/dashboard/chat/ChatNotifications";
 import { cn } from "@/lib/utils";
 import type { ChatConversation } from "@/types/chat";
 import { listTime } from "@/utils/chatDisplay";
@@ -79,6 +80,7 @@ export function ConversationList(p: Props) {
               {p.reportCount ? <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-rose-600 px-1 text-[10px] font-semibold leading-4 text-white">{p.reportCount}</span> : null}
             </button>
           ) : null}
+          <ChatNotificationsButton />
           <button type="button" onClick={p.onBrowse} title={COPY.browse} aria-label={COPY.browse} className="grid size-8 place-items-center rounded-lg text-wt-text-muted hover:bg-wt-surface-2 hover:text-wt-text">
             <Compass className="size-4" aria-hidden />
           </button>
@@ -90,6 +92,7 @@ export function ConversationList(p: Props) {
           </button>
         </div>
       </div>
+      <ChatNotificationsBanner />
       <div className="relative px-3 pb-2">
         <Search className="pointer-events-none absolute left-5.5 top-1/2 size-4 -translate-y-[60%] text-wt-text-faint" aria-hidden />
         <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={COPY.search} aria-label={COPY.search} className="h-9 pl-8" />
