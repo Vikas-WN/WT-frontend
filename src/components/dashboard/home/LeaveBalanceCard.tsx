@@ -73,9 +73,9 @@ export function LeaveBalanceCard() {
 
           {year ? (
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-wt-border pt-4">
-              <Tally label={HOME_LEAVE_CARD.creditedShort} value={year.credited ?? year.carried_forward + year.accrued} />
+              <Tally label={HOME_LEAVE_CARD.openingShort} value={year.carried_forward} />
+              <Tally label={HOME_LEAVE_CARD.accruedShort} value={year.accrued} />
               <Tally label={HOME_LEAVE_CARD.takenShort} value={year.taken_approved ?? year.leaves_taken} />
-              <Tally label={HOME_LEAVE_CARD.pendingShort} value={year.taken_pending ?? 0} />
             </div>
           ) : null}
 
