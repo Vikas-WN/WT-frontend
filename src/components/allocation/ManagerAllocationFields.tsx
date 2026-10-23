@@ -135,29 +135,33 @@ export function ManagerAllocationFields({
             onChange({
               ...state,
               allocation_type,
+              // NB has no status, so none is kept for it.
+              billing_status: allocation_type === "NONBILLABLE" ? "" : state.billing_status || "BILLED",
               locked_in_date:
                 allocation_type === "LOCKED" ? state.locked_in_date || state.start_date : "",
             })
           }
         />
-        <SelectField
-          label="Status"
-          required
-          value={state.billing_status}
-          options={ALLOCATION_STATUS_SELECT_OPTIONS}
-          onChange={(billing_status) =>
-            onChange({
-              ...state,
-              billing_status: ALLOCATION_STATUS_SELECT_OPTIONS.some((o) => o.value === billing_status)
-                ? (billing_status as AllocationBillingStatus)
-                : "",
-              allocation_type: allocationTypeForBillingStatus(
-                billing_status as AllocationBillingStatus,
-                state.allocation_type
-              ),
-            })
-          }
-        />
+        {state.allocation_type === "NONBILLABLE" ? null : (
+          <SelectField
+            label="Status"
+            required
+            value={state.billing_status}
+            options={ALLOCATION_STATUS_SELECT_OPTIONS}
+            onChange={(billing_status) =>
+              onChange({
+                ...state,
+                billing_status: ALLOCATION_STATUS_SELECT_OPTIONS.some((o) => o.value === billing_status)
+                  ? (billing_status as AllocationBillingStatus)
+                  : "",
+                allocation_type: allocationTypeForBillingStatus(
+                  billing_status as AllocationBillingStatus,
+                  state.allocation_type
+                ),
+              })
+            }
+          />
+        )}
         {showLockedInDate ? (
           <InputField
             label="Locked-In Date"

@@ -133,7 +133,8 @@ async function allocateManagerOnProject({
     }
     lockedInDate = lockedResult.date;
   }
-  const billingStatus = fields.billing_status || "BILLED";
+  // NB (non-billable) has no status; any other type defaults to Billed.
+  const billingStatus = allocationType === "NONBILLABLE" ? null : fields.billing_status || "BILLED";
   await hrmsService.createAllocation({
     employeeEmail: normalized,
     projectCode,
