@@ -86,7 +86,7 @@ export function AllocateEmployeeDialog({
   const stepIndex = ALLOCATE_STEPS.indexOf(step);
 
   const roleOptions = useMemo(
-    () => [...allocationRoles, CUSTOM_ROLE_VALUE],
+    () => [CUSTOM_ROLE_VALUE, ...allocationRoles],
     [allocationRoles]
   );
 
@@ -143,11 +143,14 @@ export function AllocateEmployeeDialog({
     () => allocationPercentOptionsForDesignation(resolvedRole, effectivePercentOptions),
     [resolvedRole, effectivePercentOptions]
   );
+  // Every type is offered, Staffing included. The server only accepts Staffing on Staffing projects, and a Staffing
+  // project holds only Staffing or Locked allocations, so the list narrows on those and the form says why.
   const allocationTypeOptions = staffing
-    ? [{ value: "STAFFING", label: "Staffing" }]
-    : // STAFFING is only valid on STAFFING projects — never offer it for In-House / other types.
-      ALLOCATION_TYPE_SELECT_OPTIONS.filter((option) => option.value !== "STAFFING");
-  const showLockedInDate = !staffing && form.allocation_type === "LOCKED";
+    ? ALLOCATION_TYPE_SELECT_OPTIONS.filter((option) => option.value === "STAFFING" || option.value === "LOCKED")
+    : ALLOCATION_TYPE_SELECT_OPTIONS;
+  const effectiveAllocationType = staffing && form.allocation_type !== "LOCKED" ? "STAFFING" : form.allocation_type;
+  const isNonBillable = effectiveAllocationType === "NONBILLABLE";
+  const showLockedInDate = effectiveAllocationType === "LOCKED";
 
   function validateEmployeeStep(): boolean {
     if (!form.employee_email.trim()) {
@@ -218,11 +221,16 @@ export function AllocateEmployeeDialog({
       );
       return;
     }
-    if (!form.allocation_type) {
+    if (!effectiveAllocationType) {
       showErrorToast("Please select allocation type.");
       return;
     }
-    if (!form.billing_status) {
+    if (effectiveAllocationType === "STAFFING" && !staffing) {
+      showErrorToast("Staffing allocations are only for Staffing projects. Pick a Staffing project, or choose another allocation type.");
+      return;
+    }
+    // NB (non-billable) has no status, so it is neither shown nor required then.
+    if (!isNonBillable && !form.billing_status) {
       showErrorToast("Please select status.");
       return;
     }
@@ -308,7 +316,7 @@ export function AllocateEmployeeDialog({
 
     setLoading(true);
     try {
-      const allocationType = staffing ? "STAFFING" : form.allocation_type;
+      const allocationType = effectiveAllocationType;
       let lockedInDate: string | null = null;
       if (allocationType === "LOCKED") {
         const lockedInRaw = (form.locked_in_date || form.start_date).trim();
@@ -331,7 +339,7 @@ export function AllocateEmployeeDialog({
         startDate,
         endDate,
         allocationType,
-        billingStatus: form.billing_status,
+        billingStatus: isNonBillable ? null : form.billing_status,
         lockedInDate,
       };
 
@@ -482,7 +490,7 @@ export function AllocateEmployeeDialog({
             placeholder="Select project role"
             options={roleOptions.map((role) =>
               role === CUSTOM_ROLE_VALUE
-                ? { value: role, label: "Create new role…" }
+                ? { value: role, label: "＋ Create a custom role…" }
                 : { value: role, label: role }
             )}
             onChange={(role) => setForm((prev) => ({ ...prev, role }))}
@@ -523,37 +531,42 @@ export function AllocateEmployeeDialog({
           )}
           <SelectField
             label="Allocation Type"
-            placeholder={staffing ? "Staffing (required for staffing projects)" : "Select allocation type"}
+            placeholder="Select allocation type"
             required
-            value={staffing ? "STAFFING" : form.allocation_type}
+            value={effectiveAllocationType}
             options={allocationTypeOptions}
-            disabled={staffing}
             onChange={(value) =>
               setForm((prev) => ({
                 ...prev,
                 allocation_type: value,
+                // NB has no status: drop any status that was picked before.
+                billing_status: value === "NONBILLABLE" ? "" : prev.billing_status,
                 locked_in_date: value === "LOCKED" ? prev.locked_in_date || prev.start_date : "",
               }))
             }
           />
-          <SelectField
-            label="Status"
-            placeholder="Select status"
-            required
-            value={form.billing_status}
-            options={ALLOCATION_STATUS_SELECT_OPTIONS}
-            onChange={(value) =>
-              setForm((prev) => ({
-                ...prev,
-                billing_status: ALLOCATION_STATUS_OPTIONS.some((o) => o.value === value)
-                  ? (value as AllocationBillingStatus)
-                  : "",
-                allocation_type: staffing
-                  ? "STAFFING"
-                  : allocationTypeForBillingStatus(value as AllocationBillingStatus, prev.allocation_type),
-              }))
-            }
-          />
+          {isNonBillable ? null : (
+            <SelectField
+              label="Status"
+              placeholder="Select status"
+              required
+              value={form.billing_status}
+              options={ALLOCATION_STATUS_SELECT_OPTIONS}
+              onChange={(value) =>
+                setForm((prev) => ({
+                  ...prev,
+                  billing_status: ALLOCATION_STATUS_OPTIONS.some((o) => o.value === value)
+                    ? (value as AllocationBillingStatus)
+                    : "",
+                  allocation_type: staffing
+                    ? prev.allocation_type === "LOCKED"
+                      ? "LOCKED"
+                      : "STAFFING"
+                    : allocationTypeForBillingStatus(value as AllocationBillingStatus, prev.allocation_type),
+                }))
+              }
+            />
+          )}
           {showLockedInDate ? (
             <InputField
               label="Locked-In Date"

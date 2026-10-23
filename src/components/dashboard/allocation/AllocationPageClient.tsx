@@ -38,6 +38,8 @@ import {
   userRequestActionLabel,
 } from "@/utils/actionToast";
 import { AllocateEmployeeDialog } from "@/components/allocation/AllocateEmployeeDialog";
+import { PeopleAllocationsPanel } from "@/components/dashboard/allocation/PeopleAllocationsPanel";
+import { PEOPLE_ALLOCATIONS_COPY } from "@/constants/peopleAllocations";
 import { CreateProjectDialog } from "@/components/allocation/CreateProjectDialog";
 import { ProjectEmployeesDetailDialog } from "@/components/allocation/ProjectEmployeesDetailDialog";
 import { ProjectTypeFilterSelect } from "@/components/allocation/ProjectTypeFilterSelect";
@@ -448,7 +450,7 @@ export function AllocationPageClient() {
   const [allocationForm, setAllocationForm] = useState(createEmptyAllocationForm);
   const [editingAllocationId, setEditingAllocationId] = useState<string>("");
   const [allocationHrSubTab, setAllocationHrSubTab] = useState<
-    "project" | "allocate" | "list"
+    "project" | "allocate" | "people" | "list"
   >("project");
   const [projectDetail, setProjectDetail] = useState<{
     code: string;
@@ -2465,7 +2467,7 @@ export function AllocationPageClient() {
   useEffect(() => {
     if (!user) return;
     if (!hasHrAccess || requiresSelfOnboarding) return;
-    if (allocationHrSubTab !== "list") return;
+    if (allocationHrSubTab !== "list" && allocationHrSubTab !== "people") return;
     const id = window.setTimeout(() => {
       void loadAllocationsForHr();
       void loadAllocationForecasting();
@@ -3421,12 +3423,13 @@ export function AllocationPageClient() {
                                 value={allocationHrSubTab}
                                 onValueChange={(value) => {
                                   setAllocationHrSubTab(
-                                    value as "project" | "allocate" | "list"
+                                    value as "project" | "allocate" | "people" | "list"
                                   );
                                 }}
                                 items={[
                                   { value: "project", label: "Projects" },
                                   { value: "allocate", label: "Project Allocation" },
+                                  { value: "people", label: PEOPLE_ALLOCATIONS_COPY.tab },
                                   { value: "list", label: "Allocation List" },
                                 ]}
                               />
@@ -3519,6 +3522,15 @@ export function AllocationPageClient() {
                                   </Button>
                                 </div>
                               </div>
+                              ) : null}
+
+                              {allocationHrSubTab === "people" ? (
+                                <PeopleAllocationsPanel
+                                  allocations={allocations.filter((row) => !isSystemProjectAllocationRow(row))}
+                                  projects={hrProjectRawRows as Array<Record<string, unknown>>}
+                                  loading={allocationsLoading}
+                                  error={allocationsLoadError}
+                                />
                               ) : null}
 
                               {allocationHrSubTab === "list" ? (
