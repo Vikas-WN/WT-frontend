@@ -18,29 +18,27 @@ function Figure({ label, hint, value, sub }: { label: string; hint: string; valu
   );
 }
 
-/** This calendar year in three figures: credited, taken (approved, and pending approval), and the balance. */
+/** This calendar year in four figures that add up: opening (carried forward) + accrued - taken = balance. Pending requests are shown under Taken. */
 export function LeaveYearSummaryStrip() {
   const { data, isLoading } = useMyLeaveBalance();
   if (isLoading) return <Skeleton className="mb-6 h-24 w-full rounded-2xl" aria-hidden />;
   const year = data?.year_summary;
   if (!year) return null;
-  // Tolerate a backend that has not been updated yet: derive the new figures from the old ones.
-  const credited = year.credited ?? year.carried_forward + year.accrued;
   const approved = year.taken_approved ?? year.leaves_taken;
   const pending = year.taken_pending ?? 0;
-  const carried = year.carried_forward > 0 ? COPY.creditedIncludes(formatBalanceDays(year.carried_forward).amount) : undefined;
   return (
     <section aria-label={COPY.heading(year.year)} className="mb-6 rounded-2xl border border-wt-border bg-wt-surface-1 shadow-[var(--wt-shadow-sm)]">
       <p className="border-b border-wt-border px-4 py-2 text-sm font-semibold text-wt-text">{COPY.heading(year.year)}</p>
       <div className="flex flex-col divide-y divide-wt-border sm:flex-row sm:divide-x sm:divide-y-0">
-        <Figure label={COPY.credited} hint={COPY.creditedHint} value={credited} sub={carried} />
+        <Figure label={COPY.opening} hint={COPY.openingHint} value={year.carried_forward} sub={COPY.openingSub} />
+        <Figure label={COPY.accrued} hint={COPY.accruedHint} value={year.accrued} sub={COPY.accruedSub} />
         <Figure
           label={COPY.taken}
           hint={COPY.takenHint}
           value={approved}
           sub={`${formatBalanceDays(approved).amount} ${COPY.approved} · ${formatBalanceDays(pending).amount} ${COPY.pending}`}
         />
-        <Figure label={COPY.balance} hint={COPY.balanceHint} value={year.balance} />
+        <Figure label={COPY.balance} hint={COPY.balanceHint} value={year.balance} sub={COPY.balanceSub} />
       </div>
     </section>
   );
