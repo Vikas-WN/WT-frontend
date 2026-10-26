@@ -208,17 +208,41 @@ export function isTalentPoolBenchRow(row: Record<string, unknown>): boolean {
   return String(row.project_name ?? row.projectName ?? "").trim().toUpperCase() === "BENCH";
 }
 
+/** Employee statuses that mean the person has left: their allocations belong in history. */
+const LEFT_EMPLOYEE_STATUSES = new Set(["OFFBOARDED", "INACTIVE", "DELETED"]);
+
 /**
- * Rows the HR allocation lists show: every client-project allocation, plus people's *current* talent-pool (BENCH)
- * rows so the talent pool is visible there too. GLOBAL rows, and ended/superseded BENCH rows, stay hidden.
+ * An allocation that is over: deallocated or superseded, marked inactive, past its end date, of type OFFBOARDED, or
+ * belonging to someone who has left (offboarded / inactive). These go under History instead of the current lists.
  */
-export function isListedAllocationRow(row: Record<string, unknown>, today: Date = new Date()): boolean {
-  if (!isSystemProjectAllocationRow(row)) return true;
-  if (!isTalentPoolBenchRow(row) || !isEditableAllocationRow(row)) return false;
+export function isHistoryAllocationRow(row: Record<string, unknown>, today: Date = new Date()): boolean {
+  if (!isEditableAllocationRow(row)) return true;
+  if (row.is_active === false || row.isActive === false) return true;
+  if (String(row.allocation_type ?? row.allocationType ?? "").trim().toUpperCase() === "OFFBOARDED") return true;
+  const employeeStatus = String(row.employee_status ?? row.employeeStatus ?? "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+  if (LEFT_EMPLOYEE_STATUSES.has(employeeStatus)) return true;
   const end = parseApiDate(String(row.end_date ?? row.endDate ?? ""));
-  if (!end) return true;
+  if (!end) return false;
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  return end.getTime() >= startOfToday.getTime();
+  return end.getTime() < startOfToday.getTime();
+}
+
+export type AllocationListView = "current" | "history";
+
+/**
+ * Rows for the HR allocation lists.
+ * - current: live client-project allocations plus people's current talent-pool (BENCH) rows.
+ * - history: client-project allocations that are over (see isHistoryAllocationRow).
+ * GLOBAL rows never show, and talent-pool rows never go to history (old free-capacity rows are just noise).
+ */
+export function isListedAllocationRow(
+  row: Record<string, unknown>,
+  view: AllocationListView = "current",
+  today: Date = new Date()
+): boolean {
+  const history = isHistoryAllocationRow(row, today);
+  if (isSystemProjectAllocationRow(row)) return view === "current" && isTalentPoolBenchRow(row) && !history;
+  return view === "history" ? history : !history;
 }
 
 /** Talent-pool rows read "Talent pool" instead of the internal BENCH project name. */
