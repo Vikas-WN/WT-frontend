@@ -199,6 +199,33 @@ export function isSystemProjectAllocationRow(row: Record<string, unknown>): bool
   return name === "BENCH";
 }
 
+/** Shown instead of "BENCH" in the allocation lists: the bench project is the talent pool's free capacity. */
+export const TALENT_POOL_PROJECT_LABEL = "Talent pool";
+
+/** A row on the BENCH project — someone's free capacity, i.e. the talent pool. */
+export function isTalentPoolBenchRow(row: Record<string, unknown>): boolean {
+  if (allocationProjectCode(row) === "BENCH") return true;
+  return String(row.project_name ?? row.projectName ?? "").trim().toUpperCase() === "BENCH";
+}
+
+/**
+ * Rows the HR allocation lists show: every client-project allocation, plus people's *current* talent-pool (BENCH)
+ * rows so the talent pool is visible there too. GLOBAL rows, and ended/superseded BENCH rows, stay hidden.
+ */
+export function isListedAllocationRow(row: Record<string, unknown>, today: Date = new Date()): boolean {
+  if (!isSystemProjectAllocationRow(row)) return true;
+  if (!isTalentPoolBenchRow(row) || !isEditableAllocationRow(row)) return false;
+  const end = parseApiDate(String(row.end_date ?? row.endDate ?? ""));
+  if (!end) return true;
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return end.getTime() >= startOfToday.getTime();
+}
+
+/** Talent-pool rows read "Talent pool" instead of the internal BENCH project name. */
+export function withTalentPoolLabel(row: Record<string, unknown>): Record<string, unknown> {
+  return isTalentPoolBenchRow(row) ? { ...row, project_name: TALENT_POOL_PROJECT_LABEL } : row;
+}
+
 /** Talent-pool billing label on a real project — still counts toward allocated %. */
 export function isTalentPoolBillingAllocationRow(row: Record<string, unknown>): boolean {
   const billing = String(row.billing_status ?? row.billingStatus ?? "")
@@ -230,14 +257,15 @@ export function sumProjectAllocatedPercent(rows: Array<Record<string, unknown>>)
  * Project allocation % that overlaps `[rangeStart, rangeEnd]` (inclusive).
  * Bench/GLOBAL never count — that capacity is free to allocate.
  */
+/** Project % already used during [rangeStart, rangeEnd]. An empty rangeEnd means open-ended (from rangeStart on). */
 export function sumOverlappingProjectAllocatedPercent(
   rows: Array<Record<string, unknown>>,
   rangeStart: string,
-  rangeEnd: string
+  rangeEnd: string | null
 ): number {
   const start = parseApiDate(rangeStart);
-  const end = parseApiDate(rangeEnd);
-  if (!start || !end) return sumProjectAllocatedPercent(rows);
+  const end = rangeEnd ? parseApiDate(rangeEnd) : null;
+  if (!start || (rangeEnd && !end)) return sumProjectAllocatedPercent(rows);
 
   let total = 0;
   for (const row of rows) {
@@ -246,7 +274,7 @@ export function sumOverlappingProjectAllocatedPercent(
     if (!rowStart) continue;
     const rowEndRaw = row.end_date ?? row.endDate;
     const rowEnd = rowEndRaw ? parseApiDate(String(rowEndRaw)) : null;
-    if (rowStart.getTime() > end.getTime()) continue;
+    if (end && rowStart.getTime() > end.getTime()) continue;
     if (rowEnd && rowEnd.getTime() < start.getTime()) continue;
     const pct = resolveAllocatedPercentFromRow(row);
     if (pct != null && Number.isFinite(pct)) total += pct;

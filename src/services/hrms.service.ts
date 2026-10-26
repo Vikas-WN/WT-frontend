@@ -715,6 +715,23 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<PagedData<unknown>>>(endpoints.allocation.root, { query: params });
   },
 
+  /**
+   * Every allocation row, across pages: GET /allocation returns at most 200 per call (oldest first), so reading
+   * only the first page silently dropped the newest allocations once there were more than 200.
+   */
+  async fetchAllAllocationPages(params: Record<string, string>, maxPages = 25): Promise<Array<Record<string, unknown>>> {
+    const size = "200";
+    const first = await this.getAllocations({ ...params, page: "0", size });
+    const firstData = ((first as { data?: unknown }).data ?? first) as { total_pages?: number; totalPages?: number };
+    const totalPages = Math.min(Number(firstData?.total_pages ?? firstData?.totalPages ?? 1) || 1, maxPages);
+    const rest = await Promise.all(
+      Array.from({ length: Math.max(0, totalPages - 1) }, (_, i) =>
+        this.getAllocations({ ...params, page: String(i + 1), size })
+      )
+    );
+    return [first, ...rest].flatMap((res) => parseAllocationListRows((res as { data?: unknown }).data ?? res));
+  },
+
   /** GET /allocation/employee — allocations for one employee (ROLE_HR | ROLE_ADMIN). */
   getEmployeeAllocations(params: {
     userEmail?: string;
