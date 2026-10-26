@@ -259,15 +259,19 @@ export function AllocateEmployeeDialog({
       return;
     }
 
-    const endResult = validateRequiredApiDate(form.end_date, "End date");
-    if (!endResult.ok) {
-      showErrorToast(endResult.error);
-      return;
+    // NB (non-billable) may be open-ended: no end date means it runs until someone ends it.
+    let endDate: string | null = null;
+    if (!(isNonBillable && !String(form.end_date ?? "").trim())) {
+      const endResult = validateRequiredApiDate(form.end_date, "End date");
+      if (!endResult.ok) {
+        showErrorToast(endResult.error);
+        return;
+      }
+      endDate = endResult.date;
     }
-    const endDate = endResult.date;
 
     const startParsed = parseApiDate(startDate);
-    const endParsed = parseApiDate(endDate);
+    const endParsed = endDate ? parseApiDate(endDate) : null;
     if (startParsed && endParsed && !(startParsed < endParsed)) {
       showErrorToast("End date must be after the start date.");
       return;
@@ -585,10 +589,11 @@ export function AllocateEmployeeDialog({
           />
           <InputField
             label="End Date"
-            required
+            required={!isNonBillable}
             type="date"
             value={form.end_date}
             onChange={(value) => setForm((prev) => ({ ...prev, end_date: value }))}
+            description={isNonBillable ? "Optional for NB — leave empty to keep it open-ended." : undefined}
           />
         </div>
         ) : null}

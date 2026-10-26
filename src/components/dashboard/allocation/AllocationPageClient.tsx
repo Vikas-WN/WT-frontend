@@ -132,6 +132,9 @@ import {
   filterAllocationListBySearch,
   groupAllocationsByProject,
   isSystemProjectAllocationRow,
+  isListedAllocationRow,
+  isTalentPoolBenchRow,
+  withTalentPoolLabel,
   mergeUniqueAllocationListRows,
   hideDeallocatedRowsWithActiveSuccessor,
   sortAllocationListForDisplay,
@@ -2244,18 +2247,13 @@ export function AllocationPageClient() {
     setAllocationsLoadError(null);
     try {
       const [mainRes, deallocRes] = await Promise.all([
-        hrmsService.getAllocations({
-          page: ALLOCATION_LIST_PAGE,
-          size: "200",
-          view: "ALL",
-          includeSuperseded: "true",
-        }),
+        hrmsService.fetchAllAllocationPages({ view: "ALL", includeSuperseded: "true" }),
         hrmsService
           .getDeallocatedAllocations({ page: ALLOCATION_LIST_PAGE, size: "200" })
           .catch(() => null),
       ]);
 
-      let mainRows = parseAllocationListRows((mainRes as { data?: unknown }).data ?? mainRes);
+      let mainRows = mainRes;
       if (!mainRows.length) {
         const fallback = await hrmsService.getAllocations({
           page: ALLOCATION_LIST_PAGE,
@@ -2550,8 +2548,10 @@ export function AllocationPageClient() {
   });
   const filteredAllocations = useMemo(
     () =>
-      filterAllocationListBySearch(allocations, allocationListSearch).filter(
-        (row) => !isSystemProjectAllocationRow(row)
+      // Client-project allocations plus people's current talent-pool rows (labelled "Talent pool").
+      filterAllocationListBySearch(
+        allocations.filter((row) => isListedAllocationRow(row)).map(withTalentPoolLabel),
+        allocationListSearch
       ),
     [allocations, allocationListSearch]
   );
@@ -3526,7 +3526,7 @@ export function AllocationPageClient() {
 
                               {allocationHrSubTab === "people" ? (
                                 <PeopleAllocationsPanel
-                                  allocations={allocations.filter((row) => !isSystemProjectAllocationRow(row))}
+                                  allocations={allocations.filter((row) => isListedAllocationRow(row)).map(withTalentPoolLabel)}
                                   projects={hrProjectRawRows as Array<Record<string, unknown>>}
                                   loading={allocationsLoading}
                                   error={allocationsLoadError}
@@ -3759,6 +3759,24 @@ export function AllocationPageClient() {
                                                             {String(row.end_date ?? "—")}
                                                           </TableCell>
                                                           <TableCell className="px-3 py-2 text-right">
+                                                            {isTalentPoolBenchRow(row) ? (
+                                                              // Talent-pool rows are the person's free capacity, kept in step by the
+                                                              // system — they are not edited or deallocated by hand. Allocate them instead.
+                                                              <Button
+                                                                variant="outline"
+                                                                size="xs"
+                                                                type="button"
+                                                                disabled={!employeeEmail}
+                                                                onClick={(e) => {
+                                                                  e.stopPropagation();
+                                                                  router.push(
+                                                                    `${DASHBOARD_ROUTES.allocation}?employeeEmail=${encodeURIComponent(employeeEmail)}`
+                                                                  );
+                                                                }}
+                                                              >
+                                                                Allocate
+                                                              </Button>
+                                                            ) : (
                                                             <div className="inline-flex items-center justify-end gap-1">
                                                               <Button
                                                                 variant="brand"
@@ -3899,6 +3917,7 @@ export function AllocationPageClient() {
                                                                 <IconTrash />
                                                               </Button>
                                                             </div>
+                                                            )}
                                                           </TableCell>
                                                         </TableRow>
                                                       );

@@ -6,9 +6,10 @@ export type ProjectDateBounds = {
 };
 
 /** Returns a user-facing error when allocation dates fall outside the project window. */
+/** Same rule as the backend: an allocation with no end date (NB) only has its start checked. */
 export function validateAllocationWithinProjectDates(
   allocationStart: string,
-  allocationEnd: string,
+  allocationEnd: string | null,
   project: ProjectDateBounds
 ): string | null {
   const projectStart = normalizeToApiDate(String(project.start_date ?? "").trim());
@@ -21,6 +22,7 @@ export function validateAllocationWithinProjectDates(
     const endLabel = formatApiDateDisplay(projectEnd) || projectEnd;
     return `Allocation dates must fall within the project start and end dates. This project ended on ${endLabel}.`;
   }
+  if (!allocationEnd) return null;
   if (projectEnd && compareApiDates(allocationEnd, projectEnd) > 0) {
     return "Allocation dates must fall within the project start and end dates.";
   }
