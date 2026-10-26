@@ -39,6 +39,8 @@ import {
 } from "@/utils/actionToast";
 import { AllocateEmployeeDialog } from "@/components/allocation/AllocateEmployeeDialog";
 import { PeopleAllocationsPanel } from "@/components/dashboard/allocation/PeopleAllocationsPanel";
+import { SegmentedTabs } from "@/components/dashboard/ui/SegmentedTabs";
+import { ALLOCATION_HISTORY_COPY, ALLOCATION_VIEW_OPTIONS } from "@/constants/allocationHistory";
 import { PEOPLE_ALLOCATIONS_COPY } from "@/constants/peopleAllocations";
 import { CreateProjectDialog } from "@/components/allocation/CreateProjectDialog";
 import { ProjectEmployeesDetailDialog } from "@/components/allocation/ProjectEmployeesDetailDialog";
@@ -127,12 +129,12 @@ import {
   parseAllocationListRows,
   parseAllocationUpdateResponse,
   parseEmployeeAllocationsResponse,
-  parseDeallocatedAllocationListRows,
   ALLOCATION_LIST_DEFAULT_SORT_ID,
   filterAllocationListBySearch,
   groupAllocationsByProject,
   isSystemProjectAllocationRow,
   isListedAllocationRow,
+  type AllocationListView,
   isTalentPoolBenchRow,
   withTalentPoolLabel,
   mergeUniqueAllocationListRows,
@@ -435,6 +437,8 @@ export function AllocationPageClient() {
   });
   const [projectSortId, setProjectSortId] = useState(PROJECT_SORT_OPTIONS[0].id);
   const [allocationListSearch, setAllocationListSearch] = useState("");
+  // Current allocations vs. history (ended / deallocated / people who have left) in the project list.
+  const [allocationListView, setAllocationListView] = useState<AllocationListView>("current");
   const [allocationListSortId, setAllocationListSortId] = useState(ALLOCATION_LIST_DEFAULT_SORT_ID);
   const [expandedAllocationProjects, setExpandedAllocationProjects] = useState<Set<string>>(
     () => new Set()
@@ -2248,9 +2252,7 @@ export function AllocationPageClient() {
     try {
       const [mainRes, deallocRes] = await Promise.all([
         hrmsService.fetchAllAllocationPages({ view: "ALL", includeSuperseded: "true" }),
-        hrmsService
-          .getDeallocatedAllocations({ page: ALLOCATION_LIST_PAGE, size: "200" })
-          .catch(() => null),
+        hrmsService.fetchAllDeallocatedAllocationPages().catch(() => null),
       ]);
 
       let mainRows = mainRes;
@@ -2263,9 +2265,7 @@ export function AllocationPageClient() {
         mainRows = parseAllocationListRows((fallback as { data?: unknown }).data ?? fallback);
       }
 
-      const deallocRows = deallocRes
-        ? parseDeallocatedAllocationListRows((deallocRes as { data?: unknown }).data ?? deallocRes)
-        : [];
+      const deallocRows = deallocRes ?? [];
 
       const rows = hideDeallocatedRowsWithActiveSuccessor(
         mergeUniqueAllocationListRows([...mainRows, ...deallocRows])
@@ -2550,10 +2550,10 @@ export function AllocationPageClient() {
     () =>
       // Client-project allocations plus people's current talent-pool rows (labelled "Talent pool").
       filterAllocationListBySearch(
-        allocations.filter((row) => isListedAllocationRow(row)).map(withTalentPoolLabel),
+        allocations.filter((row) => isListedAllocationRow(row, allocationListView)).map(withTalentPoolLabel),
         allocationListSearch
       ),
-    [allocations, allocationListSearch]
+    [allocations, allocationListSearch, allocationListView]
   );
 
   const sortedAllocations = useMemo(
@@ -2567,7 +2567,7 @@ export function AllocationPageClient() {
   );
 
   const allocationPagination = useClientPagination(allocationProjectGroups, {
-    resetKeys: [allocationListSearch, allocationListSortId],
+    resetKeys: [allocationListSearch, allocationListSortId, allocationListView],
   });
 
   function toggleAllocationProjectExpanded(projectKey: string) {
@@ -3526,7 +3526,7 @@ export function AllocationPageClient() {
 
                               {allocationHrSubTab === "people" ? (
                                 <PeopleAllocationsPanel
-                                  allocations={allocations.filter((row) => isListedAllocationRow(row)).map(withTalentPoolLabel)}
+                                  allocations={allocations}
                                   projects={hrProjectRawRows as Array<Record<string, unknown>>}
                                   loading={allocationsLoading}
                                   error={allocationsLoadError}
@@ -3543,10 +3543,17 @@ export function AllocationPageClient() {
                                     <div>
                                       <p className="text-sm font-medium">Allocation records</p>
                                       <p className="text-xs text-wt-text-muted">
+                                        {allocationListView === "history" ? ALLOCATION_HISTORY_COPY.historyHint : null}
                                         Grouped by project · {allocationProjectGroups.length} project
                                         {allocationProjectGroups.length === 1 ? "" : "s"}
                                       </p>
                                     </div>
+                                    <SegmentedTabs
+                                      value={allocationListView}
+                                      onChange={(v) => setAllocationListView(v as AllocationListView)}
+                                      options={ALLOCATION_VIEW_OPTIONS}
+                                      label={ALLOCATION_HISTORY_COPY.viewLabel}
+                                    />
                                     <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[200px] justify-end">
                                       <label className="sr-only" htmlFor="allocation-list-search">
                                         Search allocations

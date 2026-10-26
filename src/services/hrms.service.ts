@@ -3,7 +3,7 @@ import { apiClient, type ApiEnvelope } from "@/api/httpClient";
 import { parseAllocationExtensionListResponse } from "@/utils/allocationExtension";
 import type { OnboardListData, OnboardListItem } from "@/types/onboard";
 import type { OffboardListData, OffboardListQuery } from "@/types/offboard";
-import { parseAllocationListRows } from "@/utils/allocationList";
+import { parseAllocationListRows, parseDeallocatedAllocationListRows } from "@/utils/allocationList";
 import {
   ONBOARD_DATE_FIELDS,
   apiDateToInputValue,
@@ -483,6 +483,20 @@ function toEnvelope<T>(res: ApiEnvelope<T> | T): ApiEnvelope<T> {
   return res as ApiEnvelope<T>;
 }
 
+/** Read page 0, then the remaining pages (up to maxPages) in parallel, and parse every row. */
+async function fetchEveryPage(
+  get: (page: string, size: string) => Promise<unknown>,
+  parse: (data: unknown) => Array<Record<string, unknown>>,
+  maxPages: number
+): Promise<Array<Record<string, unknown>>> {
+  const size = "200";
+  const first = await get("0", size);
+  const firstData = ((first as { data?: unknown }).data ?? first) as { total_pages?: number; totalPages?: number } | null;
+  const totalPages = Math.min(Number(firstData?.total_pages ?? firstData?.totalPages ?? 1) || 1, maxPages);
+  const rest = await Promise.all(Array.from({ length: Math.max(0, totalPages - 1) }, (_, i) => get(String(i + 1), size)));
+  return [first, ...rest].flatMap((res) => parse((res as { data?: unknown }).data ?? res));
+}
+
 export const hrmsService = {
   getOnboardList(params: Record<string, string>) {
     return apiClient.get<ApiEnvelope<OnboardListData>>(endpoints.user.onboard, {
@@ -719,17 +733,13 @@ export const hrmsService = {
    * Every allocation row, across pages: GET /allocation returns at most 200 per call (oldest first), so reading
    * only the first page silently dropped the newest allocations once there were more than 200.
    */
-  async fetchAllAllocationPages(params: Record<string, string>, maxPages = 25): Promise<Array<Record<string, unknown>>> {
-    const size = "200";
-    const first = await this.getAllocations({ ...params, page: "0", size });
-    const firstData = ((first as { data?: unknown }).data ?? first) as { total_pages?: number; totalPages?: number };
-    const totalPages = Math.min(Number(firstData?.total_pages ?? firstData?.totalPages ?? 1) || 1, maxPages);
-    const rest = await Promise.all(
-      Array.from({ length: Math.max(0, totalPages - 1) }, (_, i) =>
-        this.getAllocations({ ...params, page: String(i + 1), size })
-      )
-    );
-    return [first, ...rest].flatMap((res) => parseAllocationListRows((res as { data?: unknown }).data ?? res));
+  fetchAllAllocationPages(params: Record<string, string>, maxPages = 25): Promise<Array<Record<string, unknown>>> {
+    return fetchEveryPage((page, size) => this.getAllocations({ ...params, page, size }), parseAllocationListRows, maxPages);
+  },
+
+  /** Every deallocated allocation (allocation history), across pages. */
+  fetchAllDeallocatedAllocationPages(maxPages = 25): Promise<Array<Record<string, unknown>>> {
+    return fetchEveryPage((page, size) => this.getDeallocatedAllocations({ page, size }), parseDeallocatedAllocationListRows, maxPages);
   },
 
   /** GET /allocation/employee — allocations for one employee (ROLE_HR | ROLE_ADMIN). */

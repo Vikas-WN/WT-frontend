@@ -1,5 +1,10 @@
 "use client";
 
+import { useMemo, useState } from "react";
+import { SegmentedTabs } from "@/components/dashboard/ui/SegmentedTabs";
+import { ALLOCATION_HISTORY_COPY, ALLOCATION_VIEW_OPTIONS } from "@/constants/allocationHistory";
+import { isListedAllocationRow, withTalentPoolLabel, type AllocationListView } from "@/utils/allocationList";
+
 import { DataTable } from "@/components/dashboard/ui/DataTable";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -22,14 +27,31 @@ export function PeopleAllocationsPanel({
   loading: boolean;
   error: string | null;
 }) {
-  const view = usePeopleAllocations(allocations, projects);
+  // Current allocations (incl. the talent pool) vs. history: ended, deallocated, and people who have left.
+  const [listView, setListView] = useState<AllocationListView>("current");
+  const listed = useMemo(
+    () => allocations.filter((row) => isListedAllocationRow(row, listView)).map(withTalentPoolLabel),
+    [allocations, listView]
+  );
+  const view = usePeopleAllocations(listed, projects);
   const withAll = (options: Array<{ value: string; label: string }>) => [{ value: ALL_FILTER, label: COPY.all }, ...options];
 
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="text-base font-semibold text-wt-text">{COPY.title}</h3>
-        <p className="text-sm text-wt-text-muted">{COPY.description}</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-base font-semibold text-wt-text">{COPY.title}</h3>
+          <p className="text-sm text-wt-text-muted">
+            {listView === "history" ? ALLOCATION_HISTORY_COPY.historyHint : null}
+            {COPY.description}
+          </p>
+        </div>
+        <SegmentedTabs
+          value={listView}
+          onChange={(v) => setListView(v as AllocationListView)}
+          options={ALLOCATION_VIEW_OPTIONS}
+          label={ALLOCATION_HISTORY_COPY.viewLabel}
+        />
       </div>
 
       <div className="rounded-xl border border-wt-border bg-wt-surface-1 p-4">
@@ -62,7 +84,7 @@ export function PeopleAllocationsPanel({
       {loading && view.total === 0 ? (
         <SectionLoading label="Loading allocations…" />
       ) : (
-        <DataTable columns={[...PEOPLE_ALLOCATION_COLUMNS]} rows={view.rows.map((row) => ({ ...row }))} emptyLabel={COPY.empty} pageSize={25} resetPaginationKeys={[JSON.stringify(view.filters)]} />
+        <DataTable columns={[...PEOPLE_ALLOCATION_COLUMNS]} rows={view.rows.map((row) => ({ ...row }))} emptyLabel={COPY.empty} pageSize={25} resetPaginationKeys={[JSON.stringify(view.filters), listView]} />
       )}
     </div>
   );
