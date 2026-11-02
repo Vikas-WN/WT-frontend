@@ -4,14 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="">
+    <list default="true" id="ee20d4ca-381e-41be-bdc0-a064fc8156f8" name="Changes" comment="fix: employee taking the wfh and half day leave on the same day bug">
+      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/background-verification/BackgroundVerificationPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/background-verification/BackgroundVerificationPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/masters/MastersPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/masters/MastersPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/overview/OverviewPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/overview/OverviewPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/reports/ReportsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/reports/ReportsPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/dashboard/uploads/UploadsPageClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/uploads/UploadsPageClient.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/hooks/useSelfProfile.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/useSelfProfile.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pnpm-lock.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pnpm-lock.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/dashboard/DashboardChrome.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/dashboard/DashboardChrome.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,61 +46,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.000966318619144" />
-      <entry key="MS500" value="1.8638539217101147" />
-      <entry key="S2" value="5.719930564612072" />
-      <entry key="S5" value="7.915692174264699" />
-      <entry key="S10" value="8.882342773810752" />
-      <entry key="S30" value="9.612586800452508" />
-      <entry key="S60" value="10.376596656844429" />
-      <entry key="M2" value="17.90357418614413" />
-      <entry key="M5" value="54.163663539366155" />
-      <entry key="M10" value="99.08759147929322" />
-      <entry key="M15" value="129.09199046913898" />
-      <entry key="M30" value="184.19887448488092" />
-      <entry key="H1" value="237.27648408856865" />
-      <entry key="H2" value="278.2821380641291" />
-      <entry key="H4" value="308.3468300399794" />
-      <entry key="D1" value="381.10294267995084" />
-      <entry key="W1" value="413.3582252193325" />
+      <entry key="MS100" value="1.8108498547294896" />
+      <entry key="MS500" value="4.939003870870709" />
+      <entry key="S2" value="9.3051607357501" />
+      <entry key="S5" value="17.118906637017282" />
+      <entry key="S10" value="33.38407432980514" />
+      <entry key="S30" value="70.37363356146773" />
+      <entry key="S60" value="88.73676802688234" />
+      <entry key="M2" value="100.34487712740555" />
+      <entry key="M5" value="108.38402062705677" />
+      <entry key="M10" value="117.56966700290549" />
+      <entry key="M15" value="140.320540158172" />
+      <entry key="M30" value="248.11076820966952" />
+      <entry key="H1" value="426.11342453395696" />
+      <entry key="H2" value="601.0816872939448" />
+      <entry key="H4" value="730.5817072046635" />
+      <entry key="D1" value="910.4260831699864" />
+      <entry key="W1" value="965.3318917893982" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
-      <entry key="MS500" value="1.1785054973431353E-237" />
-      <entry key="S2" value="5.859126885064023E-60" />
-      <entry key="S5" value="2.0283045331002837E-24" />
-      <entry key="S10" value="1.4241855683513594E-12" />
-      <entry key="S30" value="1.125094580265315E-4" />
-      <entry key="S60" value="0.010616472843241983" />
-      <entry key="M2" value="0.10736944751817445" />
-      <entry key="M5" value="0.6012488515232465" />
-      <entry key="M10" value="1.4709401991999767" />
-      <entry key="M15" value="2.211731739206592" />
-      <entry key="M30" value="3.847615217408345" />
-      <entry key="H1" value="5.609902387570707" />
-      <entry key="H2" value="7.0186752215839325" />
-      <entry key="H4" value="8.015770260568306" />
-      <entry key="D1" value="10.013611385209764" />
-      <entry key="W1" value="10.832854342935644" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="9.326339172227768E-157" />
+      <entry key="S10" value="9.657297330116598E-79" />
+      <entry key="S30" value="9.884435403732881E-27" />
+      <entry key="S60" value="9.942049790665132E-14" />
+      <entry key="M2" value="3.153113838235875E-7" />
+      <entry key="M5" value="0.0025341791035844987" />
+      <entry key="M10" value="0.059614507403438925" />
+      <entry key="M15" value="0.2127210017882733" />
+      <entry key="M30" value="1.0857788558614259" />
+      <entry key="H1" value="3.029099309832291" />
+      <entry key="H2" value="5.390889434230124" />
+      <entry key="H4" value="7.380245219829938" />
+      <entry key="D1" value="10.648637748361246" />
+      <entry key="W1" value="11.77586218571453" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.10603769675130291" />
-      <entry key="MS500" value="1.4917949815858995" />
-      <entry key="S2" value="5.597955359534585" />
-      <entry key="S5" value="7.862256589188205" />
-      <entry key="S10" value="8.854661732272202" />
-      <entry key="S30" value="9.60323086802127" />
-      <entry key="S60" value="10.38204960599329" />
-      <entry key="M2" value="18.00584972923136" />
-      <entry key="M5" value="54.75787203143366" />
-      <entry key="M10" value="100.55168410013924" />
-      <entry key="M15" value="131.29759492264242" />
-      <entry key="M30" value="188.04194766784136" />
-      <entry key="H1" value="242.8833985902617" />
-      <entry key="H2" value="285.29904375701614" />
-      <entry key="H4" value="316.36161524557275" />
-      <entry key="D1" value="391.116349851209" />
-      <entry key="W1" value="424.19104785801443" />
+      <entry key="MS100" value="1.7695496208530728" />
+      <entry key="MS500" value="4.914406037768111" />
+      <entry key="S2" value="9.293562384251098" />
+      <entry key="S5" value="17.110524324200085" />
+      <entry key="S10" value="33.37580376128142" />
+      <entry key="S30" value="70.36758671848018" />
+      <entry key="S60" value="88.7329000296208" />
+      <entry key="M2" value="100.34267338863975" />
+      <entry key="M5" value="108.38557423006803" />
+      <entry key="M10" value="117.62840394247043" />
+      <entry key="M15" value="140.53196848499266" />
+      <entry key="M30" value="249.1942391124668" />
+      <entry key="H1" value="429.1399226676525" />
+      <entry key="H2" value="606.4705226415874" />
+      <entry key="H4" value="737.960632649999" />
+      <entry key="D1" value="921.0744245883182" />
+      <entry key="W1" value="977.1077079403436" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -123,7 +121,7 @@
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "develop",
+    "git-widget-placeholder": "prod",
     "js.debugger.nextJs.config.created.client": "true",
     "js.debugger.nextJs.config.created.server": "true",
     "junie.onboarding.icon.badge.shown": "true",
@@ -136,7 +134,7 @@
     "nodejs_package_manager_path": "pnpm",
     "settings.editor.selected.configurable": "configurable.tailwindcss",
     "to.speed.mode.migration.done": "true",
-    "ts.external.directory.path": "/Users/likhithrajup/Developer/WT-frontend/node_modules/typescript/lib"
+    "ts.external.directory.path": "/snap/webstorm/701/plugins/javascript-plugin/jsLanguageServicesImpl/external"
   }
 }]]></component>
   <component name="RunManager" selected="npm.Next.js: server-side">
@@ -157,7 +155,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-WS-262.10968.77" />
+        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-WS-262.11879.105" />
       </set>
     </attachedChunks>
   </component>
@@ -170,6 +168,8 @@
       <updated>1790081296800</updated>
       <workItem from="1790081298044" duration="616000" />
       <workItem from="1790579845850" duration="1977000" />
+      <workItem from="1792397113325" duration="707000" />
+      <workItem from="1793599462067" duration="5025000" />
     </task>
     <task id="LOCAL-00001" summary="updated some bugs present in the OverviewPageClient.tsx">
       <option name="closed" value="true" />
@@ -235,7 +235,15 @@
       <option name="project" value="LOCAL" />
       <updated>1790331033963</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="fix: employee taking the wfh and half day leave on the same day bug">
+      <option name="closed" value="true" />
+      <created>1793600611785</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1793600611785</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -273,6 +281,7 @@
     <MESSAGE value="linting fix" />
     <MESSAGE value="fix: enforce SERVING_NOTICE eligibility, close stale-session auth gap, repair KPI/training schema drift&#10;&#10;Auth / session:&#10;- hydrate_request_actor_roles now fails closed (marks the account&#10;  inactive) if the live DB status/role lookup errors, instead of&#10;  silently falling back to the stale JWT claim — closes a gap where a&#10;  transient DB hiccup could let an actor keep acting on a status that&#10;  changed after their token was issued.&#10;- Gate leave_request, wfh, comp_off, optional_leave, and timelog&#10;  routers behind require_onboarding_complete so INVITED/ONBOARDING&#10;  users can't bypass the frontend's OnboardingGate via a direct API call.&#10;&#10;Employment status coverage (ACTIVE-only checks missing SERVING_NOTICE):&#10;- allocation_repository: manager/approver/unallocated-user lookups now&#10;  include SERVING_NOTICE alongside ACTIVE.&#10;- timelog_categories: manager picker includes SERVING_NOTICE.&#10;- scheduled_jobs_service: auto-approver selection includes SERVING_NOTICE.&#10;&#10;Other correctness fixes:&#10;- work_profile: technical-role regex now matches &quot;analyst&quot; roles.&#10;- timelog_service: use format_display_date instead of raw isoformat()&#10;  for CSV/XLSX export and submission messages.&#10;- wk_business_http: map upstream 404s to a clear &quot;not recognized&quot; 404&#10;  instead of a generic 502.&#10;- employee_service: import_user_data and bulk_upload_users now run the&#10;  exit-status/date validation and exit-survey dispatch on status&#10;  changes, matching the single-update path.&#10;&#10;Schema drift repair (guarded migrations for legacy Java-seeded tables):&#10;- Recreate missing training_* enum types when the tables predate this&#10;  app's own migrations.&#10;- Add kpi_definitions.evaluation_criteria, which no migration ever&#10;  actually created despite the model assuming it existed.&#10;- Add B4L/B4H/B5L/B5H bands, mirroring the existing B6L/B6H/B7L/B7H split.&#10;&#10;Also adds app/core/upload_limits.py to raise Starlette's undocumented&#10;1MB multipart part-size cap, wired in on startup." />
     <MESSAGE value="feat: fixing the reported bugs" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat: fixing the reported bugs" />
+    <MESSAGE value="fix: employee taking the wfh and half day leave on the same day bug" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix: employee taking the wfh and half day leave on the same day bug" />
   </component>
 </project>

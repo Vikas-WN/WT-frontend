@@ -54,6 +54,7 @@ import { LogoutConfirmDialog } from "@/components/auth/LogoutConfirmDialog";
 import { useUserPreferences } from "@/context/UserPreferencesContext";
 import { AppChromeHeader } from "@/components/dashboard/ui/AppChromeHeader";
 import { DASHBOARD_HEADER_MENU_BUTTON_CLASS } from "@/components/dashboard/ui/sidebarLayout";
+import { RelayExperience } from "@/components/relay/RelayExperience";
 
 const HEADER_ICON_BUTTON_CLASS =
   "flex size-10 cursor-pointer items-center justify-center rounded-xl text-wt-text transition-colors hover:bg-wt-surface-3";
@@ -713,7 +714,7 @@ export function DashboardChrome({ children }: { children: ReactNode }) {
               <h1 className="text-[1.5rem] font-semibold leading-tight tracking-[-0.02em] text-wt-text">{breadcrumb.title}</h1>
               {"description" in breadcrumb && breadcrumb.description ? <p className="mt-1 text-sm text-wt-text-muted">{breadcrumb.description}</p> : null}
             </div>
-            {children}
+            <RelayExperience>{children}</RelayExperience>
           </div>
         </div>
       </div>
