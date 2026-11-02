@@ -74,10 +74,12 @@ const PORTAL_ROLE_PRIORITY = [
   "ROLE_ADMIN",
   "ROLE_HR",
   "ROLE_FINANCE",
+  // Only ever granted deliberately as a portal role, whereas AM / DM / Manager also arrive
+  // from project allocations — so it must outrank them or HR's change never shows.
+  "ROLE_OFFICE_ADMIN",
   "ROLE_DM",
   "ROLE_AM",
   "ROLE_MANAGER",
-  "ROLE_OFFICE_ADMIN",
 ] as const;
 
 export function normalizePortalRoles(value: unknown): string[] {

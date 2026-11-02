@@ -1924,9 +1924,13 @@ export function LeavePageClient() {
                                         const fromDate = normalizeToApiDate(
                                           leaveRequestForm.request_from_date.trim()
                                         );
-                                        const toDate = normalizeToApiDate(
+                                        const selectedToDate = normalizeToApiDate(
                                           leaveRequestForm.request_to_date.trim()
                                         );
+                                        // A half-day is always a single-date request. Derive the
+                                        // end date from the start date at submit time so a stale
+                                        // form value can never turn it into a multi-day request.
+                                        const toDate = leaveRequestForm.is_half_day ? fromDate : selectedToDate;
                                         if (!fromDate || !toDate) {
                                           missingFields.push("From Date", "To Date");
                                         } else if (!parseApiDate(fromDate) || !parseApiDate(toDate)) {
