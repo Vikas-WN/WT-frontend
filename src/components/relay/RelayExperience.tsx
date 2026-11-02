@@ -23,9 +23,13 @@ import { cn } from "@/lib/utils";
 type RelayMessage = { id: string; role: "user" | "assistant" | "status"; text: string };
 type FormValues = Record<string, string | number | boolean | null>;
 
-const gatewayUrl = process.env.NEXT_PUBLIC_RELAY_GATEWAY_URL ?? process.env.NEXT_PUBLIC_GATEWAY_URL;
-const relayApiKey = process.env.NEXT_PUBLIC_RELAY_API_KEY;
-const agentId = process.env.NEXT_PUBLIC_RELAY_AGENT_ID ?? process.env.NEXT_PUBLIC_AGENT_ID;
+type RelayConfig = {
+  gatewayUrl: string;
+  apiKey: string;
+  agentId: string;
+  projectId: string;
+  enabled: boolean;
+};
 
 function eventText(event: RelayEventEnvelope): string {
   return String(event.payload.text ?? event.payload.message ?? "").trim();
@@ -138,7 +142,6 @@ function RelayUnavailableNotice({ onClose }: { onClose: () => void }) {
 }
 
 export function RelayExperience({ children }: { children: ReactNode }) {
-  const enabled = Boolean(gatewayUrl && agentId && (relayApiKey || process.env.NEXT_PUBLIC_RELAY_PROJECT_ID));
   const sessionRef = useRef<RelaySession | null>(null);
   const [messages, setMessages] = useState<RelayMessage[]>([]);
   const [surfaces, setSurfaces] = useState<UiSurface[]>([]);
@@ -147,13 +150,36 @@ export function RelayExperience({ children }: { children: ReactNode }) {
   const [busy, setBusy] = useState(false);
   const [connection, setConnection] = useState<RelayConnectionState>("disconnected");
   const [voiceConnected, setVoiceConnected] = useState(false);
+  const [relayConfig, setRelayConfig] = useState<RelayConfig | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
   const surfacesRef = useRef<UiSurface[]>([]);
   const addMessage = useCallback((role: RelayMessage["role"], text: string) => { if (!text) return; setMessages((current) => [...current, { id: `${Date.now()}-${Math.random()}`, role, text }]); }, []);
   const setFormValues = useCallback((id: string, values: FormValues) => setFormValuesState((current) => ({ ...current, [id]: values })), []);
 
   useEffect(() => {
-    if (!enabled || !gatewayUrl || !agentId) return;
-    const session = createRelaySession({ gatewayUrl, agentId, ...(relayApiKey ? { apiKey: relayApiKey } : { projectId: process.env.NEXT_PUBLIC_RELAY_PROJECT_ID }), transport: "small-webrtc" });
+    let active = true;
+    fetch("/api/relay/config", { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Relay configuration request failed: ${response.status}`);
+        return (await response.json()) as RelayConfig;
+      })
+      .then((config) => {
+        if (active) setRelayConfig(config);
+      })
+      .catch(() => {
+        if (active) setRelayConfig({ gatewayUrl: "", apiKey: "", agentId: "", projectId: "", enabled: false });
+      })
+      .finally(() => {
+        if (active) setConfigLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!relayConfig?.enabled) return;
+    const session = createRelaySession({ gatewayUrl: relayConfig.gatewayUrl, agentId: relayConfig.agentId, ...(relayConfig.apiKey ? { apiKey: relayConfig.apiKey } : { projectId: relayConfig.projectId }), transport: "small-webrtc" });
     sessionRef.current = session;
     const offSurfaces = registerPlaygroundSurfaces(session, ({ surfaces: next, replace }) => {
       setSurfaces((current) => {
@@ -174,11 +200,11 @@ export function RelayExperience({ children }: { children: ReactNode }) {
     const offError = session.on("SESSION_ERROR", (event) => { setBusy(false); addMessage("status", eventText(event) || "The assistant is unavailable."); });
     void session.connect().catch((error: unknown) => addMessage("status", error instanceof Error ? error.message : "The assistant could not connect."));
     return () => { offSurfaces(); offFill(); offConnection(); offTurnStart(); offTurnEnd(); offTranscript(); offResponseStart(); offDelta(); offError(); session.disconnect(); sessionRef.current = null; };
-  }, [addMessage, enabled]);
+  }, [addMessage, relayConfig]);
 
   const send = useCallback((text: string) => { sessionRef.current?.sendText(text); setOpen(true); }, []);
   const toggleVoice = useCallback(() => { const session = sessionRef.current; if (!session) return; if (voiceConnected) { void session.disconnectVoice(); setVoiceConnected(false); } else { void session.connectVoice().then(() => setVoiceConnected(true)).catch((error: unknown) => addMessage("status", error instanceof Error ? error.message : "Microphone access failed.")); } }, [addMessage, voiceConnected]);
-  if (!enabled) {
+  if (configLoading || !relayConfig?.enabled) {
     return (
       <>
         {children}
