@@ -114,6 +114,29 @@ function RelayChat({ session, messages, busy, connection, onSend, onVoice, voice
   </aside>;
 }
 
+function RelayUnavailableNotice({ onClose }: { onClose: () => void }) {
+  return (
+    <aside
+      className="fixed bottom-4 right-4 z-[300] w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-wt-border bg-wt-surface-1 shadow-2xl"
+      aria-label="Relay assistant"
+    >
+      <header className="flex items-center gap-2 border-b border-wt-border px-4 py-3">
+        <Bot className="size-4 text-[var(--wt-brand)]" />
+        <span className="text-sm font-semibold">WebTrak assistant</span>
+        <Button type="button" size="icon-xs" variant="ghost" className="ml-auto" aria-label="Close assistant" onClick={onClose}>
+          <X />
+        </Button>
+      </header>
+      <div className="space-y-2 p-4 text-sm">
+        <p className="font-medium">Assistant unavailable in this deployment.</p>
+        <p className="text-wt-text-muted">
+          Relay needs its gateway URL, publishable key, and agent ID configured before it can connect.
+        </p>
+      </div>
+    </aside>
+  );
+}
+
 export function RelayExperience({ children }: { children: ReactNode }) {
   const enabled = Boolean(gatewayUrl && agentId && (relayApiKey || process.env.NEXT_PUBLIC_RELAY_PROJECT_ID));
   const sessionRef = useRef<RelaySession | null>(null);
@@ -155,6 +178,24 @@ export function RelayExperience({ children }: { children: ReactNode }) {
 
   const send = useCallback((text: string) => { sessionRef.current?.sendText(text); setOpen(true); }, []);
   const toggleVoice = useCallback(() => { const session = sessionRef.current; if (!session) return; if (voiceConnected) { void session.disconnectVoice(); setVoiceConnected(false); } else { void session.connectVoice().then(() => setVoiceConnected(true)).catch((error: unknown) => addMessage("status", error instanceof Error ? error.message : "Microphone access failed.")); } }, [addMessage, voiceConnected]);
-  if (!enabled) return <>{children}</>;
+  if (!enabled) {
+    return (
+      <>
+        {children}
+        {open ? (
+          <RelayUnavailableNotice onClose={() => setOpen(false)} />
+        ) : (
+          <Button
+            type="button"
+            className="fixed bottom-5 right-5 z-[300] rounded-full shadow-lg"
+            aria-label="Open WebTrak assistant"
+            onClick={() => setOpen(true)}
+          >
+            <MessageCircle /> Assistant
+          </Button>
+        )}
+      </>
+    );
+  }
   return <><div>{surfaces.length ? <ResultsCanvas surfaces={surfaces} onClear={() => { surfacesRef.current = []; setSurfaces([]); }} onClose={(index) => setSurfaces((current) => { const updated = current.filter((_, item) => item !== index); surfacesRef.current = updated; return updated; })} onSubmit={(form) => { const id = form.id; const values = formValues[id] ?? {}; if (sessionRef.current) submitForm(sessionRef.current, form, values); }} formValues={formValues} setFormValues={setFormValues} /> : null}{children}</div>{open ? <RelayChat session={sessionRef.current!} messages={messages} busy={busy} connection={connection} onSend={send} onVoice={toggleVoice} voiceConnected={voiceConnected} onClose={() => setOpen(false)} /> : <Button type="button" className="fixed bottom-5 right-5 z-[300] rounded-full shadow-lg" aria-label="Open WebTrak assistant" onClick={() => setOpen(true)}><MessageCircle /> Assistant</Button>}</>;
 }
