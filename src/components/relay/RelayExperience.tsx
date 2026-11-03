@@ -25,11 +25,21 @@ type FormValues = Record<string, string | number | boolean | null>;
 
 type RelayConfig = {
   gatewayUrl: string;
-  apiKey: string;
   agentId: string;
-  projectId: string;
   enabled: boolean;
 };
+
+/** A session WebTrak's backend started for the signed-in user (so the assistant's tools know who is asking). */
+type RelaySessionGrant = { session_id: string; token: string; agent_id?: string };
+
+async function startServerSession(): Promise<RelaySessionGrant> {
+  const response = await fetch("/api/v1/relay/session", { method: "POST", credentials: "include" });
+  const body = (await response.json().catch(() => null)) as { data?: RelaySessionGrant; detail?: string } | null;
+  if (!response.ok || !body?.data?.session_id || !body.data.token) {
+    throw new Error(body?.detail || "The assistant could not start.");
+  }
+  return body.data;
+}
 
 function eventText(event: RelayEventEnvelope): string {
   return String(event.payload.text ?? event.payload.message ?? "").trim();
@@ -99,8 +109,8 @@ function ResultsCanvas({ surfaces, onClear, onClose, onSubmit, formValues, setFo
   </section>;
 }
 
-function RelayChat({ session, messages, busy, connection, onSend, onVoice, voiceConnected, onClose }: {
-  session: RelaySession;
+function RelayChat({ sessionId, messages, busy, connection, onSend, onVoice, voiceConnected, onClose }: {
+  sessionId: string | null;
   messages: RelayMessage[];
   busy: boolean;
   connection: RelayConnectionState;
@@ -114,7 +124,7 @@ function RelayChat({ session, messages, busy, connection, onSend, onVoice, voice
     <header className="flex items-center gap-2 border-b border-wt-border px-4 py-3"><Bot className="size-4 text-[var(--wt-brand)]" /><span className="text-sm font-semibold">WebTrak assistant</span><span className="ml-auto text-xs text-wt-text-muted">{connection === "ready" ? "Ready" : connection}</span><Button type="button" size="icon-xs" variant="ghost" aria-label="Close assistant" onClick={onClose}><X /></Button></header>
     <div className="max-h-80 space-y-3 overflow-y-auto p-4">{messages.length ? messages.map((message) => <div key={message.id} className={cn("rounded-xl px-3 py-2 text-sm", message.role === "user" ? "ml-8 bg-[var(--wt-brand)] text-[var(--wt-brand-text)]" : "mr-8 bg-wt-surface-2 text-wt-text")}><span className="whitespace-pre-wrap">{message.text}</span></div>) : <p className="text-sm text-wt-text-muted">Ask about WebTrak or request a table, chart, or form.</p>}{busy ? <Loader2 className="size-4 animate-spin text-wt-text-muted" /> : null}</div>
     <form className="flex gap-2 border-t border-wt-border p-3" onSubmit={(event) => { event.preventDefault(); if (text.trim()) { onSend(text.trim()); setText(""); } }}><Input value={text} onChange={(event) => setText(event.target.value)} placeholder="Ask the assistant…" disabled={connection !== "ready"} aria-label="Message assistant" /><Button type="button" size="icon" variant="outline" aria-label={voiceConnected ? "Stop voice" : "Start voice"} onClick={onVoice}>{voiceConnected ? <MicOff /> : <Mic />}</Button><Button type="submit" size="icon" disabled={connection !== "ready" || !text.trim()} aria-label="Send message"><Send /></Button></form>
-    <span className="sr-only">{session.sessionId}</span>
+    {sessionId ? <span className="sr-only">{sessionId}</span> : null}
   </aside>;
 }
 
@@ -134,7 +144,7 @@ function RelayUnavailableNotice({ onClose }: { onClose: () => void }) {
       <div className="space-y-2 p-4 text-sm">
         <p className="font-medium">Assistant unavailable in this deployment.</p>
         <p className="text-wt-text-muted">
-          Relay needs its gateway URL, publishable key, and agent ID configured before it can connect.
+          Relay needs its gateway URL and agent ID configured before it can connect.
         </p>
       </div>
     </aside>
@@ -151,6 +161,8 @@ export function RelayExperience({ children }: { children: ReactNode }) {
   const [connection, setConnection] = useState<RelayConnectionState>("disconnected");
   const [voiceConnected, setVoiceConnected] = useState(false);
   const [relayConfig, setRelayConfig] = useState<RelayConfig | null>(null);
+  // The id of the session WebTrak started for this user (shown to screen readers; null until it exists).
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
   const surfacesRef = useRef<UiSurface[]>([]);
   const addMessage = useCallback((role: RelayMessage["role"], text: string) => { if (!text) return; setMessages((current) => [...current, { id: `${Date.now()}-${Math.random()}`, role, text }]); }, []);
@@ -167,7 +179,7 @@ export function RelayExperience({ children }: { children: ReactNode }) {
         if (active) setRelayConfig(config);
       })
       .catch(() => {
-        if (active) setRelayConfig({ gatewayUrl: "", apiKey: "", agentId: "", projectId: "", enabled: false });
+        if (active) setRelayConfig({ gatewayUrl: "", agentId: "", enabled: false });
       })
       .finally(() => {
         if (active) setConfigLoading(false);
@@ -179,27 +191,51 @@ export function RelayExperience({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!relayConfig?.enabled) return;
-    const session = createRelaySession({ gatewayUrl: relayConfig.gatewayUrl, agentId: relayConfig.agentId, ...(relayConfig.apiKey ? { apiKey: relayConfig.apiKey } : { projectId: relayConfig.projectId }), transport: "small-webrtc" });
-    sessionRef.current = session;
-    const offSurfaces = registerPlaygroundSurfaces(session, ({ surfaces: next, replace }) => {
-      setSurfaces((current) => {
-        const updated = replace ? next : [...current, ...next];
-        surfacesRef.current = updated;
-        return updated;
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
+    void (async () => {
+      let grant: RelaySessionGrant;
+      try {
+        grant = await startServerSession();
+      } catch (error: unknown) {
+        if (!cancelled) addMessage("status", error instanceof Error ? error.message : "The assistant could not start.");
+        return;
+      }
+      if (cancelled) return;
+      const session = createRelaySession({
+        gatewayUrl: relayConfig.gatewayUrl,
+        agentId: grant.agent_id || relayConfig.agentId,
+        sessionId: grant.session_id,
+        devToken: grant.token,
+        transport: "small-webrtc",
       });
-      setFormValuesState((current) => { const nextValues = { ...current }; next.filter((surface): surface is UiFormSurface => surface.kind === "form").forEach((form) => { nextValues[form.id] ??= Object.fromEntries(form.fields.filter((field) => field.defaultValue !== undefined).map((field) => [field.name, field.defaultValue ?? null])); }); return nextValues; });
-      setOpen(true);
-    });
-    const offFill = registerFormFill(session, ({ formId, values }) => { if (!surfacesRef.current.some((surface) => surface.kind === "form" && surface.id === formId)) throw new Error("form is not open"); setFormValuesState((current) => ({ ...current, [formId]: { ...current[formId], ...values } })); });
-    const offConnection = session.onConnectionState(setConnection);
-    const offTurnStart = session.on("TURN_STARTED", () => setBusy(true));
-    const offTurnEnd = session.on("TURN_COMPLETED", () => setBusy(false));
-    const offTranscript = session.on("TRANSCRIPT_FINAL", (event) => addMessage("user", eventText(event)));
-    const offResponseStart = session.on("RESPONSE_STARTED", () => setMessages((current) => [...current, { id: `${Date.now()}-assistant`, role: "assistant", text: "" }]));
-    const offDelta = session.on("RESPONSE_DELTA", (event) => setMessages((current) => { const last = current[current.length - 1]; if (!last || last.role !== "assistant") return current; return [...current.slice(0, -1), { ...last, text: `${last.text}${eventText(event)}` }]; }));
-    const offError = session.on("SESSION_ERROR", (event) => { setBusy(false); addMessage("status", eventText(event) || "The assistant is unavailable."); });
-    void session.connect().catch((error: unknown) => addMessage("status", error instanceof Error ? error.message : "The assistant could not connect."));
-    return () => { offSurfaces(); offFill(); offConnection(); offTurnStart(); offTurnEnd(); offTranscript(); offResponseStart(); offDelta(); offError(); session.disconnect(); sessionRef.current = null; };
+      sessionRef.current = session;
+      setSessionId(grant.session_id);
+      // Every handler is registered before connect(), or early events are missed.
+      const offSurfaces = registerPlaygroundSurfaces(session, ({ surfaces: next, replace }) => {
+        setSurfaces((current) => {
+          const updated = replace ? next : [...current, ...next];
+          surfacesRef.current = updated;
+          return updated;
+        });
+        setFormValuesState((current) => { const nextValues = { ...current }; next.filter((surface): surface is UiFormSurface => surface.kind === "form").forEach((form) => { nextValues[form.id] ??= Object.fromEntries(form.fields.filter((field) => field.defaultValue !== undefined).map((field) => [field.name, field.defaultValue ?? null])); }); return nextValues; });
+        setOpen(true);
+      });
+      const offFill = registerFormFill(session, ({ formId, values }) => { if (!surfacesRef.current.some((surface) => surface.kind === "form" && surface.id === formId)) throw new Error("form is not open"); setFormValuesState((current) => ({ ...current, [formId]: { ...current[formId], ...values } })); });
+      const offConnection = session.onConnectionState(setConnection);
+      const offTurnStart = session.on("TURN_STARTED", () => setBusy(true));
+      const offTurnEnd = session.on("TURN_COMPLETED", () => setBusy(false));
+      const offTranscript = session.on("TRANSCRIPT_FINAL", (event) => addMessage("user", eventText(event)));
+      const offResponseStart = session.on("RESPONSE_STARTED", () => setMessages((current) => [...current, { id: `${Date.now()}-assistant`, role: "assistant", text: "" }]));
+      const offDelta = session.on("RESPONSE_DELTA", (event) => setMessages((current) => { const last = current[current.length - 1]; if (!last || last.role !== "assistant") return current; return [...current.slice(0, -1), { ...last, text: `${last.text}${eventText(event)}` }]; }));
+      const offError = session.on("SESSION_ERROR", (event) => { setBusy(false); addMessage("status", eventText(event) || "The assistant is unavailable."); });
+      cleanup = () => { offSurfaces(); offFill(); offConnection(); offTurnStart(); offTurnEnd(); offTranscript(); offResponseStart(); offDelta(); offError(); session.disconnect(); sessionRef.current = null; setSessionId(null); };
+      void session.connect().catch((error: unknown) => addMessage("status", error instanceof Error ? error.message : "The assistant could not connect."));
+    })();
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
   }, [addMessage, relayConfig]);
 
   const send = useCallback((text: string) => { sessionRef.current?.sendText(text); setOpen(true); }, []);
@@ -223,5 +259,5 @@ export function RelayExperience({ children }: { children: ReactNode }) {
       </>
     );
   }
-  return <><div>{surfaces.length ? <ResultsCanvas surfaces={surfaces} onClear={() => { surfacesRef.current = []; setSurfaces([]); }} onClose={(index) => setSurfaces((current) => { const updated = current.filter((_, item) => item !== index); surfacesRef.current = updated; return updated; })} onSubmit={(form) => { const id = form.id; const values = formValues[id] ?? {}; if (sessionRef.current) submitForm(sessionRef.current, form, values); }} formValues={formValues} setFormValues={setFormValues} /> : null}{children}</div>{open ? <RelayChat session={sessionRef.current!} messages={messages} busy={busy} connection={connection} onSend={send} onVoice={toggleVoice} voiceConnected={voiceConnected} onClose={() => setOpen(false)} /> : <Button type="button" className="fixed bottom-5 right-5 z-[300] rounded-full shadow-lg" aria-label="Open WebTrak assistant" onClick={() => setOpen(true)}><MessageCircle /> Assistant</Button>}</>;
+  return <><div>{surfaces.length ? <ResultsCanvas surfaces={surfaces} onClear={() => { surfacesRef.current = []; setSurfaces([]); }} onClose={(index) => setSurfaces((current) => { const updated = current.filter((_, item) => item !== index); surfacesRef.current = updated; return updated; })} onSubmit={(form) => { const id = form.id; const values = formValues[id] ?? {}; if (sessionRef.current) submitForm(sessionRef.current, form, values); }} formValues={formValues} setFormValues={setFormValues} /> : null}{children}</div>{open ? <RelayChat sessionId={sessionId} messages={messages} busy={busy} connection={connection} onSend={send} onVoice={toggleVoice} voiceConnected={voiceConnected} onClose={() => setOpen(false)} /> : <Button type="button" className="fixed bottom-5 right-5 z-[300] rounded-full shadow-lg" aria-label="Open WebTrak assistant" onClick={() => setOpen(true)}><MessageCircle /> Assistant</Button>}</>;
 }

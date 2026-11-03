@@ -19,20 +19,13 @@ function runtimeEnv(...names: string[]): string {
 }
 
 export function GET() {
-  // Server-only names first (RELAY_*); the NEXT_PUBLIC_* names still work for existing setups.
+  // The browser needs only where to connect and which agent: WebTrak's backend starts each session for the
+  // signed-in user (POST /api/v1/relay/session, secret key server-side), so no Relay key is sent to the browser.
   const gatewayUrl = runtimeEnv("RELAY_GATEWAY_URL", "NEXT_PUBLIC_RELAY_GATEWAY_URL", "NEXT_PUBLIC_GATEWAY_URL");
-  const apiKey = runtimeEnv("RELAY_API_KEY", "NEXT_PUBLIC_RELAY_API_KEY");
   const agentId = runtimeEnv("RELAY_AGENT_ID", "NEXT_PUBLIC_RELAY_AGENT_ID", "NEXT_PUBLIC_AGENT_ID");
-  const projectId = runtimeEnv("RELAY_PROJECT_ID", "NEXT_PUBLIC_RELAY_PROJECT_ID");
 
   return NextResponse.json(
-    {
-      gatewayUrl,
-      apiKey,
-      agentId,
-      projectId,
-      enabled: Boolean(gatewayUrl && agentId && (apiKey || projectId)),
-    },
+    { gatewayUrl, agentId, enabled: Boolean(gatewayUrl && agentId) },
     { headers: { "Cache-Control": "no-store" } }
   );
 }
