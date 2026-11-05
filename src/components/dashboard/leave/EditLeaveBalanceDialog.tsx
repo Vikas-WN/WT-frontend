@@ -16,14 +16,12 @@ export function EditLeaveBalanceDialog({
   open,
   employee,
   year,
-  month,
   onClose,
   onSaved,
 }: {
   open: boolean;
   employee: LeaveBalancesListItem | null;
   year: number;
-  month: number;
   onClose: () => void;
   onSaved: () => void | Promise<void>;
 }) {
@@ -59,7 +57,7 @@ export function EditLeaveBalanceDialog({
     parsed.carry_forward = 0;
     setLoading(true);
     try {
-      await hrmsService.updateLeaveBalance(employee.emp_id, { ...parsed, year, month });
+      await hrmsService.updateLeaveBalance(employee.emp_id, { ...parsed, year });
       showSuccessToast("Leave balance updated.");
       await onSaved();
       onClose();

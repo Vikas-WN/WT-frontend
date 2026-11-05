@@ -19,7 +19,7 @@ import { ListPagination } from "@/components/dashboard/ui/ListPagination";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@/hooks/useClientPagination";
 import { showErrorToast } from "@/lib/toast";
 import { Pencil, Search, Wallet } from "lucide-react";
-import { useHrLeaveBalancesList, validateLeaveBalancePeriod } from "@/hooks/leave/useHrLeaveBalancesList";
+import { useHrLeaveBalancesList, validateLeaveBalanceYear } from "@/hooks/leave/useHrLeaveBalancesList";
 import { FILTER_BAR_CLASS } from "@/components/dashboard/ui/uiLayout";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -27,21 +27,6 @@ import { EditLeaveBalanceDialog } from "@/components/dashboard/leave/EditLeaveBa
 import type { LeaveBalancesListItem } from "@/services/hrms.service";
 
 const BALANCES_TABLE_MIN_HEIGHT = "min-h-[320px]";
-
-const MONTH_OPTIONS = [
-  { value: "1", label: "January" },
-  { value: "2", label: "February" },
-  { value: "3", label: "March" },
-  { value: "4", label: "April" },
-  { value: "5", label: "May" },
-  { value: "6", label: "June" },
-  { value: "7", label: "July" },
-  { value: "8", label: "August" },
-  { value: "9", label: "September" },
-  { value: "10", label: "October" },
-  { value: "11", label: "November" },
-  { value: "12", label: "December" },
-];
 
 function buildYearOptions(currentYear: number) {
   const years: { value: string; label: string }[] = [];
@@ -60,15 +45,12 @@ export function HrLeaveBalancesPanel({
 }) {
   const today = new Date();
   const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth() + 1;
   const [year, setYear] = useState(String(currentYear));
-  const [month, setMonth] = useState(String(currentMonth));
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [yearError, setYearError] = useState<string | null>(null);
-  const [monthError, setMonthError] = useState<string | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<LeaveBalancesListItem | null>(null);
 
   const { user } = useAuth();
@@ -77,14 +59,9 @@ export function HrLeaveBalancesPanel({
   );
   const columnCount = canEditBalances ? 6 : 5;
 
-  const monthOptions =
-    Number(year) === currentYear
-      ? MONTH_OPTIONS.filter((opt) => Number(opt.value) <= currentMonth)
-      : MONTH_OPTIONS;
-
   const periodValid = (() => {
     try {
-      validateLeaveBalancePeriod(year, month);
+      validateLeaveBalanceYear(year);
       return true;
     } catch {
       return false;
@@ -93,21 +70,12 @@ export function HrLeaveBalancesPanel({
 
   const balancesQ = useHrLeaveBalancesList({
     year,
-    month,
     page,
     pageSize,
     search: appliedSearch,
-    // Do not fetch until Year + Month are valid — blocks load on cleared/invalid Year.
+    // Do not fetch until Year is valid — blocks load on cleared/invalid Year.
     enabled: periodValid,
   });
-
-  useEffect(() => {
-    // Only clamp future months — never re-fill a deliberately cleared Month field.
-    if (!month.trim()) return;
-    if (Number(year) === currentYear && Number(month) > currentMonth) {
-      setMonth(String(currentMonth));
-    }
-  }, [year, month, currentYear, currentMonth]);
 
   useEffect(() => {
     // API failures only. Period validation is toasting from applySearch — never pair with success.
@@ -117,7 +85,7 @@ export function HrLeaveBalancesPanel({
         ? balancesQ.error.message
         : "Could not load leave balances.";
     if (
-      /year is required|month is required|valid year|valid month|future months/i.test(message)
+      /year is required|valid year/i.test(message)
     ) {
       return;
     }
@@ -139,18 +107,15 @@ export function HrLeaveBalancesPanel({
 
   function applySearch() {
     try {
-      validateLeaveBalancePeriod(year, month);
+      validateLeaveBalanceYear(year);
       setYearError(null);
-      setMonthError(null);
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : "Select a valid year and month before searching.";
+          : "Select a valid year before searching.";
       const isYearIssue = /year/i.test(message);
-      const isMonthIssue = /month/i.test(message);
       setYearError(isYearIssue ? message : null);
-      setMonthError(isMonthIssue && !isYearIssue ? message : null);
       // Single validation toast — do not load and do not show success.
       showErrorToast(message);
       return;
@@ -169,7 +134,7 @@ export function HrLeaveBalancesPanel({
   return (
     <FormSection
       title="Leave Balances"
-      description="Organization leave and Comp-Off balances by month (HR / Admin)."
+      description="Latest leave balance for the selected year. Comp-off shows the current available balance."
       className="rounded-2xl shadow-sm"
     >
       <div className="space-y-6">
@@ -190,7 +155,7 @@ export function HrLeaveBalancesPanel({
                 placeholder="Name, Email, Emp Id"
               />
             </div>
-            <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 sm:max-w-xs">
+            <div className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:max-w-xs">
               <SelectField
                 label="Year"
                 required
@@ -204,20 +169,6 @@ export function HrLeaveBalancesPanel({
                 placeholder="Select year"
                 contentClassName="w-auto min-w-[7rem]"
                 error={yearError}
-              />
-              <SelectField
-                label="Month"
-                required
-                value={month}
-                onChange={(value) => {
-                  setMonth(value);
-                  setMonthError(null);
-                  setPage(0);
-                }}
-                options={monthOptions}
-                placeholder="Select month"
-                contentClassName="w-auto min-w-[11rem]"
-                error={monthError}
               />
             </div>
             <Button
@@ -323,8 +274,8 @@ export function HrLeaveBalancesPanel({
                         {loadError
                           ? "Adjust the period or try again."
                           : !periodValid
-                            ? "Select a year and month to view leave balances."
-                            : "Try a different search, year, or month."}
+                            ? "Select a year to view leave balances."
+                            : "Try a different search or year."}
                       </span>
                     </div>
                   </TableCell>
@@ -359,7 +310,6 @@ export function HrLeaveBalancesPanel({
           open={editingEmployee != null}
           employee={editingEmployee}
           year={Number(year)}
-          month={Number(month)}
           onClose={() => setEditingEmployee(null)}
           onSaved={async () => {
             await balancesQ.refetch();
