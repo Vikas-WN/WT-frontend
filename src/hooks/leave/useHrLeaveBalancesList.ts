@@ -5,54 +5,31 @@ import { hrmsService, type LeaveBalancesListData } from "@/services/hrms.service
 
 export const HR_LEAVE_BALANCES_QUERY_KEY = ["leave", "hr-balances-list"] as const;
 
-function validateLeaveBalancePeriod(yearRaw: string, monthRaw: string): {
-  year: number;
-  month: number;
-} {
-  const today = new Date();
-  const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth() + 1;
+function validateLeaveBalanceYear(yearRaw: string): number {
+  const currentYear = new Date().getFullYear();
   const yearText = String(yearRaw ?? "").trim();
-  const monthText = String(monthRaw ?? "").trim();
-
-  if (!yearText) {
-    throw new Error("Year is required. Select a valid year before searching.");
-  }
-  if (!monthText) {
-    throw new Error("Month is required. Select a valid month before searching.");
-  }
-
+  if (!yearText) throw new Error("Year is required. Select a valid year before searching.");
   const year = Number(yearText);
-  const month = Number(monthText);
-
   if (!Number.isInteger(year) || year < 2000 || year > currentYear) {
     throw new Error(`Enter a valid year between 2000 and ${currentYear}.`);
   }
-  if (!Number.isInteger(month) || month < 1 || month > 12) {
-    throw new Error("Enter a valid month between 1 and 12.");
-  }
-  if (year === currentYear && month > currentMonth) {
-    throw new Error("Future months are not allowed.");
-  }
-  return { year, month };
+  return year;
 }
 
 export function useHrLeaveBalancesList(params: {
   year: string;
-  month: string;
   page: number;
   pageSize: number;
   search: string;
   enabled?: boolean;
 }) {
-  const { year, month, page, pageSize, search, enabled = true } = params;
+  const { year, page, pageSize, search, enabled = true } = params;
   const trimmedSearch = search.trim();
 
   return useQuery({
     queryKey: [
       ...HR_LEAVE_BALANCES_QUERY_KEY,
       year,
-      month,
       page,
       pageSize,
       trimmedSearch,
@@ -64,13 +41,12 @@ export function useHrLeaveBalancesList(params: {
     refetchOnWindowFocus: false,
     placeholderData: keepPreviousData,
     queryFn: async (): Promise<LeaveBalancesListData> => {
-      const { year: yearNum, month: monthNum } = validateLeaveBalancePeriod(year, month);
+      const yearNum = validateLeaveBalanceYear(year);
       const res = await hrmsService.getLeaveBalancesList({
         page,
         size: pageSize,
         search: trimmedSearch || undefined,
         year: yearNum,
-        month: monthNum,
       });
       return (
         res.data ?? {
@@ -80,11 +56,11 @@ export function useHrLeaveBalancesList(params: {
           current_page: 0,
           page_size: pageSize,
           year: yearNum,
-          month: monthNum,
+          month: yearNum === new Date().getFullYear() ? new Date().getMonth() + 1 : 12,
         }
       );
     },
   });
 }
 
-export { validateLeaveBalancePeriod };
+export { validateLeaveBalanceYear };
