@@ -10,6 +10,8 @@ import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
 import { INNER_PANEL_CLASS } from "@/components/dashboard/ui/uiLayout";
+import { SegmentedTabs } from "@/components/dashboard/ui/SegmentedTabs";
+import { TeamTimeCalendar } from "@/components/dashboard/timelog/TeamTimeCalendar";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { SelectField } from "@/components/dashboard/ui/forms";
@@ -189,6 +191,9 @@ export function TimelogPageClient() {
     currentMonthRef()
   );
 
+  // UI-only: HR and Admin open Team time on the calendar; the old week-by-week summary is one tab away.
+  const [teamViewMode, setTeamViewMode] = useState<"calendar" | "summary">("calendar");
+
   const [hrWeekDetail, setHrWeekDetail] = useState<{
     email: string;
     label: string;
@@ -237,6 +242,9 @@ export function TimelogPageClient() {
       })),
     [employeeOptions]
   );
+
+  const showTeamCalendar =
+    isTeamView && (hasHrAccess || hasAdminAccess) && teamViewMode === "calendar";
 
   const hrMonthlySummary = useHrMonthlyTimelogSummary(
     hrEmployees,
@@ -607,7 +615,25 @@ export function TimelogPageClient() {
               <ProjectTimelogPanel enabled />
             ) : null}
 
-            {isHrTeamView ? (
+            {isTeamView && (hasHrAccess || hasAdminAccess) ? (
+              <SegmentedTabs
+                label="Team time view"
+                value={teamViewMode}
+                onChange={(value) => setTeamViewMode(value as "calendar" | "summary")}
+                options={[
+                  { value: "calendar", label: "Calendar" },
+                  { value: "summary", label: "Summary" },
+                ]}
+              />
+            ) : null}
+
+            {showTeamCalendar ? (
+              <div className={INNER_PANEL_CLASS}>
+                <TeamTimeCalendar employees={hrEmployees} month={hrMonth} onMonthChange={setHrMonth} />
+              </div>
+            ) : null}
+
+            {isHrTeamView && !showTeamCalendar ? (
               <div className={INNER_PANEL_CLASS}>
                 <HrMonthlyTimelogSummary
                   month={hrMonth}
@@ -640,7 +666,8 @@ export function TimelogPageClient() {
             ) : null}
 
             {isTeamView &&
-            !isHrTeamView ? (
+            !isHrTeamView &&
+            !showTeamCalendar ? (
               <div className={INNER_PANEL_CLASS}>
                 <PageSectionHeader
                   title="Team Time Logs"

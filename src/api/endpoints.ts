@@ -97,6 +97,7 @@ export const endpoints = {
       managerOptions: `${api}/timelog/manager-options`,
       week: `${api}/timelog/week`,
       weekTotalsBatch: `${api}/timelog/week/totals/batch`,
+      dayTotalsBatch: `${api}/timelog/day/totals/batch`,
       weekSubmit: `${api}/timelog/week/submit`,
       byId: (timelogId: string) => `${api}/timelog/${encodeURIComponent(timelogId)}`,
       draft: `${api}/timelog/draft`,

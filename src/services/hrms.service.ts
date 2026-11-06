@@ -1210,6 +1210,17 @@ export const hrmsService = {
     );
   },
 
+  /** POST /timelog/day/totals/batch — approved hours per employee per day (HR/Admin): the team-time calendar. */
+  getTimelogDayTotalsBatch(payload: { startDate: string; endDate: string; employeeEmails: string[] }) {
+    return apiClient.post<ApiEnvelope<Record<string, Record<string, number>>>>(
+      endpoints.timelog.dayTotalsBatch,
+      {
+        contentType: "application/json",
+        body: JSON.stringify(payload),
+      }
+    );
+  },
+
   saveTimelogWeek(payload: Record<string, unknown>) {
     const weekStart = String(payload.weekStart ?? payload.week_start ?? "");
     const body: Record<string, unknown> = {
