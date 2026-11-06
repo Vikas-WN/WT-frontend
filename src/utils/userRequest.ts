@@ -8,7 +8,7 @@ import type { ApiEnvelope } from "@/api/httpClient";
 
 import type { ApprovalStage } from "@/types/userRequest";
 
-import { apiDateToInputValue, applyApiDateQuery, requireApiDateParam } from "@/utils/apiDate";
+import { apiDateToInputValue, applyApiDateQuery, parseApiDate, requireApiDateParam } from "@/utils/apiDate";
 
 import { toPagedRows, extractFirstObjectArray } from "@/utils/apiRows";
 
@@ -31,6 +31,7 @@ import {
   canSecondaryManagerRejectOnLeave,
   hasPrimaryLeaveManagers,
   hasSecondaryLeaveManagers,
+  isAssignedCompOffUsageManager,
   isAssignedPrimaryLeaveManager,
   isAssignedSecondaryLeaveManager,
   isLeaveRequestClosedForManagerAction,
@@ -525,11 +526,51 @@ export function canHrReviewUserRequest(
   return true;
 }
 
+
+/** Who may decide what once HR is only copied on a request. Mirrors `app/domain/request_hr_policy.py` on the backend. */
+export type HrPolicyOptions = { hasHrAccess: boolean; actorEmail?: string | null; today?: Date };
+
+function startOfDay(value: Date): number {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+}
+
+/**
+ * Why HR cannot approve or reject this still-pending request — or null when they can. The reporting manager decides:
+ * HR steps in on a leave only once its date has started, on a WFH only once the day has passed, and never on comp-off
+ * usage. HR who are themselves the routed approver (HR employee, talent pool) are not limited.
+ */
+export function hrPolicyBlockHint(row: Record<string, unknown>, options: HrPolicyOptions): string | null {
+  if (!options.hasHrAccess) return null;
+  if (requestFinalStatus(row) !== "PENDING") return null;
+  if (options.actorEmail && isAssignedCompOffUsageManager(row, options.actorEmail)) return null;
+  const requestType = String(pickRowField(row, "request_type", "requestType") ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "_");
+  const today = startOfDay(options.today ?? new Date());
+  const from = parseApiDate(String(pickRowField(row, "request_from_date", "requestFromDate") ?? ""));
+  const to = parseApiDate(String(pickRowField(row, "request_to_date", "requestToDate") ?? ""));
+  switch (requestType) {
+    case "LEAVE":
+    case "OPTIONAL":
+    case "OPTIONAL_LEAVE":
+      return from && startOfDay(from) > today ? "Manager decides — HR can step in once the leave date starts" : null;
+    case "WFH":
+    case "WFH_EXCEPTION":
+      return to && startOfDay(to) >= today ? "Manager decides — HR can step in once the day has passed" : null;
+    case "COMP_OFF":
+      return "Manager decides — HR is copied";
+    default:
+      return null;
+  }
+}
+
 export function canHrToggleLeaveWfh(
   row: Record<string, unknown>,
-  options: { hasHrAccess: boolean }
+  options: HrPolicyOptions
 ): boolean {
   if (!options.hasHrAccess) return false;
+  if (hrPolicyBlockHint(row, options)) return false;
   const requestType = pickRowField(row, "request_type", "requestType");
   if (isHrDirectLeaveOrWfhRequestType(requestType)) {
     return requestFinalStatus(row) === "PENDING";
@@ -546,11 +587,13 @@ export function canHrActOnCompOff(
 
   row: Record<string, unknown>,
 
-  options: { hasHrAccess: boolean }
+  options: HrPolicyOptions
 
 ): boolean {
 
   if (!options.hasHrAccess) return false;
+
+  if (hrPolicyBlockHint(row, options)) return false;
 
   if (!isCompOffRequestType(pickRowField(row, "request_type", "requestType"))) return false;
 
@@ -564,7 +607,7 @@ export function canHrActOnCompOff(
 
 export function canHrShowTeamRequestActions(
   row: Record<string, unknown>,
-  options: { hasHrAccess: boolean }
+  options: HrPolicyOptions
 ): boolean {
   return canHrToggleLeaveWfh(row, options) || canHrActOnCompOff(row, options);
 }
@@ -573,11 +616,15 @@ export function hrTeamActionBlockedHint(
 
   row: Record<string, unknown>,
 
-  options: { hasHrAccess: boolean }
+  options: HrPolicyOptions
 
 ): string | null {
 
   if (!options.hasHrAccess) return null;
+
+  const policyHint = hrPolicyBlockHint(row, options);
+
+  if (policyHint) return policyHint;
 
   const requestType = pickRowField(row, "request_type", "requestType");
 
@@ -586,12 +633,12 @@ export function hrTeamActionBlockedHint(
   }
 
   if (isCompOffEarnRequestType(requestType)) {
-    // Earn is manager-final: once approved/rejected, Actions should not keep saying
-    // "Awaiting manager approval".
+    // Earn credit has two stages: the manager decides, then HR approves (credit added) or rejects.
     const final = requestFinalStatus(row);
     const mgr = requestManagerStatus(row);
-    if (final === "APPROVED" || mgr === "APPROVED") return null;
-    if (final === "REJECTED" || mgr === "REJECTED") return "Manager rejected";
+    if (final === "APPROVED") return null;
+    if (final === "REJECTED" || mgr === "REJECTED") return "Rejected";
+    if (mgr === "APPROVED") return "Awaiting HR approval";
     return "Awaiting manager approval";
   }
 
@@ -627,11 +674,11 @@ export function canManagerActOnRequest(
   if (requestFinalStatus(row) !== "PENDING") return false;
 
   const requestType = pickRowField(row, "request_type", "requestType");
-  // Custom WFH is HR-only; managers are notified but cannot decide.
-  if (isWfhExceptionRequestType(requestType)) return false;
-
-  // Leave/WFH/optional: one manager decision closes the request for everyone else.
-  if (isLeaveOrWfhRequestType(requestType) && isLeaveRequestClosedForManagerAction(row)) {
+  // Leave/WFH/custom WFH/optional: one manager decision closes the request for everyone else.
+  if (
+    (isLeaveOrWfhRequestType(requestType) || isWfhExceptionRequestType(requestType)) &&
+    isLeaveRequestClosedForManagerAction(row)
+  ) {
     return false;
   }
 

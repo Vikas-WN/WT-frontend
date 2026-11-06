@@ -560,11 +560,8 @@ export function CompOffPageClient({
       reason?: string | null
     ) => {
       if (!requestId) throw new Error("Invalid request id.");
-      if (flow === "COMP_OFF_EARN" && isHrOnly) {
-        throw new Error("HR can view earn requests but cannot approve or reject them.");
-      }
-      if (flow === "COMP_OFF_EARN" && !hasManagerAccess) {
-        throw new Error("Only the project manager can approve or reject earn requests.");
+      if (flow === "COMP_OFF_EARN" && !hasManagerAccess && !hasHrAccess) {
+        throw new Error("Only the project manager, then HR, can approve or reject earn requests.");
       }
       setTeamRequestUpdatingId(requestId);
       try {
@@ -599,7 +596,7 @@ export function CompOffPageClient({
         setTeamRequestUpdatingId(null);
       }
     },
-    [hasManagerAccess, isHrOnly, patchTeamRequestStatus, loadBalanceAndGrants]
+    [hasManagerAccess, hasHrAccess, isHrOnly, patchTeamRequestStatus, loadBalanceAndGrants]
   );
 
   const loadTeamRequests = useCallback(async (opts?: { raiseOnError?: boolean; force?: boolean }) => {
@@ -1422,17 +1419,11 @@ export function CompOffPageClient({
                     <TableHead className="font-semibold px-3">From</TableHead>
                     <TableHead className="font-semibold px-3">To</TableHead>
                     <TableHead className="font-semibold px-3">Description</TableHead>
-                    {isHrOnly ? (
-                      <TableHead className="font-semibold px-3">Manager status</TableHead>
-                    ) : (
-                      <>
-                        <TableHead className="font-semibold px-3">Manager status</TableHead>
-                        {hasHrAccess ? (
-                          <TableHead className="font-semibold px-3">HR status</TableHead>
-                        ) : null}
-                        <TableHead className="text-right font-semibold px-3">Actions</TableHead>
-                      </>
-                    )}
+                    <TableHead className="font-semibold px-3">Manager status</TableHead>
+                    {hasHrAccess ? (
+                      <TableHead className="font-semibold px-3">HR status</TableHead>
+                    ) : null}
+                    <TableHead className="text-right font-semibold px-3">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1487,10 +1478,16 @@ export function CompOffPageClient({
                     const canHrActUsage =
                       hasHrAccess &&
                       flow === "COMP_OFF" &&
-                      canHrActOnCompOff(row, { hasHrAccess });
+                      canHrActOnCompOff(row, { hasHrAccess, actorEmail: user?.email });
+                    // Earn credit: the manager decides first, then HR approves (credit added) or rejects.
+                    const canHrActEarn =
+                      hasHrAccess &&
+                      flow === "COMP_OFF_EARN" &&
+                      finalStatus === "PENDING" &&
+                      managerStatus === "APPROVED";
                     const canReview =
                       !isRowUpdating &&
-                      (canManagerActEarn || canManagerActUsage || canHrActUsage);
+                      (canManagerActEarn || canManagerActUsage || canHrActUsage || canHrActEarn);
                     const renderStatusBadge = (value: string) => {
                       if (value === "\u2014" || !value) {
                         return <span className="text-muted-foreground">{value || "\u2014"}</span>;
@@ -1527,80 +1524,69 @@ export function CompOffPageClient({
                             pickRowField(row, "comments", "comment", "description", "remarks") ?? "\u2014"
                           )}
                         </TableCell>
-                        {isHrOnly ? (
-                          <TableCell
-                            className="px-3 py-2.5 whitespace-nowrap"
-                            title={managerReason !== "\u2014" ? managerReason : undefined}
-                          >
-                            {renderStatusBadge(managerStatus)}
+                        <TableCell
+                          className="px-3 py-2.5 whitespace-nowrap"
+                          title={managerReason !== "\u2014" ? managerReason : undefined}
+                        >
+                          {renderStatusBadge(managerStatus)}
+                        </TableCell>
+                        {hasHrAccess ? (
+                          <TableCell className="px-3 py-2.5 whitespace-nowrap">
+                            {flow === "COMP_OFF" || flow === "COMP_OFF_EARN" ? renderStatusBadge(hrStatus) : "\u2014"}
                           </TableCell>
-                        ) : (
-                          <>
-                            <TableCell
-                              className="px-3 py-2.5 whitespace-nowrap"
-                              title={managerReason !== "\u2014" ? managerReason : undefined}
-                            >
-                              {renderStatusBadge(managerStatus)}
-                            </TableCell>
-                            {hasHrAccess ? (
-                              <TableCell className="px-3 py-2.5 whitespace-nowrap">
-                                {flow === "COMP_OFF" ? renderStatusBadge(hrStatus) : "\u2014"}
-                              </TableCell>
-                            ) : null}
-                            <TableCell className="px-3 py-2.5 text-right whitespace-nowrap">
-                              {canReview && flow ? (
-                                <div className="inline-flex items-center gap-1">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="xs"
-                                    className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
-                                    disabled={!id || isRowUpdating}
-                                    onClick={() =>
-                                      runAction(
-                                        compOffTeamReviewActionLabel(flow, "approve"),
-                                        async () => {
-                                          await decideTeamRequest(id, flow, "APPROVED");
-                                          giveFeedback("approve");
-                                          fireConfetti();
-                                          await loadTeamRequests({ force: true });
-                                        }
-                                      )
+                        ) : null}
+                        <TableCell className="px-3 py-2.5 text-right whitespace-nowrap">
+                          {canReview && flow ? (
+                            <div className="inline-flex items-center gap-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="xs"
+                                className="border-emerald-600/30 text-emerald-700 hover:bg-emerald-500/10"
+                                disabled={!id || isRowUpdating}
+                                onClick={() =>
+                                  runAction(
+                                    compOffTeamReviewActionLabel(flow, "approve"),
+                                    async () => {
+                                      await decideTeamRequest(id, flow, "APPROVED");
+                                      giveFeedback("approve");
+                                      fireConfetti();
+                                      await loadTeamRequests({ force: true });
                                     }
-                                  >
-                                    {isRowUpdating ? "\u2026" : "Approve"}
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="xs"
-                                    disabled={!id || isRowUpdating}
-                                    onClick={() => openRejectDialog(id, flow)}
-                                  >
-                                    Reject
-                                  </Button>
-                                </div>
-                              ) : (
-                                <RequestReversalActions
-                                  row={row}
-                                  actorEmail={userEmail}
-                                  isHrOrAdmin={hasHrAccess}
-                                  onChanged={async () => {
-                                    // The page remembers decisions it just made; forget this one so the row shows its real status.
-                                    teamDecisionsRef.current.delete(id);
-                                    setTeamDecisions((prev) => {
-                                      const { [id]: _removed, ...rest } = prev;
-                                      return rest;
-                                    });
-                                    await loadTeamRequests({ force: true });
-                                    void loadBalanceAndGrants();
-                                  }}
-                                  fallback={<span className="text-muted-foreground">{"\u2014"}</span>}
-                                />
-                              )}
-                            </TableCell>
-                          </>
-                        )}
+                                  )
+                                }
+                              >
+                                {isRowUpdating ? "\u2026" : "Approve"}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="xs"
+                                disabled={!id || isRowUpdating}
+                                onClick={() => openRejectDialog(id, flow)}
+                              >
+                                Reject
+                              </Button>
+                            </div>
+                          ) : (
+                            <RequestReversalActions
+                              row={row}
+                              actorEmail={userEmail}
+                              isHrOrAdmin={hasHrAccess}
+                              onChanged={async () => {
+                                // The page remembers decisions it just made; forget this one so the row shows its real status.
+                                teamDecisionsRef.current.delete(id);
+                                setTeamDecisions((prev) => {
+                                  const { [id]: _removed, ...rest } = prev;
+                                  return rest;
+                                });
+                                await loadTeamRequests({ force: true });
+                                void loadBalanceAndGrants();
+                              }}
+                              fallback={<span className="text-muted-foreground">{"\u2014"}</span>}
+                            />
+                          )}
+                        </TableCell>
                       </TableRow>
                     );
                   })}

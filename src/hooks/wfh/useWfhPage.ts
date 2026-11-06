@@ -125,13 +125,19 @@ export function useWfhPage() {
   });
 
   const submitException = useCallback(
-    async (payload: { request_from_date: string; request_to_date: string; comments: string }) => {
+    async (payload: {
+      request_from_date: string;
+      request_to_date: string;
+      comments: string;
+      manager_emails: string[];
+    }) => {
       const body = buildUserRequestBody({
         request_from_date: payload.request_from_date,
         request_to_date: payload.request_to_date,
         request_type: "WFH_EXCEPTION",
         comments: payload.comments,
         is_half_day: false,
+        primary_manager_emails: payload.manager_emails,
       });
       await apiClient.post(endpoints.userRequest.root, { contentType: "application/json", body: JSON.stringify(body) });
       showSuccessToast(WFH_PAGE_COPY.exceptionSubmitted);
