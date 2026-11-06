@@ -12,6 +12,7 @@ import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
 import {
   cancelUserRequest,
   canHrCancelApproved,
+  requestFinalStatus,
   requestUndoByEmail,
   requestUndoSecondsLeft,
   resolveUserRequestId,
@@ -50,8 +51,10 @@ export function RequestReversalActions({
 
   const requestId = Number(resolveUserRequestId(row));
   const secondsLeft = requestUndoSecondsLeft(row);
-  const canUndo =
-    secondsLeft > 0 && (requestUndoByEmail(row) === actorEmail.trim().toLowerCase() || isHrOrAdmin);
+  const decidedByMe = requestUndoByEmail(row) === actorEmail.trim().toLowerCase();
+  // HR can take back an approval but not reopen a manager's rejection (they could then approve it themselves).
+  const hrMayUndo = isHrOrAdmin && requestFinalStatus(row) !== "REJECTED";
+  const canUndo = secondsLeft > 0 && (decidedByMe || hrMayUndo);
   const canCancel = isHrOrAdmin && canHrCancelApproved(row);
   if (!Number.isFinite(requestId) || requestId <= 0 || (!canUndo && !canCancel)) return <>{fallback}</>;
 

@@ -12,7 +12,7 @@ import { WFH_PAGE_COPY } from "@/constants/wfhRequest";
 import { useWfhPage } from "@/hooks/wfh/useWfhPage";
 import { cn } from "@/lib/utils";
 
-/** Work from home: apply for a day, track and withdraw your requests, or ask HR for a custom exception. */
+/** Work from home: apply for a day, track and withdraw your requests, or ask your manager for a custom exception. */
 export function WfhPageClient() {
   const { requiresSelfOnboarding } = useDashboardAccess();
   const page = useWfhPage();
@@ -43,7 +43,12 @@ export function WfhPageClient() {
             history={page.history}
           />
         </section>
-        <WfhExceptionModal open={page.exceptionOpen} onClose={() => page.setExceptionOpen(false)} onSubmit={page.submitException} />
+        <WfhExceptionModal
+          open={page.exceptionOpen}
+          onClose={() => page.setExceptionOpen(false)}
+          onSubmit={page.submitException}
+          routesToHr={page.routesToHr}
+        />
         <ConfirmDialog
           open={Boolean(page.confirmState)}
           title={page.confirmState?.title ?? ""}

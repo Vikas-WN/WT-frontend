@@ -2442,6 +2442,7 @@ export function LeavePageClient() {
                                       !isEarnRequest &&
                                       canHrShowTeamRequestActions(rowRecord, {
                                         hasHrAccess,
+                                        actorEmail: userEmail,
                                       });
                                     // Assigned primary/secondary managers can act even without ROLE_MANAGER.
                                     const assignedPrimaryApprove = canPrimaryManagerApproveOnLeave(
@@ -2506,7 +2507,7 @@ export function LeavePageClient() {
                                     const secondaryStage = requestSecondaryManagerStatus(rowRecord);
                                     const hasDualManagers = hasSecondaryLeaveManagers(rowRecord);
                                     const blockedHint = showTeamActionsColumn
-                                        ? hrTeamActionBlockedHint(rowRecord, { hasHrAccess })
+                                        ? hrTeamActionBlockedHint(rowRecord, { hasHrAccess, actorEmail: userEmail })
                                         : null;
                                     const isRowUpdating = teamStatusUpdatingId === requestId;
                                     const rowEmail = requestRowEmail(row as Record<string, unknown>);

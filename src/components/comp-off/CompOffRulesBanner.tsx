@@ -9,8 +9,8 @@ export function CompOffRulesBanner() {
         <li>Earn Credits expire 60 days after the worked date.</li>
         <li>Usage is not allowed on the same date the credit was earned — choose a later leave date.</li>
         <li>Usage consumes grants FIFO (oldest expiry first).</li>
-        <li>Earn: request goes to your project manager; +1 unit is added after they approve.</li>
-        <li>Usage: only available when you have balance; request goes to HR for approval.</li>
+        <li>Earn: request goes to your project manager, then HR approves or rejects it; +1 unit is added once HR approves.</li>
+        <li>Usage: only available when you have balance; your manager approves or rejects it and HR is copied.</li>
       </ul>
     </div>
   );

@@ -23,6 +23,13 @@ export const WFH_COPY = {
   refreshLabel: "Refresh my requests",
 } as const;
 
+export const WFH_EXCEPTION_COPY = {
+  intro:
+    "Use this form to request more than the standard 1 WFH day per week — a second day in the same week, or several days in one request. Your manager approves or rejects it and HR is copied; HR can override an approval but cannot approve one your manager rejected.",
+  intro_hr:
+    "Use this form to request more than the standard 1 WFH day per week. You are in the talent pool, so this request goes directly to HR for approval.",
+} as const;
+
 export const WFH_ERRORS = {
   invalidFromDate: "Please provide a valid From date (dd/mm/yyyy).",
   commentsRequired: "Comments are required.",
@@ -43,7 +50,7 @@ export const WFH_PAGE_COPY = {
   title: "Work from home",
   description: "Apply for a work-from-home day, track your requests, or ask for a custom exception.",
   allocationsQueryKey: ["wfh", "my-allocations"],
-  exceptionSubmitted: "Custom Work From Home request submitted to HR for approval.",
+  exceptionSubmitted: "Custom Work From Home request submitted to your manager. HR is copied.",
   exceptionSplash: "Request submitted",
   processing: "Processing request…",
 } as const;
