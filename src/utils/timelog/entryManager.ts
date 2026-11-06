@@ -40,6 +40,8 @@ export type TimelogEntryWritePayload = {
   project_name: string | null;
   log_date: string;
   hours: number;
+  start_time?: string;
+  end_time?: string;
   task_category: string;
   sub_category: string | null;
   description: string | null;
@@ -57,7 +59,8 @@ export function buildTimelogEntryPayload(
     description: string;
   },
   logDate: string,
-  hours: number
+  hours: number,
+  times?: { start_time: string; end_time: string }
 ): TimelogEntryWritePayload {
   const managerEmail = form.project_manager.trim().toLowerCase();
   const payload: TimelogEntryWritePayload = {
@@ -68,6 +71,7 @@ export function buildTimelogEntryPayload(
     task_category: form.task_category,
     sub_category: form.sub_category || null,
     description: form.description || null,
+    ...(times ? { start_time: times.start_time, end_time: times.end_time } : {}),
     ...withPrimaryManagerEmails(managerEmail),
   };
   return payload;

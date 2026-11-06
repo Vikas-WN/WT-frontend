@@ -31,6 +31,14 @@ function calendarCellClass(day: CalendarDayInfo, isSelected: boolean): string {
     return "cursor-not-allowed border-transparent bg-transparent text-wt-text-faint opacity-45";
   }
 
+  if (day.leave && !hasEntries) {
+    return cn(
+      "border-sky-500/25 bg-sky-500/[0.07] hover:bg-sky-500/[0.13]",
+      selected && "border-[var(--wt-brand)] bg-sky-500/[0.14]",
+      day.isToday && "ring-2 ring-[color-mix(in_srgb,var(--wt-brand)_45%,transparent)]"
+    );
+  }
+
   if (hasEntries) {
     return cn(
       "border-emerald-500/25 bg-emerald-500/[0.07] hover:bg-emerald-500/[0.13]",
@@ -234,6 +242,11 @@ export function TimelogCalendar({
                   <span className="mt-0.5 inline-block size-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400" />
                 ) : null}
               </div>
+              {day.leave ? (
+                <span className="mt-1 w-fit rounded-md bg-sky-500/15 px-1.5 py-0.5 text-xs leading-tight font-semibold text-sky-700 dark:text-sky-300">
+                  {day.leave.label}
+                </span>
+              ) : null}
               {hasEntries || hasDrafts ? (
                 <div className="mt-1 flex flex-col gap-0.5">
                   {hasEntries ? (

@@ -4,6 +4,11 @@ import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { hrmsService } from "@/services/hrms.service";
+import { useAuth } from "@/context/AuthContext";
+import { useMyLeaveRequests } from "@/hooks/leave/useMyLeaveRequests";
+import { formatApiDate as formatApiDateDmy, parseApiDate } from "@/utils/apiDate";
+import { requestFinalStatus } from "@/utils/userRequest";
+import { leaveLabelsByDate } from "@/utils/timelog/leaveDays";
 import { ApiError } from "@/api/error";
 import { showErrorToast, showSuccessToast } from "@/lib/toast";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
@@ -22,6 +27,7 @@ import type {
 } from "./useDayTimelog.types";
 import { buildTimelogEntryPayload, primaryManagerEmailsFromEntries } from "@/utils/timelog/entryManager";
 import { validateTimelogHours } from "@/utils/timelog/hoursValidation";
+import { hoursBetween, validateEntryTimes } from "@/utils/timelog/entryTimes";
 import { isEmployeeTimelogEditable } from "@/utils/timelog/employeeEditability";
 
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -58,6 +64,7 @@ function buildCalendarMonth(
   year: number,
   month: number,
   entriesByDate: Record<string, DayTimelogEntry[]>,
+  leaveByDate: Record<string, string> = {},
 ): CalendarMonth {
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
@@ -78,6 +85,7 @@ function buildCalendarMonth(
       isCurrentMonth,
       isToday: dateKey === todayKey,
       isFuture: d > todayStart,
+      leave: leaveByDate[dateKey] ? { label: leaveByDate[dateKey] } : null,
       ...summarizeDayEntries(dayEntries),
     });
   };
@@ -219,9 +227,27 @@ export function useDayTimelog() {
     return map;
   }, [allEntries]);
 
+  // Approved leave over the days the calendar shows, so a day off reads as leave rather than as a missing log.
+  const { user } = useAuth();
+  const leaveRequests = useMyLeaveRequests(
+    user?.email ?? "",
+    true,
+    formatApiDateDmy(monthStart),
+    formatApiDateDmy(monthEnd),
+  );
+  const leaveByDate = useMemo(
+    () =>
+      leaveLabelsByDate(leaveRequests.rows, {
+        statusOf: requestFinalStatus,
+        parseDate: (value) => parseApiDate(value),
+        toKey: formatApiDate,
+      }),
+    [leaveRequests.rows],
+  );
+
   const calendar = useMemo(
-    () => buildCalendarMonth(viewYear, viewMonth, entriesByDate),
-    [viewYear, viewMonth, entriesByDate],
+    () => buildCalendarMonth(viewYear, viewMonth, entriesByDate, leaveByDate),
+    [viewYear, viewMonth, entriesByDate, leaveByDate],
   );
 
   const selectedDayEntries = dayLogsQuery.data ?? [];
@@ -317,10 +343,13 @@ export function useDayTimelog() {
     (form: DayTimelogEntryForm) =>
       handleAction(async () => {
         if (!selectedDate) return;
-        const hoursError = validateTimelogHours(form.hours);
+        const timesError = validateEntryTimes(form.start_time, form.end_time);
+        if (timesError) throw new Error(timesError);
+        const hours = hoursBetween(form.start_time, form.end_time) ?? 0;
+        const hoursError = validateTimelogHours(hours);
         if (hoursError) throw new Error(hoursError);
-        const hours = Number(form.hours);
-        const entryPayload = buildTimelogEntryPayload(form, selectedDate, hours);
+        const times = { start_time: form.start_time, end_time: form.end_time };
+        const entryPayload = buildTimelogEntryPayload(form, selectedDate, hours, times);
         if (!entryPayload.primaryManagerEmails?.length) {
           throw new Error("Select a project manager before submitting.");
         }
@@ -358,11 +387,14 @@ export function useDayTimelog() {
     (form: DayTimelogEntryForm) =>
       handleAction(async () => {
         if (!selectedDate) return;
-        const hoursError = validateTimelogHours(form.hours);
+        const timesError = validateEntryTimes(form.start_time, form.end_time);
+        if (timesError) throw new Error(timesError);
+        const hours = hoursBetween(form.start_time, form.end_time) ?? 0;
+        const hoursError = validateTimelogHours(hours);
         if (hoursError) throw new Error(hoursError);
-        const hours = Number(form.hours);
+        const times = { start_time: form.start_time, end_time: form.end_time };
         await hrmsService.createTimelogDraft({
-          ...buildTimelogEntryPayload(form, selectedDate, hours),
+          ...buildTimelogEntryPayload(form, selectedDate, hours, times),
           task_category: form.task_category || undefined,
         });
         await queryClient.invalidateQueries({
@@ -385,13 +417,16 @@ export function useDayTimelog() {
         if (existing && !isEmployeeTimelogEditable(existing.status)) {
           throw new Error("Rejected or finalized timelog entries cannot be edited.");
         }
-        const hoursError = validateTimelogHours(form.hours);
+        const timesError = validateEntryTimes(form.start_time, form.end_time);
+        if (timesError) throw new Error(timesError);
+        const hours = hoursBetween(form.start_time, form.end_time) ?? 0;
+        const hoursError = validateTimelogHours(hours);
         if (hoursError) throw new Error(hoursError);
-        const hours = Number(form.hours);
+        const times = { start_time: form.start_time, end_time: form.end_time };
         if (!selectedDate) return;
         await hrmsService.updateTimelogEntry(
           entryId,
-          buildTimelogEntryPayload(form, selectedDate, hours)
+          buildTimelogEntryPayload(form, selectedDate, hours, times)
         );
         await queryClient.invalidateQueries({
           queryKey: ["day-timelog-logs"],

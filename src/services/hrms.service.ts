@@ -1256,6 +1256,8 @@ export const hrmsService = {
     project_code: string;
     log_date: string;
     hours: number;
+    start_time?: string;
+    end_time?: string;
     task_category?: string;
     sub_category?: string | null;
     description?: string | null;
@@ -1332,6 +1334,8 @@ export const hrmsService = {
     primaryManagerEmails?: string[];
     log_date: string;
     hours: number;
+    start_time?: string;
+    end_time?: string;
     task_category: string;
     sub_category?: string | null;
     description?: string | null;
