@@ -193,6 +193,17 @@ export interface WhosOutHoliday {
   is_optional: boolean;
 }
 
+export interface TeamTimeCalendarData {
+  from_date: string;
+  to_date: string;
+  people: Array<{ email: string; name: string; emp_id: string | null }>;
+  /** Approved hours: email → ISO day → hours. */
+  hours: Record<string, Record<string, number>>;
+  /** Approved leave / WFH: email → entries. */
+  absences: Record<string, WhosOutEntry[]>;
+  holidays: WhosOutHoliday[];
+}
+
 export interface WhosOutData {
   from_date: string;
   to_date: string;
@@ -1208,6 +1219,13 @@ export const hrmsService = {
         body: JSON.stringify(payload),
       }
     );
+  },
+
+  /** GET /timelog/team/calendar — a month of approved hours per person per day plus leave, WFH and holidays. */
+  getTeamTimeCalendar(params: { year: number; month: number }) {
+    return apiClient.get<ApiEnvelope<TeamTimeCalendarData>>(endpoints.timelog.teamCalendar, {
+      query: { year: String(params.year), month: String(params.month) },
+    });
   },
 
   saveTimelogWeek(payload: Record<string, unknown>) {

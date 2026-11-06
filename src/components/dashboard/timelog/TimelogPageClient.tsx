@@ -10,6 +10,8 @@ import { EmptyState } from "@/components/dashboard/ui/EmptyState";
 import { ContentCard } from "@/components/dashboard/ui/ContentCard";
 import { PageSectionHeader } from "@/components/dashboard/ui/PageSectionHeader";
 import { INNER_PANEL_CLASS } from "@/components/dashboard/ui/uiLayout";
+import { SegmentedTabs } from "@/components/dashboard/ui/SegmentedTabs";
+import { TeamTimeCalendar } from "@/components/dashboard/timelog/TeamTimeCalendar";
 import { OnboardingGate } from "@/components/dashboard/shared/OnboardingGate";
 import { useDashboardAction } from "@/components/dashboard/shared/useDashboardAction";
 import { SelectField } from "@/components/dashboard/ui/forms";
@@ -189,6 +191,9 @@ export function TimelogPageClient() {
     currentMonthRef()
   );
 
+  // UI-only: Team time opens on the calendar; the week summary (HR/Admin) or the project list (managers) is one tab away.
+  const [teamViewMode, setTeamViewMode] = useState<"calendar" | "summary">("calendar");
+
   const [hrWeekDetail, setHrWeekDetail] = useState<{
     email: string;
     label: string;
@@ -237,6 +242,11 @@ export function TimelogPageClient() {
       })),
     [employeeOptions]
   );
+
+  // HR and Admin get the calendar on Team time; a project manager gets it next to their projects.
+  const hasTeamCalendar =
+    (isTeamView && (hasHrAccess || hasAdminAccess)) || (isProjectView && canSeeTeamTab);
+  const showTeamCalendar = hasTeamCalendar && teamViewMode === "calendar";
 
   const hrMonthlySummary = useHrMonthlyTimelogSummary(
     hrEmployees,
@@ -602,12 +612,31 @@ export function TimelogPageClient() {
               <MyWeeklyTimesheet />
             ) : null}
 
+            {hasTeamCalendar ? (
+              <SegmentedTabs
+                label="Team time view"
+                value={teamViewMode}
+                onChange={(value) => setTeamViewMode(value as "calendar" | "summary")}
+                options={[
+                  { value: "calendar", label: "Calendar" },
+                  { value: "summary", label: isProjectView ? "Projects" : "Summary" },
+                ]}
+              />
+            ) : null}
+
+            {showTeamCalendar ? (
+              <div className={INNER_PANEL_CLASS}>
+                <TeamTimeCalendar month={hrMonth} onMonthChange={setHrMonth} />
+              </div>
+            ) : null}
+
             {isProjectView &&
-            canSeeTeamTab ? (
+            canSeeTeamTab &&
+            !showTeamCalendar ? (
               <ProjectTimelogPanel enabled />
             ) : null}
 
-            {isHrTeamView ? (
+            {isHrTeamView && !showTeamCalendar ? (
               <div className={INNER_PANEL_CLASS}>
                 <HrMonthlyTimelogSummary
                   month={hrMonth}
@@ -640,7 +669,8 @@ export function TimelogPageClient() {
             ) : null}
 
             {isTeamView &&
-            !isHrTeamView ? (
+            !isHrTeamView &&
+            !showTeamCalendar ? (
               <div className={INNER_PANEL_CLASS}>
                 <PageSectionHeader
                   title="Team Time Logs"
