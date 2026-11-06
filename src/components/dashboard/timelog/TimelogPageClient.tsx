@@ -191,7 +191,7 @@ export function TimelogPageClient() {
     currentMonthRef()
   );
 
-  // UI-only: HR and Admin open Team time on the calendar; the old week-by-week summary is one tab away.
+  // UI-only: Team time opens on the calendar; the week summary (HR/Admin) or the project list (managers) is one tab away.
   const [teamViewMode, setTeamViewMode] = useState<"calendar" | "summary">("calendar");
 
   const [hrWeekDetail, setHrWeekDetail] = useState<{
@@ -243,8 +243,10 @@ export function TimelogPageClient() {
     [employeeOptions]
   );
 
-  const showTeamCalendar =
-    isTeamView && (hasHrAccess || hasAdminAccess) && teamViewMode === "calendar";
+  // HR and Admin get the calendar on Team time; a project manager gets it next to their projects.
+  const hasTeamCalendar =
+    (isTeamView && (hasHrAccess || hasAdminAccess)) || (isProjectView && canSeeTeamTab);
+  const showTeamCalendar = hasTeamCalendar && teamViewMode === "calendar";
 
   const hrMonthlySummary = useHrMonthlyTimelogSummary(
     hrEmployees,
@@ -610,27 +612,28 @@ export function TimelogPageClient() {
               <MyWeeklyTimesheet />
             ) : null}
 
-            {isProjectView &&
-            canSeeTeamTab ? (
-              <ProjectTimelogPanel enabled />
-            ) : null}
-
-            {isTeamView && (hasHrAccess || hasAdminAccess) ? (
+            {hasTeamCalendar ? (
               <SegmentedTabs
                 label="Team time view"
                 value={teamViewMode}
                 onChange={(value) => setTeamViewMode(value as "calendar" | "summary")}
                 options={[
                   { value: "calendar", label: "Calendar" },
-                  { value: "summary", label: "Summary" },
+                  { value: "summary", label: isProjectView ? "Projects" : "Summary" },
                 ]}
               />
             ) : null}
 
             {showTeamCalendar ? (
               <div className={INNER_PANEL_CLASS}>
-                <TeamTimeCalendar employees={hrEmployees} month={hrMonth} onMonthChange={setHrMonth} />
+                <TeamTimeCalendar month={hrMonth} onMonthChange={setHrMonth} />
               </div>
+            ) : null}
+
+            {isProjectView &&
+            canSeeTeamTab &&
+            !showTeamCalendar ? (
+              <ProjectTimelogPanel enabled />
             ) : null}
 
             {isHrTeamView && !showTeamCalendar ? (

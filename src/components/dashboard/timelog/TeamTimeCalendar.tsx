@@ -17,8 +17,6 @@ import {
   type TeamCalendarCell,
 } from "@/utils/timelog/teamCalendar";
 
-type Person = { email: string; label: string };
-
 const KIND_STYLE = Object.fromEntries(TEAM_CALENDAR_KINDS.map((k) => [k.kind, k])) as Record<
   TeamCalendarCell["kind"],
   (typeof TEAM_CALENDAR_KINDS)[number]
@@ -39,23 +37,21 @@ function cellTitle(cell: TeamCalendarCell, person: string, day: string): string 
 
 /** Month view of the team: who logged what each day, who was on leave or working from home, and the holidays. */
 export function TeamTimeCalendar({
-  employees,
   month,
   onMonthChange,
 }: {
-  employees: Person[];
   month: MonthRef;
   onMonthChange: (month: MonthRef) => void;
 }) {
   // UI-only: the search box.
   const [query, setQuery] = useState("");
-  const emails = useMemo(() => employees.map((e) => e.email), [employees]);
-  const data = useTeamTimeCalendar(emails, month, true);
+  const data = useTeamTimeCalendar(month);
   const holidayByDay = useMemo(() => mandatoryHolidays(data.holidays), [data.holidays]);
   const people = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return q ? employees.filter((e) => e.label.toLowerCase().includes(q) || e.email.includes(q)) : employees;
-  }, [employees, query]);
+    const everyone = data.people.map((p) => ({ email: p.email, label: p.name || p.email }));
+    return q ? everyone.filter((e) => e.label.toLowerCase().includes(q) || e.email.includes(q)) : everyone;
+  }, [data.people, query]);
   const isCurrentMonth = month.year === new Date().getFullYear() && month.month === new Date().getMonth();
 
   return (
@@ -82,7 +78,7 @@ export function TeamTimeCalendar({
               className="h-9 w-56 rounded-lg border border-wt-border bg-wt-surface-1 pr-3 pl-8 text-sm"
             />
           </label>
-          <RefreshIconButton onClick={data.reload} loading={data.loading} />
+          <RefreshIconButton onClick={data.reload} loading={data.refreshing} />
         </div>
       </div>
 
@@ -110,7 +106,7 @@ export function TeamTimeCalendar({
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{data.error}</div>
       ) : null}
 
-      {data.loading && !Object.keys(data.hoursByEmail).length ? (
+      {data.loading ? (
         <SectionLoading className="py-10" label={TEAM_CALENDAR_COPY.loading} />
       ) : !people.length ? (
         <p className="py-10 text-center text-sm text-wt-text-muted">{TEAM_CALENDAR_COPY.empty}</p>
