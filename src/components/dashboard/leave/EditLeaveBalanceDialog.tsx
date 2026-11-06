@@ -10,6 +10,7 @@ import { UI_COPY } from "@/constants/uiCopy";
 const BALANCE_FIELDS = [
   { key: "primary", label: "Primary" },
   { key: "secondary", label: "Secondary (incl. carry forward)" },
+  { key: "comp_off", label: "Comp-Off (available)" },
 ] as const;
 
 export function EditLeaveBalanceDialog({
@@ -25,7 +26,7 @@ export function EditLeaveBalanceDialog({
   onClose: () => void;
   onSaved: () => void | Promise<void>;
 }) {
-  const [values, setValues] = useState<Record<string, string>>({ primary: "0", secondary: "0" });
+  const [values, setValues] = useState<Record<string, string>>({ primary: "0", secondary: "0", comp_off: "0" });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -33,6 +34,7 @@ export function EditLeaveBalanceDialog({
     setValues({
       primary: String(employee.leave?.primary ?? 0),
       secondary: String(employee.leave?.secondary ?? 0),
+      comp_off: String(employee.comp_off_balance ?? 0),
     });
   }, [open, employee]);
 
@@ -49,6 +51,10 @@ export function EditLeaveBalanceDialog({
       const num = Number(values[field.key]);
       if (!Number.isFinite(num)) {
         showErrorToast(`Enter a valid ${field.label.toLowerCase()} balance.`);
+        return;
+      }
+      if (field.key === "comp_off" && num < 0) {
+        showErrorToast("Comp-off cannot be negative.");
         return;
       }
       parsed[field.key] = num;
@@ -72,7 +78,7 @@ export function EditLeaveBalanceDialog({
     <WtFormDialog
       open={open}
       title={employee ? `Edit Balance — ${employee.employee_name || employee.emp_id}` : "Edit Balance"}
-      description="Comp-off is earned/used separately and isn't editable here."
+      description="Setting comp-off adds or removes days so the available balance matches this number."
       onClose={onClose}
       onSubmit={() => void handleSubmit()}
       submitLabel={UI_COPY.saveChanges}

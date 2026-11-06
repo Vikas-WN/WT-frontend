@@ -1422,10 +1422,10 @@ export const hrmsService = {
     });
   },
 
-  /** PATCH /employee-profile/{empId}/balances — HR/Admin edit of primary/secondary/carry-forward (values may be negative). */
+  /** PATCH /employee-profile/{empId}/balances — HR/Admin edit of primary/secondary/carry-forward (values may be negative) and available comp-off (not negative). */
   updateLeaveBalance(
     empId: string,
-    payload: { primary?: number; secondary?: number; carry_forward?: number; year?: number; month?: number }
+    payload: { primary?: number; secondary?: number; carry_forward?: number; comp_off?: number; year?: number; month?: number }
   ) {
     return apiClient.patch<ApiEnvelope<LeaveBalancesListItem>>(endpoints.profile.employeeBalances(empId), {
       contentType: "application/json",
