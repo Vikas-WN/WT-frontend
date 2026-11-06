@@ -8,6 +8,9 @@ export type DayTimelogEntry = {
   primaryManagerEmails?: string[] | null;
   log_date: string;
   hours: number;
+  /** "HH:MM" — null on entries logged (in hours only) before start/end times were recorded. */
+  start_time?: string | null;
+  end_time?: string | null;
   task_category: string;
   sub_category: string | null;
   description: string | null;
@@ -26,7 +29,9 @@ export type DayTimelogEntryForm = {
   task_category: string;
   sub_category: string;
   description: string;
-  hours: string;
+  /** "HH:MM"; the entry's hours are worked out from these. */
+  start_time: string;
+  end_time: string;
 };
 
 export type DayEntriesMap = Record<string, DayTimelogEntry[]>;
@@ -42,6 +47,8 @@ export type CalendarDayInfo = {
   totalHours: number;
   /** Count of submitted/approved/rejected entries only (drafts excluded). */
   entryCount: number;
+  /** Set when this day is on approved leave. */
+  leave?: { label: string } | null;
   /** Count of draft entries, surfaced separately so they are not shown as logged entries. */
   draftCount: number;
 };

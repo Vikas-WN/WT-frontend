@@ -164,6 +164,8 @@ export function normalizeDayTimelogEntry(raw: unknown, fallbackId = 0): DayTimel
     primaryManagerEmails: managers,
     log_date,
     hours: Number.isFinite(hours) ? hours : 0,
+    start_time: readString(row.start_time, row.startTime).slice(0, 5) || null,
+    end_time: readString(row.end_time, row.endTime).slice(0, 5) || null,
     task_category: readString(row.task_category, row.taskCategory, row.category) || "GENERAL",
     sub_category: readString(row.sub_category, row.subCategory) || null,
     description: readString(row.description, row.comment) || null,

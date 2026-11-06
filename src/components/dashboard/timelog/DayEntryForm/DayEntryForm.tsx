@@ -30,6 +30,7 @@ import {
 import { FieldLabel, DatePickerField } from "@/components/dashboard/ui/forms";
 import { SearchableSelectCombobox } from "@/components/dashboard/ui/SearchableSelectCombobox";
 import { showErrorToast } from "@/lib/toast";
+import { formatDuration, hoursBetween, validateEntryTimes } from "@/utils/timelog/entryTimes";
 
 function emptyForm(): DayTimelogEntryForm {
   return {
@@ -39,7 +40,8 @@ function emptyForm(): DayTimelogEntryForm {
     task_category: "",
     sub_category: "",
     description: "",
-    hours: "",
+    start_time: "",
+    end_time: "",
   };
 }
 
@@ -52,7 +54,8 @@ function formForEntry(entry: DayTimelogEntry | null): DayTimelogEntryForm {
     task_category: entry.task_category ?? "",
     sub_category: entry.sub_category ?? "",
     description: entry.description ?? "",
-    hours: String(entry.hours ?? ""),
+    start_time: entry.start_time ?? "",
+    end_time: entry.end_time ?? "",
   };
 }
 
@@ -164,6 +167,8 @@ export function DayEntryForm({
     }
   }, [form.project_code, form.task_category, form.sub_category]);
 
+  const durationHours = hoursBetween(form.start_time, form.end_time);
+
   const validate = useCallback((): string | null => {
     if (!form.project_code) return "Select a project.";
     if (!form.project_manager.trim()) return "Select a project manager.";
@@ -173,9 +178,9 @@ export function DayEntryForm({
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     if (selectedDate > todayStr) return "Cannot log time for future dates.";
-    const hours = Number(form.hours);
-    if (!Number.isFinite(hours) || hours <= 0) return "Enter valid hours.";
-    if (hours > 24) return "Single entry cannot exceed 24 hours.";
+    const timesError = validateEntryTimes(form.start_time, form.end_time);
+    if (timesError) return timesError;
+    const hours = hoursBetween(form.start_time, form.end_time) ?? 0;
     const existing = entry ? dayTotalHours - entry.hours : dayTotalHours;
     if (existing + hours > 24) return "Total hours for this day would exceed 24.";
     return null;
@@ -318,21 +323,35 @@ export function DayEntryForm({
           ) : null}
 
           {form.project_code ? (
-            <label className={FORM_FIELD_CLASS}>
-              <FieldLabel label="Hours" required />
-              <input
-                type="text"
-                inputMode="decimal"
-                className={FORM_CONTROL_CLASS}
-                value={form.hours}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  if (raw !== "" && !/^\d*\.?\d{0,2}$/.test(raw)) return;
-                  setForm((prev) => ({ ...prev, hours: raw }));
-                }}
-                placeholder="0.5 - 24"
-              />
-            </label>
+            <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-2 gap-3">
+                <label className={FORM_FIELD_CLASS}>
+                  <FieldLabel label="From" required />
+                  <input
+                    type="time"
+                    className={FORM_CONTROL_CLASS}
+                    value={form.start_time}
+                    onChange={(e) => setForm((prev) => ({ ...prev, start_time: e.target.value }))}
+                  />
+                </label>
+                <label className={FORM_FIELD_CLASS}>
+                  <FieldLabel label="To" required />
+                  <input
+                    type="time"
+                    className={FORM_CONTROL_CLASS}
+                    value={form.end_time}
+                    onChange={(e) => setForm((prev) => ({ ...prev, end_time: e.target.value }))}
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-wt-text-muted" aria-live="polite">
+                {durationHours !== null
+                  ? `Time logged: ${formatDuration(durationHours)}`
+                  : entry && !entry.start_time
+                    ? `Logged earlier as ${entry.hours}h with no times — enter the from and to times.`
+                    : "Time logged is worked out from the from and to times."}
+              </p>
+            </div>
           ) : null}
         </div>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { formatTimeRange } from "@/utils/timelog/entryTimes";
 import { createPortal } from "react-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -132,8 +133,13 @@ export function DayEntriesPanel({
                             {entry.sub_category ? ` / ${entry.sub_category}` : ""}
                           </div>
                         </div>
-                        <div className="shrink-0 whitespace-nowrap text-sm font-semibold text-wt-text">
+                        <div className="shrink-0 text-right text-sm font-semibold whitespace-nowrap text-wt-text">
                           {entry.hours}h
+                          {formatTimeRange(entry.start_time, entry.end_time) ? (
+                            <div className="text-xs font-normal text-wt-text-muted tabular-nums">
+                              {formatTimeRange(entry.start_time, entry.end_time)}
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                       {entry.description ? (
