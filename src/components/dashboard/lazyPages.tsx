@@ -87,6 +87,12 @@ export const LazyReportsPageClient = lazyPage(
   "Loading reports…"
 );
 
+export const LazyLeaveYearReportPageClient = lazyPage(
+  () => import("@/components/dashboard/reports/LeaveYearReportPageClient"),
+  "LeaveYearReportPageClient",
+  "Loading yearly leave report…"
+);
+
 export const LazyLopReportPageClient = lazyPage(
   () => import("@/components/dashboard/reports/LopReportPageClient"),
   "LopReportPageClient",

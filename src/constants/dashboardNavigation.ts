@@ -310,6 +310,7 @@ export const dashboardNavigation: NavItem[] = [
       { id: "reports-section-7", label: "BGV Report Dashboard" },
       { id: "reports-heatmap", label: "Utilisation Heatmap" },
       { id: "reports-lop", label: "LOP Report" },
+      { id: "reports-leave-year", label: "Yearly Leave Report", roles: ["ROLE_HR", "ROLE_ADMIN"] },
     ],
   },
   { kind: "link", id: "masters", label: "Data management", roles: ["ROLE_HR", "ROLE_ADMIN"], icon: "layoutGrid" },
