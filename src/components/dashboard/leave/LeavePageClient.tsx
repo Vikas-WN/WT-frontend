@@ -143,7 +143,7 @@ import {
   isCompOffEarnRequestType,
   isEmployeeEditableUserRequest,
   listScopedUserRequests,
-  fetchPaginatedScopedUserRequests,
+  fetchAllScopedUserRequests,
   mergeStatusUpdateIntoRow,
   applyLeaveTeamRequestDecisions,
   patchLeaveTeamRequestStatus,
@@ -439,10 +439,13 @@ export function LeavePageClient() {
   const [employeeRequests, setEmployeeRequests] = useState<Array<Record<string, unknown>>>([]);
   const [teamTotalPages, setTeamTotalPages] = useState(0);
   const [teamTotalElements, setTeamTotalElements] = useState(0);
+  // True when the list hit the load cap, so the table is showing the newest rows rather than all of them.
+  const [teamRequestsTruncated, setTeamRequestsTruncated] = useState(false);
   const teamCacheRef = useRef<Map<string, {
     rows: Array<Record<string, unknown>>;
     totalPages: number;
     totalElements: number;
+    truncated?: boolean;
   }>>(new Map());
   const teamDecisionsRef = useRef<
     Map<string, { status: UserRequestStatusValue; reason?: string }>
@@ -1093,6 +1096,7 @@ export function LeavePageClient() {
     let rows: Array<Record<string, unknown>> = [];
     let totalPages = 1;
     let totalElements = 0;
+    let truncated = false;
 
     // Earn requests are not listed on /userRequest (API returns 400). Use /comp-off/earn.
     if (isCompOffEarnFilter) {
@@ -1137,16 +1141,15 @@ export function LeavePageClient() {
           : ([normalizedType] as const);
       const results = await Promise.all(
         teamTypes.map((type) =>
-          fetchPaginatedScopedUserRequests({
+          fetchAllScopedUserRequests({
             fromDate: from,
             toDate: to,
             requestType: type,
-            page: 0,
-            size: Math.max(size, 200),
             hrTeamScope: teamUsesHrScope,
           })
         )
       );
+      truncated = results.some((result) => result.truncated);
       const merged = results.flatMap((result) => result.rows);
       rows = Array.from(new Map(merged.map((row) => [requestRowKey(row), row] as const)).values());
       rows = filterTeamRequestsForPrimaryManager(rows, {
@@ -1183,14 +1186,13 @@ export function LeavePageClient() {
     } else if (canViewOrgLeaveRequests) {
       // All Employee Requests: the project-allocated side of the split. Managers see only
       // the allocated employees whose requests are routed to them; HR sees all of them.
-      const result = await fetchPaginatedScopedUserRequests({
+      const result = await fetchAllScopedUserRequests({
         fromDate: from,
         toDate: to,
         requestType,
-        page: 0,
-        size: Math.max(size, 200),
         orgScope: true,
       });
+      truncated = result.truncated;
       rows = applyListSort(result.rows, "created_desc", LEAVE_REQUEST_SORT_OPTIONS);
       totalElements = rows.length;
       totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
@@ -1282,11 +1284,13 @@ export function LeavePageClient() {
     setEmployeeRequests(withDecisions);
     setTeamTotalPages(totalPages);
     setTeamTotalElements(totalElements);
+    setTeamRequestsTruncated(truncated);
     const cacheKey = `${scope}:${employeeRequestFilters.fromDate}:${employeeRequestFilters.toDate}:${employeeRequestFilters.requestType}:0:200`;
     teamCacheRef.current.set(cacheKey, {
       rows: withDecisions,
       totalPages,
       totalElements,
+      truncated,
     });
   },
     [
@@ -1325,6 +1329,7 @@ export function LeavePageClient() {
             setEmployeeRequests(withDecisions);
             setTeamTotalPages(cached.totalPages);
             setTeamTotalElements(cached.totalElements);
+            setTeamRequestsTruncated(Boolean(cached.truncated));
             return;
           }
         }
@@ -1668,6 +1673,10 @@ export function LeavePageClient() {
     resetKeys: [myLeaveSortId, myLeaveSearch, leaveSubTab],
   });
 
+  // The highlight jumps run once per highlighted request. They used to run on every page change too, so after arriving
+  // from a notification the pager snapped straight back to the highlighted row's page whenever someone clicked Next.
+  const jumpedToHighlightRef = useRef({ my: "", team: "" });
+
   // Deep-link / highlight: jump to the page that contains the target request in
   // the employee's own "My Leave" / "WFH" history. Without this, a notification
   // (e.g. Leave Approved/Rejected) can point at a row that only exists on a later
@@ -1685,15 +1694,12 @@ export function LeavePageClient() {
       ).trim();
       return id === highlightRequestId;
     });
-    if (index < 0) return;
-    const targetPage = Math.floor(index / Math.max(myLeavePagination.pageSize, 1));
-    if (targetPage !== myLeavePagination.page) {
-      myLeavePagination.setPage(targetPage);
-    }
+    if (index < 0 || jumpedToHighlightRef.current.my === highlightRequestId) return;
+    jumpedToHighlightRef.current.my = highlightRequestId;
+    myLeavePagination.setPage(Math.floor(index / Math.max(myLeavePagination.pageSize, 1)));
   }, [
     highlightRequestId,
     activeSelfServeRequests,
-    myLeavePagination.page,
     myLeavePagination.pageSize,
     myLeavePagination.setPage,
   ]);
@@ -1725,15 +1731,12 @@ export function LeavePageClient() {
       ).trim();
       return id === highlightRequestId;
     });
-    if (index < 0) return;
-    const targetPage = Math.floor(index / Math.max(teamLeavePagination.pageSize, 1));
-    if (targetPage !== teamLeavePagination.page) {
-      teamLeavePagination.setPage(targetPage);
-    }
+    if (index < 0 || jumpedToHighlightRef.current.team === highlightRequestId) return;
+    jumpedToHighlightRef.current.team = highlightRequestId;
+    teamLeavePagination.setPage(Math.floor(index / Math.max(teamLeavePagination.pageSize, 1)));
   }, [
     highlightRequestId,
     sortedEmployeeRequests,
-    teamLeavePagination.page,
     teamLeavePagination.pageSize,
     teamLeavePagination.setPage,
   ]);
@@ -2844,6 +2847,12 @@ export function LeavePageClient() {
                               </TableBody>
                             </WtTable>
                           </ScrollableTable>
+                          {teamRequestsTruncated ? (
+                            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800" role="status">
+                              This list is very large, so only the newest {employeeRequests.length.toLocaleString()} requests are loaded. Narrow
+                              the date range or request type to see the rest.
+                            </p>
+                          ) : null}
                           {teamLeavePagination.showPagination ? (
                             <div className="border-t border-border/40 pt-4">
                               <ListPagination

@@ -38,6 +38,7 @@ import {
   pickManagerEmailList,
 } from "@/utils/leaveManagerDisplay";
 import { formatUiStatusLabel } from "@/utils/statusLabel";
+import { fetchAllPages } from "@/utils/fetchAllPages";
 
 export type UserRequestStatusValue = ApprovalStage;
 
@@ -216,6 +217,22 @@ export async function fetchPaginatedScopedUserRequests(params: {
 }
 
 
+
+/** Rows per request when loading a whole scoped list; the API allows up to 500. */
+const SCOPED_LIST_PAGE_SIZE = 500;
+
+/**
+ * Every page of a scoped list (Team / All Employee Requests), for screens that page and filter in the browser.
+ * See `fetchAllPages` for why a single page is not enough.
+ */
+export async function fetchAllScopedUserRequests(
+  params: Omit<Parameters<typeof fetchPaginatedScopedUserRequests>[0], "page" | "size">
+): Promise<{ rows: Array<Record<string, unknown>>; totalElements: number; truncated: boolean }> {
+  const all = await fetchAllPages((page) =>
+    fetchPaginatedScopedUserRequests({ ...params, page, size: SCOPED_LIST_PAGE_SIZE })
+  );
+  return { ...all, rows: dedupeUserRequestRows(all.rows) };
+}
 
 export const STAGE_USER_REQUEST_TYPES = ["LEAVE", "OPTIONAL", "WFH", "COMP_OFF"] as const;
 
