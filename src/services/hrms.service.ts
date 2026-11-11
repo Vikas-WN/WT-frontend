@@ -2556,6 +2556,13 @@ export const hrmsService = {
     });
   },
 
+  /** HR/Admin yearly leave workbook (January to December): who took leave on which dates, full and half days. */
+  async downloadYearlyLeaveReport(params: { year: number; department?: string }): Promise<Blob> {
+    const query: Record<string, string | number> = { year: params.year };
+    if (params.department?.trim()) query.department = params.department.trim();
+    return apiClient.get<Blob>(endpoints.hrReports.leaveYearExport, { query, responseType: "blob" });
+  },
+
   /** Email the monthly LOP report (xlsx attached) to the finance team. */
   sendLopReportToFinance(params: { year?: number; month?: number } = {}) {
     const query = Object.fromEntries(

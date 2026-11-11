@@ -121,6 +121,7 @@ export const APP_NAVIGATION: readonly AppNavSection[] = [
           { navId: "reports-section-6", label: "Compliance & risk" },
           { navId: "reports-section-7", label: "BGV dashboard" },
           { navId: "reports-lop", label: "LOP report" },
+          { navId: "reports-leave-year", label: "Yearly leave report" },
         ],
       },
     ],

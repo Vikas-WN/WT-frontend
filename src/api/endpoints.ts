@@ -462,6 +462,7 @@ export const endpoints = {
     lop: `${api}/reports/lop`,
     lopExport: `${api}/reports/lop/export`,
     lopSend: `${api}/reports/lop/send`,
+    leaveYearExport: `${api}/reports/leave-year/export`,
   },
   referral: {
     jobs: `${api}/jobs`,
