@@ -1,13 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { TEAM_CALENDAR_COPY, TEAM_CALENDAR_KINDS } from "@/constants/teamTimeCalendar";
 import { useTeamTimeCalendar } from "@/hooks/timelog/useTeamTimeCalendar";
 import { cn } from "@/lib/utils";
+import { showErrorToast, showSuccessToast } from "@/lib/toast";
+import { hrmsService } from "@/services/hrms.service";
+import { downloadBlob } from "@/utils/downloadBlob";
 import { formatMonthYearLabel, formatSummaryHours, shiftMonth, type MonthRef } from "@/utils/timelog/monthWeeks";
 import {
   isWeekend,
@@ -45,7 +48,21 @@ export function TeamTimeCalendar({
 }) {
   // UI-only: the search box.
   const [query, setQuery] = useState("");
+  const [downloading, setDownloading] = useState(false);
   const data = useTeamTimeCalendar(month);
+
+  const downloadPdf = async () => {
+    setDownloading(true);
+    try {
+      const blob = await hrmsService.downloadMonthlyTimelogPdf({ year: month.year, month: month.month + 1 });
+      downloadBlob(blob, `Timelogs_${month.year}-${String(month.month + 1).padStart(2, "0")}.pdf`);
+      showSuccessToast(TEAM_CALENDAR_COPY.downloadPdfDone);
+    } catch {
+      showErrorToast(TEAM_CALENDAR_COPY.downloadPdfFailed);
+    } finally {
+      setDownloading(false);
+    }
+  };
   const holidayByDay = useMemo(() => mandatoryHolidays(data.holidays), [data.holidays]);
   const people = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -78,6 +95,10 @@ export function TeamTimeCalendar({
               className="h-9 w-56 rounded-lg border border-wt-border bg-wt-surface-1 pr-3 pl-8 text-sm"
             />
           </label>
+          <Button variant="outline" size="sm" type="button" onClick={() => void downloadPdf()} disabled={downloading}>
+            <Download className="size-4" aria-hidden />
+            {downloading ? TEAM_CALENDAR_COPY.downloadingPdf : TEAM_CALENDAR_COPY.downloadPdf}
+          </Button>
           <RefreshIconButton onClick={data.reload} loading={data.refreshing} />
         </div>
       </div>

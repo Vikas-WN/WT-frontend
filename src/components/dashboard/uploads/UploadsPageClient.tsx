@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { CheckCircle2, Download, FileSpreadsheet, Upload, ArrowRight, AlertCircle } from "lucide-react";
+import { CheckCircle2, Download, FileSpreadsheet, FileText, Upload, ArrowRight, AlertCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DashboardPageShell } from "@/components/dashboard/DashboardPageShell";
 import { PageHero } from "@/components/dashboard/ui/PageHero";
@@ -10,6 +10,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/context/AuthContext";
 import { normalizeRoles } from "@/utils/roles";
 import { BULK_IMPORTS, type ImportDefinition } from "@/constants/bulkImports";
+import { exportImportTemplatePdf } from "@/utils/importTemplatePdf";
 import { validateImport, importCsv, csvCell, type ImportPreview } from "@/utils/bulkImportValidation";
 import { hrmsService } from "@/services/hrms.service";
 import { endpoints } from "@/api/endpoints";
@@ -91,7 +92,7 @@ export function UploadsPageClient() {
     {tab==="manage"?<AdminDataHub/>:<div className="grid items-start gap-5 xl:grid-cols-[260px_minmax(0,1fr)]">
       <nav aria-label="Import type" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">{BULK_IMPORTS.filter((item)=>!item.adminOnly||isAdmin).map((item)=><button key={item.id} type="button" disabled={busy} onClick={()=>choose(item)} aria-pressed={definition.id===item.id} className={`flex items-center gap-3 rounded-xl border p-3 text-left text-sm transition-colors ${definition.id===item.id?"border-wt-brand bg-wt-brand-soft text-wt-brand":"border-wt-border bg-wt-surface-1 text-wt-text hover:bg-wt-surface-2"}`}><FileSpreadsheet className="size-4 shrink-0"/><span className="flex-1 font-medium">{item.name}</span>{item.adminOnly?<span className="text-[10px]">Admin</span>:null}</button>)}</nav>
       <section className="min-w-0 space-y-6 rounded-2xl border border-wt-border bg-wt-surface-1 p-5 sm:p-7">
-        <header className="flex flex-wrap justify-between gap-4"><div><h2 className="font-[family-name:var(--font-brand)] text-xl font-semibold text-wt-text">{definition.name}</h2><p className="mt-2 text-sm text-wt-text-muted">{definition.description}</p></div><Button variant="outline" onClick={template}><Download className="size-4"/>CSV template</Button></header>
+        <header className="flex flex-wrap justify-between gap-4"><div><h2 className="font-[family-name:var(--font-brand)] text-xl font-semibold text-wt-text">{definition.name}</h2><p className="mt-2 text-sm text-wt-text-muted">{definition.description}</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" onClick={()=>void exportImportTemplatePdf(definition)}><FileText className="size-4"/>PDF guide</Button><Button variant="outline" onClick={template}><Download className="size-4"/>CSV template</Button></div></header>
         <p className="rounded-xl border border-wt-border bg-wt-surface-2 p-4 text-sm leading-relaxed text-wt-text-muted">{definition.behavior}</p>
         <div className="grid gap-3 sm:grid-cols-3">{["Download the template","Check your file","Review and import"].map((text,index)=><div key={text} className="flex items-center gap-2 text-xs font-medium text-wt-text-muted"><span className="grid size-6 place-items-center rounded-full bg-wt-brand-soft text-wt-brand">{index+1}</span>{text}</div>)}</div>
         <input ref={inputRef} type="file" accept=".csv,.xlsx" className="sr-only" aria-label="Choose import file" disabled={busy||reading} onChange={(event)=>{const file=event.target.files?.[0];if(file)void read(file);event.target.value="";}}/>

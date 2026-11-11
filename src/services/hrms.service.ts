@@ -2520,6 +2520,11 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<LopReportData>>(endpoints.hrReports.lop, { query });
   },
 
+  /** One-click branded PDF of every submitted timelog in a month (`month` is 1–12). Server scopes it to the actor. */
+  downloadMonthlyTimelogPdf(params: { year: number; month: number }): Promise<Blob> {
+    return apiClient.get<Blob>(endpoints.timelog.exportMonthlyPdf, { query: params, responseType: "blob" });
+  },
+
   /** Download the monthly LOP report as an .xlsx sheet. */
   async downloadLopReport(params: { year?: number; month?: number } = {}): Promise<Blob> {
     const query = Object.fromEntries(
