@@ -11,10 +11,7 @@ export const TEAM_CALENDAR_COPY = {
   holidaysHeading: "Holidays this month",
   noHolidays: "No holidays this month.",
   optionalSuffix: "optional",
-  downloadPdf: "Download PDF",
-  downloadingPdf: "Preparing PDF…",
-  downloadPdfDone: "Timelog PDF downloaded.",
-  downloadPdfFailed: "Could not download the timelog PDF. Try again.",
+  exportReport: "Export report",
   hint: "Hours are approved time logs. Leave and work from home are approved requests.",
 } as const;
 

@@ -8,9 +8,7 @@ import { SectionLoading } from "@/components/dashboard/ui/SectionLoading";
 import { TEAM_CALENDAR_COPY, TEAM_CALENDAR_KINDS } from "@/constants/teamTimeCalendar";
 import { useTeamTimeCalendar } from "@/hooks/timelog/useTeamTimeCalendar";
 import { cn } from "@/lib/utils";
-import { showErrorToast, showSuccessToast } from "@/lib/toast";
-import { hrmsService } from "@/services/hrms.service";
-import { downloadBlob } from "@/utils/downloadBlob";
+import { TimelogReportDialog } from "@/components/dashboard/timelog/TimelogReportDialog";
 import { formatMonthYearLabel, formatSummaryHours, shiftMonth, type MonthRef } from "@/utils/timelog/monthWeeks";
 import {
   isWeekend,
@@ -48,21 +46,8 @@ export function TeamTimeCalendar({
 }) {
   // UI-only: the search box.
   const [query, setQuery] = useState("");
-  const [downloading, setDownloading] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const data = useTeamTimeCalendar(month);
-
-  const downloadPdf = async () => {
-    setDownloading(true);
-    try {
-      const blob = await hrmsService.downloadMonthlyTimelogPdf({ year: month.year, month: month.month + 1 });
-      downloadBlob(blob, `Timelogs_${month.year}-${String(month.month + 1).padStart(2, "0")}.pdf`);
-      showSuccessToast(TEAM_CALENDAR_COPY.downloadPdfDone);
-    } catch {
-      showErrorToast(TEAM_CALENDAR_COPY.downloadPdfFailed);
-    } finally {
-      setDownloading(false);
-    }
-  };
   const holidayByDay = useMemo(() => mandatoryHolidays(data.holidays), [data.holidays]);
   const people = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -95,9 +80,9 @@ export function TeamTimeCalendar({
               className="h-9 w-56 rounded-lg border border-wt-border bg-wt-surface-1 pr-3 pl-8 text-sm"
             />
           </label>
-          <Button variant="outline" size="sm" type="button" onClick={() => void downloadPdf()} disabled={downloading}>
+          <Button variant="outline" size="sm" type="button" onClick={() => setExportOpen(true)}>
             <Download className="size-4" aria-hidden />
-            {downloading ? TEAM_CALENDAR_COPY.downloadingPdf : TEAM_CALENDAR_COPY.downloadPdf}
+            {TEAM_CALENDAR_COPY.exportReport}
           </Button>
           <RefreshIconButton onClick={data.reload} loading={data.refreshing} />
         </div>
@@ -132,7 +117,9 @@ export function TeamTimeCalendar({
       ) : !people.length ? (
         <p className="py-10 text-center text-sm text-wt-text-muted">{TEAM_CALENDAR_COPY.empty}</p>
       ) : (
-        <div className="max-h-[min(70vh,640px)] overflow-auto rounded-xl border border-wt-border">
+        // `isolate`: the sticky header/first column use z-20/z-30. Without their own stacking context those values compete with
+        // the app header (z-20), so the table painted over the notification panel that drops down from it.
+        <div className="isolate max-h-[min(70vh,640px)] overflow-auto rounded-xl border border-wt-border">
           <table className="w-max min-w-full border-separate border-spacing-0 text-xs">
             <thead className="sticky top-0 z-20 bg-wt-surface-1">
               <tr>
@@ -195,6 +182,8 @@ export function TeamTimeCalendar({
         </div>
       )}
       <p className="text-xs text-wt-text-muted">{TEAM_CALENDAR_COPY.hint}</p>
+      {/* Mounted only while open so the filters reset to the calendar's current month each time. */}
+      {exportOpen ? <TimelogReportDialog open initialMonth={month} onClose={() => setExportOpen(false)} /> : null}
     </div>
   );
 }
