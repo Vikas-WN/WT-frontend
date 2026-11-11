@@ -95,16 +95,19 @@ export function TimelogReportDialog({
   const generate = async () => {
     setBusy(true);
     try {
+      // Everything ticked is the same as nothing ticked ("all in scope"), and sending the full list would only bloat the URL.
+      const everyProject = visibleProjects.length > 0 && visibleProjects.every((p) => projects.has(p.code));
+      const everyPerson = visiblePeople.length > 0 && visiblePeople.every((p) => people.has(p.email));
       const blob = await hrmsService.downloadMonthlyTimelogPdf({
         year,
         month: month + 1,
-        projects: [...projects],
+        projects: everyProject ? [] : [...projects],
         managers: manager ? [manager] : [],
-        people: [...people],
+        people: everyPerson ? [] : [...people],
         statuses: [...statuses],
         includeEntries,
       });
-      const single = projects.size === 1 ? `_${[...projects][0]}` : "";
+      const single = !everyProject && projects.size === 1 ? `_${[...projects][0]}` : "";
       downloadBlob(blob, `Timelogs_${year}-${String(month + 1).padStart(2, "0")}${single}.pdf`);
       showSuccessToast(COPY.done);
       onClose();

@@ -37,6 +37,19 @@ export function MultiCheckList({
     return q ? items.filter((i) => `${i.label} ${i.hint ?? ""}`.toLowerCase().includes(q)) : items;
   }, [items, query]);
 
+  // "Select all" acts on what the search is showing, so it doubles as "select everything matching".
+  const selectedShown = shown.filter((i) => selected.has(i.value)).length;
+  const allShownSelected = shown.length > 0 && selectedShown === shown.length;
+  const someShownSelected = selectedShown > 0 && !allShownSelected;
+  const toggleAll = () => {
+    const next = new Set(selected);
+    for (const item of shown) {
+      if (allShownSelected) next.delete(item.value);
+      else next.add(item.value);
+    }
+    onChange(next);
+  };
+
   const toggle = (value: string) => {
     const next = new Set(selected);
     if (next.has(value)) next.delete(value);
@@ -70,6 +83,12 @@ export function MultiCheckList({
               placeholder={searchLabel}
               className="h-9 w-full bg-transparent pr-3 pl-9 text-sm outline-none"
             />
+          </label>
+        ) : null}
+        {shown.length > 1 ? (
+          <label className="flex cursor-pointer items-center gap-3 border-b border-wt-border bg-wt-surface-2 px-3 py-2 text-sm font-medium">
+            <Checkbox checked={allShownSelected} indeterminate={someShownSelected} onCheckedChange={toggleAll} />
+            <span className="min-w-0 flex-1">{query.trim() ? `Select all matching (${shown.length})` : `Select all (${shown.length})`}</span>
           </label>
         ) : null}
         <ul className="max-h-44 divide-y divide-wt-border overflow-y-auto">
