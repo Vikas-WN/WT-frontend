@@ -1,4 +1,5 @@
 import { endpoints } from "@/api/endpoints";
+import type { TimelogReportOptions, TimelogReportRequest } from "@/types/timelogReport";
 import { apiClient, type ApiEnvelope } from "@/api/httpClient";
 import { parseAllocationExtensionListResponse } from "@/utils/allocationExtension";
 import type { OnboardListData, OnboardListItem } from "@/types/onboard";
@@ -2520,9 +2521,28 @@ export const hrmsService = {
     return apiClient.get<ApiEnvelope<LopReportData>>(endpoints.hrReports.lop, { query });
   },
 
-  /** One-click branded PDF of every submitted timelog in a month (`month` is 1–12). Server scopes it to the actor. */
-  downloadMonthlyTimelogPdf(params: { year: number; month: number }): Promise<Blob> {
-    return apiClient.get<Blob>(endpoints.timelog.exportMonthlyPdf, { query: params, responseType: "blob" });
+  /** The projects, managers, people and statuses the signed-in person can filter the monthly timelog PDF by. */
+  getTimelogReportOptions() {
+    return apiClient.get<ApiEnvelope<TimelogReportOptions>>(endpoints.timelog.exportMonthlyPdfOptions);
+  },
+
+  /**
+   * Branded monthly timelog PDF: project manager → projects → people. Filters can only narrow what the server already
+   * allows this person to see; an empty filter means "everything in scope".
+   */
+  downloadMonthlyTimelogPdf(request: TimelogReportRequest): Promise<Blob> {
+    return apiClient.get<Blob>(endpoints.timelog.exportMonthlyPdf, {
+      query: {
+        year: request.year,
+        month: request.month,
+        projects: request.projects.join(","),
+        managers: request.managers.join(","),
+        people: request.people.join(","),
+        statuses: request.statuses.join(","),
+        includeEntries: String(request.includeEntries),
+      },
+      responseType: "blob",
+    });
   },
 
   /** Download the monthly LOP report as an .xlsx sheet. */

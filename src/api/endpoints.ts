@@ -110,6 +110,7 @@ export const endpoints = {
       employeeEntries: `${api}/timelog/employee/entries`,
       export: `${api}/export/timelogs`,
       exportMonthlyPdf: `${api}/timelog/export/monthly-pdf`,
+      exportMonthlyPdfOptions: `${api}/timelog/export/monthly-pdf/options`,
       projects: `${api}/timelog/projects`,
       projectWeekTotals: (projectCode: string) => `${api}/timelog/project/${encodeURIComponent(projectCode)}/week/totals`,
     },
