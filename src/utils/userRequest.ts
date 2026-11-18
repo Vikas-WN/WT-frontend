@@ -1,3 +1,4 @@
+import { wfhExceptionNeedsHr } from "@/utils/wfhException";
 import { ApiError } from "@/api/error";
 
 import { apiClient } from "@/api/httpClient";
@@ -544,6 +545,12 @@ export function canHrReviewUserRequest(
 }
 
 
+function wfhExceptionRowNeedsHr(row: Record<string, unknown>): boolean {
+  const from = parseApiDate(String(pickRowField(row, "request_from_date", "requestFromDate") ?? ""));
+  const to = parseApiDate(String(pickRowField(row, "request_to_date", "requestToDate") ?? ""));
+  return wfhExceptionNeedsHr(from, to);
+}
+
 /** Who may decide what once HR is only copied on a request. Mirrors `app/domain/request_hr_policy.py` on the backend. */
 export type HrPolicyOptions = { hasHrAccess: boolean; actorEmail?: string | null; today?: Date };
 
@@ -554,7 +561,7 @@ function startOfDay(value: Date): number {
 /**
  * Why HR cannot approve or reject this still-pending request — or null when they can. The reporting manager decides:
  * HR steps in on a leave only once its date has started, on a single-day WFH only once the day has passed, and never
- * on comp-off usage. A WFH exception (more than one day in a week) is HR's own decision, at any time. HR who are themselves the routed approver (HR employee, talent pool) are not limited.
+ * on comp-off usage. A long WFH exception (over 3 working days) is HR's own decision, at any time; a short one follows the WFH rule. HR who are themselves the routed approver (HR employee, talent pool) are not limited.
  */
 export function hrPolicyBlockHint(row: Record<string, unknown>, options: HrPolicyOptions): string | null {
   if (!options.hasHrAccess) return null;
@@ -572,6 +579,11 @@ export function hrPolicyBlockHint(row: Record<string, unknown>, options: HrPolic
     case "OPTIONAL":
     case "OPTIONAL_LEAVE":
       return from && startOfDay(from) > today ? "Manager decides — HR can step in once the leave date starts" : null;
+    case "WFH_EXCEPTION":
+    case "WORK_FROM_HOME_EXCEPTION":
+    case "CUSTOM_WFH":
+      if (wfhExceptionNeedsHr(from, to)) return null;
+      return to && startOfDay(to) >= today ? "Manager decides — HR can step in once the day has passed" : null;
     case "WFH":
       return to && startOfDay(to) >= today ? "Manager decides — HR can step in once the day has passed" : null;
     case "COMP_OFF":
@@ -690,8 +702,8 @@ export function canManagerActOnRequest(
   if (requestFinalStatus(row) !== "PENDING") return false;
 
   const requestType = pickRowField(row, "request_type", "requestType");
-  // More than one WFH day in a week is HR's decision alone; managers see the request and its status only.
-  if (isWfhExceptionRequestType(requestType)) return false;
+  // A long WFH exception is HR's decision alone; managers see the request and its status only. A short one is theirs.
+  if (isWfhExceptionRequestType(requestType) && wfhExceptionRowNeedsHr(row)) return false;
 
   // Leave/WFH/optional: one manager decision closes the request for everyone else.
   if (isLeaveOrWfhRequestType(requestType) && isLeaveRequestClosedForManagerAction(row)) {
