@@ -5,8 +5,7 @@ import { ApiError } from "@/api/error";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TextAreaField } from "@/components/dashboard/ui/forms";
-import { LeaveManagerSelector } from "@/components/dashboard/leave/LeaveManagerSelector";
-import { WFH_COPY, WFH_ERRORS, WFH_EXCEPTION_COPY } from "@/constants/wfhRequest";
+import { WFH_EXCEPTION_COPY } from "@/constants/wfhRequest";
 import { showErrorToast } from "@/lib/toast";
 import { compareApiDates, normalizeToApiDate, parseApiDate } from "@/utils/apiDate";
 import { useEffect, useState } from "react";
@@ -14,21 +13,13 @@ import { useEffect, useState } from "react";
 type WfhExceptionModalProps = {
   open: boolean;
   onClose: () => void;
-  /** Talent pool / bench: there is no manager to pick — the request goes to HR. */
-  routesToHr?: boolean;
-  onSubmit: (payload: {
-    request_from_date: string;
-    request_to_date: string;
-    comments: string;
-    manager_emails: string[];
-  }) => Promise<void>;
+  onSubmit: (payload: { request_from_date: string; request_to_date: string; comments: string }) => Promise<void>;
 };
 
-export function WfhExceptionModal({ open, onClose, onSubmit, routesToHr = false }: WfhExceptionModalProps) {
+export function WfhExceptionModal({ open, onClose, onSubmit }: WfhExceptionModalProps) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [reason, setReason] = useState("");
-  const [managerEmails, setManagerEmails] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -39,7 +30,6 @@ export function WfhExceptionModal({ open, onClose, onSubmit, routesToHr = false 
     setFromDate("");
     setToDate("");
     setReason("");
-    setManagerEmails([]);
     setSaving(false);
   }, [open]);
 
@@ -61,10 +51,6 @@ export function WfhExceptionModal({ open, onClose, onSubmit, routesToHr = false 
       showErrorToast("Start Date cannot be after the End Date.");
       return;
     }
-    if (!routesToHr && !managerEmails.length) {
-      showErrorToast(WFH_ERRORS.managerRequired);
-      return;
-    }
     if (!reason.trim()) {
       showErrorToast("Reason is required.");
       return;
@@ -80,7 +66,6 @@ export function WfhExceptionModal({ open, onClose, onSubmit, routesToHr = false 
         request_from_date: startDate,
         request_to_date: endDate,
         comments: reason.trim(),
-        manager_emails: routesToHr ? [] : managerEmails,
       });
       onClose();
     } catch (error) {
@@ -96,8 +81,7 @@ export function WfhExceptionModal({ open, onClose, onSubmit, routesToHr = false 
     }
   };
 
-  const canSubmit =
-    Boolean(fromDate.trim() && toDate.trim() && reason.trim() && (routesToHr || managerEmails.length)) && !saving;
+  const canSubmit = Boolean(fromDate.trim() && toDate.trim() && reason.trim()) && !saving;
 
   return (
     <div
@@ -118,7 +102,7 @@ export function WfhExceptionModal({ open, onClose, onSubmit, routesToHr = false 
           Request Additional Work From Home
         </h2>
         <p className="text-sm text-muted-foreground">
-          {routesToHr ? WFH_EXCEPTION_COPY.intro_hr : WFH_EXCEPTION_COPY.intro}
+          {WFH_EXCEPTION_COPY.intro}
         </p>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <DatePicker
@@ -138,15 +122,6 @@ export function WfhExceptionModal({ open, onClose, onSubmit, routesToHr = false 
             positionerClassName="z-[300]"
           />
         </div>
-        {routesToHr ? null : (
-          <LeaveManagerSelector
-            label={WFH_COPY.managersLabel}
-            required
-            selectedEmails={managerEmails}
-            onChange={setManagerEmails}
-            disabled={saving}
-          />
-        )}
         <TextAreaField
           label="Reason"
           value={reason}

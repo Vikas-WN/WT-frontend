@@ -1,5 +1,6 @@
 import { RequestStatusBadge } from "@/components/dashboard/ui/WtStatusBadge";
 import { cn } from "@/lib/utils";
+import { HALF_DAY_SUFFIX } from "@/constants/leaveRequest";
 import { formatUserRequestTypeLabel } from "@/utils/actionToast";
 import { formatShortRange } from "@/utils/shortDateRange";
 import type { HomeLeaveRequestItem } from "@/utils/homeLeaveRequests";
@@ -9,7 +10,7 @@ const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "
 /** A request as a small date tile (day over month) beside its type, dates and status — pending glows warm, approved cool. */
 export function LeaveRequestRow({ item }: { item: HomeLeaveRequestItem }) {
   const pending = item.status !== "APPROVED";
-  const range = formatShortRange(item.start, item.end);
+  const range = `${formatShortRange(item.start, item.end)}${item.isHalfDay ? HALF_DAY_SUFFIX : ""}`;
   return (
     <li className="flex items-center gap-3">
       <span
@@ -24,7 +25,7 @@ export function LeaveRequestRow({ item }: { item: HomeLeaveRequestItem }) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium text-wt-text">
-          {formatUserRequestTypeLabel(item.type, item.isHalfDay)}
+          {formatUserRequestTypeLabel(item.type)}
         </span>
         <span className="block truncate text-xs text-wt-text-muted">{range}</span>
       </span>

@@ -11,6 +11,7 @@ import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { giveFeedback } from "@/lib/feedback";
 import { notifyError, notifySuccess } from "@/lib/notify";
 import { cn } from "@/lib/utils";
+import { HALF_DAY_SUFFIX } from "@/constants/leaveRequest";
 import { formatUserRequestTypeLabel } from "@/utils/actionToast";
 import { approvalTab, canApproveInline } from "@/utils/homePendingApprovals";
 import type { PendingApprovalItem } from "@/utils/homePendingApprovals";
@@ -41,7 +42,8 @@ function PendingRow({ item, onApproved }: { item: PendingApprovalItem; onApprove
   // UI state: whether the approve call is in flight.
   const [busy, setBusy] = useState(false);
   const tab = approvalTab(item.type);
-  const range = item.start && item.end ? formatShortRange(item.start, item.end) : item.from;
+  const dates = item.start && item.end ? formatShortRange(item.start, item.end) : item.from;
+  const range = `${dates}${item.isHalfDay ? HALF_DAY_SUFFIX : ""}`;
   const tone = AVATAR_TONE[item.requester.length % AVATAR_TONE.length];
   const reviewHref = DASHBOARD_ROUTES["leave-team"];
   const inline = canApproveInline(item.type);
@@ -68,7 +70,7 @@ function PendingRow({ item, onApproved }: { item: PendingApprovalItem; onApprove
       <span className="min-w-[10rem] flex-1">
         <span className="block truncate text-[15px] font-semibold text-wt-text">{item.requester}</span>
         <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-wt-text-muted">
-          {tab !== "all" ? <span className={cn("rounded-md px-2 py-0.5 text-[13px] font-medium", TYPE_CHIP[tab])}>{formatUserRequestTypeLabel(item.type, item.isHalfDay)}</span> : <span>{formatUserRequestTypeLabel(item.type, item.isHalfDay)}</span>}
+          {tab !== "all" ? <span className={cn("rounded-md px-2 py-0.5 text-[13px] font-medium", TYPE_CHIP[tab])}>{formatUserRequestTypeLabel(item.type)}</span> : <span>{formatUserRequestTypeLabel(item.type)}</span>}
           <span className="truncate">{range}</span>
         </span>
       </span>

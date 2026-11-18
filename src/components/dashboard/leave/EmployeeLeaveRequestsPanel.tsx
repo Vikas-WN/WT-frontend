@@ -333,10 +333,7 @@ export function EmployeeLeaveRequestsPanel({
             <div>
               <dt className="text-wt-text-muted">Leave Type</dt>
               <dd className="font-medium">
-                {formatUserRequestTypeLabel(
-                  viewingRequest.request_type ?? viewingRequest.requestType,
-                  Boolean(viewingRequest.is_half_day ?? viewingRequest.isHalfDay)
-                )}
+                {formatUserRequestTypeLabel(viewingRequest.request_type ?? viewingRequest.requestType)}
               </dd>
             </div>
             <div>

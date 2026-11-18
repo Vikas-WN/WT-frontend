@@ -3,6 +3,8 @@
 import { giveFeedback } from "@/lib/feedback";
 import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Dialog } from "@base-ui/react/dialog";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SegmentedTabs } from "@/components/dashboard/ui/SegmentedTabs";
@@ -11,6 +13,7 @@ import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { LeaveRequestStatusBadge } from "@/components/dashboard/leave/LeaveRequestStatusBadge";
 import { RequestReversalActions } from "@/components/dashboard/leave/RequestReversalActions";
 import { useAuth } from "@/context/AuthContext";
+import { LEAVE_DECIDED_BY_SECONDARY_LABEL } from "@/constants/leaveRequest";
 import { UserRequestRejectDialog } from "@/components/dashboard/leave/UserRequestRejectDialog";
 import {
   primaryManagerInboxQueryKey,
@@ -26,7 +29,7 @@ import {
   canPrimaryManagerRejectOnLeave,
   canSecondaryManagerApproveOnLeave,
   canSecondaryManagerRejectOnLeave,
-  hasSecondaryLeaveManagers,
+  leaveDecidedBySecondary,
   isLeaveRequestClosedForManagerAction,
   requestSecondaryManagerStatus,
 } from "@/utils/leaveManagerDisplay";
@@ -55,6 +58,20 @@ function employeeDisplayName(row: Record<string, unknown>): string {
         "—"
     ).trim() || "—"
   );
+}
+
+function employeeIdentity(row: Record<string, unknown>): string {
+  const email = String(
+    row.emp_email ??
+      row.empEmail ??
+      row.employee_email ??
+      row.employeeEmail ??
+      row.email ??
+      row.user_email ??
+      row.userEmail ??
+      ""
+  ).trim().toLowerCase();
+  return email || employeeDisplayName(row).toLowerCase();
 }
 
 function requestIdFromRow(row: Record<string, unknown>): string {
@@ -113,6 +130,10 @@ export function LeaveApprovalsPanel({
     requestId: string;
     requestType: unknown;
   } | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<{
+    identity: string;
+    name: string;
+  } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   // Decisions made here that the server list has not caught up with yet (replaced, never mutated).
   const [decisions, setDecisions] = useState<
@@ -130,9 +151,31 @@ export function LeaveApprovalsPanel({
     [inboxQ.rows, decisions, inboxQ.dataUpdatedAt, actorEmail]
   );
 
+  const selectedEmployeePendingRows = useMemo(
+    () =>
+      selectedEmployee
+        ? displayRows.filter(
+            (row) =>
+              rowStatusFor(row) === "PENDING" &&
+              employeeIdentity(row) === selectedEmployee.identity
+          )
+        : [],
+    [displayRows, selectedEmployee]
+  );
+
   const tabCounts = useMemo(() => {
     const pending = displayRows.filter((row) => rowStatusFor(row) === "PENDING").length;
     return { pending, decided: displayRows.length - pending, all: displayRows.length };
+  }, [displayRows]);
+
+  const pendingCountsByEmployee = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const row of displayRows) {
+      if (rowStatusFor(row) !== "PENDING") continue;
+      const identity = employeeIdentity(row);
+      counts.set(identity, (counts.get(identity) ?? 0) + 1);
+    }
+    return counts;
   }, [displayRows]);
 
   const filteredRows = useMemo(() => {
@@ -302,8 +345,6 @@ export function LeaveApprovalsPanel({
               const toDate = String(rowRecord.request_to_date ?? rowRecord.requestToDate ?? "");
               const isHalfDay = Boolean(rowRecord.is_half_day ?? rowRecord.isHalfDay ?? false);
               const isUpdating = statusUpdatingId === requestId;
-              const primaryStage = requestManagerStatus(rowRecord);
-              const secondaryStage = requestSecondaryManagerStatus(rowRecord);
               const rowStatus = rowStatusFor(rowRecord);
               const canApprove =
                 canPrimaryManagerApproveOnLeave(rowRecord, actorEmail) ||
@@ -314,6 +355,8 @@ export function LeaveApprovalsPanel({
               const rejectionReason = rowStatus === "REJECTED" ? requestRejectionReason(rowRecord) : null;
               const leaveReason = String(rowRecord.comments ?? "").trim();
               const name = employeeDisplayName(rowRecord);
+              const identity = employeeIdentity(rowRecord);
+              const employeePendingCount = pendingCountsByEmployee.get(identity) ?? 0;
 
               return (
                 <li
@@ -325,9 +368,21 @@ export function LeaveApprovalsPanel({
                       {initials(name)}
                     </span>
                     <span className="min-w-0">
-                      <span className="block truncate text-[15px] font-semibold text-wt-text">{name}</span>
-                      <span className="mt-0.5 inline-block rounded-md bg-amber-500/14 px-2 py-0.5 text-[13px] font-medium text-amber-800 dark:text-amber-300">
-                        {formatUserRequestTypeLabel(rowRecord.request_type ?? rowRecord.requestType, isHalfDay)}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedEmployee({ identity, name })}
+                        aria-label={`View ${employeePendingCount} pending requests for ${name}`}
+                        className="block max-w-full truncate text-left text-[15px] font-semibold text-wt-text hover:text-[var(--wt-brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)]"
+                      >
+                        {name}
+                      </button>
+                      <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <span className="rounded-full bg-amber-500/12 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">
+                          {employeePendingCount} pending
+                        </span>
+                        <span className="rounded-md bg-amber-500/14 px-2 py-0.5 text-[13px] font-medium text-amber-800 dark:text-amber-300">
+                          {formatUserRequestTypeLabel(rowRecord.request_type ?? rowRecord.requestType)}
+                        </span>
                       </span>
                     </span>
                   </div>
@@ -347,10 +402,8 @@ export function LeaveApprovalsPanel({
                     {rowStatus !== "PENDING" || !(canApprove || canReject) ? (
                       <div className="flex flex-col items-end gap-1">
                         <LeaveRequestStatusBadge status={rowStatus} request={rowRecord} />
-                        {hasSecondaryLeaveManagers(rowRecord) && (primaryStage !== "PENDING" || secondaryStage !== "PENDING") ? (
-                          <p className="text-[11px] text-wt-text-muted">
-                            Primary: {primaryStage || "PENDING"} · Secondary: {secondaryStage || "PENDING"}
-                          </p>
+                        {leaveDecidedBySecondary(rowRecord) ? (
+                          <p className="text-[11px] text-wt-text-muted">{LEAVE_DECIDED_BY_SECONDARY_LABEL}</p>
                         ) : null}
                       </div>
                     ) : null}
@@ -458,6 +511,74 @@ export function LeaveApprovalsPanel({
         }
         loading={actionLoading}
       />
+
+      <Dialog.Root
+        open={selectedEmployee !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedEmployee(null);
+        }}
+      >
+        <Dialog.Portal>
+          <Dialog.Backdrop className="wt-modal-overlay fixed inset-0 z-[200] bg-slate-950/45 backdrop-blur-sm" />
+          <Dialog.Popup className="fixed left-1/2 top-1/2 z-[201] flex max-h-[calc(100dvh-32px)] w-[min(640px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-wt-border bg-wt-surface-1 text-wt-text shadow-[var(--wt-shadow-lg)] outline-none">
+            <header className="flex items-start justify-between gap-4 border-b border-wt-border px-6 py-5">
+              <div>
+                <Dialog.Title className="font-[family-name:var(--font-brand)] text-xl font-semibold tracking-tight">
+                  Pending requests for {selectedEmployee?.name}
+                </Dialog.Title>
+                <Dialog.Description className="mt-1 text-sm text-wt-text-muted">
+                  {selectedEmployeePendingRows.length} pending{" "}
+                  {selectedEmployeePendingRows.length === 1 ? "request" : "requests"}
+                </Dialog.Description>
+              </div>
+              <Dialog.Close
+                className="grid size-8 shrink-0 place-items-center rounded-lg text-wt-text-muted hover:bg-wt-surface-2"
+                aria-label="Close employee requests"
+              >
+                <X className="size-4" aria-hidden />
+              </Dialog.Close>
+            </header>
+            <div className="space-y-3 overflow-y-auto px-6 py-5">
+              {selectedEmployeePendingRows.length ? (
+                selectedEmployeePendingRows.map((row, index) => {
+                  const requestId = requestIdFromRow(row);
+                  const fromDate = String(row.request_from_date ?? row.requestFromDate ?? "");
+                  const toDate = String(row.request_to_date ?? row.requestToDate ?? "");
+                  const isHalfDay = Boolean(row.is_half_day ?? row.isHalfDay ?? false);
+                  const comments = String(row.comments ?? "").trim();
+
+                  return (
+                    <article
+                      key={`${requestId || "request"}-${index}`}
+                      className="rounded-xl border border-wt-border bg-wt-surface-1 px-4 py-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-semibold text-wt-text">
+                          {formatUserRequestTypeLabel(row.request_type ?? row.requestType)}
+                        </p>
+                        <LeaveRequestStatusBadge status="PENDING" request={row} />
+                      </div>
+                      <p className="mt-2 text-sm font-medium text-wt-text">
+                        {formatLeaveDateRange(fromDate, toDate, isHalfDay)}
+                      </p>
+                      <p className="text-sm text-wt-text-muted">
+                        {formatLeaveDaysCount(fromDate, toDate, isHalfDay, holidayDates)}
+                      </p>
+                      {comments ? (
+                        <p className="mt-2 whitespace-pre-wrap text-sm text-wt-text-muted">{comments}</p>
+                      ) : null}
+                    </article>
+                  );
+                })
+              ) : (
+                <p className="py-8 text-center text-sm text-wt-text-muted">
+                  No pending requests for this employee.
+                </p>
+              )}
+            </div>
+          </Dialog.Popup>
+        </Dialog.Portal>
+      </Dialog.Root>
     </>
   );
 }

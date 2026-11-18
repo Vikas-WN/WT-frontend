@@ -123,6 +123,7 @@ export const endpoints = {
       `${api}/userRequest/get/${encodeURIComponent(empEmails)}/${encodeURIComponent(fromDate)}/${encodeURIComponent(toDate)}/${encodeURIComponent(requestType)}`,
     status: `${api}/userRequest/status`,
     undo: `${api}/userRequest/undo`,
+    switchDecision: `${api}/userRequest/switchDecision`,
     cancel: `${api}/userRequest/cancel`,
     leaveManagerOptions: `${api}/leave-request/manager-options`, // @deprecated — use employees.managers
     leaveRecipientOptions: `${api}/leave-request/recipient-options`, // @deprecated — CC is server-assigned
