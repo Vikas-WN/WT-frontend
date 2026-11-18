@@ -167,6 +167,7 @@ import { useSelfProfile } from "@/hooks/useSelfProfile";
 import { buildUserRequestBody } from "@/utils/leaveRequestPayload";
 import { activeAllocationsRequireClientApproval, isTalentPoolLeaveRouting } from "@/utils/leaveAllocations";
 import { RequestReversalActions } from "@/components/dashboard/leave/RequestReversalActions";
+import { emailsNeedingNameLookup, mapWithConcurrency, NAME_LOOKUP_CONCURRENCY } from "@/utils/requestNameLookups";
 import { useLeaveAttachmentRequirement } from "@/hooks/leave/useLeaveAttachmentRequirement";
 import { leaveAttachmentService } from "@/services/leaveAttachment.service";
 import { LEAVE_ATTACHMENT_COPY, leaveAttachmentRequired } from "@/utils/leaveAttachmentRules";
@@ -1212,45 +1213,26 @@ export function LeavePageClient() {
       totalPages = Math.max(1, Math.ceil(totalElements / Math.max(size, 1)) || 1);
     }
 
-    const unresolvedEmails = [
-      ...new Set(
-        rows
-          .map((row) =>
-            String(
-              row.emp_email ??
-                row.empEmail ??
-                row.email ??
-                row.user_email ??
-                row.userEmail ??
-                row.employee_email ??
-                row.employeeEmail ??
-                ""
-            )
-              .trim()
-              .toLowerCase()
-          )
-          .filter((email) => Boolean(email) && !emailToName[email])
-      ),
-    ];
+    // Rows already carry employee_name; only look up people with no name anywhere, a few at a time (doc 10:
+    // looking up every employee in parallel made All Employee Requests take seconds to appear).
+    const unresolvedEmails = emailsNeedingNameLookup(rows, emailToName);
     const nameMap = { ...emailToName };
-    await Promise.all(
-      unresolvedEmails.map(async (email) => {
-        try {
-          const userRes = await hrmsService.getUser({ email });
-          const payload = ((userRes as { data?: unknown }).data ?? userRes) as
-            | Record<string, unknown>
-            | null;
-          if (!payload || typeof payload !== "object") return;
-          const nested =
-            (payload.user as Record<string, unknown> | undefined)?.name ??
-            (payload.profile as Record<string, unknown> | undefined)?.name;
-          const name = String(payload.name ?? nested ?? "").trim();
-          if (name) nameMap[email] = name;
-        } catch {
-          /* ignore lookup misses */
-        }
-      })
-    );
+    await mapWithConcurrency(unresolvedEmails, NAME_LOOKUP_CONCURRENCY, async (email) => {
+      try {
+        const userRes = await hrmsService.getUser({ email });
+        const payload = ((userRes as { data?: unknown }).data ?? userRes) as
+          | Record<string, unknown>
+          | null;
+        if (!payload || typeof payload !== "object") return;
+        const nested =
+          (payload.user as Record<string, unknown> | undefined)?.name ??
+          (payload.profile as Record<string, unknown> | undefined)?.name;
+        const name = String(payload.name ?? nested ?? "").trim();
+        if (name) nameMap[email] = name;
+      } catch {
+        /* ignore lookup misses */
+      }
+    });
     const enriched = rows.map((row) => {
       const email = String(
         row.email ??
