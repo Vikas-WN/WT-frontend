@@ -34,6 +34,43 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-11-18-01",
+    releasedOn: "2026-11-18",
+    title: "Leave and WFH: clearer approvals, easier cancelling",
+    highlights: [
+      {
+        area: "Approvals",
+        title: "Switch an approval to a rejection, or the other way round",
+        description:
+          "Next to a request you approved you now see Reject, and next to one you rejected, Approve. Use it to change your own decision until the end of the day the leave or WFH starts. The employee is told and the leave balance follows.",
+      },
+      {
+        area: "Approvals",
+        title: "A simpler Approval status column",
+        description:
+          "The status column is now called Approval status, and it only adds \"by Secondary\" when a secondary manager made the decision.",
+      },
+      {
+        area: "My requests",
+        title: "Cancel your approved leave or WFH up to the day it starts",
+        description:
+          "The 24-hour limit is gone: you can cancel an approved request any time until the end of the day it starts, and your balance is restored. Once the date has passed, the delete icon is greyed out and HR cancels it for you.",
+      },
+      {
+        area: "Work from home",
+        title: "More than one WFH day in a week is approved by HR",
+        description:
+          "A request for a second WFH day in a week, or several days at once, goes to HR. Managers see it on their list with its status, without Approve or Reject buttons.",
+      },
+      {
+        area: "My requests",
+        title: "Request type and number of days are shown separately",
+        description:
+          "Request type is now always Leave, Work from home or Comp Off. A half day shows as 0.5 in the new Days column.",
+      },
+    ],
+  },
+  {
     id: "2026-10-22-01",
     releasedOn: "2026-10-22",
     title: "A calmer workspace, built around your day",

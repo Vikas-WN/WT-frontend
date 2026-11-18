@@ -36,7 +36,11 @@ import { RefreshIconButton } from "@/components/dashboard/ui/RefreshIconButton";
 import { Inbox } from "lucide-react";
 import { formatUserRequestTypeLabel } from "@/utils/actionToast";
 import { Ban } from "lucide-react";
+import { DAYS_COLUMN_LABEL } from "@/constants/leaveRequest";
 import { REQUEST_REVERSAL_COPY } from "@/constants/requestReversal";
+import { useNonOptionalHolidayDates } from "@/hooks/leave/useNonOptionalHolidayDates";
+import { showWarningToast } from "@/lib/toast";
+import { formatLeaveDaysCount } from "@/utils/leaveRequestDisplay";
 import { canEmployeeCancelApproved, canHrCancelApproved } from "@/utils/userRequest";
 
 /** Today in the office time zone as yyyy-mm-dd, which is what "starts today or later" is measured against. */
@@ -86,6 +90,8 @@ export function MyLeaveRequestsView({
   /** Notification deep-link target: highlight and anchor scroll to this request. */
   highlightRequestId?: string;
 }) {
+  const holidayDates = useNonOptionalHolidayDates();
+  const columnCount = showRequestType ? 7 : 6;
   return (
     <div className="space-y-0">
       <div className="flex items-center justify-between pb-3 border-b border-border/50">
@@ -129,6 +135,7 @@ export function MyLeaveRequestsView({
                 />
               </TableHead>
               <TableHead className="font-semibold px-3">To</TableHead>
+              <TableHead className="font-semibold px-3 text-center">{DAYS_COLUMN_LABEL}</TableHead>
               {showRequestType ? <TableHead className="font-semibold px-3">Request Type</TableHead> : null}
               <TableHead className="font-semibold px-3">Status</TableHead>
               <TableHead className="font-semibold px-3">Comments</TableHead>
@@ -139,7 +146,7 @@ export function MyLeaveRequestsView({
             {loading ? (
               Array.from({ length: 5 }).map((_, rowIndex) => (
                 <TableRow key={`skeleton-${rowIndex}`}>
-                  {Array.from({ length: showRequestType ? 6 : 5 }).map((_, colIndex) => (
+                  {Array.from({ length: columnCount }).map((_, colIndex) => (
                     <TableCell key={colIndex} className="px-3 py-2.5">
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -179,12 +186,17 @@ export function MyLeaveRequestsView({
                         row.request_to_date ?? row.requestToDate ?? "—"
                       )}
                     </TableCell>
+                    <TableCell className="px-3 py-2.5 whitespace-nowrap text-center tabular-nums text-muted-foreground">
+                      {formatLeaveDaysCount(
+                        String(row.request_from_date ?? row.requestFromDate ?? ""),
+                        String(row.request_to_date ?? row.requestToDate ?? ""),
+                        Boolean(row.is_half_day ?? row.isHalfDay ?? false),
+                        holidayDates
+                      )}
+                    </TableCell>
                     {showRequestType ? (
                       <TableCell className="px-3 py-2.5 whitespace-nowrap text-muted-foreground">
-                        {formatUserRequestTypeLabel(
-                          row.request_type ?? row.requestType,
-                          Boolean(row.is_half_day ?? row.isHalfDay ?? false)
-                        )}
+                        {formatUserRequestTypeLabel(row.request_type ?? row.requestType)}
                       </TableCell>
                     ) : null}
                     <TableCell className="px-3 py-2.5 whitespace-nowrap">
@@ -253,7 +265,19 @@ export function MyLeaveRequestsView({
                           <Ban className="size-3" aria-hidden /> {REQUEST_REVERSAL_COPY.cancel}
                         </Button>
                       ) : canHrCancelApproved(row) ? (
-                        <span className="text-[11px] text-wt-text-muted">{REQUEST_REVERSAL_COPY.askHr}</span>
+                        // Looks disabled but stays hoverable and clickable, so the reason is always reachable.
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-disabled
+                          aria-label={REQUEST_REVERSAL_COPY.contactHr}
+                          title={REQUEST_REVERSAL_COPY.contactHr}
+                          onClick={() => showWarningToast(REQUEST_REVERSAL_COPY.contactHr, "contact-hr-to-cancel")}
+                          className="cursor-not-allowed text-muted-foreground/40 hover:bg-transparent hover:text-muted-foreground/40"
+                        >
+                          <IconTrash className="size-4" />
+                        </Button>
                       ) : (
                         <span className="text-muted-foreground/50">—</span>
                       )}
@@ -264,7 +288,7 @@ export function MyLeaveRequestsView({
             ) : (
               <TableRow className="hover:bg-transparent">
                 <TableCell
-                  colSpan={showRequestType ? 6 : 5}
+                  colSpan={columnCount}
                   className="h-[200px] text-center align-middle"
                 >
                   <div className="flex flex-col items-center gap-2">

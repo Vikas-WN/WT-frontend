@@ -174,7 +174,7 @@ export function MyPreviousLeaveRequestsCard({
                         </div>
                       </TableCell>
                       <TableCell className="px-3 py-2.5 whitespace-nowrap">
-                        {formatUserRequestTypeLabel(rowRecord.request_type ?? rowRecord.requestType, isHalfDay)}
+                        {formatUserRequestTypeLabel(rowRecord.request_type ?? rowRecord.requestType)}
                       </TableCell>
                       <TableCell className="px-3 py-2.5">
                         <div className="flex flex-col items-start gap-1">
