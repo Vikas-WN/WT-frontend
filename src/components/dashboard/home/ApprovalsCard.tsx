@@ -13,7 +13,7 @@ import { notifyError, notifySuccess } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import { HALF_DAY_SUFFIX } from "@/constants/leaveRequest";
 import { formatUserRequestTypeLabel } from "@/utils/actionToast";
-import { approvalTab, canApproveInline } from "@/utils/homePendingApprovals";
+import { approvalTab, canApproveInline, wfhExceptionNeedsHr } from "@/utils/homePendingApprovals";
 import type { PendingApprovalItem } from "@/utils/homePendingApprovals";
 import { formatShortRange } from "@/utils/shortDateRange";
 import { toUserFriendlyApiErrorMessage } from "@/utils/userFriendlyApiError";
@@ -38,7 +38,7 @@ function initials(name: string): string {
   );
 }
 
-function PendingRow({ item, onApproved }: { item: PendingApprovalItem; onApproved: () => void }) {
+function PendingRow({ item, canDecideException, onApproved }: { item: PendingApprovalItem; canDecideException: boolean; onApproved: () => void }) {
   // UI state: whether the approve call is in flight.
   const [busy, setBusy] = useState(false);
   const tab = approvalTab(item.type);
@@ -47,6 +47,8 @@ function PendingRow({ item, onApproved }: { item: PendingApprovalItem; onApprove
   const tone = AVATAR_TONE[item.requester.length % AVATAR_TONE.length];
   const reviewHref = DASHBOARD_ROUTES["leave-team"];
   const inline = canApproveInline(item.type);
+  // A custom WFH exception longer than the manager limit is HR/Admin only; managers can see it but not act (the API rejects it).
+  const locked = item.type === "WFH_EXCEPTION" && !canDecideException && wfhExceptionNeedsHr(item.start, item.end);
 
   const approve = async () => {
     setBusy(true);
@@ -75,6 +77,18 @@ function PendingRow({ item, onApproved }: { item: PendingApprovalItem; onApprove
         </span>
       </span>
       <span className="ml-auto flex shrink-0 items-center gap-2">
+        {locked ? (
+          <>
+            <span aria-disabled="true" title={HOME_APPROVALS_COPY.hrOnlyHint} className="inline-flex h-9 cursor-not-allowed items-center rounded-xl border border-wt-border bg-wt-surface-1 px-3.5 text-sm font-medium text-wt-text opacity-50">
+              {HOME_APPROVALS_COPY.decline}
+            </span>
+            <span aria-disabled="true" title={HOME_APPROVALS_COPY.hrOnlyHint} className="inline-flex h-9 cursor-not-allowed items-center gap-1.5 rounded-xl bg-[var(--wt-brand-soft)] px-3.5 text-sm font-semibold text-[var(--wt-brand)] opacity-50">
+              <Check className="size-4" aria-hidden />
+              {HOME_APPROVALS_COPY.approve}
+            </span>
+          </>
+        ) : (
+          <>
         <Link href={reviewHref} className="inline-flex h-9 items-center rounded-xl border border-wt-border bg-wt-surface-1 px-3.5 text-sm font-medium text-wt-text hover:bg-wt-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wt-brand)]" title={HOME_APPROVALS_COPY.declineHint}>
           {HOME_APPROVALS_COPY.decline}
         </Link>
@@ -93,13 +107,15 @@ function PendingRow({ item, onApproved }: { item: PendingApprovalItem; onApprove
             {HOME_APPROVALS_COPY.review}
           </Link>
         )}
+          </>
+        )}
       </span>
     </li>
   );
 }
 
 /** Approvers: what is waiting for a decision — filter by kind, and approve right here; declining (which needs a reason) opens the full review. */
-export function ApprovalsCard({ status, count, items }: { status: "loading" | "done" | "error"; count: number | null; items: readonly PendingApprovalItem[] }) {
+export function ApprovalsCard({ status, count, items, canDecideException }: { status: "loading" | "done" | "error"; count: number | null; items: readonly PendingApprovalItem[]; canDecideException: boolean }) {
   const queryClient = useQueryClient();
   // UI state: which tab of kinds is selected.
   const [tab, setTab] = useState<HomeApprovalsTab>("all");
@@ -150,7 +166,7 @@ export function ApprovalsCard({ status, count, items }: { status: "loading" | "d
           ) : (
             <ul>
               {shown.map((item) => (
-                <PendingRow key={item.id} item={item} onApproved={() => void queryClient.invalidateQueries({ queryKey: HOME_APPROVALS_QUERY_KEY })} />
+                <PendingRow key={item.id} item={item} canDecideException={canDecideException} onApproved={() => void queryClient.invalidateQueries({ queryKey: HOME_APPROVALS_QUERY_KEY })} />
               ))}
             </ul>
           )}
