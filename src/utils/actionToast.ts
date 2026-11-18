@@ -24,11 +24,11 @@ export function userRequestTypePhrase(type: unknown): string {
 }
 
 /** User-facing label for tables, filters, and selects (API values unchanged). */
-export function formatUserRequestTypeLabel(type: unknown, isHalfDay?: boolean): string {
+/** The kind of request. Half a day is a duration, not a type: lists show it as 0.5 in their Days column. */
+export function formatUserRequestTypeLabel(type: unknown): string {
   const raw = String(type ?? "").trim();
   if (!raw) return "—";
   const upper = raw.toUpperCase().replace(/[\s-]+/g, "_");
-  if (isHalfDay && upper === "LEAVE") return "Half Day";
   if (upper === "ALL") return "All types";
   if (upper === "WFH" || upper === "WORK_FROM_HOME") return "Work from home";
   if (upper === "WFH_EXCEPTION" || upper === "WORK_FROM_HOME_EXCEPTION") return "Work from home (Custom)";

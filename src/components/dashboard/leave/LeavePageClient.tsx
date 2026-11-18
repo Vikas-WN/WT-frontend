@@ -128,6 +128,7 @@ import {
   canPrimaryManagerRejectOnLeave,
   filterTeamRequestsForPrimaryManager,
   hasSecondaryLeaveManagers,
+  leaveDecidedBySecondary,
   isLeaveRequestClosedForManagerAction,
   pickManagerEmailList,
   requestSecondaryManagerStatus,
@@ -166,6 +167,7 @@ import { useSelfProfile } from "@/hooks/useSelfProfile";
 import { buildUserRequestBody } from "@/utils/leaveRequestPayload";
 import { activeAllocationsRequireClientApproval, isTalentPoolLeaveRouting } from "@/utils/leaveAllocations";
 import { RequestReversalActions } from "@/components/dashboard/leave/RequestReversalActions";
+import { LEAVE_DECIDED_BY_SECONDARY_LABEL } from "@/constants/leaveRequest";
 import { REQUEST_REVERSAL_COPY } from "@/constants/requestReversal";
 import { LeaveHowItWorks } from "@/components/dashboard/leave/LeaveHowItWorks";
 import { LeaveYearSummaryStrip } from "@/components/dashboard/leave/LeaveYearSummaryStrip";
@@ -2381,7 +2383,7 @@ export function LeavePageClient() {
                                     />
                                   </TableHead>
                                   <TableHead className="font-semibold px-4 text-center">Days</TableHead>
-                                  <TableHead className="font-semibold px-4">Manager status</TableHead>
+                                  <TableHead className="font-semibold px-4">Approval status</TableHead>
                                   <TableHead className="font-semibold px-4">Details</TableHead>
                                   {showTeamActionsColumn ? (
                                     <TableHead className="font-semibold px-4 text-right">Actions</TableHead>
@@ -2539,10 +2541,7 @@ export function LeavePageClient() {
                                           holidayDates
                                         );
                                     const comments = String(row.comments ?? "").trim();
-                                    const requestTypeLabel = formatUserRequestTypeLabel(
-                                      rowRequestType,
-                                      isHalfDay
-                                    );
+                                    const requestTypeLabel = formatUserRequestTypeLabel(rowRequestType);
                                     const hasDetails = managerReason || comments || requestTypeLabel;
                                     const statusBadgeClass =
                                       status === "APPROVED"
@@ -2653,12 +2652,9 @@ export function LeavePageClient() {
                                             ) : (
                                               <span className="text-xs text-muted-foreground">—</span>
                                             )}
-                                            {hasDualManagers &&
-                                            (managerStatus !== "PENDING" ||
-                                              secondaryStage !== "PENDING") ? (
+                                            {leaveDecidedBySecondary(rowRecord) ? (
                                               <p className="text-[11px] text-muted-foreground">
-                                                Primary: {managerStatus || "PENDING"} · Secondary:{" "}
-                                                {secondaryStage || "PENDING"}
+                                                {LEAVE_DECIDED_BY_SECONDARY_LABEL}
                                               </p>
                                             ) : null}
                                           </div>

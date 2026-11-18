@@ -553,8 +553,8 @@ function startOfDay(value: Date): number {
 
 /**
  * Why HR cannot approve or reject this still-pending request — or null when they can. The reporting manager decides:
- * HR steps in on a leave only once its date has started, on a WFH only once the day has passed, and never on comp-off
- * usage. HR who are themselves the routed approver (HR employee, talent pool) are not limited.
+ * HR steps in on a leave only once its date has started, on a single-day WFH only once the day has passed, and never
+ * on comp-off usage. A WFH exception (more than one day in a week) is HR's own decision, at any time. HR who are themselves the routed approver (HR employee, talent pool) are not limited.
  */
 export function hrPolicyBlockHint(row: Record<string, unknown>, options: HrPolicyOptions): string | null {
   if (!options.hasHrAccess) return null;
@@ -573,7 +573,6 @@ export function hrPolicyBlockHint(row: Record<string, unknown>, options: HrPolic
     case "OPTIONAL_LEAVE":
       return from && startOfDay(from) > today ? "Manager decides — HR can step in once the leave date starts" : null;
     case "WFH":
-    case "WFH_EXCEPTION":
       return to && startOfDay(to) >= today ? "Manager decides — HR can step in once the day has passed" : null;
     case "COMP_OFF":
       return "Manager decides — HR is copied";
@@ -691,11 +690,11 @@ export function canManagerActOnRequest(
   if (requestFinalStatus(row) !== "PENDING") return false;
 
   const requestType = pickRowField(row, "request_type", "requestType");
-  // Leave/WFH/custom WFH/optional: one manager decision closes the request for everyone else.
-  if (
-    (isLeaveOrWfhRequestType(requestType) || isWfhExceptionRequestType(requestType)) &&
-    isLeaveRequestClosedForManagerAction(row)
-  ) {
+  // More than one WFH day in a week is HR's decision alone; managers see the request and its status only.
+  if (isWfhExceptionRequestType(requestType)) return false;
+
+  // Leave/WFH/optional: one manager decision closes the request for everyone else.
+  if (isLeaveOrWfhRequestType(requestType) && isLeaveRequestClosedForManagerAction(row)) {
     return false;
   }
 
@@ -1135,7 +1134,10 @@ const REVERSIBLE_TYPES = new Set(["LEAVE", "OPTIONAL", "WFH", "WFH_EXCEPTION", "
 /** An approved comp-off credit is withdrawn by HR/Admin only, never by the employee. */
 const HR_ONLY_CANCEL_TYPES = new Set(["COMP_OFF_EARN"]);
 
-/** Seconds left to undo the latest decision on this row (server-measured), or 0 when it is final. */
+/**
+ * Seconds left to undo or switch the latest decision on this row (server-measured), or 0 when it is final. Leave/WFH:
+ * until the end of the day it starts (at least 24 hours); a comp-off credit: 24 hours.
+ */
 export function requestUndoSecondsLeft(row: Record<string, unknown>): number {
   const value = Number(pickRowField(row, "undo_seconds_left", "undoSecondsLeft"));
   return Number.isFinite(value) && value > 0 ? value : 0;
@@ -1146,20 +1148,13 @@ export function requestUndoByEmail(row: Record<string, unknown>): string {
   return String(pickRowField(row, "undo_by_email", "undoByEmail") ?? "").trim().toLowerCase();
 }
 
-/** Seconds left in the employee's own 24-hour cancel window (counted from submitting the request); 0 once it is over. */
-export function requestCancelSecondsLeft(row: Record<string, unknown>): number {
-  const value = Number(pickRowField(row, "cancel_seconds_left", "cancelSecondsLeft"));
-  return Number.isFinite(value) && value > 0 ? value : 0;
-}
-
 /**
- * Whether the employee can still cancel this approved request: within 24 hours of submitting it, and it has to start
- * today or later. Mirrors the backend rule; after that only HR can cancel it.
+ * Whether the employee can still cancel this approved request: any time until the end of the day it starts. Mirrors
+ * the backend rule; once the date has passed only HR can cancel it.
  */
 export function canEmployeeCancelApproved(row: Record<string, unknown>, todayIso: string): boolean {
   const type = String(pickRowField(row, "request_type", "requestType") ?? "").trim().toUpperCase();
   if (!REVERSIBLE_TYPES.has(type) || HR_ONLY_CANCEL_TYPES.has(type) || requestRowFinalStatus(row) !== "APPROVED") return false;
-  if (requestCancelSecondsLeft(row) <= 0) return false;
   const from = apiDateToInputValue(String(pickRowField(row, "request_from_date", "requestFromDate") ?? ""));
   return Boolean(from) && from >= todayIso;
 }
@@ -1174,6 +1169,26 @@ export async function undoUserRequestDecision(userRequestId: number, message?: s
   return apiClient.put<ApiEnvelope<unknown>>(endpoints.userRequest.undo, {
     contentType: "application/json",
     body: JSON.stringify({ user_request_id: Number(userRequestId), message: message?.trim() || null }),
+  });
+}
+
+/** Request types whose decision is switched straight to the opposite one; a comp-off credit is undone instead. */
+const SWITCHABLE_TYPES = new Set(["LEAVE", "OPTIONAL", "WFH", "WFH_EXCEPTION", "COMP_OFF"]);
+
+/** The decision the person who decided this row could switch it to, or null when it isn't a switchable row. */
+export function requestSwitchTarget(row: Record<string, unknown>): "APPROVED" | "REJECTED" | null {
+  const type = String(pickRowField(row, "request_type", "requestType") ?? "").trim().toUpperCase();
+  if (!SWITCHABLE_TYPES.has(type)) return null;
+  const status = requestRowFinalStatus(row);
+  if (status === "APPROVED") return "REJECTED";
+  return status === "REJECTED" ? "APPROVED" : null;
+}
+
+/** Switch your own approval to a rejection (a reason is required) or the reverse. */
+export async function switchUserRequestDecision(userRequestId: number, reason?: string): Promise<ApiEnvelope<unknown>> {
+  return apiClient.put<ApiEnvelope<unknown>>(endpoints.userRequest.switchDecision, {
+    contentType: "application/json",
+    body: JSON.stringify({ user_request_id: Number(userRequestId), message: reason?.trim() || null }),
   });
 }
 

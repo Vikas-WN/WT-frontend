@@ -1,3 +1,4 @@
+import { readApprovalDetails } from "@/utils/approvalHistory";
 import { normalizeRequestStatus, pickRowField } from "@/utils/compOff";
 import {
   isPendingApprovalStage,
@@ -272,4 +273,21 @@ export function filterTeamRequestsForPrimaryManager(
     if (!email) return false;
     return isAssignedLeaveManager(row, email);
   });
+}
+
+/**
+ * True when the decision standing on this leave/WFH request was made by a secondary manager. A primary manager's
+ * decision closes the request for everyone, so the secondary stage only says something when the secondary acted.
+ */
+export function leaveDecidedBySecondary(row: Record<string, unknown>): boolean {
+  if (!hasSecondaryLeaveManagers(row)) return false;
+  const finalStatus = requestFinalStatus(row);
+  if (finalStatus !== "APPROVED" && finalStatus !== "REJECTED") return false;
+  const standing = readApprovalDetails(row)
+    .history.filter((entry) => entry.action === "APPROVED" || entry.action === "REJECTED")
+    .at(-1);
+  const decidedBy = standing?.actioner_email?.toLowerCase();
+  if (!decidedBy || standing?.action !== finalStatus) return false;
+  const emails = (kind: "primary" | "secondary") => pickManagerEmailList(row, kind).map((email) => email.toLowerCase());
+  return emails("secondary").includes(decidedBy) && !emails("primary").includes(decidedBy);
 }
