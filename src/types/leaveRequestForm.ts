@@ -6,6 +6,8 @@ export interface LeaveRequestFormState {
   comments: string;
   is_half_day: boolean;
   client_approval: boolean;
+  /** The client-approval email already on the request (`s3://` reference) — kept when editing unless replaced. */
+  reference_file_url?: string | null;
 }
 
 /** A yes/no prompt the Leave page shows before running a destructive action. */

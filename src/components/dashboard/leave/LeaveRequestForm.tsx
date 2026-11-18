@@ -10,8 +10,15 @@ import { LeaveAdditionalRecipientsSelector } from "./LeaveAdditionalRecipientsSe
 import { LeaveImpactNotice } from "./LeaveImpactNotice";
 import { DatePicker } from "@/components/ui/date-picker";
 import { normalizeUserRequestType } from "@/utils/actionToast";
-import { useMemo } from "react";
-import { Eye, Info } from "lucide-react";
+import { useMemo, useRef } from "react";
+import { Eye, Info, Paperclip, X } from "lucide-react";
+import { documentHref } from "@/utils/documentLinks";
+import {
+  LEAVE_ATTACHMENT_ACCEPT,
+  LEAVE_ATTACHMENT_COPY,
+  leaveAttachmentFileProblem,
+} from "@/utils/leaveAttachmentRules";
+import { showErrorToast } from "@/lib/toast";
 
 interface LeaveRequestFormValues {
   request_from_date: string;
@@ -20,6 +27,7 @@ interface LeaveRequestFormValues {
   comments: string;
   is_half_day: boolean;
   client_approval: boolean;
+  reference_file_url?: string | null;
 }
 
 export function LeaveRequestForm({
@@ -37,6 +45,9 @@ export function LeaveRequestForm({
   onSubmit,
   onCancelEdit,
   onViewCompOffCredits,
+  attachmentRequired = false,
+  attachmentFile = null,
+  onAttachmentFileChange,
 }: {
   values: LeaveRequestFormValues;
   onChange: (values: LeaveRequestFormValues) => void;
@@ -53,7 +64,23 @@ export function LeaveRequestForm({
   onSubmit: () => void;
   onCancelEdit: () => void;
   onViewCompOffCredits?: () => void;
+  /** On-site employee applying for leave: the client's approval email is mandatory. */
+  attachmentRequired?: boolean;
+  /** A newly chosen file (uploaded on submit). */
+  attachmentFile?: File | null;
+  onAttachmentFileChange?: (file: File | null) => void;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const existingAttachmentHref = documentHref(values.reference_file_url);
+  const pickAttachment = (file: File | undefined) => {
+    if (!file) return;
+    const problem = leaveAttachmentFileProblem(file);
+    if (problem) {
+      showErrorToast(problem);
+      return;
+    }
+    onAttachmentFileChange?.(file);
+  };
   const normalizedType = normalizeUserRequestType(values.request_type);
   const isLeaveType = normalizedType === "LEAVE";
   const isLeaveOrOptional = normalizedType === "LEAVE" || normalizedType === "OPTIONAL";
@@ -253,6 +280,70 @@ export function LeaveRequestForm({
             id="leave-comments"
           />
         </Field>
+
+        {attachmentRequired ? (
+          <Field>
+            <FieldLabel htmlFor="leave-client-approval-email">
+              {LEAVE_ATTACHMENT_COPY.label}
+              <span className="text-destructive" aria-hidden>
+                *
+              </span>
+            </FieldLabel>
+            <p className="text-xs leading-relaxed text-wt-text-muted">{LEAVE_ATTACHMENT_COPY.hint}</p>
+            <input
+              ref={fileInputRef}
+              id="leave-client-approval-email"
+              type="file"
+              accept={LEAVE_ATTACHMENT_ACCEPT}
+              className="sr-only"
+              onChange={(e) => {
+                pickAttachment(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+            <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-dashed border-wt-border bg-wt-surface-2/40 px-3 py-2.5">
+              <Paperclip className="size-4 shrink-0 text-wt-text-muted" aria-hidden />
+              {attachmentFile ? (
+                <span className="min-w-0 flex-1 truncate text-sm text-wt-text" title={attachmentFile.name}>
+                  {attachmentFile.name}
+                </span>
+              ) : existingAttachmentHref ? (
+                <a
+                  href={existingAttachmentHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--wt-brand)] hover:underline"
+                >
+                  {LEAVE_ATTACHMENT_COPY.attached} · {LEAVE_ATTACHMENT_COPY.view}
+                </a>
+              ) : (
+                <span className="min-w-0 flex-1 text-sm text-wt-text-muted">No file chosen</span>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={actionLoading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {attachmentFile || existingAttachmentHref ? LEAVE_ATTACHMENT_COPY.replace : LEAVE_ATTACHMENT_COPY.choose}
+              </Button>
+              {attachmentFile ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={LEAVE_ATTACHMENT_COPY.remove}
+                  title={LEAVE_ATTACHMENT_COPY.remove}
+                  disabled={actionLoading}
+                  onClick={() => onAttachmentFileChange?.(null)}
+                >
+                  <X className="size-4" />
+                </Button>
+              ) : null}
+            </div>
+          </Field>
+        ) : null}
 
         <div className="flex justify-end pt-4 border-t border-border/40 mt-6">
           <div className="flex items-center gap-3">
