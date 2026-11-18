@@ -1,3 +1,5 @@
+export { WFH_EXCEPTION_MANAGER_MAX_DAYS, wfhExceptionNeedsHr } from "@/utils/wfhException";
+
 export interface PendingApprovalItem {
   id: string;
   requester: string;
@@ -63,3 +65,4 @@ export function approvalTab(type: string): "comp_off" | "wfh" | "leave" | "all" 
 export function canApproveInline(type: string): boolean {
   return approvalTab(type) === "leave" || approvalTab(type) === "wfh";
 }
+

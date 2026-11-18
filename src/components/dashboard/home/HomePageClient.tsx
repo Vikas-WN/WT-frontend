@@ -256,7 +256,7 @@ export function HomePageClient() {
     },
     approvals: {
       eligible: isApprover,
-      node: <ApprovalsCard status={approvals.status} count={approvals.count} items={approvals.items} />,
+      node: <ApprovalsCard status={approvals.status} count={approvals.count} items={approvals.items} canDecideException={canSeeOrgOut} />,
     },
     "leave-balance": {
       eligible: true,

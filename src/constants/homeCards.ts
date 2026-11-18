@@ -21,6 +21,7 @@ export const HOME_APPROVALS_COPY = {
   decline: "Decline…",
   declineHint: "Declining needs a reason, so this opens the full review",
   review: "Review",
+  hrOnlyHint: "Custom work-from-home requests longer than 3 working days are decided by HR",
   reviewAll: "Review all",
   nothingOfKind: "Nothing of this kind is waiting.",
   moreInQueue: (n: number) => `${n} more ${n === 1 ? "request" : "requests"} in your queue`,
