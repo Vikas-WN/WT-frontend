@@ -4,7 +4,9 @@ import { giveFeedback } from "@/lib/feedback";
 import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog } from "@base-ui/react/dialog";
-import { X } from "lucide-react";
+import { Paperclip, X } from "lucide-react";
+import { documentHref } from "@/utils/documentLinks";
+import { LEAVE_ATTACHMENT_COPY } from "@/utils/leaveAttachmentRules";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SegmentedTabs } from "@/components/dashboard/ui/SegmentedTabs";
@@ -354,6 +356,7 @@ export function LeaveApprovalsPanel({
                 canSecondaryManagerRejectOnLeave(rowRecord, actorEmail);
               const rejectionReason = rowStatus === "REJECTED" ? requestRejectionReason(rowRecord) : null;
               const leaveReason = String(rowRecord.comments ?? "").trim();
+              const attachmentHref = documentHref(rowRecord.reference_file_url ?? rowRecord.referenceFileUrl);
               const name = employeeDisplayName(rowRecord);
               const identity = employeeIdentity(rowRecord);
               const employeePendingCount = pendingCountsByEmployee.get(identity) ?? 0;
@@ -392,6 +395,17 @@ export function LeaveApprovalsPanel({
                   </div>
                   <div className="min-w-0 text-[15px] text-wt-text-muted">
                     {leaveReason ? <p className="line-clamp-2" title={leaveReason}>{leaveReason}</p> : <span aria-hidden>—</span>}
+                    {attachmentHref ? (
+                      <a
+                        href={attachmentHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-[var(--wt-brand)] hover:underline"
+                      >
+                        <Paperclip className="size-3.5" aria-hidden />
+                        {LEAVE_ATTACHMENT_COPY.detailLink}
+                      </a>
+                    ) : null}
                     {rejectionReason ? (
                       <p className="mt-1 truncate text-xs text-rose-700/90" title={rejectionReason}>
                         {rejectionReason}

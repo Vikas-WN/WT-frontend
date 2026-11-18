@@ -14,6 +14,8 @@ import {
 } from "@/components/dashboard/ui/uiLayout";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { documentHref } from "@/utils/documentLinks";
+import { LEAVE_ATTACHMENT_COPY } from "@/utils/leaveAttachmentRules";
 
 export type LeaveRequestDetailView = {
   requestId: string;
@@ -95,6 +97,8 @@ export function LeaveRequestDetailDialog({
   const headStatus = view.status || view.managerStatus || "PENDING";
   const stripe = STATUS_STRIPE[headStatus.toUpperCase()] ?? "bg-wt-border";
   const canAct = (view.canApprove || view.canReject) && Boolean(view.requestId);
+  // Stored attachments open through the access-checked download (the employee, their approvers and HR may open them).
+  const attachmentHref = documentHref(view.attachmentUrl);
   const hasDecisionReason = Boolean(view.managerReason || view.hrReason);
 
   return (
@@ -203,15 +207,15 @@ export function LeaveRequestDetailDialog({
             </div>
           ) : null}
 
-          {view.attachmentUrl ? (
+          {attachmentHref ? (
             <a
-              href={view.attachmentUrl}
+              href={attachmentHref}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm font-medium text-[var(--wt-brand)] hover:underline"
             >
               <Paperclip className="size-4" />
-              View attachment
+              {LEAVE_ATTACHMENT_COPY.detailLink}
             </a>
           ) : null}
         </div>

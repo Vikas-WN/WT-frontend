@@ -115,6 +115,11 @@ export const endpoints = {
       projectWeekTotals: (projectCode: string) => `${api}/timelog/project/${encodeURIComponent(projectCode)}/week/totals`,
     },
 
+  handbook: {
+    root: `${api}/handbook`,
+    /** The PDF itself, served inline — open it in a new tab for the browser's PDF viewer. */
+    file: `${api}/handbook/file`,
+  },
   userRequest: {
     root: `${api}/userRequest`,
     getRange: (fromDate: string, toDate: string, requestType: string) =>
@@ -124,6 +129,9 @@ export const endpoints = {
     status: `${api}/userRequest/status`,
     undo: `${api}/userRequest/undo`,
     switchDecision: `${api}/userRequest/switchDecision`,
+    /** Multipart upload of the client-approval email (on-site employees' leave). */
+    attachment: `${api}/userRequest/attachment`,
+    attachmentRequirement: `${api}/userRequest/attachment-requirement`,
     cancel: `${api}/userRequest/cancel`,
     leaveManagerOptions: `${api}/leave-request/manager-options`, // @deprecated — use employees.managers
     leaveRecipientOptions: `${api}/leave-request/recipient-options`, // @deprecated — CC is server-assigned

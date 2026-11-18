@@ -167,6 +167,9 @@ import { useSelfProfile } from "@/hooks/useSelfProfile";
 import { buildUserRequestBody } from "@/utils/leaveRequestPayload";
 import { activeAllocationsRequireClientApproval, isTalentPoolLeaveRouting } from "@/utils/leaveAllocations";
 import { RequestReversalActions } from "@/components/dashboard/leave/RequestReversalActions";
+import { useLeaveAttachmentRequirement } from "@/hooks/leave/useLeaveAttachmentRequirement";
+import { leaveAttachmentService } from "@/services/leaveAttachment.service";
+import { LEAVE_ATTACHMENT_COPY, leaveAttachmentRequired } from "@/utils/leaveAttachmentRules";
 import { LEAVE_DECIDED_BY_SECONDARY_LABEL } from "@/constants/leaveRequest";
 import { REQUEST_REVERSAL_COPY } from "@/constants/requestReversal";
 import { LeaveHowItWorks } from "@/components/dashboard/leave/LeaveHowItWorks";
@@ -827,6 +830,15 @@ export function LeavePageClient() {
   const requiresClientApproval = useMemo(
     () => activeAllocationsRequireClientApproval(myAllocationRowsForLeave),
     [myAllocationRowsForLeave]
+  );
+
+  // On-site employees attach the client's approval email to every leave request (the server owns the rule).
+  const leaveAttachmentRequirementQ = useLeaveAttachmentRequirement();
+  // UI state: the client-approval email chosen in the form, uploaded when the request is submitted.
+  const [leaveAttachmentFile, setLeaveAttachmentFile] = useState<File | null>(null);
+  const leaveAttachmentNeeded = leaveAttachmentRequired(
+    leaveAttachmentRequirementQ.data,
+    leaveRequestForm.request_type
   );
 
   const routesLeaveWfhToHr = useMemo(
@@ -1913,6 +1925,9 @@ export function LeavePageClient() {
                                     onAdditionalEmailsChange={setSelectedAdditionalRecipientEmails}
                                     editingLeaveRequestId={editingLeaveRequestId}
                                     requiresClientApproval={requiresClientApproval}
+                                    attachmentRequired={leaveAttachmentNeeded}
+                                    attachmentFile={leaveAttachmentFile}
+                                    onAttachmentFileChange={setLeaveAttachmentFile}
                                     routesToHr={routesLeaveWfhToHr}
                                     actionLoading={actionLoading || profileAssignedProjectsLoading}
                                     leaveRequestTypeOptions={leaveRequestTypeOptions}
@@ -1963,6 +1978,13 @@ export function LeavePageClient() {
                                         if (needsClientApproval && !leaveRequestForm.client_approval) {
                                           missingFields.push("Client approval confirmation");
                                         }
+                                        if (
+                                          leaveAttachmentNeeded &&
+                                          !leaveAttachmentFile &&
+                                          !leaveRequestForm.reference_file_url
+                                        ) {
+                                          missingFields.push(LEAVE_ATTACHMENT_COPY.missing);
+                                        }
                                         
                                         if (
                                           !routesLeaveWfhToHr &&
@@ -1997,6 +2019,7 @@ export function LeavePageClient() {
                                             [REASON_COPY.validation(REQUEST_REASON_MAX_LENGTH)]: "leave-comments",
                                             "Valid Half-day date (From and To Date must be the same)": "leave-from-date",
                                             "Client approval confirmation": "client-approval",
+                                            [LEAVE_ATTACHMENT_COPY.missing]: "leave-client-approval-email",
                                             "At least one Primary Manager": "leave-primary-managers",
                                             "At least one Secondary Manager": "leave-secondary-managers",
                                             "Leave Type": "leave-request-type",
@@ -2132,6 +2155,12 @@ export function LeavePageClient() {
                                             // If grants cannot be loaded, let the backend enforce the rule.
                                           }
                                         }
+                                        // Upload the client-approval email first; the request then names it.
+                                        let referenceFileUrl = leaveRequestForm.reference_file_url ?? null;
+                                        if (leaveAttachmentFile && leaveAttachmentNeeded) {
+                                          const uploaded = await leaveAttachmentService.upload(leaveAttachmentFile);
+                                          referenceFileUrl = uploaded.reference_file_url;
+                                        }
                                         const payload = buildUserRequestBody(
                                           {
                                             request_from_date: fromDate,
@@ -2139,6 +2168,7 @@ export function LeavePageClient() {
                                             request_type: requestType,
                                             comments,
                                             is_half_day: leaveRequestForm.is_half_day,
+                                            reference_file_url: referenceFileUrl,
                                             client_approval: needsClientApproval
                                               ? leaveRequestForm.client_approval
                                               : undefined,
@@ -2169,6 +2199,7 @@ export function LeavePageClient() {
                                           });
                                         }
                                         setLeaveRequestForm(createDefaultLeaveRequestForm());
+                                        setLeaveAttachmentFile(null);
                                         setSelectedLeaveManagerEmails([]);
                                         setSelectedAdditionalRecipientEmails([]);
                                         setEditingLeaveRequestId("");
@@ -2182,6 +2213,7 @@ export function LeavePageClient() {
                                     }
                                     onCancelEdit={() => {
                                       setLeaveRequestForm(createDefaultLeaveRequestForm());
+                                      setLeaveAttachmentFile(null);
                                       setSelectedLeaveManagerEmails([]);
                                       setSelectedAdditionalRecipientEmails([]);
                                       setEditingLeaveRequestId("");
@@ -2221,7 +2253,10 @@ export function LeavePageClient() {
                                         comments: String(row.comments ?? ""),
                                         is_half_day: Boolean(row.is_half_day ?? row.isHalfDay ?? false),
                                         client_approval: false,
+                                        reference_file_url:
+                                          String(row.reference_file_url ?? row.referenceFileUrl ?? "").trim() || null,
                                       });
+                                      setLeaveAttachmentFile(null);
                                       setSelectedLeaveManagerEmails(
                                         pickManagerEmailList(row, "primary")
                                       );
