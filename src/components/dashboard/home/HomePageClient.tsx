@@ -29,6 +29,7 @@ import { TodaysCelebrationsBanner } from "@/components/dashboard/home/TodaysCele
 import { LeaveBalanceCard } from "@/components/dashboard/home/LeaveBalanceCard";
 import { ApprovalsCard } from "@/components/dashboard/home/ApprovalsCard";
 import { AttendanceCard } from "@/components/dashboard/home/AttendanceCard";
+import { HandbookCard } from "@/components/dashboard/home/HandbookCard";
 import { DashboardWidgetFrame } from "@/components/dashboard/home/DashboardWidgetFrame";
 import { useHomeDashboardLayout } from "@/hooks/dashboard/useHomeDashboardLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -90,6 +91,7 @@ function greeting(): string {
 const HOME_WIDGET_IDS = [
   "approvals",
   "leave-balance",
+  "handbook",
   "attendance",
   "holidays",
   "learning",
@@ -110,6 +112,7 @@ const HOME_WIDGET_TITLES: Record<string, string> = {
   projects: "My Projects",
   holidays: "Upcoming Holidays",
   celebrations: "Celebrations",
+  handbook: "Employee Handbook",
 };
 
 /** Thin completion bar for the Learning card. */
@@ -258,6 +261,11 @@ export function HomePageClient() {
     "leave-balance": {
       eligible: true,
       node: <LeaveBalanceCard />,
+    },
+    handbook: {
+      eligible: true,
+      // Everyone reads it; only Admin uploads a new version.
+      node: <HandbookCard canUpload={roles.includes("ROLE_ADMIN")} />,
     },
     learning: {
       eligible: true,
