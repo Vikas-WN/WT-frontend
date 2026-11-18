@@ -1,6 +1,7 @@
 "use client";
 
 import { InputField } from "@/components/dashboard/ui/forms";
+import { ModalPortal } from "@/components/dashboard/ui/ModalPortal";
 import { Button } from "@/components/ui/button";
 
 type UserRequestRejectDialogProps = {
@@ -36,9 +37,13 @@ export function UserRequestRejectDialog({
 }: UserRequestRejectDialogProps) {
   if (!open) return null;
 
+  // Portalled to <body>: opened from a table's actions cell it used to inherit that cell's `whitespace-nowrap` and
+  // right alignment (the description ran off the dialog), and a `fixed` overlay inside a transformed row is boxed
+  // into the row instead of covering the screen.
   return (
+    <ModalPortal onEscape={loading ? undefined : onCancel}>
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 dark:bg-black/60"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4 dark:bg-black/60"
       role="presentation"
       onClick={onCancel}
     >
@@ -46,13 +51,13 @@ export function UserRequestRejectDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="user-request-reject-title"
-        className="w-full max-w-md rounded-2xl border border-wt-border bg-wt-surface-1 p-5 shadow-xl space-y-4"
+        className="w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-wt-border bg-wt-surface-1 p-5 shadow-xl space-y-4 text-left whitespace-normal break-words"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="user-request-reject-title" className="text-base font-semibold text-wt-text">
           {title}
         </h2>
-        <p className="text-sm text-wt-text-muted">{description}</p>
+        <p className="text-sm leading-relaxed text-wt-text-muted">{description}</p>
         <InputField
           label={reasonLabel}
           value={reason}
@@ -74,5 +79,6 @@ export function UserRequestRejectDialog({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

@@ -10,5 +10,6 @@ export function createDefaultLeaveRequestForm(): LeaveRequestFormState {
     comments: "",
     is_half_day: false,
     client_approval: false,
+    reference_file_url: null,
   };
 }

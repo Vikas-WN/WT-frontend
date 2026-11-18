@@ -34,6 +34,30 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    id: "2026-11-18-02",
+    releasedOn: "2026-11-18",
+    title: "Employee Handbook on Home, and client approval for on-site leave",
+    highlights: [
+      {
+        area: "Home",
+        title: "The Employee Handbook is one click away",
+        description:
+          "A new Employee Handbook card on Home opens the latest handbook in a new tab, where you can search, zoom and download it. Admins upload new versions from the same card.",
+      },
+      {
+        area: "Leave",
+        title: "On-site? Attach the client's approval email",
+        description:
+          "If you work on-site at a client, a leave request now needs a screenshot or PDF of the client's email approving it. Your managers and HR can open it from the request.",
+      },
+      {
+        area: "Approvals",
+        title: "The reject dialog reads properly",
+        description: "The reason dialog for rejecting or switching a decision no longer cuts off its text inside the list.",
+      },
+    ],
+  },
+  {
     id: "2026-11-18-01",
     releasedOn: "2026-11-18",
     title: "Leave and WFH: clearer approvals, easier cancelling",
