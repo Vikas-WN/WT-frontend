@@ -20,4 +20,6 @@ test("left and right steps alternate and the gait repeats after one stride", () 
 test("different characters have distinct step cadence and speed", () => {
   assert.ok(COMPANION_MOTION.pikachu.speed > COMPANION_MOTION.charmander.speed);
   assert.ok(COMPANION_MOTION.virat.bob < COMPANION_MOTION.pikachu.bob);
+  assert.ok(COMPANION_MOTION.dhoni.bob < COMPANION_MOTION.pikachu.bob);
+  assert.notDeepEqual(COMPANION_MOTION.dhoni, COMPANION_MOTION.virat);
 });
