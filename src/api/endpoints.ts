@@ -35,8 +35,6 @@ export const endpoints = {
     employeeBalances: (empId: string) =>
       `${api}/employee-profile/${encodeURIComponent(empId)}/balances`,
     nextBandKpis: `${api}/profile/next-band-kpis`,
-    employeeNextBandKpis: (empId: string) =>
-      `${api}/employee-profile/${encodeURIComponent(empId)}/next-band-kpis`,
   },
 
   employeeResume: {

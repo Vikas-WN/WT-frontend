@@ -8,18 +8,15 @@ import {
 } from "@/constants/nextBandKpis";
 import { nextBandKpisService } from "@/services/nextBandKpis.service";
 
-/** Own KPIs when `empId` is omitted; otherwise the given employee's (HR/Admin only). */
-export function useNextBandKpis(options: { empId?: string; enabled?: boolean } = {}) {
-  const { empId, enabled = true } = options;
+/** The signed-in employee's own next-band KPIs. */
+export function useNextBandKpis() {
   const { user } = useAuth();
-  const scope = empId ?? user?.email ?? "anonymous";
 
   return useQuery({
-    queryKey: [...NEXT_BAND_KPIS_QUERY_KEY, scope] as const,
-    enabled: enabled && Boolean(user),
+    queryKey: [...NEXT_BAND_KPIS_QUERY_KEY, user?.email ?? "anonymous"] as const,
+    enabled: Boolean(user),
     staleTime: NEXT_BAND_KPIS_STALE_TIME_MS,
     retry: false,
-    queryFn: () =>
-      empId ? nextBandKpisService.getForEmployee(empId) : nextBandKpisService.getMine(),
+    queryFn: nextBandKpisService.getMine,
   });
 }

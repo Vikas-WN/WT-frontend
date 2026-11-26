@@ -1,5 +1,6 @@
 export type NextBandKpi = {
   kpi_name: string;
+  /** Returned by the API but intentionally not shown in the UI. */
   weightage: number;
 };
 
