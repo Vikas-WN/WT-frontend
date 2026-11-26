@@ -17,10 +17,8 @@ import { SubmissionPortalPanel } from "@/components/dashboard/pulse/SubmissionPo
 import { SubmissionsReviewPanel } from "@/components/dashboard/pulse/SubmissionsReviewPanel";
 import { EmployeeMonthlyReviewPanel } from "@/components/dashboard/pulse/employee/EmployeeMonthlyReviewPanel";
 import { MyKpiSummaryPanel } from "@/components/dashboard/pulse/employee/MyKpiSummaryPanel";
-import { PathToPromotionPanel } from "@/components/dashboard/pulse/employee/promotion/PathToPromotionPanel";
 import { ManagerTeamReviewPanel } from "@/components/dashboard/pulse/manager/ManagerTeamReviewPanel";
 import { useAuth } from "@/context/AuthContext";
-import { NEXT_BAND_KPIS_COPY } from "@/constants/nextBandKpis";
 import { normalizeRoles } from "@/utils/roles";
 
 /** Pulse: everyone's monthly KPI self-review, in one place — employees and
@@ -103,12 +101,11 @@ function PulseTabsPage<T extends string>({
   );
 }
 
-type EmployeeTab = "review" | "history" | "promotion";
+type EmployeeTab = "review" | "history";
 
 const EMPLOYEE_TABS: readonly TabItem<EmployeeTab>[] = [
   { value: "review", label: "My Review" },
   { value: "history", label: "My KPI Summary" },
-  { value: "promotion", label: NEXT_BAND_KPIS_COPY.tabLabel },
 ];
 const EMPLOYEE_LINKS: Partial<Record<PulseTabLink, EmployeeTab>> = { "my-review": "review" };
 
@@ -119,26 +116,17 @@ function PulseEmployeePageClient() {
       initial="review"
       items={EMPLOYEE_TABS}
       links={EMPLOYEE_LINKS}
-      render={(tab) =>
-        tab === "review" ? (
-          <EmployeeMonthlyReviewPanel />
-        ) : tab === "history" ? (
-          <MyKpiSummaryPanel />
-        ) : (
-          <PathToPromotionPanel />
-        )
-      }
+      render={(tab) => (tab === "review" ? <EmployeeMonthlyReviewPanel /> : <MyKpiSummaryPanel />)}
     />
   );
 }
 
-type ManagerTab = "team" | "review" | "history" | "promotion";
+type ManagerTab = "team" | "review" | "history";
 
 const MANAGER_TABS: readonly TabItem<ManagerTab>[] = [
   { value: "team", label: "Team Reviews" },
   { value: "review", label: "My Review" },
   { value: "history", label: "My KPI Summary" },
-  { value: "promotion", label: NEXT_BAND_KPIS_COPY.tabLabel },
 ];
 const MANAGER_LINKS: Partial<Record<PulseTabLink, ManagerTab>> = {
   "team-reviews": "team",
@@ -157,10 +145,8 @@ function PulseManagerPageClient() {
           <ManagerTeamReviewPanel />
         ) : tab === "review" ? (
           <EmployeeMonthlyReviewPanel />
-        ) : tab === "history" ? (
-          <MyKpiSummaryPanel />
         ) : (
-          <PathToPromotionPanel />
+          <MyKpiSummaryPanel />
         )
       }
     />
@@ -172,7 +158,6 @@ type AdminTab =
   | "insights"
   | "manager-reviews"
   | "my-review"
-  | "promotion"
   | "kpis"
   | "values"
   | "certifications"
@@ -187,7 +172,6 @@ const ADMIN_TABS: readonly TabItem<AdminTab>[] = [
   // from employees with no manager on record get their manager step.
   { value: "manager-reviews", label: "Manager Reviews" },
   { value: "my-review", label: "My Review" },
-  { value: "promotion", label: NEXT_BAND_KPIS_COPY.tabLabel },
   { value: "kpis", label: "KPI Definitions" },
   { value: "values", label: "WebKnot Values" },
   { value: "certifications", label: "Certifications" },
@@ -213,8 +197,6 @@ function PulseAdminPageClient() {
           <ManagerTeamReviewPanel />
         ) : tab === "my-review" ? (
           <EmployeeMonthlyReviewPanel />
-        ) : tab === "promotion" ? (
-          <PathToPromotionPanel />
         ) : tab === "kpis" ? (
           <KpiDefinitionsPanel />
         ) : tab === "values" ? (
