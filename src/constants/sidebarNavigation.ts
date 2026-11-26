@@ -1,3 +1,4 @@
+import { PULSE_ENABLED } from "@/constants/pulseFeature";
 import {
   Activity,
   BarChart3,
@@ -131,7 +132,7 @@ export const APP_NAVIGATION: readonly AppNavSection[] = [
     label: "Grow",
     entries: [
       { navId: "learning", label: "Learning", icon: GraduationCap, badge: "learning" },
-      { navId: "pulse", label: "Pulse", icon: Activity },
+      ...(PULSE_ENABLED ? [{ navId: "pulse", label: "Pulse", icon: Activity }] : []),
       { navId: "announcements", label: "Announcements", icon: Megaphone, description: "News and notices from HR, Admin and your managers." },
       { navId: "events", label: "Events", icon: Star, description: "What is happening at WebKnot, and what you are invited to." },
       { navId: "forms", label: "Forms", icon: FileText, description: "Forms and surveys waiting for you." },

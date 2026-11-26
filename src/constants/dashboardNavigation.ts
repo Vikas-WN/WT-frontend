@@ -1,6 +1,7 @@
 import type { SidebarIconName } from "@/constants/sidebarIcons";
 import { toTitleCase } from "@/utils/titleCase";
 import { ASSET_ADMIN_ROLES } from "@/utils/roles";
+import { PULSE_ENABLED } from "@/constants/pulseFeature";
 
 /** External Pulse (RT portal) — sidebar + /dashboard/pulse redirect. */
 export const PULSE_EXTERNAL_URL = "https://rtportal.webknot-dev.in/";
@@ -354,8 +355,10 @@ export const dashboardNavigation: NavItem[] = [
       { id: "guide", label: "Help & Guide", roles: MORE_ROLES_NO_OFFICE_ADMIN, icon: "bookUser" },
     ],
   },
+  ...(PULSE_ENABLED
+    ? [
   {
-    kind: "link",
+    kind: "link" as const,
     id: "pulse",
     label: "Pulse",
     // Native now (self-review for everyone, team reviews for managers, KPI
@@ -363,8 +366,10 @@ export const dashboardNavigation: NavItem[] = [
     // the external RT portal. See PULSE_EXTERNAL_URL if that ever needs
     // restoring for a specific rollout.
     roles: ["ROLE_EMPLOYEE", "ROLE_AM", "ROLE_MANAGER", "ROLE_DM", "ROLE_HR", "ROLE_ADMIN"],
-    icon: "trendingUp",
+    icon: "trendingUp" as const,
   },
+      ]
+    : []),
 ];
 
 function childVisible(

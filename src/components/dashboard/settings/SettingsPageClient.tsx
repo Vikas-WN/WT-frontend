@@ -27,6 +27,7 @@ import { useAuth } from "@/context/AuthContext";
 import { normalizeRoles } from "@/utils/roles";
 import { SeasonalThemeSettingsSection } from "@/components/dashboard/settings/SeasonalThemeSettingsSection";
 import { PulseScoreSettingsSection } from "@/components/dashboard/settings/PulseScoreSettingsSection";
+import { PULSE_ENABLED } from "@/constants/pulseFeature";
 import {
   COMMON_TIMEZONES,
   type DateFormatPreference,
@@ -478,7 +479,7 @@ export function SettingsPageClient() {
           </section>
 
           {canManagePulseScoring ? <div id="settings-seasonal"><SeasonalThemeSettingsSection /></div> : null}
-          {canManagePulseScoring ? <div id="settings-scoring"><PulseScoreSettingsSection /></div> : null}
+          {PULSE_ENABLED && canManagePulseScoring ? <div id="settings-scoring"><PulseScoreSettingsSection /></div> : null}
 
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-wt-border bg-wt-surface-1 p-4">
             <p role="status" className="text-xs text-wt-text-muted">{dirty ? "You have unsaved preferences." : "Your preferences are up to date."}</p>
