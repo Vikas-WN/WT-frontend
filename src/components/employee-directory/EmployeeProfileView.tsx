@@ -6,6 +6,7 @@ import { ProfileSectionsView } from "@/components/employee-directory/ProfileSect
 import { EmployeeTrainingMarksCard } from "@/components/learning-development/EmployeeTrainingMarksCard";
 import { EmployeeLeaveBalancesCard } from "@/components/employee-directory/EmployeeLeaveBalancesCard";
 import { ProfileAssignedProjectsSection } from "@/components/dashboard/profile/ProfileAssignedProjectsSection";
+import { ProfileNextBandKpisSection } from "@/components/dashboard/profile/ProfileNextBandKpisSection";
 
 type EmployeeProfileViewProps = {
   profile: Record<string, unknown>;
@@ -72,6 +73,8 @@ export function EmployeeProfileView({
       />
 
       <EmployeeLeaveBalancesCard empId={empId} enabled={queriesEnabled} />
+
+      <ProfileNextBandKpisSection empId={empId} enabled={queriesEnabled} />
     </div>
   );
 }
