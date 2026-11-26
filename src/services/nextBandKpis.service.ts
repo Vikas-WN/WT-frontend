@@ -8,12 +8,4 @@ export const nextBandKpisService = {
     const body = await apiClient.get<ApiEnvelope<NextBandKpisData>>(endpoints.profile.nextBandKpis);
     return body.data;
   },
-
-  /** HR/Admin: next-band KPIs for another employee. */
-  async getForEmployee(empId: string): Promise<NextBandKpisData> {
-    const body = await apiClient.get<ApiEnvelope<NextBandKpisData>>(
-      endpoints.profile.employeeNextBandKpis(empId),
-    );
-    return body.data;
-  },
 };
