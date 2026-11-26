@@ -50,7 +50,6 @@ import { DASHBOARD_ROUTES } from "@/constants/routes";
 import { ProfileEmployeeTrainingsSection } from "@/components/dashboard/profile/ProfileEmployeeTrainingsSection";
 import { MyDocumentsSection } from "@/components/dashboard/profile/MyDocumentsSection";
 import { ProfileAssignedProjectsSection } from "@/components/dashboard/profile/ProfileAssignedProjectsSection";
-import { ProfileNextBandKpisSection } from "@/components/dashboard/profile/ProfileNextBandKpisSection";
 import {
   ProfileDetailsSkeleton,
   ProfileHeaderSkeleton,
@@ -900,9 +899,6 @@ export function ProfilePageLeanClient() {
                     ) : null}
                     {!requiresSelfOnboarding ? (
                       <ProfileEmployeeTrainingsSection enabled />
-                    ) : null}
-                    {!requiresSelfOnboarding ? (
-                      <ProfileNextBandKpisSection />
                     ) : null}
                   </div>
                 )}
