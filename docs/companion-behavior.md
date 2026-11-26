@@ -6,11 +6,11 @@ These are custom vector fan-art interpretations, not official character assets o
 
 Reference: [ICC's interview about his batting adjustments](https://www.icc-cricket.com/news/kohli-reveals-game-plan-as-countdown-continues-to-t20-world-cup), and [BCCI's discussion of his routine and planning](https://www.bcci.tv/news/article/virat-kohli-the-man-behind-the-batsman).
 
-The ICC describes his right-handed batting, cover drive, and use of his feet to meet the ball earlier. Our signature sequence interprets that as preparation and backlift, a small weight shift forward, downswing/contact, elevated follow-through, and recovery. A local ball animation is synchronized to contact rather than appearing on every tap. The bat has its own pivot, and the hands and torso follow different timing curves. The everyday walk uses a longer stride and much smaller body bob than the Pokémon. Appearance uses a stylized bearded face, dark hair, a blue jersey and number 18; no photorealistic likeness is claimed.
+The ICC describes his right-handed batting, cover drive, and use of his feet to meet the ball earlier. Our signature sequence interprets that as preparation and backlift, a small weight shift forward, downswing/contact, elevated follow-through, and recovery. A local ball animation is synchronized to contact rather than appearing on every tap. The bat has its own pivot, and the hands and torso follow different timing curves. The everyday walk uses a longer stride and much smaller body bob than the Pokémon. Appearance uses a stylized full-bearded face, dark swept hair, a blue jersey with orange trim and number 18; no photorealistic likeness is claimed.
 
 ## MS Dhoni
 
-Fan-art tribute made on the occasion of his retirement; no official likeness is claimed. He wears a yellow jersey with "MSD" and the number 7, short dark hair and a light stubble. The signature action is a helicopter shot: a low, balanced stance and short backlift, a late wrist-driven swing, then a full rotating follow-through with the ball launched up and away. It runs once on double-tap or menu action. The walk is calm and measured: a modest stride with very little body bob, in keeping with his composed on-field persona.
+Fan-art tribute made on the occasion of his retirement; no official likeness is claimed. He wears a yellow cap with a blue brim and a yellow jersey with "MSD" and the number 7, plus a light stubble. The signature action is a helicopter shot: a low, balanced stance and short backlift, a late wrist-driven swing, then a full rotating follow-through with the ball launched up and away. It runs once on double-tap or menu action. The walk is calm and measured: a modest stride with very little body bob, in keeping with his composed on-field persona.
 
 ## Goku
 
