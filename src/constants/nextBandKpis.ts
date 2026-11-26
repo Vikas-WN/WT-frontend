@@ -3,8 +3,8 @@ export const NEXT_BAND_KPIS_QUERY_KEY = ["profile", "next-band-kpis"] as const;
 export const NEXT_BAND_KPIS_STALE_TIME_MS = 5 * 60_000;
 
 export const NEXT_BAND_KPIS_COPY = {
-  tabLabel: "Path to Promotion",
-  pulseDescription: "See what the next band expects of you, so you know what to work on.",
+  dropdownLabel: "Path to Promotion",
+  dropdownHint: "See the KPIs of the next band",
   heading: "What the next band expects",
   intro:
     "These KPIs are what the next band is measured on. Build a track record against them in your monthly Pulse reviews and you're working towards your promotion.",

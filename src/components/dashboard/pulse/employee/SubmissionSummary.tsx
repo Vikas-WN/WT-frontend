@@ -2,22 +2,30 @@
 
 import { Quote } from "lucide-react";
 
+import { LEVEL_TONE } from "@/components/dashboard/pulse/employee/RatingButtons";
+import { NextBandKpisDropdown } from "@/components/dashboard/pulse/employee/promotion/NextBandKpisDropdown";
 import { StagePipeline } from "@/components/dashboard/pulse/shared/StagePipeline";
 import { StatusPill } from "@/components/dashboard/pulse/shared/StatusPill";
 import { statusMeta } from "@/components/dashboard/pulse/shared/submissionStatus";
+import { pulseRatingLabel, pulseRatingShort } from "@/constants/pulseRatings";
 import { groupKpisByParameter, hasKpiParameters } from "@/utils/kpiParameters";
 import { cn } from "@/lib/utils";
 import type { MonthlySubmissionItem } from "@/types/kpi";
 
+/** A rating shown by name ("Meets", "Poor"…), never as the stored 1-5 digit. */
 function Rating({ value, muted }: { value: number | null | undefined; muted?: boolean }) {
+  if (value == null) {
+    return <span className="inline-flex min-w-16 justify-center rounded-lg border border-dashed border-wt-border px-2 py-1 text-xs text-wt-text-faint">–</span>;
+  }
   return (
     <span
+      title={pulseRatingLabel(value)}
       className={cn(
-        "inline-flex size-7 items-center justify-center rounded-lg border text-sm font-semibold tabular-nums",
-        value == null ? "border-dashed border-wt-border text-wt-text-faint" : muted ? "border-wt-border bg-wt-surface-2 text-wt-text" : "border-[var(--wt-brand)]/30 bg-[var(--wt-brand-soft)] text-[var(--wt-brand)]"
+        "inline-flex min-w-16 justify-center rounded-lg border px-2 py-1 text-xs font-semibold",
+        muted ? "border-wt-border bg-wt-surface-2 text-wt-text" : LEVEL_TONE[value]?.selected
       )}
     >
-      {value ?? "–"}
+      {pulseRatingShort(value)}
     </span>
   );
 }
@@ -73,7 +81,7 @@ export function SubmissionSummary({ submission }: { submission: MonthlySubmissio
       ) : null}
 
       <section className="rounded-2xl border border-wt-border bg-wt-surface-1">
-        <header className="grid grid-cols-[minmax(0,1fr)_4rem_4rem] items-center gap-2 border-b border-wt-border px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-wt-text-muted">
+        <header className="grid grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] items-center gap-2 border-b border-wt-border px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-wt-text-muted">
           <span>KPI</span>
           <span className="text-center">You</span>
           <span className="text-center">Manager</span>
@@ -82,7 +90,7 @@ export function SubmissionSummary({ submission }: { submission: MonthlySubmissio
           <div key={group.parameter ?? "_none"}>
             {params ? <p className="bg-wt-surface-2/60 px-4 py-1.5 text-xs font-semibold text-wt-text-muted">{group.parameter ?? "Other"}</p> : null}
             {group.items.map((kpi) => (
-              <div key={kpi.id} className="grid grid-cols-[minmax(0,1fr)_4rem_4rem] items-center gap-2 border-t border-wt-border px-4 py-2.5 first:border-t-0">
+              <div key={kpi.id} className="grid grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] items-center gap-2 border-t border-wt-border px-4 py-2.5 first:border-t-0">
                 <span className="truncate text-sm text-wt-text">{kpi.kpi_name}</span>
                 <span className="flex justify-center"><Rating value={mine.get(kpi.id)} muted /></span>
                 <span className="flex justify-center"><Rating value={manager[String(kpi.id)]} /></span>
@@ -94,7 +102,7 @@ export function SubmissionSummary({ submission }: { submission: MonthlySubmissio
           <>
             <p className="border-t border-wt-border bg-wt-surface-2/60 px-4 py-1.5 text-xs font-semibold text-wt-text-muted">Company values</p>
             {submission.value_ratings.map((v) => (
-              <div key={v.value_id} className="grid grid-cols-[minmax(0,1fr)_4rem_4rem] items-center gap-2 border-t border-wt-border px-4 py-2.5">
+              <div key={v.value_id} className="grid grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] items-center gap-2 border-t border-wt-border px-4 py-2.5">
                 <span className="truncate text-sm text-wt-text">{submission.value_details.find((d) => d.id === v.value_id)?.name ?? `Value #${v.value_id}`}</span>
                 <span className="flex justify-center"><Rating value={v.rating} muted /></span>
                 <span className="flex justify-center"><Rating value={managerValues[String(v.value_id)]} /></span>
@@ -103,6 +111,8 @@ export function SubmissionSummary({ submission }: { submission: MonthlySubmissio
           </>
         ) : null}
       </section>
+
+      <NextBandKpisDropdown />
 
       {submission.self_review_text ? (
         <section className="rounded-2xl border border-wt-border bg-wt-surface-1 p-4">

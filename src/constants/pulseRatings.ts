@@ -20,6 +20,13 @@ export const PULSE_RATING_LEVELS: readonly PulseRatingLevel[] = [
 
 const LABEL_BY_VALUE = new Map(PULSE_RATING_LEVELS.map((level) => [level.value, level.label]));
 
+const SHORT_BY_VALUE = new Map(PULSE_RATING_LEVELS.map((level) => [level.value, level.short]));
+
+/** "Meets" for 3; an em dash when there is no rating yet. */
+export function pulseRatingShort(value: number | null | undefined): string {
+  return value == null ? "—" : (SHORT_BY_VALUE.get(value) ?? "—");
+}
+
 /** "Meets Expectations" for 3; an em dash when there is no rating yet. */
 export function pulseRatingLabel(value: number | null | undefined): string {
   return value == null ? "—" : (LABEL_BY_VALUE.get(value) ?? "—");

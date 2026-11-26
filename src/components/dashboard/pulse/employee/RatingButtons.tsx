@@ -9,7 +9,7 @@ const FIRST = PULSE_RATING_LEVELS[0].value;
 const LAST = PULSE_RATING_LEVELS[PULSE_RATING_LEVELS.length - 1].value;
 
 /** One colour per level, climbing from rose to emerald, so a column of ratings reads at a glance. */
-const LEVEL_TONE: Record<number, { bar: string; selected: string; hover: string }> = {
+export const LEVEL_TONE: Record<number, { bar: string; selected: string; hover: string }> = {
   1: { bar: "bg-rose-500", selected: "border-rose-500 bg-rose-500/12 text-rose-800 dark:text-rose-200", hover: "hover:border-rose-500/50" },
   2: { bar: "bg-orange-500", selected: "border-orange-500 bg-orange-500/12 text-orange-800 dark:text-orange-200", hover: "hover:border-orange-500/50" },
   3: { bar: "bg-amber-500", selected: "border-amber-500 bg-amber-500/12 text-amber-800 dark:text-amber-200", hover: "hover:border-amber-500/50" },
